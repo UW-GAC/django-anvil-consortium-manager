@@ -4,10 +4,15 @@ from django.db import models
 class Investigator(models.Model):
     """A model to store information about AnVIL investigators."""
 
+    # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
 
     def __str__(self):
         return "{email}".format(email=self.email)
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.lower()
+        return super().save(*args, **kwargs)
 
 
 class Group(models.Model):
