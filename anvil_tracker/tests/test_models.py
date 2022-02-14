@@ -1,7 +1,7 @@
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
-from anvil_tracker.models import Investigator
+from ..models import Investigator
 
 
 class InvestigatorTest(TestCase):
