@@ -272,3 +272,7 @@ tags
 example_site/media/
 
 .pytest_cache/
+
+
+### My additions
+db.sqlite3
