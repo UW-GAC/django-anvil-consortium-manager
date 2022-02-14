@@ -92,7 +92,7 @@ class WorkspaceGroupAccess(models.Model):
         (READER, "Reader"),
     ]
 
-    investigator = models.ForeignKey("Investigator", on_delete=models.CASCADE)
+    group = models.ForeignKey("Group", on_delete=models.CASCADE)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
     access_level = models.CharField(
         max_length=10, choices=ACCESS_LEVEL_CHOICES, default=READER
