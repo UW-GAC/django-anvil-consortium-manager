@@ -4,7 +4,7 @@ from django.db import models
 class Investigator(models.Model):
     """A model to store information about AnVIL investigators."""
 
-    email = models.EmailField()
+    email = models.EmailField(unique=True)
 
     def __str__(self):
         return "{email}".format(email=self.email)

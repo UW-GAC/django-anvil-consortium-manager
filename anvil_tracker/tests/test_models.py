@@ -1,3 +1,4 @@
+from django.db.utils import IntegrityError
 from django.test import TestCase
 
 from anvil_tracker.models import Investigator
@@ -16,3 +17,12 @@ class InvestigatorTest(TestCase):
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "email@example.com")
+
+    def test_unique(self):
+        """Saving a model with a duplicate email fails."""
+        email = "email@example.com"
+        instance = Investigator(email=email)
+        instance.save()
+        instance2 = Investigator(email=email)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
