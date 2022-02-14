@@ -46,7 +46,7 @@ class GroupMembership(models.Model):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
     def __str__(self):
-        return "{investigator} with {role} in {group}".format(
+        return "{investigator} as {role} in {group}".format(
             investigator=self.investigator,
             group=self.group,
             role=self.role,
