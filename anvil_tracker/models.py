@@ -64,6 +64,13 @@ class GroupMembership(models.Model):
     group = models.ForeignKey("Group", on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["investigator", "group"], name="unique_group_membership"
+            )
+        ]
+
     def __str__(self):
         return "{investigator} as {role} in {group}".format(
             investigator=self.investigator,

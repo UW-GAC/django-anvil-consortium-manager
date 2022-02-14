@@ -1,7 +1,7 @@
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
-from ..models import Group, Investigator, Workspace
+from ..models import Group, GroupMembership, Investigator, Workspace
 from . import factories
 
 
@@ -118,3 +118,76 @@ class WorkspaceTest(TestCase):
         instance1.save()
         instance2 = Workspace(namespace=namespace, name="name-2")
         instance2.save()
+
+
+class GroupMembershipTest(TestCase):
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        investigator = factories.InvestigatorFactory.create()
+        group = factories.GroupFactory.create()
+        instance = GroupMembership(investigator=investigator, group=group)
+        self.assertIsInstance(instance, GroupMembership)
+
+    def test_str_method(self):
+        """The custom __str__ method returns the correct string."""
+        email = "email@example.com"
+        group = "test-group"
+        investigator = factories.InvestigatorFactory(email=email)
+        group = factories.GroupFactory(name=group)
+        instance = GroupMembership(
+            investigator=investigator, group=group, role=GroupMembership.MEMBER
+        )
+        instance.save()
+        self.assertIsInstance(instance.__str__(), str)
+        expected_string = "{email} as MEMBER in {group}".format(
+            email=email, group=group
+        )
+        self.assertEquals(instance.__str__(), expected_string)
+
+    def test_same_investigator_in_two_groups(self):
+        """The same investigator can be in two groups."""
+        investigator = factories.InvestigatorFactory()
+        group_1 = factories.GroupFactory(name="group-1")
+        group_2 = factories.GroupFactory(name="group-2")
+        instance = GroupMembership(investigator=investigator, group=group_1)
+        instance.save()
+        instance = GroupMembership(investigator=investigator, group=group_2)
+        instance.save()
+
+    def test_two_investigators_in_same_group(self):
+        """Two investigators can be in the same group."""
+        investigator_1 = factories.InvestigatorFactory(email="email_1@example.com")
+        investigator_2 = factories.InvestigatorFactory(email="email_2@example.com")
+        group = factories.GroupFactory()
+        instance = GroupMembership(investigator=investigator_1, group=group)
+        instance.save()
+        instance = GroupMembership(investigator=investigator_2, group=group)
+        instance.save()
+
+    def test_cannot_have_duplicated_investigator_and_group_with_same_role(self):
+        """Cannot have the same investigator in the same group with the same role twice."""
+        investigator = factories.InvestigatorFactory()
+        group = factories.GroupFactory()
+        instance_1 = GroupMembership(
+            investigator=investigator, group=group, role=GroupMembership.MEMBER
+        )
+        instance_1.save()
+        instance_2 = GroupMembership(
+            investigator=investigator, group=group, role=GroupMembership.MEMBER
+        )
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
+
+    def test_cannot_have_duplicated_investigator_and_group_with_different_role(self):
+        """Cannot have the same investigator in the same group with different roles twice."""
+        investigator = factories.InvestigatorFactory()
+        group = factories.GroupFactory()
+        instance_1 = GroupMembership(
+            investigator=investigator, group=group, role=GroupMembership.MEMBER
+        )
+        instance_1.save()
+        instance_2 = GroupMembership(
+            investigator=investigator, group=group, role=GroupMembership.ADMIN
+        )
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
