@@ -32,12 +32,21 @@ class Group(models.Model):
 class Workspace(models.Model):
     """A model to store inromation about AnVIL workspaces."""
 
-    namespace = models.CharField(max_length=64)
-    name = models.CharField(max_length=64)
-    authorization_domain = models.ForeignKey("Group", on_delete=models.PROTECT)
+    namespace = models.SlugField(max_length=64)
+    name = models.SlugField(max_length=64)
+    authorization_domain = models.ForeignKey(
+        "Group", on_delete=models.PROTECT, null=True
+    )
 
     def __str__(self):
         return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["namespace", "name"], name="unique_workspace"
+            )
+        ]
 
 
 class GroupMembership(models.Model):

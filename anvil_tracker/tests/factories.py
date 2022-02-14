@@ -29,7 +29,6 @@ class WorkspaceFactory(DjangoModelFactory):
 
     namespace = Faker("slug")
     name = Faker("slug")
-    authorization_domain = SubFactory(GroupFactory)
 
     class Meta:
         model = models.Workspace
