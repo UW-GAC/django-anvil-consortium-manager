@@ -17,7 +17,7 @@ class InvestigatorFactory(DjangoModelFactory):
 class GroupFactory(DjangoModelFactory):
     """A factory for the Group model."""
 
-    name = Faker("word")
+    name = Faker("slug")
 
     class Meta:
         model = models.Group
@@ -27,8 +27,8 @@ class GroupFactory(DjangoModelFactory):
 class WorkspaceFactory(DjangoModelFactory):
     """A factory for the Workspace model."""
 
-    namespace = Faker("word")
-    name = Faker("word")
+    namespace = Faker("slug")
+    name = Faker("slug")
     authorization_domain = SubFactory(GroupFactory)
 
     class Meta:
