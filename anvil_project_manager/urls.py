@@ -17,6 +17,7 @@ group_patterns = (
     [
         path("<int:pk>", views.GroupDetail.as_view(), name="detail"),
         path("new/", views.GroupCreate.as_view(), name="new"),
+        path("", views.GroupList.as_view(), name="list"),
     ],
     "groups",
 )

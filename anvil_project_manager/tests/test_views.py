@@ -290,6 +290,54 @@ class GroupCreateTest(TestCase):
         self.assertEqual(models.Group.objects.count(), 0)
 
 
+class GroupListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:groups:list", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.GroupTable)
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.GroupFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.GroupFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
 class WorkspaceDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""

@@ -31,6 +31,11 @@ class GroupCreate(CreateView):
     fields = ("name",)
 
 
+class GroupList(SingleTableView):
+    model = models.Group
+    table_class = tables.GroupTable
+
+
 class WorkspaceDetail(DetailView):
     model = models.Workspace
 

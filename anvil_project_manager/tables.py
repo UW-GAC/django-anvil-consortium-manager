@@ -11,3 +11,13 @@ class InvestigatorTable(tables.Table):
     class Meta:
         model = models.Investigator
         fields = ("pk", "email")
+
+
+class GroupTable(tables.Table):
+    name = tables.LinkColumn(
+        "anvil_project_manager:groups:detail", args=[tables.utils.A("pk")]
+    )
+
+    class Meta:
+        model = models.Group
+        fields = ("pk", "name")
