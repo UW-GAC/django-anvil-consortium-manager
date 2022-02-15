@@ -276,6 +276,3 @@ example_site/media/
 
 ### My additions
 db.sqlite3
-
-# for now don't track migrations
-anvil_tracker/migrations/
