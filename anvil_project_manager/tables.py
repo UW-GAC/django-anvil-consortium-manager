@@ -4,7 +4,9 @@ from . import models
 
 
 class InvestigatorTable(tables.Table):
-    email = tables.LinkColumn("anvil:investigator:detail", args=[tables.utils.A("pk")])
+    email = tables.LinkColumn(
+        "anvil_project_manager:investigators:detail", args=[tables.utils.A("pk")]
+    )
 
     class Meta:
         model = models.Investigator
