@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('namespace', models.SlugField(max_length=64)),
                 ('name', models.SlugField(max_length=64)),
-                ('authorization_domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='anvil_tracker.group')),
+                ('authorization_domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='anvil_project_manager.group')),
             ],
         ),
         migrations.CreateModel(
@@ -41,8 +41,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('access_level', models.CharField(choices=[('OWNER', 'Owner'), ('WRITER', 'Writer'), ('READER', 'Reader')], default='READER', max_length=10)),
-                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_tracker.group')),
-                ('workspace', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_tracker.workspace')),
+                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_project_manager.group')),
+                ('workspace', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_project_manager.workspace')),
             ],
         ),
         migrations.CreateModel(
@@ -50,8 +50,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('role', models.CharField(choices=[('MEMBER', 'Member'), ('ADMIN', 'Admin')], default='MEMBER', max_length=10)),
-                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_tracker.group')),
-                ('investigator', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_tracker.investigator')),
+                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_project_manager.group')),
+                ('investigator', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='anvil_project_manager.investigator')),
             ],
         ),
         migrations.AddConstraint(
