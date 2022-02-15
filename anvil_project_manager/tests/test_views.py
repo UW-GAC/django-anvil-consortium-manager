@@ -2,7 +2,7 @@ from django.http.response import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
-from .. import models, views
+from .. import models, tables, views
 from . import factories
 
 
@@ -136,6 +136,54 @@ class InvestigatorCreateTest(TestCase):
         self.assertEqual(models.Investigator.objects.count(), 0)
 
 
+class InvestigatorListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:investigators:list", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.InvestigatorList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.InvestigatorTable)
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.InvestigatorFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.InvestigatorFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
 class GroupDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -240,6 +288,54 @@ class GroupCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Group.objects.count(), 0)
+
+
+class GroupListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:groups:list", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.GroupTable)
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.GroupFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.GroupFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
 class WorkspaceDetailTest(TestCase):
@@ -488,3 +584,51 @@ class WorkspaceCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
+
+
+class WorkspaceListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:workspaces:list", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.WorkspaceFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.WorkspaceFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)

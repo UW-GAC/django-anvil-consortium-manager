@@ -1,6 +1,7 @@
 from django.views.generic import CreateView, DetailView, TemplateView
+from django_tables2 import SingleTableView
 
-from . import models
+from . import models, tables
 
 
 class Index(TemplateView):
@@ -16,6 +17,11 @@ class InvestigatorCreate(CreateView):
     fields = ("email",)
 
 
+class InvestigatorList(SingleTableView):
+    model = models.Investigator
+    table_class = tables.InvestigatorTable
+
+
 class GroupDetail(DetailView):
     model = models.Group
 
@@ -23,6 +29,11 @@ class GroupDetail(DetailView):
 class GroupCreate(CreateView):
     model = models.Group
     fields = ("name",)
+
+
+class GroupList(SingleTableView):
+    model = models.Group
+    table_class = tables.GroupTable
 
 
 class WorkspaceDetail(DetailView):
@@ -36,3 +47,8 @@ class WorkspaceCreate(CreateView):
         "name",
         "authorization_domain",
     )
+
+
+class WorkspaceList(SingleTableView):
+    model = models.Workspace
+    table_class = tables.WorkspaceTable
