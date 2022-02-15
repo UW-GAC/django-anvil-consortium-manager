@@ -148,7 +148,7 @@ class GroupMembershipTest(TestCase):
         expected_string = "{email} as MEMBER in {group}".format(
             email=email, group=group
         )
-        self.assertEquals(instance.__str__(), expected_string)
+        self.assertEqual(instance.__str__(), expected_string)
 
     def test_same_investigator_in_two_groups(self):
         """The same investigator can be in two groups."""
