@@ -264,7 +264,7 @@ class WorkspaceGroupAccessTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
-    def test_cannot_have_duplicated_investigator_and_group_with_different_access_levle(
+    def test_cannot_have_duplicated_investigator_and_group_with_different_access_level(
         self,
     ):
         """Cannot have the same investigator in the same group with different access levels twice."""
