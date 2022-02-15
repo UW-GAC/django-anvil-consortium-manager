@@ -8,6 +8,7 @@ investigator_patterns = (
     [
         path("<int:pk>", views.InvestigatorDetail.as_view(), name="detail"),
         path("new/", views.InvestigatorCreate.as_view(), name="new"),
+        path("", views.InvestigatorList.as_view(), name="list"),
     ],
     "investigators",
 )

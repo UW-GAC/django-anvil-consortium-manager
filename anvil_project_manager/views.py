@@ -1,6 +1,7 @@
 from django.views.generic import CreateView, DetailView, TemplateView
+from django_tables2 import SingleTableView
 
-from . import models
+from . import models, tables
 
 
 class Index(TemplateView):
@@ -14,6 +15,11 @@ class InvestigatorDetail(DetailView):
 class InvestigatorCreate(CreateView):
     model = models.Investigator
     fields = ("email",)
+
+
+class InvestigatorList(SingleTableView):
+    model = models.Investigator
+    table_class = tables.InvestigatorTable
 
 
 class GroupDetail(DetailView):
