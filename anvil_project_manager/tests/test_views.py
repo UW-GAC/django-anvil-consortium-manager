@@ -13,7 +13,7 @@ class IndexTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_tracker:index", args=args)
+        return reverse("anvil_project_manager:index", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -34,7 +34,7 @@ class InvestigatorDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_tracker:investigators:detail", args=args)
+        return reverse("anvil_project_manager:investigators:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -62,7 +62,7 @@ class InvestigatorCreateTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_tracker:investigators:new", args=args)
+        return reverse("anvil_project_manager:investigators:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -143,7 +143,7 @@ class GroupDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_tracker:groups:detail", args=args)
+        return reverse("anvil_project_manager:groups:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -171,7 +171,7 @@ class GroupCreateTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_tracker:groups:new", args=args)
+        return reverse("anvil_project_manager:groups:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -249,7 +249,7 @@ class WorkspaceDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_tracker:workspaces:detail", args=args)
+        return reverse("anvil_project_manager:workspaces:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -277,7 +277,7 @@ class WorkspaceCreateTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_tracker:workspaces:new", args=args)
+        return reverse("anvil_project_manager:workspaces:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""

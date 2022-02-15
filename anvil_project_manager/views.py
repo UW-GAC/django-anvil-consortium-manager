@@ -4,7 +4,7 @@ from . import models
 
 
 class Index(TemplateView):
-    template_name = "anvil_tracker/index.html"
+    template_name = "anvil_project_manager/index.html"
 
 
 class InvestigatorDetail(DetailView):

@@ -16,7 +16,9 @@ class Investigator(models.Model):
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse("anvil_tracker:investigators:detail", kwargs={"pk": self.pk})
+        return reverse(
+            "anvil_project_manager:investigators:detail", kwargs={"pk": self.pk}
+        )
 
 
 class Group(models.Model):
@@ -33,7 +35,7 @@ class Group(models.Model):
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse("anvil_tracker:groups:detail", kwargs={"pk": self.pk})
+        return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})
 
 
 class Workspace(models.Model):
@@ -56,7 +58,9 @@ class Workspace(models.Model):
         return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
 
     def get_absolute_url(self):
-        return reverse("anvil_tracker:workspaces:detail", kwargs={"pk": self.pk})
+        return reverse(
+            "anvil_project_manager:workspaces:detail", kwargs={"pk": self.pk}
+        )
 
     def get_full_name(self):
         return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
