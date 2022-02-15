@@ -1,7 +1,15 @@
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 
 app_name = "anvil_tracker"
 
-urlpatterns = [path("", views.Index.as_view(), name="index")]
+investigator_patterns = (
+    [path("<int:pk>", views.InvestigatorDetail.as_view(), name="detail")],
+    "investigators",
+)
+
+urlpatterns = [
+    path("", views.Index.as_view(), name="index"),
+    path("investigators/", include(investigator_patterns)),
+]

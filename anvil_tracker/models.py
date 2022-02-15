@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 
 
 class Investigator(models.Model):
@@ -13,6 +14,9 @@ class Investigator(models.Model):
     def save(self, *args, **kwargs):
         self.email = self.email.lower()
         return super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("anvil_tracker:investigators:detail", kwargs={"pk": self.pk})
 
 
 class Group(models.Model):
