@@ -5,7 +5,10 @@ from . import views
 app_name = "anvil_tracker"
 
 investigator_patterns = (
-    [path("<int:pk>", views.InvestigatorDetail.as_view(), name="detail")],
+    [
+        path("<int:pk>", views.InvestigatorDetail.as_view(), name="detail"),
+        path("new/", views.InvestigatorCreate.as_view(), name="new"),
+    ],
     "investigators",
 )
 

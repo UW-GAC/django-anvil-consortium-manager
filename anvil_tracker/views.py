@@ -1,4 +1,4 @@
-from django.views.generic import DetailView, TemplateView
+from django.views.generic import CreateView, DetailView, TemplateView
 
 from . import models
 
@@ -9,3 +9,8 @@ class Index(TemplateView):
 
 class InvestigatorDetail(DetailView):
     model = models.Investigator
+
+
+class InvestigatorCreate(CreateView):
+    model = models.Investigator
+    fields = ("email",)
