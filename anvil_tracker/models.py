@@ -98,9 +98,16 @@ class WorkspaceGroupAccess(models.Model):
         max_length=10, choices=ACCESS_LEVEL_CHOICES, default=READER
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group", "workspace"], name="unique_workspace_group_access"
+            )
+        ]
+
     def __str__(self):
         return "{group} with {access} to {workspace}".format(
             group=self.group,
-            access=self.role,
+            access=self.access_level,
             workspace=self.workspace,
         )

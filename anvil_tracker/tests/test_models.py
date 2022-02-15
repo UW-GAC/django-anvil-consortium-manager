@@ -1,7 +1,13 @@
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
-from ..models import Group, GroupMembership, Investigator, Workspace
+from ..models import (
+    Group,
+    GroupMembership,
+    Investigator,
+    Workspace,
+    WorkspaceGroupAccess,
+)
 from . import factories
 
 
@@ -188,6 +194,88 @@ class GroupMembershipTest(TestCase):
         instance_1.save()
         instance_2 = GroupMembership(
             investigator=investigator, group=group, role=GroupMembership.ADMIN
+        )
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
+
+
+class WorkspaceGroupAccessTest(TestCase):
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        group = factories.GroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        instance = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+        )
+        self.assertIsInstance(instance, WorkspaceGroupAccess)
+
+    def test_str_method(self):
+        """The custom __str__ method returns the correct string."""
+        workspace_namespace = "test-namespace"
+        workspace_name = "test-workspace"
+        group_name = "test-group"
+        group = factories.GroupFactory(name=group_name)
+        workspace = factories.WorkspaceFactory(
+            namespace=workspace_namespace, name=workspace_name
+        )
+        instance = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+        )
+        instance.save()
+        self.assertIsInstance(instance.__str__(), str)
+        expected_string = "{group} with READER to {workspace}".format(
+            group=group, workspace=workspace
+        )
+        print(instance)
+        print(expected_string)
+        self.assertEqual(instance.__str__(), expected_string)
+
+    def test_same_group_in_two_workspaces(self):
+        """The same group can have access to two workspaces."""
+        group = factories.GroupFactory()
+        workspace_1 = factories.WorkspaceFactory(name="workspace-1")
+        workspace_2 = factories.WorkspaceFactory(name="workspace-2")
+        instance = WorkspaceGroupAccess(group=group, workspace=workspace_1)
+        instance.save()
+        instance = WorkspaceGroupAccess(group=group, workspace=workspace_2)
+        instance.save()
+
+    def test_two_groups_and_same_workspace(self):
+        """Two investigators can be in the same group."""
+        group_1 = factories.GroupFactory(name="group-1")
+        group_2 = factories.GroupFactory(name="group-2")
+        workspace = factories.WorkspaceFactory()
+        instance = WorkspaceGroupAccess(group=group_1, workspace=workspace)
+        instance.save()
+        instance = WorkspaceGroupAccess(group=group_2, workspace=workspace)
+        instance.save()
+
+    def test_cannot_have_duplicated_investigator_and_group_with_same_access_level(self):
+        """Cannot have the same investigator in the same group with the same access levels twice."""
+        group = factories.GroupFactory()
+        workspace = factories.WorkspaceFactory()
+        instance_1 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+        )
+        instance_1.save()
+        instance_2 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+        )
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
+
+    def test_cannot_have_duplicated_investigator_and_group_with_different_access_levle(
+        self,
+    ):
+        """Cannot have the same investigator in the same group with different access levels twice."""
+        group = factories.GroupFactory()
+        workspace = factories.WorkspaceFactory()
+        instance_1 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+        )
+        instance_1.save()
+        instance_2 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.WRITER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
