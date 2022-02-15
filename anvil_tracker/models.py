@@ -42,7 +42,7 @@ class Workspace(models.Model):
     namespace = models.SlugField(max_length=64)
     name = models.SlugField(max_length=64)
     authorization_domain = models.ForeignKey(
-        "Group", on_delete=models.PROTECT, null=True
+        "Group", on_delete=models.PROTECT, null=True, blank=True
     )
 
     class Meta:
@@ -54,6 +54,9 @@ class Workspace(models.Model):
 
     def __str__(self):
         return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
+
+    def get_absolute_url(self):
+        return reverse("anvil_tracker:workspaces:detail", kwargs={"pk": self.pk})
 
     def get_full_name(self):
         return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)

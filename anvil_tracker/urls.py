@@ -20,8 +20,17 @@ group_patterns = (
     "groups",
 )
 
+workspace_patterns = (
+    [
+        path("<int:pk>", views.WorkspaceDetail.as_view(), name="detail"),
+        path("new/", views.WorkspaceCreate.as_view(), name="new"),
+    ],
+    "workspaces",
+)
+
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
     path("investigators/", include(investigator_patterns)),
     path("groups/", include(group_patterns)),
+    path("workspaces/", include(workspace_patterns)),
 ]

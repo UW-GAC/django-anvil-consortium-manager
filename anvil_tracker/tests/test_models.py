@@ -99,6 +99,11 @@ class WorkspaceTest(TestCase):
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my-namespace/my-name")
 
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.WorkspaceFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
+
     def test_can_have_authorization_domain(self):
         """A workspace can have a group as its authorization domain."""
         auth_domain_group = factories.GroupFactory.create()
