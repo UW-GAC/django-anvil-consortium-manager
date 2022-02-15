@@ -12,7 +12,16 @@ investigator_patterns = (
     "investigators",
 )
 
+group_patterns = (
+    [
+        path("<int:pk>", views.GroupDetail.as_view(), name="detail"),
+        path("new/", views.GroupCreate.as_view(), name="new"),
+    ],
+    "groups",
+)
+
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
     path("investigators/", include(investigator_patterns)),
+    path("groups/", include(group_patterns)),
 ]

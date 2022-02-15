@@ -62,6 +62,11 @@ class GroupTest(TestCase):
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my_group")
 
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.GroupFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
+
     def test_unique_name(self):
         """Saving a model with a duplicate name fails."""
         name = "my_group"

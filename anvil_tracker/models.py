@@ -32,6 +32,9 @@ class Group(models.Model):
         self.name_lower = self.name.lower()
         return super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        return reverse("anvil_tracker:groups:detail", kwargs={"pk": self.pk})
+
 
 class Workspace(models.Model):
     """A model to store inromation about AnVIL workspaces."""

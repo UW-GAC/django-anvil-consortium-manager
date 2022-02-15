@@ -14,3 +14,12 @@ class InvestigatorDetail(DetailView):
 class InvestigatorCreate(CreateView):
     model = models.Investigator
     fields = ("email",)
+
+
+class GroupDetail(DetailView):
+    model = models.Group
+
+
+class GroupCreate(CreateView):
+    model = models.Group
+    fields = ("name",)
