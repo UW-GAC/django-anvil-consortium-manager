@@ -8,15 +8,19 @@ from . import factories
 
 class IndexTest(TestCase):
     def setUp(self):
+        """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
+        """Get the url for the view being tested."""
         return reverse("anvil_tracker:index", args=args)
 
     def get_view(self):
+        """Return the view being tested."""
         return views.Index.as_view()
 
     def test_view_success_code(self):
+        """Returns a successful status code."""
         request = self.factory.get(self.get_url())
         # request.user = AnonymousUser()
         response = self.get_view()(request)
@@ -25,21 +29,26 @@ class IndexTest(TestCase):
 
 class InvestigatorDetailTest(TestCase):
     def setUp(self):
+        """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
+        """Get the url for the view being tested."""
         return reverse("anvil_tracker:investigators:detail", args=args)
 
     def get_view(self):
+        """Return the view being tested."""
         return views.InvestigatorDetail.as_view()
 
     def test_view_status_code_with_existing_object(self):
+        """Returns a successful status code for an existing object pk."""
         obj = factories.InvestigatorFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
+        """Raises a 404 error with an invalid object pk."""
         obj = factories.InvestigatorFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
