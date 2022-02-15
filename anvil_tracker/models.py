@@ -45,15 +45,18 @@ class Workspace(models.Model):
         "Group", on_delete=models.PROTECT, null=True
     )
 
-    def __str__(self):
-        return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
-
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["namespace", "name"], name="unique_workspace"
             )
         ]
+
+    def __str__(self):
+        return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
+
+    def get_full_name(self):
+        return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
 
 
 class GroupMembership(models.Model):

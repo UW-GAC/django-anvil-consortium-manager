@@ -135,6 +135,11 @@ class WorkspaceTest(TestCase):
         instance2 = Workspace(namespace=namespace, name="name-2")
         instance2.save()
 
+    def test_get_full_name(self):
+        instance = Workspace(namespace="test-namespace", name="test-name")
+        instance.save()
+        self.assertEqual(instance.get_full_name(), "test-namespace/test-name")
+
 
 class GroupMembershipTest(TestCase):
     def test_model_saving(self):
