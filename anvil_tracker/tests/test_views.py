@@ -95,7 +95,7 @@ class InvestigatorCreateTest(TestCase):
         new_object = models.Investigator.objects.latest("pk")
         self.assertRedirects(
             response,
-            reverse("anvil_tracker:investigators:detail", args=[new_object.pk]),
+            new_object.get_absolute_url(),
         )
 
     def test_cannot_create_duplicate_object(self):
