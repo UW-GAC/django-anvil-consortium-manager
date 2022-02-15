@@ -26,6 +26,7 @@ workspace_patterns = (
     [
         path("<int:pk>", views.WorkspaceDetail.as_view(), name="detail"),
         path("new/", views.WorkspaceCreate.as_view(), name="new"),
+        path("", views.WorkspaceList.as_view(), name="list"),
     ],
     "workspaces",
 )

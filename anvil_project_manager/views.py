@@ -47,3 +47,8 @@ class WorkspaceCreate(CreateView):
         "name",
         "authorization_domain",
     )
+
+
+class WorkspaceList(SingleTableView):
+    model = models.Workspace
+    table_class = tables.WorkspaceTable
