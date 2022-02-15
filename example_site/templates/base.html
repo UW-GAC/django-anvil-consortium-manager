@@ -46,12 +46,49 @@
 
           <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
-              <li class="nav-item active">
-                <a class="nav-link" href="{% url 'home' %}">Home <span class="visually-hidden">(current)</span></a>
+
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDarkDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Investigators
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:investigators:list' %}">List</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:investigators:new' %}">Add</a>
+                  </li>
+                </ul>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'about' %}">About</a>
+
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDarkDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Groups
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:list' %}">List</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:new' %}">Add</a>
+                  </li>
+                </ul>
               </li>
+
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDarkDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Workspaces
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:list' %}">List</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:new' %}">Add</a>
+                  </li>
+                </ul>
+              </li>
+
             </ul>
           </div>
         </div>
