@@ -84,7 +84,7 @@ class InvestigatorCreateTest(TestCase):
         """Posting valid data to the form creates an object."""
         request = self.factory.post(self.get_url(), {"email": "test@example.com"})
         response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
         new_object = models.Investigator.objects.latest("pk")
         self.assertIsInstance(new_object, models.Investigator)
 
