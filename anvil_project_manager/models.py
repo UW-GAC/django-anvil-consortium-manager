@@ -38,8 +38,22 @@ class Group(models.Model):
         return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})
 
 
+class BillingProject(models.Model):
+    """A model to store information about AnVIL billing projects."""
+
+    name = models.SlugField(max_length=64, unique=True)
+    name_lower = models.CharField(max_length=64, unique=True)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        self.name_lower = self.name.lower()
+        return super().save(*args, **kwargs)
+
+
 class Workspace(models.Model):
-    """A model to store inromation about AnVIL workspaces."""
+    """A model to store information about AnVIL workspaces."""
 
     namespace = models.SlugField(max_length=64)
     name = models.SlugField(max_length=64)

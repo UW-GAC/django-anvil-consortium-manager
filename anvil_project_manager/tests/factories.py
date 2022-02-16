@@ -24,6 +24,16 @@ class GroupFactory(DjangoModelFactory):
         django_get_or_create = ["name"]
 
 
+class BillingProjectFactory(DjangoModelFactory):
+    """A factory for the BillingProject model."""
+
+    name = Faker("slug")
+
+    class Meta:
+        model = models.BillingProject
+        django_get_or_create = ["name"]
+
+
 class WorkspaceFactory(DjangoModelFactory):
     """A factory for the Workspace model."""
 
