@@ -37,6 +37,15 @@ class GroupList(SingleTableView):
     table_class = tables.GroupTable
 
 
+class BillingProjectDetail(DetailView):
+    model = models.BillingProject
+
+
+class BillingProjectCreate(CreateView):
+    model = models.BillingProject
+    fields = ("name",)
+
+
 class WorkspaceDetail(DetailView):
     model = models.Workspace
 

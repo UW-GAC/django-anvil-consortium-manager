@@ -22,6 +22,16 @@ group_patterns = (
     "groups",
 )
 
+
+billing_project_patterns = (
+    [
+        path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
+        path("new/", views.BillingProjectCreate.as_view(), name="new"),
+        # path("", views.BillingProjectList.as_view(), name="list"),
+    ],
+    "billing_projects",
+)
+
 workspace_patterns = (
     [
         path("<int:pk>", views.WorkspaceDetail.as_view(), name="detail"),
@@ -51,6 +61,7 @@ urlpatterns = [
     path("", views.Index.as_view(), name="index"),
     path("investigators/", include(investigator_patterns)),
     path("groups/", include(group_patterns)),
+    path("billing_projects/", include(billing_project_patterns)),
     path("workspaces/", include(workspace_patterns)),
     path("group_membership/", include(group_membership_patterns)),
     path("workspace_group_access/", include(workspace_group_access_patterns)),
