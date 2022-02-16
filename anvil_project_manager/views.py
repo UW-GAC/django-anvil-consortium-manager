@@ -58,7 +58,7 @@ class WorkspaceDetail(DetailView):
 class WorkspaceCreate(CreateView):
     model = models.Workspace
     fields = (
-        "namespace",
+        "billing_project",
         "name",
         "authorization_domain",
     )

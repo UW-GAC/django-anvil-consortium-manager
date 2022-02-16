@@ -551,7 +551,8 @@ class WorkspaceCreateTest(TestCase):
         """Posting valid data to the form creates an object."""
         billing_project = factories.BillingProjectFactory.create()
         request = self.factory.post(
-            self.get_url(), {"namespace": billing_project.pk, "name": "test-workspace"}
+            self.get_url(),
+            {"billing_project": billing_project.pk, "name": "test-workspace"},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
@@ -563,7 +564,8 @@ class WorkspaceCreateTest(TestCase):
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         billing_project = factories.BillingProjectFactory.create()
         response = self.client.post(
-            self.get_url(), {"namespace": billing_project.pk, "name": "test-workspace"}
+            self.get_url(),
+            {"billing_project": billing_project.pk, "name": "test-workspace"},
         )
         new_object = models.Workspace.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
@@ -575,7 +577,7 @@ class WorkspaceCreateTest(TestCase):
         request = self.factory.post(
             self.get_url(),
             {
-                "namespace": billing_project.pk,
+                "billing_project": billing_project.pk,
                 "name": "test-workspace",
                 "authorization_domain": auth_domain.pk,
             },
@@ -587,10 +589,11 @@ class WorkspaceCreateTest(TestCase):
         self.assertEqual(new_object.authorization_domain, auth_domain)
 
     def test_cannot_create_duplicate_object(self):
-        """Cannot create two workspaces with the same namespace and name."""
+        """Cannot create two workspaces with the same billing project and name."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.post(
-            self.get_url(), {"namespace": obj.namespace.pk, "name": obj.name}
+            self.get_url(),
+            {"billing_project": obj.billing_project.pk, "name": obj.name},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -603,12 +606,14 @@ class WorkspaceCreateTest(TestCase):
         )
 
     def test_cannot_create_duplicate_object_with_auth_domain(self):
-        """Cannot create two workspaces with the same namespace and name if the first has an authorization domain."""
+        """Cannot create two workspaces with the same billing project and name if the first has
+        an authorization domain."""
         auth_domain = factories.GroupFactory.create()
         obj = factories.WorkspaceFactory.create(authorization_domain=auth_domain)
         # Attempt to create a workspace with the same name and no auth domain.
         request = self.factory.post(
-            self.get_url(), {"namespace": obj.namespace.pk, "name": obj.name}
+            self.get_url(),
+            {"billing_project": obj.billing_project.pk, "name": obj.name},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -621,14 +626,15 @@ class WorkspaceCreateTest(TestCase):
         )
 
     def test_cannot_create_duplicate_object_with_auth_domain_2(self):
-        """Cannot create two workspaces with the same namespace and name if the second has an authorization domain."""
+        """Cannot create two workspaces with the same billing project and name if the second has
+        an authorization domain."""
         auth_domain = factories.GroupFactory.create()
         obj = factories.WorkspaceFactory.create()
         # Attempt to create a workspace with the same name and no auth domain.
         request = self.factory.post(
             self.get_url(),
             {
-                "namespace": obj.namespace.pk,
+                "billing_project": obj.billing_project.pk,
                 "name": obj.name,
                 "authorization_domain": auth_domain.pk,
             },
@@ -643,41 +649,50 @@ class WorkspaceCreateTest(TestCase):
             models.Workspace.objects.filter(pk=obj.pk),
         )
 
-    def test_can_create_workspace_with_same_namespace_different_name(self):
-        """Can create a workspace with a different name in the same namespace."""
+    def test_can_create_workspace_with_same_billing_project_different_name(self):
+        """Can create a workspace with a different name in the same billing project."""
         billing_project = factories.BillingProjectFactory.create()
-        factories.WorkspaceFactory.create(namespace=billing_project, name="test-name-1")
+        factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-name-1"
+        )
         request = self.factory.post(
-            self.get_url(), {"namespace": billing_project.pk, "name": "test-name-2"}
+            self.get_url(),
+            {"billing_project": billing_project.pk, "name": "test-name-2"},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 2)
         # Make sure you can get the new object.
-        models.Workspace.objects.get(namespace=billing_project, name="test-name-2")
+        models.Workspace.objects.get(
+            billing_project=billing_project, name="test-name-2"
+        )
 
-    def test_can_create_workspace_with_same_name_different_namespace(self):
-        """Can create a workspace with the same name in a different namespace."""
+    def test_can_create_workspace_with_same_name_different_billing_project(self):
+        """Can create a workspace with the same name in a different billing project."""
         billing_project_1 = factories.BillingProjectFactory.create(name="project-1")
         billing_project_2 = factories.BillingProjectFactory.create(name="project-2")
         workspace_name = "test-name"
         factories.WorkspaceFactory.create(
-            namespace=billing_project_1, name=workspace_name
+            billing_project=billing_project_1, name=workspace_name
         )
         request = self.factory.post(
-            self.get_url(), {"namespace": billing_project_2.pk, "name": workspace_name}
+            self.get_url(),
+            {"billing_project": billing_project_2.pk, "name": workspace_name},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 2)
         # Make sure you can get the new object.
-        models.Workspace.objects.get(namespace=billing_project_2, name=workspace_name)
+        models.Workspace.objects.get(
+            billing_project=billing_project_2, name=workspace_name
+        )
 
     def test_invalid_input_name(self):
         """Posting invalid data to name field does not create an object."""
         billing_project = factories.BillingProjectFactory.create()
         request = self.factory.post(
-            self.get_url(), {"namespace": billing_project.pk, "name": "invalid name"}
+            self.get_url(),
+            {"billing_project": billing_project.pk, "name": "invalid name"},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -687,39 +702,40 @@ class WorkspaceCreateTest(TestCase):
         self.assertIn("slug", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
 
-    def test_invalid_input_namespace(self):
-        """Posting invalid data to namespace field does not create an object."""
+    def test_invalid_input_billing_project(self):
+        """Posting invalid data to billing_project field does not create an object."""
         request = self.factory.post(
-            self.get_url(), {"namespace": 1, "name": "test-name"}
+            self.get_url(), {"billing_project": 1, "name": "test-name"}
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("namespace", form.errors.keys())
-        self.assertIn("valid choice", form.errors["namespace"][0])
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("valid choice", form.errors["billing_project"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
 
-    def test_post_invalid_name_namespace(self):
+    def test_post_invalid_name_billing_project(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("namespace", form.errors.keys())
-        self.assertIn("required", form.errors["namespace"][0])
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("required", form.errors["billing_project"][0])
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
 
     def test_post_invalid_authorization_domain(self):
         """Posting an invalid authorization domain does not create an object."""
+        billing_project = factories.BillingProjectFactory.create()
         auth_domain = factories.GroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
-                "namespace": "test-namespace",
+                "billing_project": billing_project.pk,
                 "name": "test-name",
                 "authorization_domain": auth_domain.pk + 1,
             },
@@ -739,8 +755,8 @@ class WorkspaceCreateTest(TestCase):
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("namespace", form.errors.keys())
-        self.assertIn("required", form.errors["namespace"][0])
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("required", form.errors["billing_project"][0])
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
