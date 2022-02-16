@@ -31,9 +31,18 @@ workspace_patterns = (
     "workspaces",
 )
 
+group_membership_patterns = (
+    [
+        path("new/", views.GroupMembershipCreate.as_view(), name="new"),
+        path("", views.GroupMembershipList.as_view(), name="list"),
+    ],
+    "group_membership",
+)
+
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
     path("investigators/", include(investigator_patterns)),
     path("groups/", include(group_patterns)),
     path("workspaces/", include(workspace_patterns)),
+    path("group_membership/", include(group_membership_patterns)),
 ]
