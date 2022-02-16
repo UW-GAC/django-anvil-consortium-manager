@@ -70,8 +70,8 @@ class WorkspaceGroupAccessTable(tables.Table):
     group = tables.LinkColumn(
         "anvil_project_manager:groups:detail", args=[tables.utils.A("group__pk")]
     )
-    access_level = tables.Column()
+    access = tables.Column()
 
     class Meta:
         model = models.WorkspaceGroupAccess
-        fields = ("workspace", "group", "access_level")
+        fields = ("workspace", "group", "access")
