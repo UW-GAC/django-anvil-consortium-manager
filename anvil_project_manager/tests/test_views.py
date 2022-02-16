@@ -570,74 +570,12 @@ class WorkspaceCreateTest(TestCase):
         new_object = models.Workspace.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
 
-    def test_can_create_a_workspace_with_an_authorization_domain(self):
-        """Posting data with an authorization domain creates a workspace with that authorization domain."""
-        billing_project = factories.BillingProjectFactory.create()
-        auth_domain = factories.GroupFactory.create()
-        request = self.factory.post(
-            self.get_url(),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                "authorization_domain": auth_domain.pk,
-            },
-        )
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 302)
-        new_object = models.Workspace.objects.latest("pk")
-        self.assertIsInstance(new_object, models.Workspace)
-        self.assertEqual(new_object.authorization_domain, auth_domain)
-
     def test_cannot_create_duplicate_object(self):
         """Cannot create two workspaces with the same billing project and name."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.post(
             self.get_url(),
             {"billing_project": obj.billing_project.pk, "name": obj.name},
-        )
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
-            models.Workspace.objects.all(),
-            models.Workspace.objects.filter(pk=obj.pk),
-        )
-
-    def test_cannot_create_duplicate_object_with_auth_domain(self):
-        """Cannot create two workspaces with the same billing project and name if the first has
-        an authorization domain."""
-        auth_domain = factories.GroupFactory.create()
-        obj = factories.WorkspaceFactory.create(authorization_domain=auth_domain)
-        # Attempt to create a workspace with the same name and no auth domain.
-        request = self.factory.post(
-            self.get_url(),
-            {"billing_project": obj.billing_project.pk, "name": obj.name},
-        )
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
-            models.Workspace.objects.all(),
-            models.Workspace.objects.filter(pk=obj.pk),
-        )
-
-    def test_cannot_create_duplicate_object_with_auth_domain_2(self):
-        """Cannot create two workspaces with the same billing project and name if the second has
-        an authorization domain."""
-        auth_domain = factories.GroupFactory.create()
-        obj = factories.WorkspaceFactory.create()
-        # Attempt to create a workspace with the same name and no auth domain.
-        request = self.factory.post(
-            self.get_url(),
-            {
-                "billing_project": obj.billing_project.pk,
-                "name": obj.name,
-                "authorization_domain": auth_domain.pk,
-            },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -727,26 +665,6 @@ class WorkspaceCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
-
-    def test_post_invalid_authorization_domain(self):
-        """Posting an invalid authorization domain does not create an object."""
-        billing_project = factories.BillingProjectFactory.create()
-        auth_domain = factories.GroupFactory.create()
-        request = self.factory.post(
-            self.get_url(),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-name",
-                "authorization_domain": auth_domain.pk + 1,
-            },
-        )
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("form", response.context_data)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("authorization_domain", form.errors.keys())
-        self.assertIn("Select a valid choice", form.errors["authorization_domain"][0])
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""

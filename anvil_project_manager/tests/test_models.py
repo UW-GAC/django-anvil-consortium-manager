@@ -144,17 +144,6 @@ class WorkspaceTest(TestCase):
         instance = factories.WorkspaceFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
-    def test_can_have_authorization_domain(self):
-        """A workspace can have a group as its authorization domain."""
-        billing_project = factories.BillingProjectFactory.create()
-        auth_domain_group = factories.GroupFactory.create()
-        instance = Workspace(
-            billing_project=billing_project,
-            name="test-name",
-            authorization_domain=auth_domain_group,
-        )
-        instance.save()
-
     def test_cannot_have_duplicated_billing_project_and_name(self):
         """Cannot have two workspaces with the same billing_project and name."""
         billing_project = factories.BillingProjectFactory.create()
