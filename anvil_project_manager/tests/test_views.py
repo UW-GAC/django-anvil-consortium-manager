@@ -871,7 +871,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertIn("required", form.errors["investigator"][0])
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.GroupMembership.objects.count(), 0)
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
@@ -886,7 +886,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
-        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.GroupMembership.objects.count(), 0)
 
     def test_post_blank_data_investigator(self):
         """Posting blank data to the investigator field does not create an object."""
@@ -900,7 +900,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("investigator", form.errors.keys())
         self.assertIn("required", form.errors["investigator"][0])
-        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.GroupMembership.objects.count(), 0)
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -915,7 +915,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.GroupMembership.objects.count(), 0)
 
 
 class GroupMembershipListTest(TestCase):
