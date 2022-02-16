@@ -60,7 +60,10 @@ class Group(models.Model):
 class Workspace(models.Model):
     """A model to store information about AnVIL workspaces."""
 
-    namespace = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
+    # NB: In the APIs some documentation, this is also referred to as "namespace".
+    # In other places, it is "billing project".
+    # For internal consistency, call it "billing project" here.
+    billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
     authorization_domain = models.ForeignKey(
         "Group", on_delete=models.PROTECT, null=True, blank=True
@@ -69,12 +72,14 @@ class Workspace(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["namespace", "name"], name="unique_workspace"
+                fields=["billing_project", "name"], name="unique_workspace"
             )
         ]
 
     def __str__(self):
-        return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
+        return "{billing_project}/{name}".format(
+            billing_project=self.billing_project, name=self.name
+        )
 
     def get_absolute_url(self):
         return reverse(
@@ -82,7 +87,9 @@ class Workspace(models.Model):
         )
 
     def get_full_name(self):
-        return "{namespace}/{name}".format(namespace=self.namespace, name=self.name)
+        return "{billing_project}/{name}".format(
+            billing_project=self.billing_project, name=self.name
+        )
 
 
 class GroupMembership(models.Model):
