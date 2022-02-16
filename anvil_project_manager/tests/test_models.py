@@ -280,7 +280,7 @@ class WorkspaceGroupAccessTest(TestCase):
         group = factories.GroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         instance = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         self.assertIsInstance(instance, WorkspaceGroupAccess)
 
@@ -295,7 +295,7 @@ class WorkspaceGroupAccessTest(TestCase):
             billing_project=billing_project, name=workspace_name
         )
         instance = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
@@ -322,32 +322,32 @@ class WorkspaceGroupAccessTest(TestCase):
         instance = WorkspaceGroupAccess(group=group_2, workspace=workspace)
         instance.save()
 
-    def test_cannot_have_duplicated_researcher_and_group_with_same_access_level(self):
+    def test_cannot_have_duplicated_researcher_and_group_with_same_access(self):
         """Cannot have the same researcher in the same group with the same access levels twice."""
         group = factories.GroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         instance_1.save()
         instance_2 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
-    def test_cannot_have_duplicated_researcher_and_group_with_different_access_level(
+    def test_cannot_have_duplicated_researcher_and_group_with_different_access(
         self,
     ):
         """Cannot have the same researcher in the same group with different access levels twice."""
         group = factories.GroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         instance_1.save()
         instance_2 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access_level=WorkspaceGroupAccess.WRITER
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.WRITER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()

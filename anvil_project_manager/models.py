@@ -129,7 +129,7 @@ class WorkspaceGroupAccess(models.Model):
     WRITER = "WRITER"
     READER = "READER"
 
-    ACCESS_LEVEL_CHOICES = [
+    ACCESS_CHOICES = [
         (OWNER, "Owner"),
         (WRITER, "Writer"),
         (READER, "Reader"),
@@ -137,9 +137,7 @@ class WorkspaceGroupAccess(models.Model):
 
     group = models.ForeignKey("Group", on_delete=models.CASCADE)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
-    access_level = models.CharField(
-        max_length=10, choices=ACCESS_LEVEL_CHOICES, default=READER
-    )
+    access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
 
     class Meta:
         constraints = [
@@ -151,6 +149,6 @@ class WorkspaceGroupAccess(models.Model):
     def __str__(self):
         return "{group} with {access} to {workspace}".format(
             group=self.group,
-            access=self.access_level,
+            access=self.access,
             workspace=self.workspace,
         )

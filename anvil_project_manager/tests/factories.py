@@ -62,7 +62,7 @@ class WorkspaceGroupAccessFactory(DjangoModelFactory):
 
     workspace = SubFactory(WorkspaceFactory)
     group = SubFactory(GroupFactory)
-    access_level = models.WorkspaceGroupAccess.READER
+    access = models.WorkspaceGroupAccess.READER
 
     class Meta:
         model = models.WorkspaceGroupAccess

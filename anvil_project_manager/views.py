@@ -84,7 +84,7 @@ class GroupMembershipList(SingleTableView):
 
 class WorkspaceGroupAccessCreate(CreateView):
     model = models.WorkspaceGroupAccess
-    fields = ("workspace", "group", "access_level")
+    fields = ("workspace", "group", "access")
 
     def get_success_url(self):
         return reverse("anvil_project_manager:workspace_group_access:list")

@@ -1170,14 +1170,14 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access_level": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupAccess.READER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
-        self.assertEqual(new_object.access_level, models.WorkspaceGroupAccess.READER)
+        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.READER)
 
     def test_can_create_an_object_writer(self):
         """Posting valid data to the form creates an object."""
@@ -1188,14 +1188,14 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access_level": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupAccess.WRITER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
-        self.assertEqual(new_object.access_level, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.WRITER)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -1206,14 +1206,14 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access_level": models.WorkspaceGroupAccess.OWNER,
+                "access": models.WorkspaceGroupAccess.OWNER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
-        self.assertEqual(new_object.access_level, models.WorkspaceGroupAccess.OWNER)
+        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.OWNER)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -1225,7 +1225,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access_level": models.WorkspaceGroupAccess.OWNER,
+                "access": models.WorkspaceGroupAccess.OWNER,
             },
         )
         self.assertRedirects(
@@ -1239,7 +1239,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         obj = factories.WorkspaceGroupAccessFactory(
             group=group,
             workspace=workspace,
-            access_level=models.WorkspaceGroupAccess.READER,
+            access=models.WorkspaceGroupAccess.READER,
         )
         request = self.factory.post(
             self.get_url(),
@@ -1266,7 +1266,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         obj = factories.WorkspaceGroupAccessFactory(
             group=group,
             workspace=workspace,
-            access_level=models.WorkspaceGroupAccess.READER,
+            access=models.WorkspaceGroupAccess.READER,
         )
         request = self.factory.post(
             self.get_url(),
@@ -1296,7 +1296,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group_2.pk,
                 "workspace": workspace.pk,
-                "access_level": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupAccess.READER,
             },
         )
         response = self.get_view()(request)
@@ -1313,7 +1313,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace_2.pk,
-                "access_level": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupAccess.READER,
             },
         )
         response = self.get_view()(request)
@@ -1328,7 +1328,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": 1,
                 "workspace": workspace.pk,
-                "access_level": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupAccess.READER,
             },
         )
         response = self.get_view()(request)
@@ -1347,7 +1347,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group.pk,
                 "workspace": 1,
-                "access_level": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupAccess.READER,
             },
         )
         response = self.get_view()(request)
@@ -1367,15 +1367,15 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access_level": "foo",
+                "access": "foo",
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("access_level", form.errors.keys())
-        self.assertIn("valid choice", form.errors["access_level"][0])
+        self.assertIn("access", form.errors.keys())
+        self.assertIn("valid choice", form.errors["access"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
     def test_post_blank_data(self):
@@ -1389,8 +1389,8 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("required", form.errors["group"][0])
         self.assertIn("workspace", form.errors.keys())
         self.assertIn("required", form.errors["workspace"][0])
-        self.assertIn("access_level", form.errors.keys())
-        self.assertIn("required", form.errors["access_level"][0])
+        self.assertIn("access", form.errors.keys())
+        self.assertIn("required", form.errors["access"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
     def test_post_blank_data_group(self):
@@ -1400,7 +1400,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             self.get_url(),
             {
                 "workspace": workspace.pk,
-                "access_level": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupAccess.READER,
             },
         )
         response = self.get_view()(request)
@@ -1416,7 +1416,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         group = factories.GroupFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {"group": group.pk, "access_level": models.WorkspaceGroupAccess.READER},
+            {"group": group.pk, "access": models.WorkspaceGroupAccess.READER},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1438,8 +1438,8 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("access_level", form.errors.keys())
-        self.assertIn("required", form.errors["access_level"][0])
+        self.assertIn("access", form.errors.keys())
+        self.assertIn("required", form.errors["access"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
 
