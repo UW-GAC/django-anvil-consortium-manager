@@ -24,10 +24,10 @@ class BillingProjectTableTest(TestCase):
         self.assertEqual(len(table.rows), 2)
 
 
-class InvestigatorTableTest(TestCase):
-    model = models.Investigator
-    model_factory = factories.InvestigatorFactory
-    table_class = tables.InvestigatorTable
+class ResearcherTableTest(TestCase):
+    model = models.Researcher
+    model_factory = factories.ResearcherFactory
+    table_class = tables.ResearcherTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

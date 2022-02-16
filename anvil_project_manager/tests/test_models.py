@@ -5,7 +5,7 @@ from ..models import (
     BillingProject,
     Group,
     GroupMembership,
-    Investigator,
+    Researcher,
     Workspace,
     WorkspaceGroupAccess,
 )
@@ -49,39 +49,39 @@ class BillingProjectTest(TestCase):
             instance2.save()
 
 
-class InvestigatorTest(TestCase):
+class ResearcherTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        instance = Investigator(email="email@example.com")
+        instance = Researcher(email="email@example.com")
         instance.save()
-        self.assertIsInstance(instance, Investigator)
+        self.assertIsInstance(instance, Researcher)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        instance = Investigator(email="email@example.com")
+        instance = Researcher(email="email@example.com")
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "email@example.com")
 
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
-        instance = factories.InvestigatorFactory()
+        instance = factories.ResearcherFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_unique_email(self):
         """Saving a model with a duplicate email fails."""
         email = "email@example.com"
-        instance = Investigator(email=email)
+        instance = Researcher(email=email)
         instance.save()
-        instance2 = Investigator(email=email)
+        instance2 = Researcher(email=email)
         with self.assertRaises(IntegrityError):
             instance2.save()
 
     def test_unique_email_case_insensitive(self):
         """Email uniqueness does not depend on case."""
-        instance = Investigator(email="email@example.com")
+        instance = Researcher(email="email@example.com")
         instance.save()
-        instance2 = Investigator(email="EMAIL@example.com")
+        instance2 = Researcher(email="EMAIL@example.com")
         with self.assertRaises(IntegrityError):
             instance2.save()
 
@@ -204,19 +204,19 @@ class WorkspaceTest(TestCase):
 class GroupMembershipTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        investigator = factories.InvestigatorFactory.create()
+        researcher = factories.ResearcherFactory.create()
         group = factories.GroupFactory.create()
-        instance = GroupMembership(investigator=investigator, group=group)
+        instance = GroupMembership(researcher=researcher, group=group)
         self.assertIsInstance(instance, GroupMembership)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         email = "email@example.com"
         group = "test-group"
-        investigator = factories.InvestigatorFactory(email=email)
+        researcher = factories.ResearcherFactory(email=email)
         group = factories.GroupFactory(name=group)
         instance = GroupMembership(
-            investigator=investigator, group=group, role=GroupMembership.MEMBER
+            researcher=researcher, group=group, role=GroupMembership.MEMBER
         )
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
@@ -225,50 +225,50 @@ class GroupMembershipTest(TestCase):
         )
         self.assertEqual(instance.__str__(), expected_string)
 
-    def test_same_investigator_in_two_groups(self):
-        """The same investigator can be in two groups."""
-        investigator = factories.InvestigatorFactory()
+    def test_same_researcher_in_two_groups(self):
+        """The same researcher can be in two groups."""
+        researcher = factories.ResearcherFactory()
         group_1 = factories.GroupFactory(name="group-1")
         group_2 = factories.GroupFactory(name="group-2")
-        instance = GroupMembership(investigator=investigator, group=group_1)
+        instance = GroupMembership(researcher=researcher, group=group_1)
         instance.save()
-        instance = GroupMembership(investigator=investigator, group=group_2)
+        instance = GroupMembership(researcher=researcher, group=group_2)
         instance.save()
 
-    def test_two_investigators_in_same_group(self):
-        """Two investigators can be in the same group."""
-        investigator_1 = factories.InvestigatorFactory(email="email_1@example.com")
-        investigator_2 = factories.InvestigatorFactory(email="email_2@example.com")
+    def test_two_researchers_in_same_group(self):
+        """Two researchers can be in the same group."""
+        researcher_1 = factories.ResearcherFactory(email="email_1@example.com")
+        researcher_2 = factories.ResearcherFactory(email="email_2@example.com")
         group = factories.GroupFactory()
-        instance = GroupMembership(investigator=investigator_1, group=group)
+        instance = GroupMembership(researcher=researcher_1, group=group)
         instance.save()
-        instance = GroupMembership(investigator=investigator_2, group=group)
+        instance = GroupMembership(researcher=researcher_2, group=group)
         instance.save()
 
-    def test_cannot_have_duplicated_investigator_and_group_with_same_role(self):
-        """Cannot have the same investigator in the same group with the same role twice."""
-        investigator = factories.InvestigatorFactory()
+    def test_cannot_have_duplicated_researcher_and_group_with_same_role(self):
+        """Cannot have the same researcher in the same group with the same role twice."""
+        researcher = factories.ResearcherFactory()
         group = factories.GroupFactory()
         instance_1 = GroupMembership(
-            investigator=investigator, group=group, role=GroupMembership.MEMBER
+            researcher=researcher, group=group, role=GroupMembership.MEMBER
         )
         instance_1.save()
         instance_2 = GroupMembership(
-            investigator=investigator, group=group, role=GroupMembership.MEMBER
+            researcher=researcher, group=group, role=GroupMembership.MEMBER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
-    def test_cannot_have_duplicated_investigator_and_group_with_different_role(self):
-        """Cannot have the same investigator in the same group with different roles twice."""
-        investigator = factories.InvestigatorFactory()
+    def test_cannot_have_duplicated_researcher_and_group_with_different_role(self):
+        """Cannot have the same researcher in the same group with different roles twice."""
+        researcher = factories.ResearcherFactory()
         group = factories.GroupFactory()
         instance_1 = GroupMembership(
-            investigator=investigator, group=group, role=GroupMembership.MEMBER
+            researcher=researcher, group=group, role=GroupMembership.MEMBER
         )
         instance_1.save()
         instance_2 = GroupMembership(
-            investigator=investigator, group=group, role=GroupMembership.ADMIN
+            researcher=researcher, group=group, role=GroupMembership.ADMIN
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
@@ -313,7 +313,7 @@ class WorkspaceGroupAccessTest(TestCase):
         instance.save()
 
     def test_two_groups_and_same_workspace(self):
-        """Two investigators can be in the same group."""
+        """Two researchers can be in the same group."""
         group_1 = factories.GroupFactory(name="group-1")
         group_2 = factories.GroupFactory(name="group-2")
         workspace = factories.WorkspaceFactory()
@@ -322,8 +322,8 @@ class WorkspaceGroupAccessTest(TestCase):
         instance = WorkspaceGroupAccess(group=group_2, workspace=workspace)
         instance.save()
 
-    def test_cannot_have_duplicated_investigator_and_group_with_same_access_level(self):
-        """Cannot have the same investigator in the same group with the same access levels twice."""
+    def test_cannot_have_duplicated_researcher_and_group_with_same_access_level(self):
+        """Cannot have the same researcher in the same group with the same access levels twice."""
         group = factories.GroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(
@@ -336,10 +336,10 @@ class WorkspaceGroupAccessTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
-    def test_cannot_have_duplicated_investigator_and_group_with_different_access_level(
+    def test_cannot_have_duplicated_researcher_and_group_with_different_access_level(
         self,
     ):
-        """Cannot have the same investigator in the same group with different access levels twice."""
+        """Cannot have the same researcher in the same group with different access levels twice."""
         group = factories.GroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(

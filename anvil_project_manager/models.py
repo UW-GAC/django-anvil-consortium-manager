@@ -21,8 +21,8 @@ class BillingProject(models.Model):
         )
 
 
-class Investigator(models.Model):
-    """A model to store information about AnVIL investigators."""
+class Researcher(models.Model):
+    """A model to store information about AnVIL researchers."""
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
@@ -36,7 +36,7 @@ class Investigator(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:investigators:detail", kwargs={"pk": self.pk}
+            "anvil_project_manager:researchers:detail", kwargs={"pk": self.pk}
         )
 
 
@@ -93,7 +93,7 @@ class Workspace(models.Model):
 
 
 class GroupMembership(models.Model):
-    """A model to store which investigators are in a group."""
+    """A model to store which researchers are in a group."""
 
     MEMBER = "MEMBER"
     ADMIN = "ADMIN"
@@ -103,20 +103,20 @@ class GroupMembership(models.Model):
         (ADMIN, "Admin"),
     ]
 
-    investigator = models.ForeignKey("Investigator", on_delete=models.CASCADE)
+    researcher = models.ForeignKey("Researcher", on_delete=models.CASCADE)
     group = models.ForeignKey("Group", on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["investigator", "group"], name="unique_group_membership"
+                fields=["researcher", "group"], name="unique_group_membership"
             )
         ]
 
     def __str__(self):
-        return "{investigator} as {role} in {group}".format(
-            investigator=self.investigator,
+        return "{researcher} as {role} in {group}".format(
+            researcher=self.researcher,
             group=self.group,
             role=self.role,
         )

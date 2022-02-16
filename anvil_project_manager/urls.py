@@ -13,13 +13,13 @@ billing_project_patterns = (
     "billing_projects",
 )
 
-investigator_patterns = (
+researcher_patterns = (
     [
-        path("<int:pk>", views.InvestigatorDetail.as_view(), name="detail"),
-        path("new/", views.InvestigatorCreate.as_view(), name="new"),
-        path("", views.InvestigatorList.as_view(), name="list"),
+        path("<int:pk>", views.ResearcherDetail.as_view(), name="detail"),
+        path("new/", views.ResearcherCreate.as_view(), name="new"),
+        path("", views.ResearcherList.as_view(), name="list"),
     ],
-    "investigators",
+    "researchers",
 )
 
 group_patterns = (
@@ -58,7 +58,7 @@ workspace_group_access_patterns = (
 
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
-    path("investigators/", include(investigator_patterns)),
+    path("researchers/", include(researcher_patterns)),
     path("groups/", include(group_patterns)),
     path("billing_projects/", include(billing_project_patterns)),
     path("workspaces/", include(workspace_patterns)),
