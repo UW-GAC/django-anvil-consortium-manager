@@ -53,10 +53,10 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:investigators:list' %}">List</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:investigators:list' %}">List investigators</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:investigators:new' %}">Add</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:investigators:new' %}">Add an investigator</a>
                   </li>
                 </ul>
               </li>
@@ -67,10 +67,13 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:list' %}">List</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:list' %}">List groups</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:new' %}">Add</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:new' %}">Add a group</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:group_membership:list' %}">Group membership</a>
                   </li>
                 </ul>
               </li>
@@ -81,10 +84,13 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:list' %}">List</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:list' %}">List workspaces</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:new' %}">Add</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:new' %}">Add a workspace</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspace_group_access:list' %}">Workspace access</a>
                   </li>
                 </ul>
               </li>
