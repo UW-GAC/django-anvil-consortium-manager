@@ -1,6 +1,6 @@
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, TemplateView
-from django_tables2 import SingleTableMixin, SingleTableView
+from django_tables2 import SingleTableView
 
 from . import models, tables
 
@@ -9,10 +9,8 @@ class Index(TemplateView):
     template_name = "anvil_project_manager/index.html"
 
 
-class InvestigatorDetail(SingleTableMixin, DetailView):
+class InvestigatorDetail(DetailView):
     model = models.Investigator
-    table_class = tables.GroupTable
-    context_table_name = "group_table"
 
 
 class InvestigatorCreate(CreateView):
