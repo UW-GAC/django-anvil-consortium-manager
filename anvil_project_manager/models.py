@@ -55,7 +55,7 @@ class BillingProject(models.Model):
 class Workspace(models.Model):
     """A model to store information about AnVIL workspaces."""
 
-    namespace = models.SlugField(max_length=64)
+    namespace = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
     authorization_domain = models.ForeignKey(
         "Group", on_delete=models.PROTECT, null=True, blank=True

@@ -37,7 +37,7 @@ class BillingProjectFactory(DjangoModelFactory):
 class WorkspaceFactory(DjangoModelFactory):
     """A factory for the Workspace model."""
 
-    namespace = Faker("slug")
+    namespace = SubFactory(BillingProjectFactory)
     name = Faker("slug")
 
     class Meta:
