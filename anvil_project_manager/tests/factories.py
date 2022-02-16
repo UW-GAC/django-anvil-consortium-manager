@@ -37,12 +37,12 @@ class GroupFactory(DjangoModelFactory):
 class WorkspaceFactory(DjangoModelFactory):
     """A factory for the Workspace model."""
 
-    namespace = SubFactory(BillingProjectFactory)
+    billing_project = SubFactory(BillingProjectFactory)
     name = Faker("slug")
 
     class Meta:
         model = models.Workspace
-        django_get_or_create = ["namespace", "name"]
+        django_get_or_create = ["billing_project", "name"]
 
 
 class GroupMembershipFactory(DjangoModelFactory):

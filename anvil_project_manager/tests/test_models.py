@@ -127,14 +127,14 @@ class WorkspaceTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         billing_project = factories.BillingProjectFactory.create()
-        instance = Workspace(namespace=billing_project, name="my-name")
+        instance = Workspace(billing_project=billing_project, name="my-name")
         instance.save()
         self.assertIsInstance(instance, Workspace)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         billing_project = factories.BillingProjectFactory.create(name="my-project")
-        instance = Workspace(namespace=billing_project, name="my-name")
+        instance = Workspace(billing_project=billing_project, name="my-name")
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my-project/my-name")
@@ -149,24 +149,24 @@ class WorkspaceTest(TestCase):
         billing_project = factories.BillingProjectFactory.create()
         auth_domain_group = factories.GroupFactory.create()
         instance = Workspace(
-            namespace=billing_project,
+            billing_project=billing_project,
             name="test-name",
             authorization_domain=auth_domain_group,
         )
         instance.save()
 
-    def test_cannot_have_duplicated_namespace_and_name(self):
-        """Cannot have two workspaces with the same namespace and name."""
+    def test_cannot_have_duplicated_billing_project_and_name(self):
+        """Cannot have two workspaces with the same billing_project and name."""
         billing_project = factories.BillingProjectFactory.create()
         name = "test-name"
-        instance1 = Workspace(namespace=billing_project, name=name)
+        instance1 = Workspace(billing_project=billing_project, name=name)
         instance1.save()
-        instance2 = Workspace(namespace=billing_project, name=name)
+        instance2 = Workspace(billing_project=billing_project, name=name)
         with self.assertRaises(IntegrityError):
             instance2.save()
 
-    def test_can_have_same_name_in_different_namespace(self):
-        """Can have two workspaces with the same name but in different namespaces."""
+    def test_can_have_same_name_in_different_billing_project(self):
+        """Can have two workspaces with the same name but in different billing_projects."""
         name = "test-name"
         billing_project_1 = factories.BillingProjectFactory.create(
             name="test-project-1"
@@ -174,28 +174,28 @@ class WorkspaceTest(TestCase):
         billing_project_2 = factories.BillingProjectFactory.create(
             name="test-project-2"
         )
-        instance1 = Workspace(namespace=billing_project_1, name=name)
+        instance1 = Workspace(billing_project=billing_project_1, name=name)
         instance1.save()
-        instance2 = Workspace(namespace=billing_project_2, name=name)
+        instance2 = Workspace(billing_project=billing_project_2, name=name)
         instance2.save()
         self.assertEqual(Workspace.objects.count(), 2)
 
-    def test_can_have_same_namespace_with_different_names(self):
+    def test_can_have_same_billing_project_with_different_names(self):
         """Can have two workspaces with different names in the same namespace."""
         billing_project = factories.BillingProjectFactory.create(name="test-project")
-        instance1 = Workspace(namespace=billing_project, name="name-1")
+        instance1 = Workspace(billing_project=billing_project, name="name-1")
         instance1.save()
-        instance2 = Workspace(namespace=billing_project, name="name-2")
+        instance2 = Workspace(billing_project=billing_project, name="name-2")
         instance2.save()
         self.assertEqual(Workspace.objects.count(), 2)
 
     def test_get_full_name(self):
         billing_project = factories.BillingProjectFactory.create(name="test-project")
-        instance = Workspace(namespace=billing_project, name="test-name")
+        instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
         self.assertEqual(instance.get_full_name(), "test-project/test-name")
 
-    def test_cannot_create_with_invalid_namespace(self):
+    def test_cannot_create_with_invalid_billing_project(self):
         instance = Workspace(name="test-name")
         with self.assertRaises(IntegrityError):
             instance.save()
@@ -292,7 +292,7 @@ class WorkspaceGroupAccessTest(TestCase):
         billing_project = factories.BillingProjectFactory(name=billing_project_name)
         group = factories.GroupFactory(name=group_name)
         workspace = factories.WorkspaceFactory(
-            namespace=billing_project, name=workspace_name
+            billing_project=billing_project, name=workspace_name
         )
         instance = WorkspaceGroupAccess(
             group=group, workspace=workspace, access_level=WorkspaceGroupAccess.READER
