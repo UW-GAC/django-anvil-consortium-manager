@@ -33,7 +33,7 @@ class WorkspaceTable(tables.Table):
     )
 
     class Meta:
-        model = models.Group
+        model = models.Workspace
         fields = ("pk", "name", "namespace", "authorization_domain")
 
 
