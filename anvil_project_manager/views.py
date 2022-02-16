@@ -23,18 +23,18 @@ class BillingProjectList(SingleTableView):
     table_class = tables.BillingProjectTable
 
 
-class InvestigatorDetail(DetailView):
-    model = models.Investigator
+class ResearcherDetail(DetailView):
+    model = models.Researcher
 
 
-class InvestigatorCreate(CreateView):
-    model = models.Investigator
+class ResearcherCreate(CreateView):
+    model = models.Researcher
     fields = ("email",)
 
 
-class InvestigatorList(SingleTableView):
-    model = models.Investigator
-    table_class = tables.InvestigatorTable
+class ResearcherList(SingleTableView):
+    model = models.Researcher
+    table_class = tables.ResearcherTable
 
 
 class GroupDetail(DetailView):
@@ -71,7 +71,7 @@ class WorkspaceList(SingleTableView):
 
 class GroupMembershipCreate(CreateView):
     model = models.GroupMembership
-    fields = ("investigator", "group", "role")
+    fields = ("researcher", "group", "role")
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_membership:list")
