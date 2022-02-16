@@ -27,7 +27,7 @@ billing_project_patterns = (
     [
         path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
         path("new/", views.BillingProjectCreate.as_view(), name="new"),
-        # path("", views.BillingProjectList.as_view(), name="list"),
+        path("", views.BillingProjectList.as_view(), name="list"),
     ],
     "billing_projects",
 )

@@ -46,6 +46,11 @@ class BillingProjectCreate(CreateView):
     fields = ("name",)
 
 
+class BillingProjectList(SingleTableView):
+    model = models.BillingProject
+    table_class = tables.BillingProjectTable
+
+
 class WorkspaceDetail(DetailView):
     model = models.Workspace
 

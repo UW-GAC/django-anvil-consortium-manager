@@ -23,6 +23,16 @@ class GroupTable(tables.Table):
         fields = ("pk", "name")
 
 
+class BillingProjectTable(tables.Table):
+    name = tables.LinkColumn(
+        "anvil_project_manager:billing_projects:detail", args=[tables.utils.A("pk")]
+    )
+
+    class Meta:
+        model = models.BillingProject
+        fields = ("pk", "name")
+
+
 class WorkspaceTable(tables.Table):
     pk = tables.LinkColumn(
         "anvil_project_manager:workspaces:detail", args=[tables.utils.A("pk")]
