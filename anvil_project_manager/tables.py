@@ -44,7 +44,7 @@ class WorkspaceTable(tables.Table):
 
     class Meta:
         model = models.Workspace
-        fields = ("pk", "name", "namespace", "authorization_domain")
+        fields = ("pk", "billing_project", "name", "authorization_domain")
 
 
 class GroupMembershipTable(tables.Table):
