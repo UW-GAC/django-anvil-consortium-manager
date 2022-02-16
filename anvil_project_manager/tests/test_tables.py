@@ -4,6 +4,26 @@ from .. import models, tables
 from . import factories
 
 
+class BillingProjectTableTest(TestCase):
+    model = models.BillingProject
+    model_factory = factories.BillingProjectFactory
+    table_class = tables.BillingProjectTable
+
+    def test_row_count_with_no_objects(self):
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(len(table.rows), 0)
+
+    def test_row_count_with_one_object(self):
+        self.model_factory.create()
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(len(table.rows), 1)
+
+    def test_row_count_with_two_objects(self):
+        self.model_factory.create_batch(2)
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(len(table.rows), 2)
+
+
 class InvestigatorTableTest(TestCase):
     model = models.Investigator
     model_factory = factories.InvestigatorFactory
@@ -28,26 +48,6 @@ class GroupTableTest(TestCase):
     model = models.Group
     model_factory = factories.GroupFactory
     table_class = tables.GroupTable
-
-    def test_row_count_with_no_objects(self):
-        table = self.table_class(self.model.objects.all())
-        self.assertEqual(len(table.rows), 0)
-
-    def test_row_count_with_one_object(self):
-        self.model_factory.create()
-        table = self.table_class(self.model.objects.all())
-        self.assertEqual(len(table.rows), 1)
-
-    def test_row_count_with_two_objects(self):
-        self.model_factory.create_batch(2)
-        table = self.table_class(self.model.objects.all())
-        self.assertEqual(len(table.rows), 2)
-
-
-class BillingProjectTableTest(TestCase):
-    model = models.BillingProject
-    model_factory = factories.BillingProjectFactory
-    table_class = tables.BillingProjectTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

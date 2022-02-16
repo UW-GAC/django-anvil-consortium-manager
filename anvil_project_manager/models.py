@@ -2,6 +2,25 @@ from django.db import models
 from django.urls import reverse
 
 
+class BillingProject(models.Model):
+    """A model to store information about AnVIL billing projects."""
+
+    name = models.SlugField(max_length=64, unique=True)
+    name_lower = models.CharField(max_length=64, unique=True)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        self.name_lower = self.name.lower()
+        return super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse(
+            "anvil_project_manager:billing_projects:detail", kwargs={"pk": self.pk}
+        )
+
+
 class Investigator(models.Model):
     """A model to store information about AnVIL investigators."""
 
@@ -36,25 +55,6 @@ class Group(models.Model):
 
     def get_absolute_url(self):
         return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})
-
-
-class BillingProject(models.Model):
-    """A model to store information about AnVIL billing projects."""
-
-    name = models.SlugField(max_length=64, unique=True)
-    name_lower = models.CharField(max_length=64, unique=True)
-
-    def __str__(self):
-        return self.name
-
-    def save(self, *args, **kwargs):
-        self.name_lower = self.name.lower()
-        return super().save(*args, **kwargs)
-
-    def get_absolute_url(self):
-        return reverse(
-            "anvil_project_manager:billing_projects:detail", kwargs={"pk": self.pk}
-        )
 
 
 class Workspace(models.Model):

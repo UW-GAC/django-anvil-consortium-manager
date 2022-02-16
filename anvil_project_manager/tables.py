@@ -3,6 +3,16 @@ import django_tables2 as tables
 from . import models
 
 
+class BillingProjectTable(tables.Table):
+    name = tables.LinkColumn(
+        "anvil_project_manager:billing_projects:detail", args=[tables.utils.A("pk")]
+    )
+
+    class Meta:
+        model = models.BillingProject
+        fields = ("pk", "name")
+
+
 class InvestigatorTable(tables.Table):
     email = tables.LinkColumn(
         "anvil_project_manager:investigators:detail", args=[tables.utils.A("pk")]
@@ -20,16 +30,6 @@ class GroupTable(tables.Table):
 
     class Meta:
         model = models.Group
-        fields = ("pk", "name")
-
-
-class BillingProjectTable(tables.Table):
-    name = tables.LinkColumn(
-        "anvil_project_manager:billing_projects:detail", args=[tables.utils.A("pk")]
-    )
-
-    class Meta:
-        model = models.BillingProject
         fields = ("pk", "name")
 
 

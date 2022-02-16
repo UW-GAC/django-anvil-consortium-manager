@@ -12,6 +12,43 @@ from ..models import (
 from . import factories
 
 
+class BillingProjectTest(TestCase):
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        instance = BillingProject(name="my_project")
+        instance.save()
+        self.assertIsInstance(instance, BillingProject)
+
+    def test_str_method(self):
+        """The custom __str__ method returns the correct string."""
+        instance = BillingProject(name="my_project")
+        instance.save()
+        self.assertIsInstance(instance.__str__(), str)
+        self.assertEqual(instance.__str__(), "my_project")
+
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.BillingProjectFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
+
+    def test_unique_name(self):
+        """Saving a model with a duplicate name fails."""
+        name = "my_project"
+        instance = BillingProject(name=name)
+        instance.save()
+        instance2 = BillingProject(name=name)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_unique_name_case_insensitive(self):
+        """Name uniqueness does not depend on case."""
+        instance = BillingProject(name="my_project")
+        instance.save()
+        instance2 = BillingProject(name="My_PrOjEcT")
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+
 class InvestigatorTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
@@ -82,43 +119,6 @@ class GroupTest(TestCase):
         instance = Group(name="my_group")
         instance.save()
         instance2 = Group(name="My_GrOuP")
-        with self.assertRaises(IntegrityError):
-            instance2.save()
-
-
-class BillingProjectTest(TestCase):
-    def test_model_saving(self):
-        """Creation using the model constructor and .save() works."""
-        instance = BillingProject(name="my_project")
-        instance.save()
-        self.assertIsInstance(instance, BillingProject)
-
-    def test_str_method(self):
-        """The custom __str__ method returns the correct string."""
-        instance = BillingProject(name="my_project")
-        instance.save()
-        self.assertIsInstance(instance.__str__(), str)
-        self.assertEqual(instance.__str__(), "my_project")
-
-    def test_get_absolute_url(self):
-        """The get_absolute_url() method works."""
-        instance = factories.BillingProjectFactory()
-        self.assertIsInstance(instance.get_absolute_url(), str)
-
-    def test_unique_name(self):
-        """Saving a model with a duplicate name fails."""
-        name = "my_project"
-        instance = BillingProject(name=name)
-        instance.save()
-        instance2 = BillingProject(name=name)
-        with self.assertRaises(IntegrityError):
-            instance2.save()
-
-    def test_unique_name_case_insensitive(self):
-        """Name uniqueness does not depend on case."""
-        instance = BillingProject(name="my_project")
-        instance.save()
-        instance2 = BillingProject(name="My_PrOjEcT")
         with self.assertRaises(IntegrityError):
             instance2.save()
 

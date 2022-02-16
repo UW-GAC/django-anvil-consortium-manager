@@ -4,6 +4,15 @@ from . import views
 
 app_name = "anvil_project_manager"
 
+billing_project_patterns = (
+    [
+        path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
+        path("new/", views.BillingProjectCreate.as_view(), name="new"),
+        path("", views.BillingProjectList.as_view(), name="list"),
+    ],
+    "billing_projects",
+)
+
 investigator_patterns = (
     [
         path("<int:pk>", views.InvestigatorDetail.as_view(), name="detail"),
@@ -20,16 +29,6 @@ group_patterns = (
         path("", views.GroupList.as_view(), name="list"),
     ],
     "groups",
-)
-
-
-billing_project_patterns = (
-    [
-        path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
-        path("new/", views.BillingProjectCreate.as_view(), name="new"),
-        path("", views.BillingProjectList.as_view(), name="list"),
-    ],
-    "billing_projects",
 )
 
 workspace_patterns = (

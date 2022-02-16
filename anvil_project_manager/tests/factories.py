@@ -4,6 +4,16 @@ from factory.django import DjangoModelFactory
 from anvil_project_manager import models
 
 
+class BillingProjectFactory(DjangoModelFactory):
+    """A factory for the BillingProject model."""
+
+    name = Faker("slug")
+
+    class Meta:
+        model = models.BillingProject
+        django_get_or_create = ["name"]
+
+
 class InvestigatorFactory(DjangoModelFactory):
     """A factory for the Investigator model."""
 
@@ -21,16 +31,6 @@ class GroupFactory(DjangoModelFactory):
 
     class Meta:
         model = models.Group
-        django_get_or_create = ["name"]
-
-
-class BillingProjectFactory(DjangoModelFactory):
-    """A factory for the BillingProject model."""
-
-    name = Faker("slug")
-
-    class Meta:
-        model = models.BillingProject
         django_get_or_create = ["name"]
 
 
