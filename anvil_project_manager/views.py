@@ -9,6 +9,20 @@ class Index(TemplateView):
     template_name = "anvil_project_manager/index.html"
 
 
+class BillingProjectDetail(DetailView):
+    model = models.BillingProject
+
+
+class BillingProjectCreate(CreateView):
+    model = models.BillingProject
+    fields = ("name",)
+
+
+class BillingProjectList(SingleTableView):
+    model = models.BillingProject
+    table_class = tables.BillingProjectTable
+
+
 class InvestigatorDetail(DetailView):
     model = models.Investigator
 
@@ -44,7 +58,7 @@ class WorkspaceDetail(DetailView):
 class WorkspaceCreate(CreateView):
     model = models.Workspace
     fields = (
-        "namespace",
+        "billing_project",
         "name",
         "authorization_domain",
     )
