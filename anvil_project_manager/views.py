@@ -25,11 +25,12 @@ class BillingProjectList(SingleTableView):
 
 class ResearcherDetail(SingleTableMixin, DetailView):
     model = models.Researcher
-    table_class = tables.GroupMembershipTable
     context_table_name = "group_table"
 
-    def get_table_data(self):
-        return self.object.groupmembership_set.all()
+    def get_table(self):
+        return tables.GroupMembershipTable(
+            self.object.groupmembership_set.all(), exclude="researcher"
+        )
 
 
 class ResearcherCreate(CreateView):
@@ -48,10 +49,10 @@ class GroupDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
-            self.object.workspacegroupaccess_set.all()
+            self.object.workspacegroupaccess_set.all(), exclude="group"
         )
         context["researcher_table"] = tables.GroupMembershipTable(
-            self.object.groupmembership_set.all()
+            self.object.groupmembership_set.all(), exclude="group"
         )
         return context
 
@@ -71,8 +72,10 @@ class WorkspaceDetail(SingleTableMixin, DetailView):
     table_class = tables.WorkspaceGroupAccessTable
     context_table_name = "group_table"
 
-    def get_table_data(self):
-        return self.object.workspacegroupaccess_set.all()
+    def get_table(self):
+        return tables.WorkspaceGroupAccessTable(
+            self.object.workspacegroupaccess_set.all(), exclude="workspace"
+        )
 
 
 class WorkspaceCreate(CreateView):
