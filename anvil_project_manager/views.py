@@ -1,5 +1,5 @@
 from django.urls import reverse
-from django.views.generic import CreateView, DetailView, TemplateView
+from django.views.generic import CreateView, DeleteView, DetailView, TemplateView
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import models, tables
@@ -114,6 +114,13 @@ class GroupMembershipList(SingleTableView):
     table_class = tables.GroupMembershipTable
 
 
+class GroupMembershipDelete(DeleteView):
+    model = models.GroupMembership
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:group_membership:list")
+
+
 class WorkspaceGroupAccessDetail(DetailView):
     model = models.WorkspaceGroupAccess
 
@@ -129,3 +136,10 @@ class WorkspaceGroupAccessCreate(CreateView):
 class WorkspaceGroupAccessList(SingleTableView):
     model = models.WorkspaceGroupAccess
     table_class = tables.WorkspaceGroupAccessTable
+
+
+class WorkspaceGroupAccessDelete(DeleteView):
+    model = models.WorkspaceGroupAccess
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:workspace_group_access:list")

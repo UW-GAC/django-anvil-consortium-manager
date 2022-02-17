@@ -45,6 +45,7 @@ group_membership_patterns = (
         path("<int:pk>", views.GroupMembershipDetail.as_view(), name="detail"),
         path("new/", views.GroupMembershipCreate.as_view(), name="new"),
         path("", views.GroupMembershipList.as_view(), name="list"),
+        path("<int:pk>/delete", views.GroupMembershipDelete.as_view(), name="delete"),
     ],
     "group_membership",
 )
@@ -54,6 +55,9 @@ workspace_group_access_patterns = (
         path("<int:pk>", views.WorkspaceGroupAccessDetail.as_view(), name="detail"),
         path("new/", views.WorkspaceGroupAccessCreate.as_view(), name="new"),
         path("", views.WorkspaceGroupAccessList.as_view(), name="list"),
+        path(
+            "<int:pk>/delete", views.WorkspaceGroupAccessDelete.as_view(), name="delete"
+        ),
     ],
     "workspace_group_access",
 )
