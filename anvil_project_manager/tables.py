@@ -44,6 +44,9 @@ class WorkspaceTable(tables.Table):
 
 
 class GroupMembershipTable(tables.Table):
+    pk = tables.LinkColumn(
+        "anvil_project_manager:group_membership:detail", args=[tables.utils.A("pk")]
+    )
     researcher = tables.LinkColumn(
         "anvil_project_manager:researchers:detail",
         args=[tables.utils.A("researcher__pk")],
@@ -55,10 +58,14 @@ class GroupMembershipTable(tables.Table):
 
     class Meta:
         models = models.GroupMembership
-        fields = ("researcher", "group", "role")
+        fields = ("pk", "researcher", "group", "role")
 
 
 class WorkspaceGroupAccessTable(tables.Table):
+    pk = tables.LinkColumn(
+        "anvil_project_manager:workspace_group_access:detail",
+        args=[tables.utils.A("pk")],
+    )
     workspace = tables.LinkColumn(
         "anvil_project_manager:workspaces:detail",
         args=[tables.utils.A("workspace__pk")],
@@ -70,4 +77,4 @@ class WorkspaceGroupAccessTable(tables.Table):
 
     class Meta:
         model = models.WorkspaceGroupAccess
-        fields = ("workspace", "group", "access")
+        fields = ("pk", "workspace", "group", "access")
