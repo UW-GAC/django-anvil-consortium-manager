@@ -9,8 +9,14 @@ class Index(TemplateView):
     template_name = "anvil_project_manager/index.html"
 
 
-class BillingProjectDetail(DetailView):
+class BillingProjectDetail(SingleTableMixin, DetailView):
     model = models.BillingProject
+    context_table_name = "workspace_table"
+
+    def get_table(self):
+        return tables.WorkspaceTable(
+            self.object.workspace_set.all(), exclude="billing_project"
+        )
 
 
 class BillingProjectCreate(CreateView):

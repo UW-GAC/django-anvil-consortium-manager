@@ -54,6 +54,52 @@ class BillingProjectDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
+    def test_workspace_table(self):
+        """The workspace table exists."""
+        obj = factories.BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["workspace_table"], tables.WorkspaceTable
+        )
+
+    def test_workspace_table_none(self):
+        """No workspaces are shown if the billing project does not have any workspaces."""
+        billing_project = factories.BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
+    def test_workspace_table_one(self):
+        """One workspace is shown if the group have access to one workspace."""
+        billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create(billing_project=billing_project)
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
+
+    def test_workspace_table_two(self):
+        """Two workspaces are shown if the group have access to two workspaces."""
+        billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create_batch(2, billing_project=billing_project)
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
+
+    def test_shows_workspace_for_only_this_group(self):
+        """Only shows workspcaes that this group has access to."""
+        billing_project = factories.BillingProjectFactory.create()
+        other_billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create(billing_project=other_billing_project)
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
 
 class BillingProjectCreateTest(TestCase):
     def setUp(self):
