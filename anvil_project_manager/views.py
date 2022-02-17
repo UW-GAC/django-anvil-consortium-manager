@@ -50,6 +50,9 @@ class GroupDetail(DetailView):
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all()
         )
+        context["researcher_table"] = tables.GroupMembershipTable(
+            self.object.groupmembership_set.all()
+        )
         return context
 
 
