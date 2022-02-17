@@ -216,6 +216,9 @@ class ResearcherDetailTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["group_table"], tables.GroupMembershipTable
+        )
 
     def test_group_membership_none(self):
         """No groups are shown if the researcher is not part of any groups."""
@@ -418,6 +421,9 @@ class GroupDetailTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["workspace_table"], tables.WorkspaceGroupAccessTable
+        )
 
     def test_workspace_table_none(self):
         """No workspaces are shown if the group does not have access to any workspaces."""
@@ -461,6 +467,9 @@ class GroupDetailTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("researcher_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["researcher_table"], tables.GroupMembershipTable
+        )
 
     def test_researcher_table_none(self):
         """No researchers are shown if the group has no researchers."""
@@ -658,6 +667,9 @@ class WorkspaceDetailTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["group_table"], tables.WorkspaceGroupAccessTable
+        )
 
     def test_group_table_none(self):
         """No groups are shown if the workspace has not been shared with any groups."""
