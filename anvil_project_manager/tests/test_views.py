@@ -54,6 +54,52 @@ class BillingProjectDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
+    def test_workspace_table(self):
+        """The workspace table exists."""
+        obj = factories.BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["workspace_table"], tables.WorkspaceTable
+        )
+
+    def test_workspace_table_none(self):
+        """No workspaces are shown if the billing project does not have any workspaces."""
+        billing_project = factories.BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
+    def test_workspace_table_one(self):
+        """One workspace is shown if the group have access to one workspace."""
+        billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create(billing_project=billing_project)
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
+
+    def test_workspace_table_two(self):
+        """Two workspaces are shown if the group have access to two workspaces."""
+        billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create_batch(2, billing_project=billing_project)
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
+
+    def test_shows_workspace_for_only_this_group(self):
+        """Only shows workspcaes that this group has access to."""
+        billing_project = factories.BillingProjectFactory.create()
+        other_billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create(billing_project=other_billing_project)
+        request = self.factory.get(self.get_url(billing_project.pk))
+        response = self.get_view()(request, pk=billing_project.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
 
 class BillingProjectCreateTest(TestCase):
     def setUp(self):
@@ -209,6 +255,54 @@ class ResearcherDetailTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
+
+    def test_group_membership_table(self):
+        """The group membership table exists."""
+        obj = factories.ResearcherFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["group_table"], tables.GroupMembershipTable
+        )
+
+    def test_group_membership_none(self):
+        """No groups are shown if the researcher is not part of any groups."""
+        researcher = factories.ResearcherFactory.create()
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
+    def test_group_membership_one(self):
+        """One group is shown if the researcher is part of one group."""
+        researcher = factories.ResearcherFactory.create()
+        factories.GroupMembershipFactory.create(researcher=researcher)
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+
+    def test_group_membership_two(self):
+        """Two groups are shown if the researcher is part of two groups."""
+        researcher = factories.ResearcherFactory.create()
+        factories.GroupMembershipFactory.create_batch(2, researcher=researcher)
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 2)
+
+    def test_shows_group_membership_for_only_that_user(self):
+        """Only shows groups that this research is part of."""
+        researcher = factories.ResearcherFactory.create(email="email_1@example.com")
+        other_researcher = factories.ResearcherFactory.create(
+            email="email_2@example.com"
+        )
+        factories.GroupMembershipFactory.create(researcher=other_researcher)
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
 
 class ResearcherCreateTest(TestCase):
@@ -367,6 +461,98 @@ class GroupDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
+    def test_workspace_table(self):
+        """The workspace table exists."""
+        obj = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["workspace_table"], tables.WorkspaceGroupAccessTable
+        )
+
+    def test_workspace_table_none(self):
+        """No workspaces are shown if the group does not have access to any workspaces."""
+        group = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
+    def test_workspace_table_one(self):
+        """One workspace is shown if the group have access to one workspace."""
+        group = factories.GroupFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
+
+    def test_workspace_table_two(self):
+        """Two workspaces are shown if the group have access to two workspaces."""
+        group = factories.GroupFactory.create()
+        factories.WorkspaceGroupAccessFactory.create_batch(2, group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
+
+    def test_shows_workspace_for_only_this_group(self):
+        """Only shows workspcaes that this group has access to."""
+        group = factories.GroupFactory.create(name="group-1")
+        other_group = factories.GroupFactory.create(name="group-2")
+        factories.WorkspaceGroupAccessFactory.create(group=other_group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
+    def test_researcher_table(self):
+        """The researcher table exists."""
+        obj = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("researcher_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["researcher_table"], tables.GroupMembershipTable
+        )
+
+    def test_researcher_table_none(self):
+        """No researchers are shown if the group has no researchers."""
+        group = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("researcher_table", response.context_data)
+        self.assertEqual(len(response.context_data["researcher_table"].rows), 0)
+
+    def test_researcher_table_one(self):
+        """One researchers is shown if the group has only that researcher."""
+        group = factories.GroupFactory.create()
+        factories.GroupMembershipFactory.create(group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("researcher_table", response.context_data)
+        self.assertEqual(len(response.context_data["researcher_table"].rows), 1)
+
+    def test_researcher_table_two(self):
+        """Two researchers are shown if the group has only those researchers."""
+        group = factories.GroupFactory.create()
+        factories.GroupMembershipFactory.create_batch(2, group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("researcher_table", response.context_data)
+        self.assertEqual(len(response.context_data["researcher_table"].rows), 2)
+
+    def test_shows_researcher_for_only_this_group(self):
+        """Only shows researchers that are in this group."""
+        group = factories.GroupFactory.create(name="group-1")
+        other_group = factories.GroupFactory.create(name="group-2")
+        factories.GroupMembershipFactory.create(group=other_group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("researcher_table", response.context_data)
+        self.assertEqual(len(response.context_data["researcher_table"].rows), 0)
+
 
 class GroupCreateTest(TestCase):
     def setUp(self):
@@ -520,6 +706,52 @@ class WorkspaceDetailTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
+
+    def test_group_table(self):
+        """The workspace group access table exists."""
+        obj = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["group_table"], tables.WorkspaceGroupAccessTable
+        )
+
+    def test_group_table_none(self):
+        """No groups are shown if the workspace has not been shared with any groups."""
+        workspace = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
+    def test_group_table_one(self):
+        """One group is shown if the workspace has been shared with one group."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+
+    def test_group_table_two(self):
+        """Two groups are shown if the workspace has been shared with two groups."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create_batch(2, workspace=workspace)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 2)
+
+    def test_shows_workspace_group_access_for_only_that_workspace(self):
+        """Only shows groups that this workspace has been shared with."""
+        workspace = factories.WorkspaceFactory.create(name="workspace-1")
+        other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
+        factories.WorkspaceGroupAccessFactory.create(workspace=other_workspace)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
 
 class WorkspaceCreateTest(TestCase):

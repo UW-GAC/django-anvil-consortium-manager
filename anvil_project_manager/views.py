@@ -1,6 +1,6 @@
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, TemplateView
-from django_tables2 import SingleTableView
+from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import models, tables
 
@@ -9,8 +9,14 @@ class Index(TemplateView):
     template_name = "anvil_project_manager/index.html"
 
 
-class BillingProjectDetail(DetailView):
+class BillingProjectDetail(SingleTableMixin, DetailView):
     model = models.BillingProject
+    context_table_name = "workspace_table"
+
+    def get_table(self):
+        return tables.WorkspaceTable(
+            self.object.workspace_set.all(), exclude="billing_project"
+        )
 
 
 class BillingProjectCreate(CreateView):
@@ -23,8 +29,14 @@ class BillingProjectList(SingleTableView):
     table_class = tables.BillingProjectTable
 
 
-class ResearcherDetail(DetailView):
+class ResearcherDetail(SingleTableMixin, DetailView):
     model = models.Researcher
+    context_table_name = "group_table"
+
+    def get_table(self):
+        return tables.GroupMembershipTable(
+            self.object.groupmembership_set.all(), exclude="researcher"
+        )
 
 
 class ResearcherCreate(CreateView):
@@ -40,6 +52,16 @@ class ResearcherList(SingleTableView):
 class GroupDetail(DetailView):
     model = models.Group
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace_table"] = tables.WorkspaceGroupAccessTable(
+            self.object.workspacegroupaccess_set.all(), exclude="group"
+        )
+        context["researcher_table"] = tables.GroupMembershipTable(
+            self.object.groupmembership_set.all(), exclude="group"
+        )
+        return context
+
 
 class GroupCreate(CreateView):
     model = models.Group
@@ -51,8 +73,15 @@ class GroupList(SingleTableView):
     table_class = tables.GroupTable
 
 
-class WorkspaceDetail(DetailView):
+class WorkspaceDetail(SingleTableMixin, DetailView):
     model = models.Workspace
+    table_class = tables.WorkspaceGroupAccessTable
+    context_table_name = "group_table"
+
+    def get_table(self):
+        return tables.WorkspaceGroupAccessTable(
+            self.object.workspacegroupaccess_set.all(), exclude="workspace"
+        )
 
 
 class WorkspaceCreate(CreateView):
