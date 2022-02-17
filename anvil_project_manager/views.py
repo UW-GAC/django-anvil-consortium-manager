@@ -56,8 +56,13 @@ class GroupList(SingleTableView):
     table_class = tables.GroupTable
 
 
-class WorkspaceDetail(DetailView):
+class WorkspaceDetail(SingleTableMixin, DetailView):
     model = models.Workspace
+    table_class = tables.WorkspaceGroupAccessTable
+    context_table_name = "group_table"
+
+    def get_table_data(self):
+        return self.object.workspacegroupaccess_set.all()
 
 
 class WorkspaceCreate(CreateView):

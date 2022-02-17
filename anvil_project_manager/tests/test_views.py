@@ -566,6 +566,49 @@ class WorkspaceDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
+    def test_workspacegroup_table(self):
+        """The workspace group access table exists."""
+        obj = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("group_table", response.context_data)
+
+    def test_workspacegroup_table_none(self):
+        """No groups are shown if the workspace has not been shared with any groups."""
+        workspace = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
+    def test_workspacegroup_table_one(self):
+        """One group is shown if the workspace has been shared with one group."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+
+    def test_workspacegroup_table_two(self):
+        """Two groups are shown if the workspace has been shared with two groups."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create_batch(2, workspace=workspace)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 2)
+
+    def test_shows_workspace_group_access_for_only_that_workspace(self):
+        """Only shows groups that this workspace has been shared with."""
+        workspace = factories.WorkspaceFactory.create(name="workspace-1")
+        other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
+        factories.WorkspaceGroupAccessFactory.create(workspace=other_workspace)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
 
 class WorkspaceCreateTest(TestCase):
     def setUp(self):
