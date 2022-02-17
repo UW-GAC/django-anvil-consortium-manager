@@ -1,6 +1,6 @@
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, TemplateView
-from django_tables2 import SingleTableView
+from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import models, tables
 
@@ -23,8 +23,13 @@ class BillingProjectList(SingleTableView):
     table_class = tables.BillingProjectTable
 
 
-class ResearcherDetail(DetailView):
+class ResearcherDetail(SingleTableMixin, DetailView):
     model = models.Researcher
+    table_class = tables.GroupMembershipTable
+    context_table_name = "group_table"
+
+    def get_table_data(self):
+        return self.object.groupmembership_set.all()
 
 
 class ResearcherCreate(CreateView):

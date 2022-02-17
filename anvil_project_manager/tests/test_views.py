@@ -210,6 +210,51 @@ class ResearcherDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
+    def test_group_membership_table(self):
+        """The group membership table exists."""
+        obj = factories.ResearcherFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("group_table", response.context_data)
+
+    def test_group_membership_none(self):
+        """No groups are shown if the researcher is not part of any groups."""
+        researcher = factories.ResearcherFactory.create()
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
+    def test_group_membership_one(self):
+        """One group is shown if the researcher is part of one group."""
+        researcher = factories.ResearcherFactory.create()
+        factories.GroupMembershipFactory.create(researcher=researcher)
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+
+    def test_group_membership_two(self):
+        """Two groups are shown if the researcher is part of two groups."""
+        researcher = factories.ResearcherFactory.create()
+        factories.GroupMembershipFactory.create_batch(2, researcher=researcher)
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 2)
+
+    def test_shows_group_membership_for_only_that_user(self):
+        """Only shows groups that this research is part of."""
+        researcher = factories.ResearcherFactory.create(email="email_1@example.com")
+        other_researcher = factories.ResearcherFactory.create(
+            email="email_2@example.com"
+        )
+        factories.GroupMembershipFactory.create(researcher=other_researcher)
+        request = self.factory.get(self.get_url(researcher.pk))
+        response = self.get_view()(request, pk=researcher.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
 
 class ResearcherCreateTest(TestCase):
     def setUp(self):
