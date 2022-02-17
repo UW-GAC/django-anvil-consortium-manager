@@ -60,7 +60,6 @@ class WorkspaceCreate(CreateView):
     fields = (
         "billing_project",
         "name",
-        "authorization_domain",
     )
 
 

@@ -37,14 +37,10 @@ class WorkspaceTable(tables.Table):
     pk = tables.LinkColumn(
         "anvil_project_manager:workspaces:detail", args=[tables.utils.A("pk")]
     )
-    authorization_domain = tables.LinkColumn(
-        "anvil_project_manager:groups:detail",
-        args=[tables.utils.A("authorization_domain__pk")],
-    )
 
     class Meta:
         model = models.Workspace
-        fields = ("pk", "billing_project", "name", "authorization_domain")
+        fields = ("pk", "billing_project", "name")
 
 
 class GroupMembershipTable(tables.Table):

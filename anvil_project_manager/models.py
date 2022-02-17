@@ -65,9 +65,6 @@ class Workspace(models.Model):
     # For internal consistency, call it "billing project" here.
     billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
-    authorization_domain = models.ForeignKey(
-        "Group", on_delete=models.PROTECT, null=True, blank=True
-    )
 
     class Meta:
         constraints = [
