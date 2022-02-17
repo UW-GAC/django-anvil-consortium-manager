@@ -118,6 +118,11 @@ class GroupMembership(models.Model):
             role=self.role,
         )
 
+    def get_absolute_url(self):
+        return reverse(
+            "anvil_project_manager:group_membership:detail", kwargs={"pk": self.pk}
+        )
+
 
 class WorkspaceGroupAccess(models.Model):
     """A model to store which groups have access to a workspace."""
@@ -148,4 +153,10 @@ class WorkspaceGroupAccess(models.Model):
             group=self.group,
             access=self.access,
             workspace=self.workspace,
+        )
+
+    def get_absolute_url(self):
+        return reverse(
+            "anvil_project_manager:workspace_group_access:detail",
+            kwargs={"pk": self.pk},
         )
