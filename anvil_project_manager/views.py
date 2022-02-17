@@ -42,8 +42,13 @@ class ResearcherList(SingleTableView):
     table_class = tables.ResearcherTable
 
 
-class GroupDetail(DetailView):
+class GroupDetail(SingleTableMixin, DetailView):
     model = models.Group
+    table_class = tables.WorkspaceGroupAccessTable
+    context_table_name = "workspace_table"
+
+    def get_table_data(self):
+        return self.object.workspacegroupaccess_set.all()
 
 
 class GroupCreate(CreateView):

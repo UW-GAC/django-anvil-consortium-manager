@@ -412,6 +412,49 @@ class GroupDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
+    def test_workspace_table(self):
+        """The workspace table exists."""
+        obj = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("workspace_table", response.context_data)
+
+    def test_workspace_table_none(self):
+        """No workspaces are shown if the group does not have access to any workspaces."""
+        group = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
+    def test_workspace_table_one(self):
+        """One workspace is shown if the group have access to one workspace."""
+        group = factories.GroupFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
+
+    def test_workspace_table_two(self):
+        """Two workspaces are shown if the group have access to two workspaces."""
+        group = factories.GroupFactory.create()
+        factories.WorkspaceGroupAccessFactory.create_batch(2, group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
+
+    def test_shows_workspace_for_only_this_group(self):
+        """Only shows workspcaes that this group has access to."""
+        group = factories.GroupFactory.create(name="group-1")
+        other_group = factories.GroupFactory.create(name="group-2")
+        factories.WorkspaceGroupAccessFactory.create(group=other_group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
+
 
 class GroupCreateTest(TestCase):
     def setUp(self):
