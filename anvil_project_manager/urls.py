@@ -42,6 +42,7 @@ workspace_patterns = (
 
 group_membership_patterns = (
     [
+        path("<int:pk>", views.GroupMembershipDetail.as_view(), name="detail"),
         path("new/", views.GroupMembershipCreate.as_view(), name="new"),
         path("", views.GroupMembershipList.as_view(), name="list"),
     ],
@@ -50,6 +51,7 @@ group_membership_patterns = (
 
 workspace_group_access_patterns = (
     [
+        path("<int:pk>", views.WorkspaceGroupAccessDetail.as_view(), name="detail"),
         path("new/", views.WorkspaceGroupAccessCreate.as_view(), name="new"),
         path("", views.WorkspaceGroupAccessList.as_view(), name="list"),
     ],

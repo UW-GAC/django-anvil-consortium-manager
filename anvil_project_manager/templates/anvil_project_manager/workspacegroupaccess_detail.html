@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Workspace group access: {{ object }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+      <h2>Workspace group access: {{ object }}</h2>
+
+      <ul>
+        <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>
+        <li>Workspace: <a href="{{object.workspace.get_absolute_url}}"> {{ object.workspace}} </a></li>
+        <li>Access: {{ object.access }}</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+</div>
+{% endblock content %}

@@ -97,6 +97,10 @@ class WorkspaceList(SingleTableView):
     table_class = tables.WorkspaceTable
 
 
+class GroupMembershipDetail(DetailView):
+    model = models.GroupMembership
+
+
 class GroupMembershipCreate(CreateView):
     model = models.GroupMembership
     fields = ("researcher", "group", "role")
@@ -108,6 +112,10 @@ class GroupMembershipCreate(CreateView):
 class GroupMembershipList(SingleTableView):
     model = models.GroupMembership
     table_class = tables.GroupMembershipTable
+
+
+class WorkspaceGroupAccessDetail(DetailView):
+    model = models.WorkspaceGroupAccess
 
 
 class WorkspaceGroupAccessCreate(CreateView):

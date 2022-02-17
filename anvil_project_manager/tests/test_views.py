@@ -960,6 +960,34 @@ class WorkspaceListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
+class GroupMembershipDetailTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:group_membership:detail", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupMembershipDetail.as_view()
+
+    def test_view_status_code_with_existing_object(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.GroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_invalid_pk(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.GroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk + 1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=obj.pk + 1)
+
+
 class GroupMembershipCreateTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -1284,6 +1312,34 @@ class GroupMembershipListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class WorkspaceGroupAccessDetailTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:workspace_group_access:detail", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceGroupAccessDetail.as_view()
+
+    def test_view_status_code_with_existing_object(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_invalid_pk(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.get(self.get_url(obj.pk + 1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=obj.pk + 1)
 
 
 class WorkspaceGroupAccessCreateTest(TestCase):
