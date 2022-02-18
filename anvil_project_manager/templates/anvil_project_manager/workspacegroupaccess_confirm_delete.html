@@ -16,14 +16,11 @@
 
       <p>Are you sure you want to remove access to <a href="{{ object.workspace.get_absolute_url }}">{{ object.workspace }}</a> for <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a>?</p>
 
-      <form method="POST"
-      action="{% url 'anvil_project_manager:workspace_group_access:delete' pk=object.pk %}"
-      >
-        {% csrf_token %}
-        <input type="submit" class="btn btn-danger" value="Yes, remove"/>
-        <a href="{{ object.get_absolute_url }}"
-        class="btn btn-secondary" role="button">
-        No, cancel</a>
+      <form method="POST">{% csrf_token %}
+          {{ form }}
+          <input type="submit" class="btn btn-danger" value="Yes, remove"/>
+          <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">
+          No, cancel</a>
       </form>
 
     </div>
