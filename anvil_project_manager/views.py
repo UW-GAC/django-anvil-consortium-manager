@@ -1,5 +1,5 @@
 from django.urls import reverse
-from django.views.generic import CreateView, DetailView, TemplateView
+from django.views.generic import CreateView, DeleteView, DetailView, TemplateView
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import models, tables
@@ -29,6 +29,13 @@ class BillingProjectList(SingleTableView):
     table_class = tables.BillingProjectTable
 
 
+class BillingProjectDelete(DeleteView):
+    model = models.BillingProject
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:billing_projects:list")
+
+
 class ResearcherDetail(SingleTableMixin, DetailView):
     model = models.Researcher
     context_table_name = "group_table"
@@ -47,6 +54,13 @@ class ResearcherCreate(CreateView):
 class ResearcherList(SingleTableView):
     model = models.Researcher
     table_class = tables.ResearcherTable
+
+
+class ResearcherDelete(DeleteView):
+    model = models.Researcher
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:researchers:list")
 
 
 class GroupDetail(DetailView):
@@ -73,6 +87,13 @@ class GroupList(SingleTableView):
     table_class = tables.GroupTable
 
 
+class GroupDelete(DeleteView):
+    model = models.Group
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:groups:list")
+
+
 class WorkspaceDetail(SingleTableMixin, DetailView):
     model = models.Workspace
     table_class = tables.WorkspaceGroupAccessTable
@@ -97,6 +118,17 @@ class WorkspaceList(SingleTableView):
     table_class = tables.WorkspaceTable
 
 
+class WorkspaceDelete(DeleteView):
+    model = models.Workspace
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:workspaces:list")
+
+
+class GroupMembershipDetail(DetailView):
+    model = models.GroupMembership
+
+
 class GroupMembershipCreate(CreateView):
     model = models.GroupMembership
     fields = ("researcher", "group", "role")
@@ -110,6 +142,17 @@ class GroupMembershipList(SingleTableView):
     table_class = tables.GroupMembershipTable
 
 
+class GroupMembershipDelete(DeleteView):
+    model = models.GroupMembership
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:group_membership:list")
+
+
+class WorkspaceGroupAccessDetail(DetailView):
+    model = models.WorkspaceGroupAccess
+
+
 class WorkspaceGroupAccessCreate(CreateView):
     model = models.WorkspaceGroupAccess
     fields = ("workspace", "group", "access")
@@ -121,3 +164,10 @@ class WorkspaceGroupAccessCreate(CreateView):
 class WorkspaceGroupAccessList(SingleTableView):
     model = models.WorkspaceGroupAccess
     table_class = tables.WorkspaceGroupAccessTable
+
+
+class WorkspaceGroupAccessDelete(DeleteView):
+    model = models.WorkspaceGroupAccess
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:workspace_group_access:list")

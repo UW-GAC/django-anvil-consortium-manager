@@ -214,6 +214,11 @@ class GroupMembershipTest(TestCase):
         )
         self.assertEqual(instance.__str__(), expected_string)
 
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.GroupMembershipFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
+
     def test_same_researcher_in_two_groups(self):
         """The same researcher can be in two groups."""
         researcher = factories.ResearcherFactory()
@@ -290,6 +295,11 @@ class WorkspaceGroupAccessTest(TestCase):
         self.assertIsInstance(instance.__str__(), str)
         expected_string = "test-group with READER to test-namespace/test-workspace"
         self.assertEqual(instance.__str__(), expected_string)
+
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.WorkspaceGroupAccessFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_same_group_in_two_workspaces(self):
         """The same group can have access to two workspaces."""

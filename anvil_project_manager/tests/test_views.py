@@ -229,6 +229,64 @@ class BillingProjectListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
+class BillingProjectDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:billing_projects:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.BillingProjectDelete.as_view()
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        object = factories.BillingProjectFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.BillingProjectFactory.create()
+        other_object = factories.BillingProjectFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        self.assertQuerysetEqual(
+            models.BillingProject.objects.all(),
+            models.BillingProject.objects.filter(pk=other_object.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.BillingProjectFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response, reverse("anvil_project_manager:billing_projects:list")
+        )
+
+
 class ResearcherDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -432,6 +490,64 @@ class ResearcherListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class ResearcherDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:researchers:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ResearcherDelete.as_view()
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.ResearcherFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        object = factories.ResearcherFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Researcher.objects.count(), 0)
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.ResearcherFactory.create()
+        other_object = factories.ResearcherFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Researcher.objects.count(), 1)
+        self.assertQuerysetEqual(
+            models.Researcher.objects.all(),
+            models.Researcher.objects.filter(pk=other_object.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.ResearcherFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response, reverse("anvil_project_manager:researchers:list")
+        )
 
 
 class GroupDetailTest(TestCase):
@@ -678,6 +794,62 @@ class GroupListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class GroupDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:groups:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupDelete.as_view()
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        object = factories.GroupFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Group.objects.count(), 0)
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.GroupFactory.create()
+        other_object = factories.GroupFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertQuerysetEqual(
+            models.Group.objects.all(),
+            models.Group.objects.filter(pk=other_object.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.GroupFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("anvil_project_manager:groups:list"))
 
 
 class WorkspaceDetailTest(TestCase):
@@ -958,6 +1130,90 @@ class WorkspaceListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class WorkspaceDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:workspaces:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceDelete.as_view()
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        object = factories.WorkspaceFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.WorkspaceFactory.create()
+        other_object = factories.WorkspaceFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertQuerysetEqual(
+            models.Workspace.objects.all(),
+            models.Workspace.objects.filter(pk=other_object.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.WorkspaceFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("anvil_project_manager:workspaces:list"))
+
+
+class GroupMembershipDetailTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:group_membership:detail", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupMembershipDetail.as_view()
+
+    def test_view_status_code_with_existing_object(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.GroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_invalid_pk(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.GroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk + 1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=obj.pk + 1)
 
 
 class GroupMembershipCreateTest(TestCase):
@@ -1284,6 +1540,92 @@ class GroupMembershipListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class GroupMembershipDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:group_membership:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupMembershipDelete.as_view()
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.GroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        object = factories.GroupMembershipFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.GroupMembership.objects.count(), 0)
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.GroupMembershipFactory.create()
+        other_object = factories.GroupMembershipFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.GroupMembership.objects.count(), 1)
+        self.assertQuerysetEqual(
+            models.GroupMembership.objects.all(),
+            models.GroupMembership.objects.filter(pk=other_object.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.GroupMembershipFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response, reverse("anvil_project_manager:group_membership:list")
+        )
+
+
+class WorkspaceGroupAccessDetailTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:workspace_group_access:detail", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceGroupAccessDetail.as_view()
+
+    def test_view_status_code_with_existing_object(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_invalid_pk(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.get(self.get_url(obj.pk + 1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=obj.pk + 1)
 
 
 class WorkspaceGroupAccessCreateTest(TestCase):
@@ -1641,3 +1983,61 @@ class WorkspaceGroupAccessListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class WorkspaceGroupAccessDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:workspace_group_access:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceGroupAccessDelete.as_view()
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        object = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.WorkspaceGroupAccessFactory.create()
+        other_object = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        self.assertQuerysetEqual(
+            models.WorkspaceGroupAccess.objects.all(),
+            models.WorkspaceGroupAccess.objects.filter(pk=other_object.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.WorkspaceGroupAccessFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response, reverse("anvil_project_manager:workspace_group_access:list")
+        )

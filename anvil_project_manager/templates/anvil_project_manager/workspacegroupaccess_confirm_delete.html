@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Remove Workspace Group Access: {{ object }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+
+      <h2>Remove Workspace Group Access</h2>
+
+      <h2>{{ object }}</h2>
+
+      <p>Are you sure you want to remove access to <a href="{{ object.workspace.get_absolute_url }}">{{ object.workspace }}</a> for <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a>?</p>
+
+      <form method="POST">{% csrf_token %}
+          {{ form }}
+          <input type="submit" class="btn btn-danger" value="Yes, remove"/>
+          <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">
+          No, cancel</a>
+      </form>
+
+    </div>
+  </div>
+
+
+</div>
+{% endblock content %}
