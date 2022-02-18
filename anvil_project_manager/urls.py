@@ -9,6 +9,7 @@ billing_project_patterns = (
         path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
         path("new/", views.BillingProjectCreate.as_view(), name="new"),
         path("", views.BillingProjectList.as_view(), name="list"),
+        path("<int:pk>/delete", views.BillingProjectDelete.as_view(), name="delete"),
     ],
     "billing_projects",
 )
@@ -18,6 +19,7 @@ researcher_patterns = (
         path("<int:pk>", views.ResearcherDetail.as_view(), name="detail"),
         path("new/", views.ResearcherCreate.as_view(), name="new"),
         path("", views.ResearcherList.as_view(), name="list"),
+        path("<int:pk>/delete", views.ResearcherDelete.as_view(), name="delete"),
     ],
     "researchers",
 )
@@ -27,6 +29,7 @@ group_patterns = (
         path("<int:pk>", views.GroupDetail.as_view(), name="detail"),
         path("new/", views.GroupCreate.as_view(), name="new"),
         path("", views.GroupList.as_view(), name="list"),
+        path("<int:pk>/delete", views.GroupDelete.as_view(), name="delete"),
     ],
     "groups",
 )
@@ -36,6 +39,7 @@ workspace_patterns = (
         path("<int:pk>", views.WorkspaceDetail.as_view(), name="detail"),
         path("new/", views.WorkspaceCreate.as_view(), name="new"),
         path("", views.WorkspaceList.as_view(), name="list"),
+        path("<int:pk>/delete", views.WorkspaceDelete.as_view(), name="delete"),
     ],
     "workspaces",
 )

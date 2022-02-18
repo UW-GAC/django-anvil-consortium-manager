@@ -29,6 +29,13 @@ class BillingProjectList(SingleTableView):
     table_class = tables.BillingProjectTable
 
 
+class BillingProjectDelete(DeleteView):
+    model = models.BillingProject
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:billing_projects:list")
+
+
 class ResearcherDetail(SingleTableMixin, DetailView):
     model = models.Researcher
     context_table_name = "group_table"
@@ -47,6 +54,13 @@ class ResearcherCreate(CreateView):
 class ResearcherList(SingleTableView):
     model = models.Researcher
     table_class = tables.ResearcherTable
+
+
+class ResearcherDelete(DeleteView):
+    model = models.Researcher
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:researchers:list")
 
 
 class GroupDetail(DetailView):
@@ -73,6 +87,13 @@ class GroupList(SingleTableView):
     table_class = tables.GroupTable
 
 
+class GroupDelete(DeleteView):
+    model = models.Group
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:groups:list")
+
+
 class WorkspaceDetail(SingleTableMixin, DetailView):
     model = models.Workspace
     table_class = tables.WorkspaceGroupAccessTable
@@ -95,6 +116,13 @@ class WorkspaceCreate(CreateView):
 class WorkspaceList(SingleTableView):
     model = models.Workspace
     table_class = tables.WorkspaceTable
+
+
+class WorkspaceDelete(DeleteView):
+    model = models.Workspace
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:workspaces:list")
 
 
 class GroupMembershipDetail(DetailView):
