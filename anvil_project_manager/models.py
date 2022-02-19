@@ -6,14 +6,9 @@ class BillingProject(models.Model):
     """A model to store information about AnVIL billing projects."""
 
     name = models.SlugField(max_length=64, unique=True)
-    name_lower = models.CharField(max_length=64, unique=True)
 
     def __str__(self):
         return self.name
-
-    def save(self, *args, **kwargs):
-        self.name_lower = self.name.lower()
-        return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse(
@@ -44,14 +39,9 @@ class Group(models.Model):
     """A model to store information about AnVIL groups."""
 
     name = models.SlugField(max_length=64, unique=True)
-    name_lower = models.CharField(max_length=64, unique=True)
 
     def __str__(self):
         return "{name}".format(name=self.name)
-
-    def save(self, *args, **kwargs):
-        self.name_lower = self.name.lower()
-        return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})

@@ -40,14 +40,6 @@ class BillingProjectTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
-    def test_unique_name_case_insensitive(self):
-        """Name uniqueness does not depend on case."""
-        instance = BillingProject(name="my_project")
-        instance.save()
-        instance2 = BillingProject(name="My_PrOjEcT")
-        with self.assertRaises(IntegrityError):
-            instance2.save()
-
 
 class ResearcherTest(TestCase):
     def test_model_saving(self):
@@ -111,14 +103,6 @@ class GroupTest(TestCase):
         instance = Group(name=name)
         instance.save()
         instance2 = Group(name=name)
-        with self.assertRaises(IntegrityError):
-            instance2.save()
-
-    def test_unique_name_case_insensitive(self):
-        """Email uniqueness does not depend on case."""
-        instance = Group(name="my_group")
-        instance.save()
-        instance2 = Group(name="My_GrOuP")
         with self.assertRaises(IntegrityError):
             instance2.save()
 
