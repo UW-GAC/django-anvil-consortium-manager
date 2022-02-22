@@ -50,6 +50,7 @@ jobs:
     env:
       # postgres://user:password@host:port/database
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      CODECOV_TOKEN: "7c6ebf2c-48e5-4449-85fb-e3fb2ce9563d"
 
     steps:
 
@@ -72,3 +73,9 @@ jobs:
 
       - name: Test with pytest
         run:  pytest
+
+      - name: Run code coverage
+        run:  coverage run -m pytest
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
