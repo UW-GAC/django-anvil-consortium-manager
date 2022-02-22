@@ -34,6 +34,11 @@ class GroupFactory(DjangoModelFactory):
         model = models.Group
         django_get_or_create = ["name"]
 
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        """Override the default ``_create`` with a call to add_root(). Currently not working."""
+        return model_class.add_root(*args, **kwargs)
+
 
 class WorkspaceFactory(DjangoModelFactory):
     """A factory for the Workspace model."""
