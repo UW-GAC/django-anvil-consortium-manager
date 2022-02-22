@@ -17,3 +17,4 @@ django-redis==5.2.0  # https://github.com/jazzband/django-redis
 # My additions
 # ------------------------------------------------------------------------------
 django-tables2==2.4.1
+django_treebeard==4.5.1  # tree implementation; used for handling nested groups

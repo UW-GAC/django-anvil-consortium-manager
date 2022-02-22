@@ -1,5 +1,6 @@
 from django.db import models
 from django.urls import reverse
+from treebeard.mp_tree import MP_Node
 
 
 class BillingProject(models.Model):
@@ -34,7 +35,7 @@ class Account(models.Model):
         return reverse("anvil_project_manager:accounts:detail", kwargs={"pk": self.pk})
 
 
-class Group(models.Model):
+class Group(MP_Node):
     """A model to store information about AnVIL groups."""
 
     name = models.SlugField(max_length=64, unique=True)
