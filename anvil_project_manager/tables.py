@@ -51,6 +51,7 @@ class GroupMembershipTable(tables.Table):
         "anvil_project_manager:accounts:detail",
         args=[tables.utils.A("account__pk")],
     )
+    is_service_account = tables.BooleanColumn(accessor="account.is_service_account")
     group = tables.LinkColumn(
         "anvil_project_manager:groups:detail", args=[tables.utils.A("group__pk")]
     )
@@ -58,7 +59,7 @@ class GroupMembershipTable(tables.Table):
 
     class Meta:
         models = models.GroupMembership
-        fields = ("pk", "account", "group", "role")
+        fields = ("pk", "account", "is_service_account", "group", "role")
 
 
 class WorkspaceGroupAccessTable(tables.Table):
