@@ -27,3 +27,6 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# Required for coverage to work
+TEMPLATES[0]["OPTIONS"]["debug"] = True  # noqa

@@ -148,7 +148,7 @@ TEMPLATES = [
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
             ],
-            "debug": True,  # This should go in TEST
+            "debug": False,
         },
     }
 ]
