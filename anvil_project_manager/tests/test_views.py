@@ -287,36 +287,36 @@ class BillingProjectDeleteTest(TestCase):
         )
 
 
-class ResearcherDetailTest(TestCase):
+class AccountDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:researchers:detail", args=args)
+        return reverse("anvil_project_manager:accounts:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ResearcherDetail.as_view()
+        return views.AccountDetail.as_view()
 
     def test_view_status_code_with_existing_object(self):
         """Returns a successful status code for an existing object pk."""
-        obj = factories.ResearcherFactory.create()
+        obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.ResearcherFactory.create()
+        obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
     def test_group_membership_table(self):
         """The group membership table exists."""
-        obj = factories.ResearcherFactory.create()
+        obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
@@ -325,56 +325,54 @@ class ResearcherDetailTest(TestCase):
         )
 
     def test_group_membership_none(self):
-        """No groups are shown if the researcher is not part of any groups."""
-        researcher = factories.ResearcherFactory.create()
-        request = self.factory.get(self.get_url(researcher.pk))
-        response = self.get_view()(request, pk=researcher.pk)
+        """No groups are shown if the account is not part of any groups."""
+        account = factories.AccountFactory.create()
+        request = self.factory.get(self.get_url(account.pk))
+        response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
     def test_group_membership_one(self):
-        """One group is shown if the researcher is part of one group."""
-        researcher = factories.ResearcherFactory.create()
-        factories.GroupMembershipFactory.create(researcher=researcher)
-        request = self.factory.get(self.get_url(researcher.pk))
-        response = self.get_view()(request, pk=researcher.pk)
+        """One group is shown if the account is part of one group."""
+        account = factories.AccountFactory.create()
+        factories.GroupMembershipFactory.create(account=account)
+        request = self.factory.get(self.get_url(account.pk))
+        response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 1)
 
     def test_group_membership_two(self):
-        """Two groups are shown if the researcher is part of two groups."""
-        researcher = factories.ResearcherFactory.create()
-        factories.GroupMembershipFactory.create_batch(2, researcher=researcher)
-        request = self.factory.get(self.get_url(researcher.pk))
-        response = self.get_view()(request, pk=researcher.pk)
+        """Two groups are shown if the account is part of two groups."""
+        account = factories.AccountFactory.create()
+        factories.GroupMembershipFactory.create_batch(2, account=account)
+        request = self.factory.get(self.get_url(account.pk))
+        response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 2)
 
     def test_shows_group_membership_for_only_that_user(self):
         """Only shows groups that this research is part of."""
-        researcher = factories.ResearcherFactory.create(email="email_1@example.com")
-        other_researcher = factories.ResearcherFactory.create(
-            email="email_2@example.com"
-        )
-        factories.GroupMembershipFactory.create(researcher=other_researcher)
-        request = self.factory.get(self.get_url(researcher.pk))
-        response = self.get_view()(request, pk=researcher.pk)
+        account = factories.AccountFactory.create(email="email_1@example.com")
+        other_account = factories.AccountFactory.create(email="email_2@example.com")
+        factories.GroupMembershipFactory.create(account=other_account)
+        request = self.factory.get(self.get_url(account.pk))
+        response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
 
-class ResearcherCreateTest(TestCase):
+class AccountCreateTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:researchers:new", args=args)
+        return reverse("anvil_project_manager:accounts:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ResearcherCreate.as_view()
+        return views.AccountCreate.as_view()
 
     def test_status_code(self):
         """Returns successful response code."""
@@ -393,22 +391,23 @@ class ResearcherCreateTest(TestCase):
         request = self.factory.post(self.get_url(), {"email": "test@example.com"})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.Researcher.objects.latest("pk")
-        self.assertIsInstance(new_object, models.Researcher)
+        new_object = models.Account.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Account)
+        self.assertFalse(new_object.is_service_account)
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         response = self.client.post(self.get_url(), {"email": "test@example.com"})
-        new_object = models.Researcher.objects.latest("pk")
+        new_object = models.Account.objects.latest("pk")
         self.assertRedirects(
             response,
             new_object.get_absolute_url(),
         )
 
     def test_cannot_create_duplicate_object(self):
-        """Cannot create two researchers with the same email."""
-        obj = factories.ResearcherFactory.create()
+        """Cannot create two accounts with the same email."""
+        obj = factories.AccountFactory.create()
         request = self.factory.post(self.get_url(), {"email": obj.email})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -417,8 +416,8 @@ class ResearcherCreateTest(TestCase):
         self.assertIn("email", form.errors.keys())
         self.assertIn("already exists", form.errors["email"][0])
         self.assertQuerysetEqual(
-            models.Researcher.objects.all(),
-            models.Researcher.objects.filter(pk=obj.pk),
+            models.Account.objects.all(),
+            models.Account.objects.filter(pk=obj.pk),
         )
 
     def test_invalid_input(self):
@@ -430,7 +429,7 @@ class ResearcherCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors.keys())
         self.assertIn("valid email", form.errors["email"][0])
-        self.assertEqual(models.Researcher.objects.count(), 0)
+        self.assertEqual(models.Account.objects.count(), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -441,21 +440,32 @@ class ResearcherCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors.keys())
         self.assertIn("required", form.errors["email"][0])
-        self.assertEqual(models.Researcher.objects.count(), 0)
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_can_create_service_account(self):
+        """Can create a service account."""
+        request = self.factory.post(
+            self.get_url(), {"email": "test@example.com", "is_service_account": True}
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Account.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Account)
+        self.assertTrue(new_object.is_service_account)
 
 
-class ResearcherListTest(TestCase):
+class AccountListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:researchers:list", args=args)
+        return reverse("anvil_project_manager:accounts:list", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ResearcherList.as_view()
+        return views.AccountList.as_view()
 
     def test_view_status_code(self):
         request = self.factory.get(self.get_url())
@@ -466,7 +476,7 @@ class ResearcherListTest(TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.ResearcherTable)
+        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
@@ -476,7 +486,7 @@ class ResearcherListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_one_object(self):
-        factories.ResearcherFactory()
+        factories.AccountFactory()
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -484,7 +494,16 @@ class ResearcherListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.ResearcherFactory.create_batch(2)
+        factories.AccountFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_service_account(self):
+        factories.AccountFactory.create(is_service_account=True)
+        factories.AccountFactory.create(is_service_account=False)
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -492,22 +511,22 @@ class ResearcherListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class ResearcherDeleteTest(TestCase):
+class AccountDeleteTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:researchers:delete", args=args)
+        return reverse("anvil_project_manager:accounts:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ResearcherDelete.as_view()
+        return views.AccountDelete.as_view()
 
     def test_view_status_code(self):
         """Returns a successful status code for an existing object."""
-        object = factories.ResearcherFactory.create()
+        object = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
@@ -520,34 +539,40 @@ class ResearcherDeleteTest(TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.ResearcherFactory.create()
+        object = factories.AccountFactory.create()
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.Researcher.objects.count(), 0)
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_view_deletes_object_service_account(self):
+        """Posting submit to the form successfully deletes the service account object."""
+        object = factories.AccountFactory.create(is_service_account=True)
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Account.objects.count(), 0)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        object = factories.ResearcherFactory.create()
-        other_object = factories.ResearcherFactory.create()
+        object = factories.AccountFactory.create()
+        other_object = factories.AccountFactory.create()
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.Researcher.objects.count(), 1)
+        self.assertEqual(models.Account.objects.count(), 1)
         self.assertQuerysetEqual(
-            models.Researcher.objects.all(),
-            models.Researcher.objects.filter(pk=other_object.pk),
+            models.Account.objects.all(),
+            models.Account.objects.filter(pk=other_object.pk),
         )
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        object = factories.ResearcherFactory.create()
+        object = factories.AccountFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(
-            response, reverse("anvil_project_manager:researchers:list")
-        )
+        self.assertRedirects(response, reverse("anvil_project_manager:accounts:list"))
 
 
 class GroupDetailTest(TestCase):
@@ -623,51 +648,51 @@ class GroupDetailTest(TestCase):
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 
-    def test_researcher_table(self):
-        """The researcher table exists."""
+    def test_account_table(self):
+        """The account table exists."""
         obj = factories.GroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
-        self.assertIn("researcher_table", response.context_data)
+        self.assertIn("account_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["researcher_table"], tables.GroupMembershipTable
+            response.context_data["account_table"], tables.GroupMembershipTable
         )
 
-    def test_researcher_table_none(self):
-        """No researchers are shown if the group has no researchers."""
+    def test_account_table_none(self):
+        """No accounts are shown if the group has no accounts."""
         group = factories.GroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("researcher_table", response.context_data)
-        self.assertEqual(len(response.context_data["researcher_table"].rows), 0)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 0)
 
-    def test_researcher_table_one(self):
-        """One researchers is shown if the group has only that researcher."""
+    def test_account_table_one(self):
+        """One accounts is shown if the group has only that account."""
         group = factories.GroupFactory.create()
         factories.GroupMembershipFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("researcher_table", response.context_data)
-        self.assertEqual(len(response.context_data["researcher_table"].rows), 1)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 1)
 
-    def test_researcher_table_two(self):
-        """Two researchers are shown if the group has only those researchers."""
+    def test_account_table_two(self):
+        """Two accounts are shown if the group has only those accounts."""
         group = factories.GroupFactory.create()
         factories.GroupMembershipFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("researcher_table", response.context_data)
-        self.assertEqual(len(response.context_data["researcher_table"].rows), 2)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 2)
 
-    def test_shows_researcher_for_only_this_group(self):
-        """Only shows researchers that are in this group."""
+    def test_shows_account_for_only_this_group(self):
+        """Only shows accounts that are in this group."""
         group = factories.GroupFactory.create(name="group-1")
         other_group = factories.GroupFactory.create(name="group-2")
         factories.GroupMembershipFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("researcher_table", response.context_data)
-        self.assertEqual(len(response.context_data["researcher_table"].rows), 0)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 0)
 
 
 class GroupCreateTest(TestCase):
@@ -1244,12 +1269,12 @@ class GroupMembershipCreateTest(TestCase):
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         group = factories.GroupFactory.create()
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
-                "researcher": researcher.pk,
+                "account": account.pk,
                 "role": models.GroupMembership.MEMBER,
             },
         )
@@ -1262,12 +1287,12 @@ class GroupMembershipCreateTest(TestCase):
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         group = factories.GroupFactory.create()
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
-                "researcher": researcher.pk,
+                "account": account.pk,
                 "role": models.GroupMembership.ADMIN,
             },
         )
@@ -1281,12 +1306,12 @@ class GroupMembershipCreateTest(TestCase):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         group = factories.GroupFactory.create()
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
-                "researcher": researcher.pk,
+                "account": account.pk,
                 "role": models.GroupMembership.ADMIN,
             },
         )
@@ -1295,17 +1320,17 @@ class GroupMembershipCreateTest(TestCase):
         )
 
     def test_cannot_create_duplicate_object_with_same_role(self):
-        """Cannot create a second GroupMembership object for the same researcher and group with the same role."""
+        """Cannot create a second GroupMembership object for the same account and group with the same role."""
         group = factories.GroupFactory.create()
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         obj = factories.GroupMembershipFactory(
-            group=group, researcher=researcher, role=models.GroupMembership.MEMBER
+            group=group, account=account, role=models.GroupMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
-                "researcher": researcher.pk,
+                "account": account.pk,
                 "role": models.GroupMembership.MEMBER,
             },
         )
@@ -1320,17 +1345,17 @@ class GroupMembershipCreateTest(TestCase):
         )
 
     def test_cannot_create_duplicate_object_with_different_role(self):
-        """Cannot create a second GroupMembership object for the same researcher and group with a different role."""
+        """Cannot create a second GroupMembership object for the same account and group with a different role."""
         group = factories.GroupFactory.create()
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         obj = factories.GroupMembershipFactory(
-            group=group, researcher=researcher, role=models.GroupMembership.MEMBER
+            group=group, account=account, role=models.GroupMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
-                "researcher": researcher.pk,
+                "account": account.pk,
                 "role": models.GroupMembership.ADMIN,
             },
         )
@@ -1344,16 +1369,16 @@ class GroupMembershipCreateTest(TestCase):
             models.GroupMembership.objects.filter(pk=obj.pk),
         )
 
-    def test_can_add_two_groups_for_one_researcher(self):
+    def test_can_add_two_groups_for_one_account(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
         group_2 = factories.GroupFactory.create(name="test-group-2")
-        researcher = factories.ResearcherFactory.create()
-        factories.GroupMembershipFactory.create(group=group_1, researcher=researcher)
+        account = factories.AccountFactory.create()
+        factories.GroupMembershipFactory.create(group=group_1, account=account)
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group_2.pk,
-                "researcher": researcher.pk,
+                "account": account.pk,
                 "role": models.GroupMembership.MEMBER,
             },
         )
@@ -1361,16 +1386,16 @@ class GroupMembershipCreateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupMembership.objects.count(), 2)
 
-    def test_can_add_two_researchers_to_one_group(self):
+    def test_can_add_two_accounts_to_one_group(self):
         group = factories.GroupFactory.create()
-        researcher_1 = factories.ResearcherFactory.create(email="test_1@example.com")
-        researcher_2 = factories.ResearcherFactory.create(email="test_2@example.com")
-        factories.GroupMembershipFactory.create(group=group, researcher=researcher_1)
+        account_1 = factories.AccountFactory.create(email="test_1@example.com")
+        account_2 = factories.AccountFactory.create(email="test_2@example.com")
+        factories.GroupMembershipFactory.create(group=group, account=account_1)
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
-                "researcher": researcher_2.pk,
+                "account": account_2.pk,
                 "role": models.GroupMembership.MEMBER,
             },
         )
@@ -1378,14 +1403,14 @@ class GroupMembershipCreateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupMembership.objects.count(), 2)
 
-    def test_invalid_input_researcher(self):
-        """Posting invalid data to researcher field does not create an object."""
+    def test_invalid_input_account(self):
+        """Posting invalid data to account field does not create an object."""
         group = factories.GroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
-                "researcher": 1,
+                "account": 1,
                 "role": models.GroupMembership.MEMBER,
             },
         )
@@ -1393,18 +1418,18 @@ class GroupMembershipCreateTest(TestCase):
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("researcher", form.errors.keys())
-        self.assertIn("valid choice", form.errors["researcher"][0])
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("valid choice", form.errors["account"][0])
         self.assertEqual(models.GroupMembership.objects.count(), 0)
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
                 "group": 1,
-                "researcher": researcher.pk,
+                "account": account.pk,
                 "role": models.GroupMembership.MEMBER,
             },
         )
@@ -1419,10 +1444,10 @@ class GroupMembershipCreateTest(TestCase):
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
         group = factories.GroupFactory.create()
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {"group": group.pk, "researcher": researcher.pk, "role": "foo"},
+            {"group": group.pk, "account": account.pk, "role": "foo"},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1441,18 +1466,18 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
-        self.assertIn("researcher", form.errors.keys())
-        self.assertIn("required", form.errors["researcher"][0])
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("required", form.errors["account"][0])
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupMembership.objects.count(), 0)
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {"researcher": researcher.pk, "role": models.GroupMembership.MEMBER},
+            {"account": account.pk, "role": models.GroupMembership.MEMBER},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1462,8 +1487,8 @@ class GroupMembershipCreateTest(TestCase):
         self.assertIn("required", form.errors["group"][0])
         self.assertEqual(models.GroupMembership.objects.count(), 0)
 
-    def test_post_blank_data_researcher(self):
-        """Posting blank data to the researcher field does not create an object."""
+    def test_post_blank_data_account(self):
+        """Posting blank data to the account field does not create an object."""
         group = factories.GroupFactory.create()
         request = self.factory.post(
             self.get_url(), {"group": group.pk, "role": models.GroupMembership.MEMBER}
@@ -1472,16 +1497,16 @@ class GroupMembershipCreateTest(TestCase):
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("researcher", form.errors.keys())
-        self.assertIn("required", form.errors["researcher"][0])
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("required", form.errors["account"][0])
         self.assertEqual(models.GroupMembership.objects.count(), 0)
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         group = factories.GroupFactory.create()
         request = self.factory.post(
-            self.get_url(), {"group": group.pk, "researcher": researcher.pk}
+            self.get_url(), {"group": group.pk, "account": account.pk}
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)

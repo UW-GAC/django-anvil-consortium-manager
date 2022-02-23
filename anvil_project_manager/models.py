@@ -16,11 +16,12 @@ class BillingProject(models.Model):
         )
 
 
-class Researcher(models.Model):
-    """A model to store information about AnVIL researchers."""
+class Account(models.Model):
+    """A model to store information about AnVIL accounts."""
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
+    is_service_account = models.BooleanField()
 
     def __str__(self):
         return "{email}".format(email=self.email)
@@ -30,9 +31,7 @@ class Researcher(models.Model):
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse(
-            "anvil_project_manager:researchers:detail", kwargs={"pk": self.pk}
-        )
+        return reverse("anvil_project_manager:accounts:detail", kwargs={"pk": self.pk})
 
 
 class Group(models.Model):
@@ -80,7 +79,7 @@ class Workspace(models.Model):
 
 
 class GroupMembership(models.Model):
-    """A model to store which researchers are in a group."""
+    """A model to store which accounts are in a group."""
 
     MEMBER = "MEMBER"
     ADMIN = "ADMIN"
@@ -90,20 +89,20 @@ class GroupMembership(models.Model):
         (ADMIN, "Admin"),
     ]
 
-    researcher = models.ForeignKey("Researcher", on_delete=models.CASCADE)
+    account = models.ForeignKey("Account", on_delete=models.CASCADE)
     group = models.ForeignKey("Group", on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["researcher", "group"], name="unique_group_membership"
+                fields=["account", "group"], name="unique_group_membership"
             )
         ]
 
     def __str__(self):
-        return "{researcher} as {role} in {group}".format(
-            researcher=self.researcher,
+        return "{account} as {role} in {group}".format(
+            account=self.account,
             group=self.group,
             role=self.role,
         )

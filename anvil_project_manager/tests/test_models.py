@@ -2,10 +2,10 @@ from django.db.utils import IntegrityError
 from django.test import TestCase
 
 from ..models import (
+    Account,
     BillingProject,
     Group,
     GroupMembership,
-    Researcher,
     Workspace,
     WorkspaceGroupAccess,
 )
@@ -41,39 +41,64 @@ class BillingProjectTest(TestCase):
             instance2.save()
 
 
-class ResearcherTest(TestCase):
+class AccountTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        instance = Researcher(email="email@example.com")
+        instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
-        self.assertIsInstance(instance, Researcher)
+        self.assertIsInstance(instance, Account)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        instance = Researcher(email="email@example.com")
+        instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "email@example.com")
 
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
-        instance = factories.ResearcherFactory()
+        instance = factories.AccountFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
-    def test_unique_email(self):
+    def test_unique_email_non_service_account(self):
         """Saving a model with a duplicate email fails."""
         email = "email@example.com"
-        instance = Researcher(email=email)
+        instance = Account(email=email, is_service_account=False)
         instance.save()
-        instance2 = Researcher(email=email)
+        instance2 = Account(email=email, is_service_account=False)
         with self.assertRaises(IntegrityError):
             instance2.save()
 
     def test_unique_email_case_insensitive(self):
         """Email uniqueness does not depend on case."""
-        instance = Researcher(email="email@example.com")
+        instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
-        instance2 = Researcher(email="EMAIL@example.com")
+        instance2 = Account(email="EMAIL@example.com", is_service_account=False)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_service_account(self):
+        """Can create a service account."""
+        instance = Account(email="service@account.com", is_service_account=True)
+        instance.save()
+        self.assertIsInstance(instance, Account)
+        self.assertTrue(instance.is_service_account)
+
+    def test_unique_email_service_account(self):
+        """Saving a service account model with a duplicate email fails."""
+        email = "email@example.com"
+        instance = Account(email=email, is_service_account=True)
+        instance.save()
+        instance2 = Account(email=email, is_service_account=True)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_unique_email(self):
+        """Saving a model with a duplicate email fails regardless of service account status."""
+        email = "email@example.com"
+        instance = Account(email=email, is_service_account=True)
+        instance.save()
+        instance2 = Account(email=email, is_service_account=False)
         with self.assertRaises(IntegrityError):
             instance2.save()
 
@@ -177,19 +202,19 @@ class WorkspaceTest(TestCase):
 class GroupMembershipTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        researcher = factories.ResearcherFactory.create()
+        account = factories.AccountFactory.create()
         group = factories.GroupFactory.create()
-        instance = GroupMembership(researcher=researcher, group=group)
+        instance = GroupMembership(account=account, group=group)
         self.assertIsInstance(instance, GroupMembership)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         email = "email@example.com"
         group = "test-group"
-        researcher = factories.ResearcherFactory(email=email)
+        account = factories.AccountFactory(email=email)
         group = factories.GroupFactory(name=group)
         instance = GroupMembership(
-            researcher=researcher, group=group, role=GroupMembership.MEMBER
+            account=account, group=group, role=GroupMembership.MEMBER
         )
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
@@ -203,50 +228,50 @@ class GroupMembershipTest(TestCase):
         instance = factories.GroupMembershipFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
-    def test_same_researcher_in_two_groups(self):
-        """The same researcher can be in two groups."""
-        researcher = factories.ResearcherFactory()
+    def test_same_account_in_two_groups(self):
+        """The same account can be in two groups."""
+        account = factories.AccountFactory()
         group_1 = factories.GroupFactory(name="group-1")
         group_2 = factories.GroupFactory(name="group-2")
-        instance = GroupMembership(researcher=researcher, group=group_1)
+        instance = GroupMembership(account=account, group=group_1)
         instance.save()
-        instance = GroupMembership(researcher=researcher, group=group_2)
+        instance = GroupMembership(account=account, group=group_2)
         instance.save()
 
-    def test_two_researchers_in_same_group(self):
-        """Two researchers can be in the same group."""
-        researcher_1 = factories.ResearcherFactory(email="email_1@example.com")
-        researcher_2 = factories.ResearcherFactory(email="email_2@example.com")
+    def test_two_accounts_in_same_group(self):
+        """Two accounts can be in the same group."""
+        account_1 = factories.AccountFactory(email="email_1@example.com")
+        account_2 = factories.AccountFactory(email="email_2@example.com")
         group = factories.GroupFactory()
-        instance = GroupMembership(researcher=researcher_1, group=group)
+        instance = GroupMembership(account=account_1, group=group)
         instance.save()
-        instance = GroupMembership(researcher=researcher_2, group=group)
+        instance = GroupMembership(account=account_2, group=group)
         instance.save()
 
-    def test_cannot_have_duplicated_researcher_and_group_with_same_role(self):
-        """Cannot have the same researcher in the same group with the same role twice."""
-        researcher = factories.ResearcherFactory()
+    def test_cannot_have_duplicated_account_and_group_with_same_role(self):
+        """Cannot have the same account in the same group with the same role twice."""
+        account = factories.AccountFactory()
         group = factories.GroupFactory()
         instance_1 = GroupMembership(
-            researcher=researcher, group=group, role=GroupMembership.MEMBER
+            account=account, group=group, role=GroupMembership.MEMBER
         )
         instance_1.save()
         instance_2 = GroupMembership(
-            researcher=researcher, group=group, role=GroupMembership.MEMBER
+            account=account, group=group, role=GroupMembership.MEMBER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
-    def test_cannot_have_duplicated_researcher_and_group_with_different_role(self):
-        """Cannot have the same researcher in the same group with different roles twice."""
-        researcher = factories.ResearcherFactory()
+    def test_cannot_have_duplicated_account_and_group_with_different_role(self):
+        """Cannot have the same account in the same group with different roles twice."""
+        account = factories.AccountFactory()
         group = factories.GroupFactory()
         instance_1 = GroupMembership(
-            researcher=researcher, group=group, role=GroupMembership.MEMBER
+            account=account, group=group, role=GroupMembership.MEMBER
         )
         instance_1.save()
         instance_2 = GroupMembership(
-            researcher=researcher, group=group, role=GroupMembership.ADMIN
+            account=account, group=group, role=GroupMembership.ADMIN
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
@@ -296,7 +321,7 @@ class WorkspaceGroupAccessTest(TestCase):
         instance.save()
 
     def test_two_groups_and_same_workspace(self):
-        """Two researchers can be in the same group."""
+        """Two accounts can be in the same group."""
         group_1 = factories.GroupFactory(name="group-1")
         group_2 = factories.GroupFactory(name="group-2")
         workspace = factories.WorkspaceFactory()
@@ -305,8 +330,8 @@ class WorkspaceGroupAccessTest(TestCase):
         instance = WorkspaceGroupAccess(group=group_2, workspace=workspace)
         instance.save()
 
-    def test_cannot_have_duplicated_researcher_and_group_with_same_access(self):
-        """Cannot have the same researcher in the same group with the same access levels twice."""
+    def test_cannot_have_duplicated_account_and_group_with_same_access(self):
+        """Cannot have the same account in the same group with the same access levels twice."""
         group = factories.GroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(
@@ -319,10 +344,10 @@ class WorkspaceGroupAccessTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
-    def test_cannot_have_duplicated_researcher_and_group_with_different_access(
+    def test_cannot_have_duplicated_account_and_group_with_different_access(
         self,
     ):
-        """Cannot have the same researcher in the same group with different access levels twice."""
+        """Cannot have the same account in the same group with different access levels twice."""
         group = factories.GroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(

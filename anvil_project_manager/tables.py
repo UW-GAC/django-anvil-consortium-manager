@@ -13,14 +13,14 @@ class BillingProjectTable(tables.Table):
         fields = ("pk", "name")
 
 
-class ResearcherTable(tables.Table):
+class AccountTable(tables.Table):
     email = tables.LinkColumn(
-        "anvil_project_manager:researchers:detail", args=[tables.utils.A("pk")]
+        "anvil_project_manager:accounts:detail", args=[tables.utils.A("pk")]
     )
 
     class Meta:
-        model = models.Researcher
-        fields = ("pk", "email")
+        model = models.Account
+        fields = ("pk", "email", "is_service_account")
 
 
 class GroupTable(tables.Table):
@@ -47,10 +47,11 @@ class GroupMembershipTable(tables.Table):
     pk = tables.LinkColumn(
         "anvil_project_manager:group_membership:detail", args=[tables.utils.A("pk")]
     )
-    researcher = tables.LinkColumn(
-        "anvil_project_manager:researchers:detail",
-        args=[tables.utils.A("researcher__pk")],
+    account = tables.LinkColumn(
+        "anvil_project_manager:accounts:detail",
+        args=[tables.utils.A("account__pk")],
     )
+    is_service_account = tables.BooleanColumn(accessor="account.is_service_account")
     group = tables.LinkColumn(
         "anvil_project_manager:groups:detail", args=[tables.utils.A("group__pk")]
     )
@@ -58,7 +59,7 @@ class GroupMembershipTable(tables.Table):
 
     class Meta:
         models = models.GroupMembership
-        fields = ("pk", "researcher", "group", "role")
+        fields = ("pk", "account", "is_service_account", "group", "role")
 
 
 class WorkspaceGroupAccessTable(tables.Table):

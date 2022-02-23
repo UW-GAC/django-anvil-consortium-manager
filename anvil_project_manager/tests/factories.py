@@ -14,13 +14,14 @@ class BillingProjectFactory(DjangoModelFactory):
         django_get_or_create = ["name"]
 
 
-class ResearcherFactory(DjangoModelFactory):
-    """A factory for the Researcher model."""
+class AccountFactory(DjangoModelFactory):
+    """A factory for the Account model."""
 
     email = Faker("email")
+    is_service_account = False
 
     class Meta:
-        model = models.Researcher
+        model = models.Account
         django_get_or_create = ["email"]
 
 
@@ -48,13 +49,13 @@ class WorkspaceFactory(DjangoModelFactory):
 class GroupMembershipFactory(DjangoModelFactory):
     """A factory for the Group model."""
 
-    researcher = SubFactory(ResearcherFactory)
+    account = SubFactory(AccountFactory)
     group = SubFactory(GroupFactory)
     role = models.GroupMembership.MEMBER
 
     class Meta:
         model = models.GroupMembership
-        django_get_or_create = ["researcher", "group"]
+        django_get_or_create = ["account", "group"]
 
 
 class WorkspaceGroupAccessFactory(DjangoModelFactory):
