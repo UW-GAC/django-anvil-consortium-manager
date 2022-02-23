@@ -14,14 +14,14 @@ billing_project_patterns = (
     "billing_projects",
 )
 
-researcher_patterns = (
+account_patterns = (
     [
-        path("<int:pk>", views.ResearcherDetail.as_view(), name="detail"),
-        path("new/", views.ResearcherCreate.as_view(), name="new"),
-        path("", views.ResearcherList.as_view(), name="list"),
-        path("<int:pk>/delete", views.ResearcherDelete.as_view(), name="delete"),
+        path("<int:pk>", views.AccountDetail.as_view(), name="detail"),
+        path("new/", views.AccountCreate.as_view(), name="new"),
+        path("", views.AccountList.as_view(), name="list"),
+        path("<int:pk>/delete", views.AccountDelete.as_view(), name="delete"),
     ],
-    "researchers",
+    "accounts",
 )
 
 group_patterns = (
@@ -68,7 +68,7 @@ workspace_group_access_patterns = (
 
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
-    path("researchers/", include(researcher_patterns)),
+    path("accounts/", include(account_patterns)),
     path("groups/", include(group_patterns)),
     path("billing_projects/", include(billing_project_patterns)),
     path("workspaces/", include(workspace_patterns)),

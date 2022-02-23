@@ -36,31 +36,31 @@ class BillingProjectDelete(DeleteView):
         return reverse("anvil_project_manager:billing_projects:list")
 
 
-class ResearcherDetail(SingleTableMixin, DetailView):
-    model = models.Researcher
+class AccountDetail(SingleTableMixin, DetailView):
+    model = models.Account
     context_table_name = "group_table"
 
     def get_table(self):
         return tables.GroupMembershipTable(
-            self.object.groupmembership_set.all(), exclude="researcher"
+            self.object.groupmembership_set.all(), exclude="account"
         )
 
 
-class ResearcherCreate(CreateView):
-    model = models.Researcher
+class AccountCreate(CreateView):
+    model = models.Account
     fields = ("email",)
 
 
-class ResearcherList(SingleTableView):
-    model = models.Researcher
-    table_class = tables.ResearcherTable
+class AccountList(SingleTableView):
+    model = models.Account
+    table_class = tables.AccountTable
 
 
-class ResearcherDelete(DeleteView):
-    model = models.Researcher
+class AccountDelete(DeleteView):
+    model = models.Account
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:researchers:list")
+        return reverse("anvil_project_manager:accounts:list")
 
 
 class GroupDetail(DetailView):
@@ -71,7 +71,7 @@ class GroupDetail(DetailView):
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="group"
         )
-        context["researcher_table"] = tables.GroupMembershipTable(
+        context["account_table"] = tables.GroupMembershipTable(
             self.object.groupmembership_set.all(), exclude="group"
         )
         return context
@@ -131,7 +131,7 @@ class GroupMembershipDetail(DetailView):
 
 class GroupMembershipCreate(CreateView):
     model = models.GroupMembership
-    fields = ("researcher", "group", "role")
+    fields = ("account", "group", "role")
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_membership:list")
