@@ -314,17 +314,17 @@ class AccountDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
-    def test_group_membership_table(self):
+    def test_group_account_membership_table(self):
         """The group membership table exists."""
         obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["group_table"], tables.GroupMembershipTable
+            response.context_data["group_table"], tables.GroupAccountMembershipTable
         )
 
-    def test_group_membership_none(self):
+    def test_group_account_membership_none(self):
         """No groups are shown if the account is not part of any groups."""
         account = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(account.pk))
@@ -332,29 +332,29 @@ class AccountDetailTest(TestCase):
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
-    def test_group_membership_one(self):
+    def test_group_account_membership_one(self):
         """One group is shown if the account is part of one group."""
         account = factories.AccountFactory.create()
-        factories.GroupMembershipFactory.create(account=account)
+        factories.GroupAccountMembershipFactory.create(account=account)
         request = self.factory.get(self.get_url(account.pk))
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 1)
 
-    def test_group_membership_two(self):
+    def test_group_account_membership_two(self):
         """Two groups are shown if the account is part of two groups."""
         account = factories.AccountFactory.create()
-        factories.GroupMembershipFactory.create_batch(2, account=account)
+        factories.GroupAccountMembershipFactory.create_batch(2, account=account)
         request = self.factory.get(self.get_url(account.pk))
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 2)
 
-    def test_shows_group_membership_for_only_that_user(self):
+    def test_shows_group_account_membership_for_only_that_user(self):
         """Only shows groups that this research is part of."""
         account = factories.AccountFactory.create(email="email_1@example.com")
         other_account = factories.AccountFactory.create(email="email_2@example.com")
-        factories.GroupMembershipFactory.create(account=other_account)
+        factories.GroupAccountMembershipFactory.create(account=other_account)
         request = self.factory.get(self.get_url(account.pk))
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
@@ -655,7 +655,7 @@ class GroupDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("account_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["account_table"], tables.GroupMembershipTable
+            response.context_data["account_table"], tables.GroupAccountMembershipTable
         )
 
     def test_account_table_none(self):
@@ -669,7 +669,7 @@ class GroupDetailTest(TestCase):
     def test_account_table_one(self):
         """One accounts is shown if the group has only that account."""
         group = factories.GroupFactory.create()
-        factories.GroupMembershipFactory.create(group=group)
+        factories.GroupAccountMembershipFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("account_table", response.context_data)
@@ -678,7 +678,7 @@ class GroupDetailTest(TestCase):
     def test_account_table_two(self):
         """Two accounts are shown if the group has only those accounts."""
         group = factories.GroupFactory.create()
-        factories.GroupMembershipFactory.create_batch(2, group=group)
+        factories.GroupAccountMembershipFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("account_table", response.context_data)
@@ -688,7 +688,7 @@ class GroupDetailTest(TestCase):
         """Only shows accounts that are in this group."""
         group = factories.GroupFactory.create(name="group-1")
         other_group = factories.GroupFactory.create(name="group-2")
-        factories.GroupMembershipFactory.create(group=other_group)
+        factories.GroupAccountMembershipFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("account_table", response.context_data)
@@ -1213,46 +1213,48 @@ class WorkspaceDeleteTest(TestCase):
         self.assertRedirects(response, reverse("anvil_project_manager:workspaces:list"))
 
 
-class GroupMembershipDetailTest(TestCase):
+class GroupAccountMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_membership:detail", args=args)
+        return reverse(
+            "anvil_project_manager:group_account_membership:detail", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupMembershipDetail.as_view()
+        return views.GroupAccountMembershipDetail.as_view()
 
     def test_view_status_code_with_existing_object(self):
         """Returns a successful status code for an existing object pk."""
-        obj = factories.GroupMembershipFactory.create()
+        obj = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.GroupMembershipFactory.create()
+        obj = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
 
-class GroupMembershipCreateTest(TestCase):
+class GroupAccountMembershipCreateTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_membership:new", args=args)
+        return reverse("anvil_project_manager:group_account_membership:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupMembershipCreate.as_view()
+        return views.GroupAccountMembershipCreate.as_view()
 
     def test_status_code(self):
         """Returns successful response code."""
@@ -1275,14 +1277,14 @@ class GroupMembershipCreateTest(TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.GroupMembership.objects.latest("pk")
-        self.assertIsInstance(new_object, models.GroupMembership)
-        self.assertEqual(new_object.role, models.GroupMembership.MEMBER)
+        new_object = models.GroupAccountMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupAccountMembership)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
@@ -1293,14 +1295,14 @@ class GroupMembershipCreateTest(TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupMembership.ADMIN,
+                "role": models.GroupAccountMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.GroupMembership.objects.latest("pk")
-        self.assertIsInstance(new_object, models.GroupMembership)
-        self.assertEqual(new_object.role, models.GroupMembership.ADMIN)
+        new_object = models.GroupAccountMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupAccountMembership)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -1312,26 +1314,26 @@ class GroupMembershipCreateTest(TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupMembership.ADMIN,
+                "role": models.GroupAccountMembership.ADMIN,
             },
         )
         self.assertRedirects(
-            response, reverse("anvil_project_manager:group_membership:list")
+            response, reverse("anvil_project_manager:group_account_membership:list")
         )
 
     def test_cannot_create_duplicate_object_with_same_role(self):
-        """Cannot create a second GroupMembership object for the same account and group with the same role."""
+        """Cannot create a second GroupAccountMembership object for the same account and group with the same role."""
         group = factories.GroupFactory.create()
         account = factories.AccountFactory.create()
-        obj = factories.GroupMembershipFactory(
-            group=group, account=account, role=models.GroupMembership.MEMBER
+        obj = factories.GroupAccountMembershipFactory(
+            group=group, account=account, role=models.GroupAccountMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -1340,23 +1342,23 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.GroupMembership.objects.all(),
-            models.GroupMembership.objects.filter(pk=obj.pk),
+            models.GroupAccountMembership.objects.all(),
+            models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
 
     def test_cannot_create_duplicate_object_with_different_role(self):
-        """Cannot create a second GroupMembership object for the same account and group with a different role."""
+        """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
         group = factories.GroupFactory.create()
         account = factories.AccountFactory.create()
-        obj = factories.GroupMembershipFactory(
-            group=group, account=account, role=models.GroupMembership.MEMBER
+        obj = factories.GroupAccountMembershipFactory(
+            group=group, account=account, role=models.GroupAccountMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupMembership.ADMIN,
+                "role": models.GroupAccountMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
@@ -1365,43 +1367,43 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.GroupMembership.objects.all(),
-            models.GroupMembership.objects.filter(pk=obj.pk),
+            models.GroupAccountMembership.objects.all(),
+            models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
 
     def test_can_add_two_groups_for_one_account(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
         group_2 = factories.GroupFactory.create(name="test-group-2")
         account = factories.AccountFactory.create()
-        factories.GroupMembershipFactory.create(group=group_1, account=account)
+        factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group_2.pk,
                 "account": account.pk,
-                "role": models.GroupMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.GroupMembership.objects.count(), 2)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
 
     def test_can_add_two_accounts_to_one_group(self):
         group = factories.GroupFactory.create()
         account_1 = factories.AccountFactory.create(email="test_1@example.com")
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
-        factories.GroupMembershipFactory.create(group=group, account=account_1)
+        factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "account": account_2.pk,
-                "role": models.GroupMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.GroupMembership.objects.count(), 2)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
 
     def test_invalid_input_account(self):
         """Posting invalid data to account field does not create an object."""
@@ -1411,7 +1413,7 @@ class GroupMembershipCreateTest(TestCase):
             {
                 "group": group.pk,
                 "account": 1,
-                "role": models.GroupMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -1420,7 +1422,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("account", form.errors.keys())
         self.assertIn("valid choice", form.errors["account"][0])
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
@@ -1430,7 +1432,7 @@ class GroupMembershipCreateTest(TestCase):
             {
                 "group": 1,
                 "account": account.pk,
-                "role": models.GroupMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -1439,7 +1441,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("valid choice", form.errors["group"][0])
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
@@ -1455,7 +1457,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("valid choice", form.errors["role"][0])
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -1470,14 +1472,14 @@ class GroupMembershipCreateTest(TestCase):
         self.assertIn("required", form.errors["account"][0])
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
         account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {"account": account.pk, "role": models.GroupMembership.MEMBER},
+            {"account": account.pk, "role": models.GroupAccountMembership.MEMBER},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1485,13 +1487,14 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data_account(self):
         """Posting blank data to the account field does not create an object."""
         group = factories.GroupFactory.create()
         request = self.factory.post(
-            self.get_url(), {"group": group.pk, "role": models.GroupMembership.MEMBER}
+            self.get_url(),
+            {"group": group.pk, "role": models.GroupAccountMembership.MEMBER},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1499,7 +1502,7 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("account", form.errors.keys())
         self.assertIn("required", form.errors["account"][0])
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -1514,21 +1517,21 @@ class GroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
 
-class GroupMembershipListTest(TestCase):
+class GroupAccountMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_membership:list", args=args)
+        return reverse("anvil_project_manager:group_account_membership:list", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupMembershipList.as_view()
+        return views.GroupAccountMembershipList.as_view()
 
     def test_view_status_code(self):
         request = self.factory.get(self.get_url())
@@ -1540,7 +1543,7 @@ class GroupMembershipListTest(TestCase):
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
-            response.context_data["table"], tables.GroupMembershipTable
+            response.context_data["table"], tables.GroupAccountMembershipTable
         )
 
     def test_view_with_no_objects(self):
@@ -1551,7 +1554,7 @@ class GroupMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_one_object(self):
-        factories.GroupMembershipFactory()
+        factories.GroupAccountMembershipFactory()
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1559,7 +1562,7 @@ class GroupMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.GroupMembershipFactory.create_batch(2)
+        factories.GroupAccountMembershipFactory.create_batch(2)
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1567,22 +1570,24 @@ class GroupMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class GroupMembershipDeleteTest(TestCase):
+class GroupAccountMembershipDeleteTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_membership:delete", args=args)
+        return reverse(
+            "anvil_project_manager:group_account_membership:delete", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupMembershipDelete.as_view()
+        return views.GroupAccountMembershipDelete.as_view()
 
     def test_view_status_code(self):
         """Returns a successful status code for an existing object."""
-        object = factories.GroupMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
@@ -1595,33 +1600,33 @@ class GroupMembershipDeleteTest(TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.GroupMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.GroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        object = factories.GroupMembershipFactory.create()
-        other_object = factories.GroupMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
+        other_object = factories.GroupAccountMembershipFactory.create()
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.GroupMembership.objects.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
         self.assertQuerysetEqual(
-            models.GroupMembership.objects.all(),
-            models.GroupMembership.objects.filter(pk=other_object.pk),
+            models.GroupAccountMembership.objects.all(),
+            models.GroupAccountMembership.objects.filter(pk=other_object.pk),
         )
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        object = factories.GroupMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
-            response, reverse("anvil_project_manager:group_membership:list")
+            response, reverse("anvil_project_manager:group_account_membership:list")
         )
 
 

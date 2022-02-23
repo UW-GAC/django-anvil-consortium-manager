@@ -43,9 +43,10 @@ class WorkspaceTable(tables.Table):
         fields = ("pk", "billing_project", "name")
 
 
-class GroupMembershipTable(tables.Table):
+class GroupAccountMembershipTable(tables.Table):
     pk = tables.LinkColumn(
-        "anvil_project_manager:group_membership:detail", args=[tables.utils.A("pk")]
+        "anvil_project_manager:group_account_membership:detail",
+        args=[tables.utils.A("pk")],
     )
     account = tables.LinkColumn(
         "anvil_project_manager:accounts:detail",
@@ -58,7 +59,7 @@ class GroupMembershipTable(tables.Table):
     role = tables.Column()
 
     class Meta:
-        models = models.GroupMembership
+        models = models.GroupAccountMembership
         fields = ("pk", "account", "is_service_account", "group", "role")
 
 

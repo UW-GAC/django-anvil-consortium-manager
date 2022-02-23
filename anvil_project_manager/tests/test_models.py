@@ -5,7 +5,7 @@ from ..models import (
     Account,
     BillingProject,
     Group,
-    GroupMembership,
+    GroupAccountMembership,
     Workspace,
     WorkspaceGroupAccess,
 )
@@ -199,13 +199,13 @@ class WorkspaceTest(TestCase):
             instance.save()
 
 
-class GroupMembershipTest(TestCase):
+class GroupAccountMembershipTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         account = factories.AccountFactory.create()
         group = factories.GroupFactory.create()
-        instance = GroupMembership(account=account, group=group)
-        self.assertIsInstance(instance, GroupMembership)
+        instance = GroupAccountMembership(account=account, group=group)
+        self.assertIsInstance(instance, GroupAccountMembership)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -213,8 +213,8 @@ class GroupMembershipTest(TestCase):
         group = "test-group"
         account = factories.AccountFactory(email=email)
         group = factories.GroupFactory(name=group)
-        instance = GroupMembership(
-            account=account, group=group, role=GroupMembership.MEMBER
+        instance = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.MEMBER
         )
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
@@ -225,7 +225,7 @@ class GroupMembershipTest(TestCase):
 
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
-        instance = factories.GroupMembershipFactory()
+        instance = factories.GroupAccountMembershipFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_same_account_in_two_groups(self):
@@ -233,9 +233,9 @@ class GroupMembershipTest(TestCase):
         account = factories.AccountFactory()
         group_1 = factories.GroupFactory(name="group-1")
         group_2 = factories.GroupFactory(name="group-2")
-        instance = GroupMembership(account=account, group=group_1)
+        instance = GroupAccountMembership(account=account, group=group_1)
         instance.save()
-        instance = GroupMembership(account=account, group=group_2)
+        instance = GroupAccountMembership(account=account, group=group_2)
         instance.save()
 
     def test_two_accounts_in_same_group(self):
@@ -243,21 +243,21 @@ class GroupMembershipTest(TestCase):
         account_1 = factories.AccountFactory(email="email_1@example.com")
         account_2 = factories.AccountFactory(email="email_2@example.com")
         group = factories.GroupFactory()
-        instance = GroupMembership(account=account_1, group=group)
+        instance = GroupAccountMembership(account=account_1, group=group)
         instance.save()
-        instance = GroupMembership(account=account_2, group=group)
+        instance = GroupAccountMembership(account=account_2, group=group)
         instance.save()
 
     def test_cannot_have_duplicated_account_and_group_with_same_role(self):
         """Cannot have the same account in the same group with the same role twice."""
         account = factories.AccountFactory()
         group = factories.GroupFactory()
-        instance_1 = GroupMembership(
-            account=account, group=group, role=GroupMembership.MEMBER
+        instance_1 = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.MEMBER
         )
         instance_1.save()
-        instance_2 = GroupMembership(
-            account=account, group=group, role=GroupMembership.MEMBER
+        instance_2 = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.MEMBER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
@@ -266,12 +266,12 @@ class GroupMembershipTest(TestCase):
         """Cannot have the same account in the same group with different roles twice."""
         account = factories.AccountFactory()
         group = factories.GroupFactory()
-        instance_1 = GroupMembership(
-            account=account, group=group, role=GroupMembership.MEMBER
+        instance_1 = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.MEMBER
         )
         instance_1.save()
-        instance_2 = GroupMembership(
-            account=account, group=group, role=GroupMembership.ADMIN
+        instance_2 = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.ADMIN
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()

@@ -41,8 +41,8 @@ class AccountDetail(SingleTableMixin, DetailView):
     context_table_name = "group_table"
 
     def get_table(self):
-        return tables.GroupMembershipTable(
-            self.object.groupmembership_set.all(), exclude="account"
+        return tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(), exclude="account"
         )
 
 
@@ -71,8 +71,8 @@ class GroupDetail(DetailView):
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="group"
         )
-        context["account_table"] = tables.GroupMembershipTable(
-            self.object.groupmembership_set.all(), exclude="group"
+        context["account_table"] = tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(), exclude="group"
         )
         return context
 
@@ -125,28 +125,28 @@ class WorkspaceDelete(DeleteView):
         return reverse("anvil_project_manager:workspaces:list")
 
 
-class GroupMembershipDetail(DetailView):
-    model = models.GroupMembership
+class GroupAccountMembershipDetail(DetailView):
+    model = models.GroupAccountMembership
 
 
-class GroupMembershipCreate(CreateView):
-    model = models.GroupMembership
+class GroupAccountMembershipCreate(CreateView):
+    model = models.GroupAccountMembership
     fields = ("account", "group", "role")
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:group_membership:list")
+        return reverse("anvil_project_manager:group_account_membership:list")
 
 
-class GroupMembershipList(SingleTableView):
-    model = models.GroupMembership
-    table_class = tables.GroupMembershipTable
+class GroupAccountMembershipList(SingleTableView):
+    model = models.GroupAccountMembership
+    table_class = tables.GroupAccountMembershipTable
 
 
-class GroupMembershipDelete(DeleteView):
-    model = models.GroupMembership
+class GroupAccountMembershipDelete(DeleteView):
+    model = models.GroupAccountMembership
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:group_membership:list")
+        return reverse("anvil_project_manager:group_account_membership:list")
 
 
 class WorkspaceGroupAccessDetail(DetailView):

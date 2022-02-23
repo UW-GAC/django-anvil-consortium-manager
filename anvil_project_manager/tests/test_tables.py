@@ -84,10 +84,10 @@ class WorkspaceTableTest(TestCase):
         self.assertEqual(len(table.rows), 2)
 
 
-class GroupMembershipTableTest(TestCase):
-    model = models.GroupMembership
-    model_factory = factories.GroupMembershipFactory
-    table_class = tables.GroupMembershipTable
+class GroupAccountMembershipTableTest(TestCase):
+    model = models.GroupAccountMembership
+    model_factory = factories.GroupAccountMembershipFactory
+    table_class = tables.GroupAccountMembershipTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

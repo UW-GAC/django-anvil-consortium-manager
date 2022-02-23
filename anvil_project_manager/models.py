@@ -78,7 +78,7 @@ class Workspace(models.Model):
         )
 
 
-class GroupMembership(models.Model):
+class GroupAccountMembership(models.Model):
     """A model to store which accounts are in a group."""
 
     MEMBER = "MEMBER"
@@ -96,7 +96,7 @@ class GroupMembership(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["account", "group"], name="unique_group_membership"
+                fields=["account", "group"], name="unique_group_account_membership"
             )
         ]
 
@@ -109,7 +109,8 @@ class GroupMembership(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:group_membership:detail", kwargs={"pk": self.pk}
+            "anvil_project_manager:group_account_membership:detail",
+            kwargs={"pk": self.pk},
         )
 
 
