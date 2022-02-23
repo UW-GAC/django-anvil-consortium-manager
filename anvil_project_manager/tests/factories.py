@@ -18,6 +18,7 @@ class AccountFactory(DjangoModelFactory):
     """A factory for the Account model."""
 
     email = Faker("email")
+    is_service_account = False
 
     class Meta:
         model = models.Account

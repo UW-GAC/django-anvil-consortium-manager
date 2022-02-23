@@ -21,6 +21,7 @@ class Account(models.Model):
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
+    is_service_account = models.BooleanField()
 
     def __str__(self):
         return "{email}".format(email=self.email)

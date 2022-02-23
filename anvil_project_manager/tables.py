@@ -20,7 +20,7 @@ class AccountTable(tables.Table):
 
     class Meta:
         model = models.Account
-        fields = ("pk", "email")
+        fields = ("pk", "email", "is_service_account")
 
 
 class GroupTable(tables.Table):

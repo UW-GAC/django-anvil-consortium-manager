@@ -44,13 +44,13 @@ class BillingProjectTest(TestCase):
 class AccountTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        instance = Account(email="email@example.com")
+        instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
         self.assertIsInstance(instance, Account)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        instance = Account(email="email@example.com")
+        instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "email@example.com")
@@ -60,20 +60,45 @@ class AccountTest(TestCase):
         instance = factories.AccountFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
-    def test_unique_email(self):
+    def test_unique_email_non_service_account(self):
         """Saving a model with a duplicate email fails."""
         email = "email@example.com"
-        instance = Account(email=email)
+        instance = Account(email=email, is_service_account=False)
         instance.save()
-        instance2 = Account(email=email)
+        instance2 = Account(email=email, is_service_account=False)
         with self.assertRaises(IntegrityError):
             instance2.save()
 
     def test_unique_email_case_insensitive(self):
         """Email uniqueness does not depend on case."""
-        instance = Account(email="email@example.com")
+        instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
-        instance2 = Account(email="EMAIL@example.com")
+        instance2 = Account(email="EMAIL@example.com", is_service_account=False)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_service_account(self):
+        """Can create a service account."""
+        instance = Account(email="service@account.com", is_service_account=True)
+        instance.save()
+        self.assertIsInstance(instance, Account)
+        self.assertTrue(instance.is_service_account)
+
+    def test_unique_email_service_account(self):
+        """Saving a service account model with a duplicate email fails."""
+        email = "email@example.com"
+        instance = Account(email=email, is_service_account=True)
+        instance.save()
+        instance2 = Account(email=email, is_service_account=True)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_unique_email(self):
+        """Saving a model with a duplicate email fails regardless of service account status."""
+        email = "email@example.com"
+        instance = Account(email=email, is_service_account=True)
+        instance.save()
+        instance2 = Account(email=email, is_service_account=False)
         with self.assertRaises(IntegrityError):
             instance2.save()
 

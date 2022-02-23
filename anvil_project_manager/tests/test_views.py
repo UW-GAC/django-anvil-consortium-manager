@@ -393,6 +393,7 @@ class AccountCreateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         new_object = models.Account.objects.latest("pk")
         self.assertIsInstance(new_object, models.Account)
+        self.assertFalse(new_object.is_service_account)
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -440,6 +441,17 @@ class AccountCreateTest(TestCase):
         self.assertIn("email", form.errors.keys())
         self.assertIn("required", form.errors["email"][0])
         self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_can_create_service_account(self):
+        """Can create a service account."""
+        request = self.factory.post(
+            self.get_url(), {"email": "test@example.com", "is_service_account": True}
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Account.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Account)
+        self.assertTrue(new_object.is_service_account)
 
 
 class AccountListTest(TestCase):
@@ -489,6 +501,15 @@ class AccountListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_service_account(self):
+        factories.AccountFactory.create(is_service_account=True)
+        factories.AccountFactory.create(is_service_account=False)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
 
 class AccountDeleteTest(TestCase):
     def setUp(self):
@@ -519,6 +540,14 @@ class AccountDeleteTest(TestCase):
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.AccountFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_view_deletes_object_service_account(self):
+        """Posting submit to the form successfully deletes the service account object."""
+        object = factories.AccountFactory.create(is_service_account=True)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)

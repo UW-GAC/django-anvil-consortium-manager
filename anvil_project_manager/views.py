@@ -48,7 +48,7 @@ class AccountDetail(SingleTableMixin, DetailView):
 
 class AccountCreate(CreateView):
     model = models.Account
-    fields = ("email",)
+    fields = ("email", "is_service_account")
 
 
 class AccountList(SingleTableView):
