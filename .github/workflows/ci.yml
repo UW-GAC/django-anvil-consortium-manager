@@ -74,7 +74,9 @@ jobs:
         run:  pytest
 
       - name: Run code coverage
-        run:  coverage run -m pytest
+        run:  |
+          coverage run -m pytest
+          coverage xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
