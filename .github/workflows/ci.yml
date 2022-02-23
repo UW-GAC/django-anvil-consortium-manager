@@ -72,3 +72,13 @@ jobs:
 
       - name: Test with pytest
         run:  pytest
+
+      - name: Run code coverage
+        run:  |
+          coverage run -m pytest
+          coverage xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
