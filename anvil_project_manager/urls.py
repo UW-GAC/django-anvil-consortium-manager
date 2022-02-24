@@ -88,6 +88,11 @@ workspace_group_access_patterns = (
         path(
             "<int:pk>/delete", views.WorkspaceGroupAccessDelete.as_view(), name="delete"
         ),
+        path(
+            "<int:pk>/update",
+            views.WorkspaceGroupAccessUpdate.as_view(),
+            name="update",
+        ),
     ],
     "workspace_group_access",
 )

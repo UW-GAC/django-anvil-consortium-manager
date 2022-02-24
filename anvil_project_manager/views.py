@@ -206,6 +206,12 @@ class WorkspaceGroupAccessCreate(CreateView):
         return reverse("anvil_project_manager:workspace_group_access:list")
 
 
+class WorkspaceGroupAccessUpdate(UpdateView):
+    model = models.WorkspaceGroupAccess
+    fields = ("access",)
+    template_name = "anvil_project_manager/workspacegroupaccess_update.html"
+
+
 class WorkspaceGroupAccessList(SingleTableView):
     model = models.WorkspaceGroupAccess
     table_class = tables.WorkspaceGroupAccessTable
