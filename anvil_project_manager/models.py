@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -115,6 +116,16 @@ class GroupGroupMembership(models.Model):
             "anvil_project_manager:group_group_membership:detail",
             kwargs={"pk": self.pk},
         )
+
+    def clean(self):
+        super().clean()
+        # Don't allow the same group to be added as both a parent and a child.
+        try:
+            if self.parent_group.pk == self.child_group.pk:
+                raise ValidationError("Cannot add a group to itself.")
+        except ObjectDoesNotExist:
+            # This should be handled elsewhere - in other field clean or form methods.
+            pass
 
 
 class GroupAccountMembership(models.Model):

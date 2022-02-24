@@ -1526,6 +1526,42 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
+    def test_cant_add_a_group_to_itself_member(self):
+        """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
+        group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": group.pk,
+                "child_group": group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("add a group to itself", form.non_field_errors()[0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cant_add_a_group_to_itself_admin(self):
+        """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
+        group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": group.pk,
+                "child_group": group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("add a group to itself", form.non_field_errors()[0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
 
 class GroupGroupMembershipListTest(TestCase):
     def setUp(self):

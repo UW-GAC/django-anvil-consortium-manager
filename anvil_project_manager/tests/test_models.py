@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
@@ -283,6 +284,22 @@ class GroupGroupMembershipTest(TestCase):
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
+
+    def test_cant_add_a_group_to_itself_member(self):
+        group = factories.GroupFactory()
+        instance = GroupGroupMembership(
+            parent_group=group, child_group=group, role=GroupGroupMembership.MEMBER
+        )
+        with self.assertRaises(ValidationError):
+            instance.clean()
+
+    def test_cant_add_a_group_to_itself_admin(self):
+        group = factories.GroupFactory()
+        instance = GroupGroupMembership(
+            parent_group=group, child_group=group, role=GroupGroupMembership.ADMIN
+        )
+        with self.assertRaises(ValidationError):
+            instance.clean()
 
     # def test_cant_add_circular_groups(self):
     #     self.fail('write this test')
