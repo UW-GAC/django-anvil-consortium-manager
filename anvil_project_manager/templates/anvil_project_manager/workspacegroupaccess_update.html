@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Workspace group access: {{ object }}{% endblock %}
+
+{% block content %}
+
+  <h2>Modify Workspace Group Access</h2>
+
+  <ul>
+    <li>Workspace: {{ object.workspace }}</li>
+    <li>Group: {{ object.group }}</li>
+    <li>Access: {{ object.access }}</li>
+  </ul>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-success">Save access</button>
+  </form>
+
+{% endblock content %}
