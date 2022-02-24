@@ -298,11 +298,20 @@ class GroupGroupMembershipTest(TestCase):
         instance = GroupGroupMembership(
             parent_group=group, child_group=group, role=GroupGroupMembership.ADMIN
         )
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "add a group to itself"):
             instance.clean()
 
-    # def test_cant_add_circular_groups(self):
-    #     self.fail('write this test')
+    def test_cant_add_circular_groups_one_level_member(self):
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=GroupGroupMembership.MEMBER
+        )
+        instance = GroupGroupMembership(
+            parent_group=obj.child_group,
+            child_group=obj.parent_group,
+            role=GroupGroupMembership.MEMBER,
+        )
+        with self.assertRaisesRegex(ValidationError, "circular"):
+            instance.clean()
 
     # def test_cant_add_circular_groups_via_a_complicated_path(self):
     #     self.fail('write this test')
