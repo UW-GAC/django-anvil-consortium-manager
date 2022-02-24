@@ -54,6 +54,31 @@ class Group(models.Model):
         """Return a queryset of the direct children of this group. Does not include grandchildren."""
         return Group.objects.filter(parent_memberships__parent_group=self)
 
+    def get_all_parents(self):
+        """Return a queryset of all direct and indirect parents of this group. Includes all grandparents.
+
+        Not optimized.
+        """
+        print("current group: " + self.__str__())
+        print("parents: ")
+        these_parents = self.get_direct_parents()
+        print(these_parents)
+        parents = these_parents
+        for parent in these_parents:
+            print("working on parent " + parent.__str__())
+            tmp = parent.get_all_parents()
+            parents = parents | tmp
+        print("done with " + self.__str__())
+        print(parents)
+        pks = set([parent.pk for parent in parents])
+        return Group.objects.filter(pk__in=pks)
+
+    def get_all_children(self):
+        """Return a queryset of all direct and indirect children of this group. Includes all childrenparents.
+
+        Not optimized.
+        """
+
 
 class Workspace(models.Model):
     """A model to store information about AnVIL workspaces."""
