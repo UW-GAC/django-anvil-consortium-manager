@@ -1,5 +1,11 @@
 from django.urls import reverse
-from django.views.generic import CreateView, DeleteView, DetailView, TemplateView
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    TemplateView,
+    UpdateView,
+)
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import models, tables
@@ -138,6 +144,12 @@ class GroupGroupMembershipCreate(CreateView):
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_group_membership:list")
+
+
+class GroupGroupMembershipUpdate(UpdateView):
+    model = models.GroupGroupMembership
+    fields = ("role",)
+    template_name = "anvil_project_manager/groupgroupmembership_update.html"
 
 
 class GroupGroupMembershipList(SingleTableView):
