@@ -255,13 +255,13 @@ class GroupGroupMembershipTest(TestCase):
         instance_1 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupGroupMembership.MEMBER,
         )
         instance_1.save()
         instance_2 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupGroupMembership.MEMBER,
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
@@ -273,13 +273,13 @@ class GroupGroupMembershipTest(TestCase):
         instance_1 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupGroupMembership.MEMBER,
         )
         instance_1.save()
         instance_2 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupAccountMembership.ADMIN,
+            role=GroupGroupMembership.ADMIN,
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
