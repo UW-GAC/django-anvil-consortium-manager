@@ -176,6 +176,12 @@ class GroupAccountMembershipCreate(CreateView):
         return reverse("anvil_project_manager:group_account_membership:list")
 
 
+class GroupAccountMembershipUpdate(UpdateView):
+    model = models.GroupAccountMembership
+    fields = ("role",)
+    template_name = "anvil_project_manager/groupaccountmembership_update.html"
+
+
 class GroupAccountMembershipList(SingleTableView):
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable

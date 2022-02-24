@@ -2185,6 +2185,143 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
 
+class GroupAccountMembershipUpdateTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_project_manager:group_account_membership:update", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupAccountMembershipUpdate.as_view()
+
+    def test_status_code(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.GroupAccountMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_invalid_pk(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.GroupAccountMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk + 1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=obj.pk + 1)
+
+    def test_can_update_role(self):
+        """Can update the role through the view."""
+        obj = factories.GroupAccountMembershipFactory(
+            role=models.GroupAccountMembership.MEMBER
+        )
+        request = self.factory.post(
+            self.get_url(obj.pk),
+            {
+                "role": models.GroupAccountMembership.ADMIN,
+            },
+        )
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupAccountMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupAccountMembership)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
+
+    def test_redirects_to_detail(self):
+        """After successfully creating an object, view redirects to the model's get_absolute_url."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        obj = factories.GroupAccountMembershipFactory(
+            role=models.GroupAccountMembership.MEMBER
+        )
+        response = self.client.post(
+            self.get_url(obj.pk),
+            {
+                "role": models.GroupAccountMembership.ADMIN,
+            },
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+
+    def test_post_blank_data_role(self):
+        """Posting blank data to the role field does not update the object."""
+        obj = factories.GroupAccountMembershipFactory.create(
+            role=models.GroupAccountMembership.MEMBER
+        )
+        request = self.factory.post(
+            self.get_url(obj.pk),
+            {"role": ""},
+        )
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        obj.refresh_from_db()
+        self.assertEqual(obj.role, models.GroupAccountMembership.MEMBER)
+
+    def test_post_invalid_data_role(self):
+        """Posting invalid data to the role field does not update the object."""
+        obj = factories.GroupAccountMembershipFactory.create(
+            role=models.GroupAccountMembership.MEMBER
+        )
+        request = self.factory.post(
+            self.get_url(obj.pk),
+            {"role": "foo"},
+        )
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("valid choice", form.errors["role"][0])
+        obj.refresh_from_db()
+        self.assertEqual(obj.role, models.GroupAccountMembership.MEMBER)
+
+    def test_post_group_pk(self):
+        """Posting a new group pk has no effect."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        original_group = factories.GroupFactory.create()
+        obj = factories.GroupAccountMembershipFactory(
+            group=original_group, role=models.GroupAccountMembership.MEMBER
+        )
+        new_group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(obj.pk),
+            {
+                "group": new_group.pk,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 302)
+        obj.refresh_from_db()
+        self.assertEqual(obj.group, original_group)
+
+    def test_post_account_pk(self):
+        """Posting a new account pk has no effect."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        original_account = factories.AccountFactory.create()
+        obj = factories.GroupAccountMembershipFactory(
+            account=original_account, role=models.GroupAccountMembership.MEMBER
+        )
+        new_account = factories.AccountFactory.create()
+        request = self.factory.post(
+            self.get_url(obj.pk),
+            {
+                "account": new_account.pk,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 302)
+        obj.refresh_from_db()
+        self.assertEqual(obj.account, original_account)
+
+
 class GroupAccountMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""
