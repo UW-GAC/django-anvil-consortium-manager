@@ -110,6 +110,12 @@ class GroupGroupMembership(models.Model):
             child_group=self.child_group, role=self.role, parent_group=self.parent_group
         )
 
+    def get_absolute_url(self):
+        return reverse(
+            "anvil_project_manager:group_group_membership:detail",
+            kwargs={"pk": self.pk},
+        )
+
 
 class GroupAccountMembership(models.Model):
     """A model to store which accounts are in a group."""

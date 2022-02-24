@@ -125,6 +125,30 @@ class WorkspaceDelete(DeleteView):
         return reverse("anvil_project_manager:workspaces:list")
 
 
+class GroupGroupMembershipDetail(DetailView):
+    model = models.GroupGroupMembership
+
+
+class GroupGroupMembershipCreate(CreateView):
+    model = models.GroupGroupMembership
+    fields = ("parent_group", "child_group", "role")
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:group_group_membership:list")
+
+
+class GroupGroupMembershipList(SingleTableView):
+    model = models.GroupGroupMembership
+    table_class = tables.GroupGroupMembershipTable
+
+
+class GroupGroupMembershipDelete(DeleteView):
+    model = models.GroupGroupMembership
+
+    def get_success_url(self):
+        return reverse("anvil_project_manager:group_group_membership:list")
+
+
 class GroupAccountMembershipDetail(DetailView):
     model = models.GroupAccountMembership
 

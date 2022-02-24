@@ -221,10 +221,10 @@ class GroupGroupMembershipTest(TestCase):
         expected_string = "child as MEMBER in parent"
         self.assertEqual(instance.__str__(), expected_string)
 
-    # def test_get_absolute_url(self):
-    #     """The get_absolute_url() method works."""
-    #     instance = factories.GroupGroupMembershipFactory()
-    #     self.assertIsInstance(instance.get_absolute_url(), str)
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.GroupGroupMembershipFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_same_group_with_two_parent_groups(self):
         """The same group can be a child in two groups."""

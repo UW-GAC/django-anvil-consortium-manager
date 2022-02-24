@@ -1213,6 +1213,428 @@ class WorkspaceDeleteTest(TestCase):
         self.assertRedirects(response, reverse("anvil_project_manager:workspaces:list"))
 
 
+class GroupGroupMembershipDetailTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:group_group_membership:detail", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupGroupMembershipDetail.as_view()
+
+    def test_view_status_code_with_existing_object(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.GroupGroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_invalid_pk(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.GroupGroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk + 1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=obj.pk + 1)
+
+
+class GroupGroupMembershipCreateTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:group_group_membership:new", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupGroupMembershipCreate.as_view()
+
+    def test_status_code(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertTrue("form" in response.context_data)
+
+    def test_can_create_an_object_member(self):
+        """Posting valid data to the form creates an object."""
+        parent_group = factories.GroupFactory.create(name="group-1")
+        child_group = factories.GroupFactory.create(name="group-2")
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+
+    def test_can_create_an_object_admin(self):
+        """Posting valid data to the form creates an object."""
+        parent_group = factories.GroupFactory.create(name="group-1")
+        child_group = factories.GroupFactory.create(name="group-2")
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+
+    def test_redirects_to_list(self):
+        """After successfully creating an object, view redirects to the model's list view."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        parent_group = factories.GroupFactory.create(name="group-1")
+        child_group = factories.GroupFactory.create(name="group-2")
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        self.assertRedirects(
+            response, reverse("anvil_project_manager:group_group_membership:list")
+        )
+
+    def test_cannot_create_duplicate_object_with_same_role(self):
+        """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": obj.parent_group.pk,
+                "child_group": obj.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("already exists", form.non_field_errors()[0])
+        self.assertQuerysetEqual(
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=obj.pk),
+        )
+
+    def test_cannot_create_duplicate_object_with_different_role(self):
+        """Cannot create a second GroupGroupMembership object for the same parent and child with a different role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": obj.parent_group.pk,
+                "child_group": obj.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("already exists", form.non_field_errors()[0])
+        self.assertQuerysetEqual(
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=obj.pk),
+        )
+        self.assertEqual(
+            models.GroupGroupMembership.objects.first().role,
+            models.GroupGroupMembership.MEMBER,
+        )
+
+    def test_can_add_two_groups_to_one_parent(self):
+        group_1 = factories.GroupFactory.create(name="test-group-1")
+        group_2 = factories.GroupFactory.create(name="test-group-2")
+        parent = factories.GroupFactory.create(name="parent-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=group_1
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": parent.pk,
+                "child_group": group_2.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+
+    def test_can_add_a_child_group_to_two_parents(self):
+        group_1 = factories.GroupFactory.create(name="test-group-1")
+        group_2 = factories.GroupFactory.create(name="test-group-2")
+        child = factories.GroupFactory.create(name="child_1-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=group_1, child_group=child
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": group_2.pk,
+                "child_group": child.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+
+    def test_invalid_input_child(self):
+        """Posting invalid data to child_group field does not create an object."""
+        group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": group.pk,
+                "child_group": group.pk + 1,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("valid choice", form.errors["child_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_invalid_input_parent(self):
+        """Posting invalid data to parent group field does not create an object."""
+        group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": group.pk + 1,
+                "child_group": group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("valid choice", form.errors["parent_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_invalid_input_role(self):
+        """Posting invalid data to group field does not create an object."""
+        parent_group = factories.GroupFactory.create()
+        child_group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": "foo",
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("valid choice", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        request = self.factory.post(self.get_url(), {})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_parent_group(self):
+        """Posting blank data to the parent_group field does not create an object."""
+        child_group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {"child_group": child_group.pk, "role": "foo"},
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_child_group(self):
+        """Posting blank data to the child_group field does not create an object."""
+        parent_group = factories.GroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {"parent_group": parent_group.pk, "role": "foo"},
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_role(self):
+        """Posting blank data to the role field does not create an object."""
+        parent_group = factories.GroupFactory.create(name="parent")
+        child_group = factories.GroupFactory.create(name="child")
+        request = self.factory.post(
+            self.get_url(),
+            {"parent_group": parent_group.pk, "child_group": child_group.pk},
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+
+class GroupGroupMembershipListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:group_group_membership:list", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupGroupMembershipList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], tables.GroupGroupMembershipTable
+        )
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.GroupGroupMembershipFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.GroupGroupMembershipFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class GroupGroupMembershipDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:group_group_membership:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupGroupMembershipDelete.as_view()
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.GroupGroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        object = factories.GroupGroupMembershipFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.GroupGroupMembershipFactory.create()
+        other_object = factories.GroupGroupMembershipFactory.create()
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        self.assertQuerysetEqual(
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=other_object.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.GroupGroupMembershipFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response, reverse("anvil_project_manager:group_group_membership:list")
+        )
+
+
 class GroupAccountMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
