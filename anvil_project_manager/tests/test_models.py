@@ -6,6 +6,7 @@ from ..models import (
     BillingProject,
     Group,
     GroupAccountMembership,
+    GroupGroupMembership,
     Workspace,
     WorkspaceGroupAccess,
 )
@@ -197,6 +198,97 @@ class WorkspaceTest(TestCase):
         instance = Workspace(name="test-name")
         with self.assertRaises(IntegrityError):
             instance.save()
+
+
+class GroupGroupMembershipTest(TestCase):
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        parent_group = factories.GroupFactory.create(name="parent")
+        child_group = factories.GroupFactory.create(name="child")
+        instance = GroupGroupMembership(
+            parent_group=parent_group, child_group=child_group
+        )
+        self.assertIsInstance(instance, GroupGroupMembership)
+
+    def test_str_method(self):
+        """The custom __str__ method returns the correct string."""
+        parent_group = factories.GroupFactory.create(name="parent")
+        child_group = factories.GroupFactory.create(name="child")
+        instance = GroupGroupMembership(
+            parent_group=parent_group, child_group=child_group
+        )
+        self.assertIsInstance(instance.__str__(), str)
+        expected_string = "child as MEMBER in parent"
+        self.assertEqual(instance.__str__(), expected_string)
+
+    # def test_get_absolute_url(self):
+    #     """The get_absolute_url() method works."""
+    #     instance = factories.GroupGroupMembershipFactory()
+    #     self.assertIsInstance(instance.get_absolute_url(), str)
+
+    def test_same_group_with_two_parent_groups(self):
+        """The same group can be a child in two groups."""
+        child_group = factories.GroupFactory(name="child")
+        group_1 = factories.GroupFactory(name="parent-1")
+        group_2 = factories.GroupFactory(name="parent-2")
+        instance = GroupGroupMembership(parent_group=group_1, child_group=child_group)
+        instance.save()
+        instance = GroupGroupMembership(parent_group=group_2, child_group=child_group)
+        instance.save()
+        self.assertEqual(GroupGroupMembership.objects.count(), 2)
+
+    def test_two_groups_in_same_parent_group(self):
+        """Two accounts can be in the same group."""
+        child_1 = factories.GroupFactory(name="child-1")
+        child_2 = factories.GroupFactory(name="child-2")
+        parent = factories.GroupFactory(name="parent")
+        instance = GroupGroupMembership(parent_group=parent, child_group=child_1)
+        instance.save()
+        instance = GroupGroupMembership(parent_group=parent, child_group=child_2)
+        instance.save()
+        self.assertEqual(GroupGroupMembership.objects.count(), 2)
+
+    def test_cannot_have_duplicated_parent_and_child_with_same_role(self):
+        """Cannot have the same child in the same group with the same role twice."""
+        child_group = factories.GroupFactory()
+        parent_group = factories.GroupFactory()
+        instance_1 = GroupGroupMembership(
+            parent_group=parent_group,
+            child_group=child_group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        instance_1.save()
+        instance_2 = GroupGroupMembership(
+            parent_group=parent_group,
+            child_group=child_group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
+
+    def test_cannot_have_duplicated_parent_and_child_with_different_role(self):
+        """Cannot have the same child in the same group with a different role twice."""
+        child_group = factories.GroupFactory()
+        parent_group = factories.GroupFactory()
+        instance_1 = GroupGroupMembership(
+            parent_group=parent_group,
+            child_group=child_group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        instance_1.save()
+        instance_2 = GroupGroupMembership(
+            parent_group=parent_group,
+            child_group=child_group,
+            role=GroupAccountMembership.ADMIN,
+        )
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
+
+    # def test_cant_add_circular_groups(self):
+    #     self.fail('write this test')
+
+    # def test_cant_add_circular_groups_via_a_complicated_path(self):
+    #     self.fail('write this test')
 
 
 class GroupAccountMembershipTest(TestCase):

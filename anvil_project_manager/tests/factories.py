@@ -46,6 +46,18 @@ class WorkspaceFactory(DjangoModelFactory):
         django_get_or_create = ["billing_project", "name"]
 
 
+class GroupGroupMembershipFactory(DjangoModelFactory):
+    """A factory for the GroupGroupMembership model."""
+
+    parent_group = SubFactory(GroupFactory)
+    child_group = SubFactory(GroupFactory)
+    role = models.GroupAccountMembership.MEMBER
+
+    class Meta:
+        model = models.GroupGroupMembership
+        django_get_or_create = ["parent_group", "child_group"]
+
+
 class GroupAccountMembershipFactory(DjangoModelFactory):
     """A factory for the Group model."""
 

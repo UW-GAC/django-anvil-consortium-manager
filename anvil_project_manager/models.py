@@ -78,6 +78,39 @@ class Workspace(models.Model):
         )
 
 
+class GroupGroupMembership(models.Model):
+    """A model to store which groups are in a group."""
+
+    MEMBER = "MEMBER"
+    ADMIN = "ADMIN"
+
+    ROLE_CHOICES = [
+        (MEMBER, "Member"),
+        (ADMIN, "Admin"),
+    ]
+
+    parent_group = models.ForeignKey(
+        "Group", on_delete=models.CASCADE, related_name="parent_groups"
+    )
+    child_group = models.ForeignKey(
+        "Group", on_delete=models.CASCADE, related_name="child_groups"
+    )
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["parent_group", "child_group"],
+                name="unique_group_group_membership",
+            )
+        ]
+
+    def __str__(self):
+        return "{child_group} as {role} in {parent_group}".format(
+            child_group=self.child_group, role=self.role, parent_group=self.parent_group
+        )
+
+
 class GroupAccountMembership(models.Model):
     """A model to store which accounts are in a group."""
 
