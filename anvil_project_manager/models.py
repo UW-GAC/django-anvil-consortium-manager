@@ -59,38 +59,23 @@ class Group(models.Model):
 
         Not optimized.
         """
-        print("current group: " + self.__str__())
-        print("parents: ")
         these_parents = self.get_direct_parents()
-        print(these_parents)
         parents = these_parents
         for parent in these_parents:
-            print("working on parent " + parent.__str__())
-            tmp = parent.get_all_parents()
-            parents = parents | tmp
-        print("done with " + self.__str__())
-        print(parents)
-        pks = set([parent.pk for parent in parents])
-        return Group.objects.filter(pk__in=pks)
+            parents = parents.union(parent.get_all_parents())
+        return parents
 
     def get_all_children(self):
         """Return a queryset of all direct and indirect children of this group. Includes all childrenparents.
 
         Not optimized.
         """
-        print("current group: " + self.__str__())
-        print("children: ")
         these_children = self.get_direct_children()
         print(these_children)
         children = these_children
         for child in these_children:
-            print("working on child " + child.__str__())
-            tmp = child.get_all_children()
-            children = children | tmp
-        print("done with " + self.__str__())
-        print(children)
-        pks = set([child.pk for child in children])
-        return Group.objects.filter(pk__in=pks)
+            children = children.union(child.get_all_children())
+        return children
 
 
 class Workspace(models.Model):
