@@ -157,6 +157,16 @@ class GroupGroupMembership(models.Model):
         except ObjectDoesNotExist:
             # This should already be handled elsewhere - in other field clean or form methods.
             pass
+        # Check if this would create a circular group relationship, eg if the child is a parent of itself.
+        try:
+            # Do we need to check both of these, or just one?
+            children = self.child_group.get_all_children()
+            parents = self.parent_group.get_all_parents()
+            if self.parent_group in children or self.child_group in parents:
+                raise ValidationError("Cannot add a circular group relationship.")
+        except ObjectDoesNotExist:
+            # This should already be handled elsewhere - in other field clean or form methods.
+            pass
 
 
 class GroupAccountMembership(models.Model):

@@ -749,7 +749,7 @@ class GroupGroupMembershipTest(TestCase):
         with self.assertRaisesRegex(ValidationError, "add a group to itself"):
             instance.clean()
 
-    def test_cant_add_circular_groups_one_level_member(self):
+    def test_circular_cant_add_parent_group_as_a_child(self):
         obj = factories.GroupGroupMembershipFactory.create(
             role=GroupGroupMembership.MEMBER
         )
@@ -761,8 +761,45 @@ class GroupGroupMembershipTest(TestCase):
         with self.assertRaisesRegex(ValidationError, "circular"):
             instance.clean()
 
-    # def test_cant_add_circular_groups_via_a_complicated_path(self):
-    #     self.fail('write this test')
+    def test_circular_cant_add_grandparent_group_as_a_grandchild(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        instance = GroupGroupMembership(
+            parent_group=child,
+            child_group=grandparent,
+            role=GroupGroupMembership.MEMBER,
+        )
+        with self.assertRaisesRegex(ValidationError, "circular"):
+            instance.clean()
+
+    def test_circular_multiple_paths(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        # Also create a grandparent-child relationship.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=child
+        )
+        instance = GroupGroupMembership(
+            parent_group=child,
+            child_group=grandparent,
+            role=GroupGroupMembership.MEMBER,
+        )
+        with self.assertRaisesRegex(ValidationError, "circular"):
+            instance.clean()
 
 
 class GroupAccountMembershipTest(TestCase):
