@@ -46,6 +46,14 @@ class Group(models.Model):
     def get_absolute_url(self):
         return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})
 
+    def get_direct_parents(self):
+        """Return a queryset of the direct parents of this group. Does not include grandparents."""
+        return Group.objects.filter(child_memberships__child_group=self)
+
+    def get_direct_children(self):
+        """Return a queryset of the direct children of this group. Does not include grandchildren."""
+        return Group.objects.filter(parent_memberships__parent_group=self)
+
 
 class Workspace(models.Model):
     """A model to store information about AnVIL workspaces."""
@@ -91,10 +99,10 @@ class GroupGroupMembership(models.Model):
     ]
 
     parent_group = models.ForeignKey(
-        "Group", on_delete=models.CASCADE, related_name="parent_groups"
+        "Group", on_delete=models.CASCADE, related_name="child_memberships"
     )
     child_group = models.ForeignKey(
-        "Group", on_delete=models.CASCADE, related_name="child_groups"
+        "Group", on_delete=models.CASCADE, related_name="parent_memberships"
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
@@ -124,7 +132,7 @@ class GroupGroupMembership(models.Model):
             if self.parent_group.pk == self.child_group.pk:
                 raise ValidationError("Cannot add a group to itself.")
         except ObjectDoesNotExist:
-            # This should be handled elsewhere - in other field clean or form methods.
+            # This should already be handled elsewhere - in other field clean or form methods.
             pass
 
 

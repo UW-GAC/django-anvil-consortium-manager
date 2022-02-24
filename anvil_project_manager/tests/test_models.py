@@ -133,6 +133,170 @@ class GroupTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_get_direct_parents_no_parents(self):
+        group = factories.GroupFactory(name="group")
+        self.assertEqual(group.get_direct_parents().count(), 0)
+        self.assertQuerysetEqual(group.get_direct_parents(), Group.objects.none())
+
+    def test_get_direct_parents_one_parent(self):
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(child.get_direct_parents().count(), 1)
+        self.assertQuerysetEqual(
+            child.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+        )
+
+    def test_get_direct_parents_one_child_two_parents(self):
+        parent_1 = factories.GroupFactory(name="parent-group-1")
+        parent_2 = factories.GroupFactory(name="parent-group-2")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_1, child_group=child
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_2, child_group=child
+        )
+        self.assertEqual(child.get_direct_parents().count(), 2)
+        self.assertQuerysetEqual(
+            child.get_direct_parents(),
+            Group.objects.filter(pk__in=[parent_1.pk, parent_2.pk]),
+            ordered=False,
+        )
+
+    def test_get_direct_parents_two_children_one_parent(self):
+        parent = factories.GroupFactory(name="parent-group-1")
+        child_1 = factories.GroupFactory(name="child-group-1")
+        child_2 = factories.GroupFactory(name="child-group-2")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child_2
+        )
+        self.assertEqual(child_1.get_direct_parents().count(), 1)
+        self.assertQuerysetEqual(
+            child_1.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+        )
+        self.assertEqual(child_2.get_direct_parents().count(), 1)
+        self.assertQuerysetEqual(
+            child_2.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+        )
+
+    def test_get_direct_parents_with_other_group(self):
+        # Create a relationship not involving the group in question.
+        factories.GroupGroupMembershipFactory.create()
+        # Create a group not related to any other group.
+        group = factories.GroupFactory.create()
+        self.assertEqual(group.get_direct_parents().count(), 0)
+
+    def test_get_direct_parents_with_only_child(self):
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(parent.get_direct_parents().count(), 0)
+
+    def test_get_direct_parents_with_grandparent(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(child.get_direct_parents().count(), 1)
+        self.assertQuerysetEqual(
+            child.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+        )
+
+    def test_get_direct_children_no_children(self):
+        group = factories.GroupFactory(name="group")
+        self.assertEqual(group.get_direct_children().count(), 0)
+        self.assertQuerysetEqual(group.get_direct_children(), Group.objects.none())
+
+    def test_get_direct_children_one_child(self):
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(parent.get_direct_children().count(), 1)
+        self.assertQuerysetEqual(
+            parent.get_direct_children(), Group.objects.filter(pk=child.pk)
+        )
+
+    def test_get_direct_children_one_parent_two_children(self):
+        child_1 = factories.GroupFactory(name="child-group-1")
+        child_2 = factories.GroupFactory(name="child-group-2")
+        parent = factories.GroupFactory(name="parent-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child_2
+        )
+        self.assertEqual(parent.get_direct_children().count(), 2)
+        self.assertQuerysetEqual(
+            parent.get_direct_children(),
+            Group.objects.filter(pk__in=[child_1.pk, child_2.pk]),
+            ordered=False,
+        )
+
+    def test_get_direct_parents_two_parents_one_child(self):
+        child = factories.GroupFactory(name="child-group-1")
+        parent_1 = factories.GroupFactory(name="parent-group-1")
+        parent_2 = factories.GroupFactory(name="parent-group-2")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_1, child_group=child
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_2, child_group=child
+        )
+        self.assertEqual(parent_1.get_direct_children().count(), 1)
+        self.assertQuerysetEqual(
+            parent_1.get_direct_children(), Group.objects.filter(pk=child.pk)
+        )
+        self.assertEqual(parent_2.get_direct_children().count(), 1)
+        self.assertQuerysetEqual(
+            parent_2.get_direct_children(), Group.objects.filter(pk=child.pk)
+        )
+
+    def test_get_direct_children_with_other_group(self):
+        # Create a relationship not involving the group in question.
+        factories.GroupGroupMembershipFactory.create()
+        # Create a group not related to any other group.
+        group = factories.GroupFactory.create()
+        self.assertEqual(group.get_direct_children().count(), 0)
+
+    def test_get_direct_children_with_only_parent(self):
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(child.get_direct_children().count(), 0)
+
+    def test_get_direct_children_with_grandchildren(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(grandparent.get_direct_children().count(), 1)
+        self.assertQuerysetEqual(
+            grandparent.get_direct_children(), Group.objects.filter(pk=parent.pk)
+        )
+
 
 class WorkspaceTest(TestCase):
     def test_model_saving(self):
