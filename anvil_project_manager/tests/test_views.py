@@ -1562,6 +1562,32 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("add a group to itself", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
+    def test_cant_add_circular_relationship(self):
+        """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
+        grandparent = factories.GroupFactory.create()
+        parent = factories.GroupFactory.create()
+        child = factories.GroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": child.pk,
+                "child_group": grandparent.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("circular", form.non_field_errors()[0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+
 
 class GroupGroupMembershipListTest(TestCase):
     def setUp(self):
