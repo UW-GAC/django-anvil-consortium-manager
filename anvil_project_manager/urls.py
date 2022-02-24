@@ -44,14 +44,32 @@ workspace_patterns = (
     "workspaces",
 )
 
-group_membership_patterns = (
+group_group_membership_patterns = (
     [
-        path("<int:pk>", views.GroupMembershipDetail.as_view(), name="detail"),
-        path("new/", views.GroupMembershipCreate.as_view(), name="new"),
-        path("", views.GroupMembershipList.as_view(), name="list"),
-        path("<int:pk>/delete", views.GroupMembershipDelete.as_view(), name="delete"),
+        path("<int:pk>", views.GroupGroupMembershipDetail.as_view(), name="detail"),
+        path("new/", views.GroupGroupMembershipCreate.as_view(), name="new"),
+        path("", views.GroupGroupMembershipList.as_view(), name="list"),
+        path(
+            "<int:pk>/delete",
+            views.GroupGroupMembershipDelete.as_view(),
+            name="delete",
+        ),
     ],
-    "group_membership",
+    "group_group_membership",
+)
+
+group_account_membership_patterns = (
+    [
+        path("<int:pk>", views.GroupAccountMembershipDetail.as_view(), name="detail"),
+        path("new/", views.GroupAccountMembershipCreate.as_view(), name="new"),
+        path("", views.GroupAccountMembershipList.as_view(), name="list"),
+        path(
+            "<int:pk>/delete",
+            views.GroupAccountMembershipDelete.as_view(),
+            name="delete",
+        ),
+    ],
+    "group_account_membership",
 )
 
 workspace_group_access_patterns = (
@@ -72,6 +90,7 @@ urlpatterns = [
     path("groups/", include(group_patterns)),
     path("billing_projects/", include(billing_project_patterns)),
     path("workspaces/", include(workspace_patterns)),
-    path("group_membership/", include(group_membership_patterns)),
+    path("group_group_membership/", include(group_group_membership_patterns)),
+    path("group_account_membership/", include(group_account_membership_patterns)),
     path("workspace_group_access/", include(workspace_group_access_patterns)),
 ]

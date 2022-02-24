@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Group Group membership: {{ object }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+      <h2>Group Group membership: {{ object }}</h2>
+
+      <ul>
+        <li>Parent group: <a href="{{object.parent_group.get_absolute_url}}"> {{ object.parent_group}} </a></li>
+        <li>Child group: <a href="{{object.child_group.get_absolute_url}}"> {{ object.child_group}} </a></li>
+        <li>Role: {{ object.role }}</li>
+      </ul>
+
+    </div>
+  </div>
+
+  <a href="{% url 'anvil_project_manager:group_group_membership:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete</a>
+
+</div>
+{% endblock content %}

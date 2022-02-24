@@ -43,22 +43,37 @@ class WorkspaceTable(tables.Table):
         fields = ("pk", "billing_project", "name")
 
 
-class GroupMembershipTable(tables.Table):
+class GroupGroupMembershipTable(tables.Table):
     pk = tables.LinkColumn(
-        "anvil_project_manager:group_membership:detail", args=[tables.utils.A("pk")]
+        "anvil_project_manager:group_group_membership:detail",
+        args=[tables.utils.A("pk")],
+    )
+    parent_group = tables.RelatedLinkColumn(accessor="parent_group")
+    child_group = tables.RelatedLinkColumn(accessor="child_group")
+    role = tables.Column()
+
+    class Meta:
+        models = models.GroupAccountMembership
+        fields = ("pk", "parent_group", "child_group", "role")
+
+
+class GroupAccountMembershipTable(tables.Table):
+    pk = tables.LinkColumn(
+        "anvil_project_manager:group_account_membership:detail",
+        args=[tables.utils.A("pk")],
     )
     account = tables.LinkColumn(
         "anvil_project_manager:accounts:detail",
         args=[tables.utils.A("account__pk")],
     )
-    is_service_account = tables.BooleanColumn(accessor="account.is_service_account")
+    is_service_account = tables.BooleanColumn(accessor="account__is_service_account")
     group = tables.LinkColumn(
         "anvil_project_manager:groups:detail", args=[tables.utils.A("group__pk")]
     )
     role = tables.Column()
 
     class Meta:
-        models = models.GroupMembership
+        models = models.GroupAccountMembership
         fields = ("pk", "account", "is_service_account", "group", "role")
 
 

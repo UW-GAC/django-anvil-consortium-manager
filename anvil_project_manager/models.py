@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
@@ -45,6 +46,37 @@ class Group(models.Model):
     def get_absolute_url(self):
         return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})
 
+    def get_direct_parents(self):
+        """Return a queryset of the direct parents of this group. Does not include grandparents."""
+        return Group.objects.filter(child_memberships__child_group=self)
+
+    def get_direct_children(self):
+        """Return a queryset of the direct children of this group. Does not include grandchildren."""
+        return Group.objects.filter(parent_memberships__parent_group=self)
+
+    def get_all_parents(self):
+        """Return a queryset of all direct and indirect parents of this group. Includes all grandparents.
+
+        Not optimized.
+        """
+        these_parents = self.get_direct_parents()
+        parents = these_parents
+        for parent in these_parents:
+            parents = parents.union(parent.get_all_parents())
+        return parents
+
+    def get_all_children(self):
+        """Return a queryset of all direct and indirect children of this group. Includes all childrenparents.
+
+        Not optimized.
+        """
+        these_children = self.get_direct_children()
+        print(these_children)
+        children = these_children
+        for child in these_children:
+            children = children.union(child.get_all_children())
+        return children
+
 
 class Workspace(models.Model):
     """A model to store information about AnVIL workspaces."""
@@ -78,7 +110,66 @@ class Workspace(models.Model):
         )
 
 
-class GroupMembership(models.Model):
+class GroupGroupMembership(models.Model):
+    """A model to store which groups are in a group."""
+
+    MEMBER = "MEMBER"
+    ADMIN = "ADMIN"
+
+    ROLE_CHOICES = [
+        (MEMBER, "Member"),
+        (ADMIN, "Admin"),
+    ]
+
+    parent_group = models.ForeignKey(
+        "Group", on_delete=models.CASCADE, related_name="child_memberships"
+    )
+    child_group = models.ForeignKey(
+        "Group", on_delete=models.CASCADE, related_name="parent_memberships"
+    )
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["parent_group", "child_group"],
+                name="unique_group_group_membership",
+            )
+        ]
+
+    def __str__(self):
+        return "{child_group} as {role} in {parent_group}".format(
+            child_group=self.child_group, role=self.role, parent_group=self.parent_group
+        )
+
+    def get_absolute_url(self):
+        return reverse(
+            "anvil_project_manager:group_group_membership:detail",
+            kwargs={"pk": self.pk},
+        )
+
+    def clean(self):
+        super().clean()
+        # Don't allow the same group to be added as both a parent and a child.
+        try:
+            if self.parent_group.pk == self.child_group.pk:
+                raise ValidationError("Cannot add a group to itself.")
+        except ObjectDoesNotExist:
+            # This should already be handled elsewhere - in other field clean or form methods.
+            pass
+        # Check if this would create a circular group relationship, eg if the child is a parent of itself.
+        try:
+            # Do we need to check both of these, or just one?
+            children = self.child_group.get_all_children()
+            parents = self.parent_group.get_all_parents()
+            if self.parent_group in children or self.child_group in parents:
+                raise ValidationError("Cannot add a circular group relationship.")
+        except ObjectDoesNotExist:
+            # This should already be handled elsewhere - in other field clean or form methods.
+            pass
+
+
+class GroupAccountMembership(models.Model):
     """A model to store which accounts are in a group."""
 
     MEMBER = "MEMBER"
@@ -96,7 +187,7 @@ class GroupMembership(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["account", "group"], name="unique_group_membership"
+                fields=["account", "group"], name="unique_group_account_membership"
             )
         ]
 
@@ -109,7 +200,8 @@ class GroupMembership(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:group_membership:detail", kwargs={"pk": self.pk}
+            "anvil_project_manager:group_account_membership:detail",
+            kwargs={"pk": self.pk},
         )
 
 
