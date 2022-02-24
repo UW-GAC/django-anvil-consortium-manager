@@ -441,6 +441,146 @@ class GroupTest(TestCase):
         group = factories.GroupFactory.create(name="other-group")
         self.assertEqual(group.get_all_parents().count(), 0)
 
+    def test_get_all_children_no_children(self):
+        group = factories.GroupFactory(name="group")
+        self.assertEqual(group.get_all_children().count(), 0)
+        self.assertQuerysetEqual(group.get_all_children(), Group.objects.none())
+
+    def test_get_all_children_one_child(self):
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(parent.get_all_children().count(), 1)
+        self.assertQuerysetEqual(
+            parent.get_all_children(), Group.objects.filter(pk=child.pk)
+        )
+
+    def test_get_all_children_one_grandchild(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(grandparent.get_all_children().count(), 2)
+        self.assertQuerysetEqual(
+            grandparent.get_all_children(),
+            Group.objects.filter(pk__in=[parent.pk, child.pk]),
+            ordered=False,
+        )
+
+    def test_get_all_children_two_grandchildren_same_parent(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child_1 = factories.GroupFactory(name="child-group-1")
+        child_2 = factories.GroupFactory(name="child-group-2")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child_2
+        )
+        self.assertEqual(grandparent.get_all_children().count(), 3)
+        self.assertQuerysetEqual(
+            grandparent.get_all_children(),
+            Group.objects.filter(pk__in=[parent.pk, child_1.pk, child_2.pk]),
+            ordered=False,
+        )
+
+    def test_get_all_children_two_grandchildren_two_parents(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent_1 = factories.GroupFactory(name="parent-group-1")
+        parent_2 = factories.GroupFactory(name="parent-group-2")
+        child_1 = factories.GroupFactory(name="child-group-1")
+        child_2 = factories.GroupFactory(name="child-group-2")
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent_2
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_1, child_group=child_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_2, child_group=child_2
+        )
+        self.assertEqual(grandparent.get_all_children().count(), 4)
+        self.assertQuerysetEqual(
+            grandparent.get_all_children(),
+            Group.objects.filter(
+                pk__in=[parent_1.pk, parent_2.pk, child_1.pk, child_2.pk]
+            ),
+            ordered=False,
+        )
+
+    def test_get_all_children_multiple_paths_to_same_group(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        # Create the standard grandparent-parent-child relationship
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        # Then create a grandparent-child direct relationship.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=child
+        )
+        self.assertEqual(grandparent.get_all_children().count(), 2)
+        self.assertQuerysetEqual(
+            grandparent.get_all_children(),
+            Group.objects.filter(pk__in=[parent.pk, child.pk]),
+            ordered=False,
+        )
+
+    def test_all_children_greatgrandparent(self):
+        greatgrandparent = factories.GroupFactory(name="greatgrandparent-group")
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        # Create the standard grandparent-parent-child relationship
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=greatgrandparent, child_group=grandparent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.assertEqual(greatgrandparent.get_all_children().count(), 3)
+        self.assertQuerysetEqual(
+            greatgrandparent.get_all_children(),
+            Group.objects.filter(pk__in=[grandparent.pk, parent.pk, child.pk]),
+            ordered=False,
+        )
+
+    def test_get_all_children_with_other_group(self):
+        grandparent = factories.GroupFactory(name="grandparent-group")
+        parent = factories.GroupFactory(name="parent-group")
+        child = factories.GroupFactory(name="child-group")
+        # Create the standard grandparent-parent-child relationship
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        # Create a group with no relationships
+        group = factories.GroupFactory.create(name="other-group")
+        self.assertEqual(group.get_all_children().count(), 0)
+
 
 class WorkspaceTest(TestCase):
     def test_model_saving(self):

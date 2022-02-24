@@ -78,6 +78,19 @@ class Group(models.Model):
 
         Not optimized.
         """
+        print("current group: " + self.__str__())
+        print("children: ")
+        these_children = self.get_direct_children()
+        print(these_children)
+        children = these_children
+        for child in these_children:
+            print("working on child " + child.__str__())
+            tmp = child.get_all_children()
+            children = children | tmp
+        print("done with " + self.__str__())
+        print(children)
+        pks = set([child.pk for child in children])
+        return Group.objects.filter(pk__in=pks)
 
 
 class Workspace(models.Model):
