@@ -694,6 +694,52 @@ class GroupDetailTest(TestCase):
         self.assertIn("account_table", response.context_data)
         self.assertEqual(len(response.context_data["account_table"].rows), 0)
 
+    def test_group_table(self):
+        """The group table exists."""
+        obj = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["group_table"], tables.GroupGroupMembershipTable
+        )
+
+    def test_group_table_none(self):
+        """No groups are shown if the group has no member groups."""
+        group = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
+    def test_group_table_one(self):
+        """One group is shown if the group has only that member group."""
+        group = factories.GroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(parent_group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+
+    def test_group_table_two(self):
+        """Two groups are shown if the group has only those member groups."""
+        group = factories.GroupFactory.create()
+        factories.GroupGroupMembershipFactory.create_batch(2, parent_group=group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 2)
+
+    def test_group_account_for_only_this_group(self):
+        """Only shows member groups that are in this group."""
+        group = factories.GroupFactory.create(name="group-1")
+        other_group = factories.GroupFactory.create(name="group-2")
+        factories.GroupGroupMembershipFactory.create(parent_group=other_group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+
 
 class GroupCreateTest(TestCase):
     def setUp(self):

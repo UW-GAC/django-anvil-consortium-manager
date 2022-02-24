@@ -13,11 +13,16 @@
 
       <h2>Group: {{ object.name }}</h2>
 
-      <h3>Workspaces</h3>
+      <h3>Workspaces that this group has access to</h3>
       {% render_table workspace_table %}
 
-      <h3>Accounts</h3>
+      <h3>Members of this group</h3>
+
+      <h4>Accounts</h4>
       {% render_table account_table %}
+
+      <h4>Groups</h4>
+      {% render_table group_table %}
 
     </div>
   </div>

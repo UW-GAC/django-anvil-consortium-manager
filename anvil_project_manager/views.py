@@ -74,6 +74,9 @@ class GroupDetail(DetailView):
         context["account_table"] = tables.GroupAccountMembershipTable(
             self.object.groupaccountmembership_set.all(), exclude="group"
         )
+        context["group_table"] = tables.GroupGroupMembershipTable(
+            self.object.child_memberships.all(), exclude="parent_group"
+        )
         return context
 
 
