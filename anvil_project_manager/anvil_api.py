@@ -26,7 +26,6 @@ class AnVILAPISession(AuthorizedSession):
         url = self.entry_point + method
         response = super().get(url, *args, **kwargs)
         # Handle common error codes here.
-        print(response)
         if response.status_code == 403:
             raise AnVILAPIError403(response)
         elif response.status_code == 404:

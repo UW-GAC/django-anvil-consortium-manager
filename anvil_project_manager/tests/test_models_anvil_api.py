@@ -7,85 +7,84 @@ from . import factories
 
 
 class GroupAnVILAPIMockTest(TestCase):
-    def setUp(self):
-        """Setup method to mock requests."""
-        super().setUp()
-        # Mock the superclass get method, not my subclass get method. This lets us test that exceptions are raised.
-        # Get requests.
-        get_patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.get")
-        self.mock_get = get_patcher.start()
-        self.addCleanup(get_patcher.stop)
-        # Post requests.
-        post_patcher = mock.patch(
-            "google.auth.transport.requests.AuthorizedSession.post"
-        )
-        self.mock_post = post_patcher.start()
-        self.addCleanup(post_patcher.stop)
+    def get_mock_response(self, status_code, message="mock message"):
+        """Create a mock response."""
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
-    def set_mock_get(self, status_code):
-        """Set the mock response status code and json message of a GET request."""
-        self.mock_get.return_value = mock.Mock(
-            status_code=status_code, json=lambda: {"message": "mock get message"}
-        )
-
-    def set_mock_post(self, status_code):
-        """Set the mock response status code and json message of a POST request."""
-        self.mock_post.return_value = mock.Mock(
-            status_code=status_code, json=lambda: {"message": "mock post message"}
-        )
-
-    def test_anvil_exists_group_exists(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
+    def test_anvil_exists_group_exists(self, mock_get):
         group = factories.GroupFactory()
-        # self.mock_get.return_value = mock.Mock(status_code = 200, json=lambda: {})
-        self.set_mock_get(200)
+        mock_get.return_value = self.get_mock_response(200)
         self.assertIs(group.anvil_exists(), True)
-        self.mock_get.assert_called_once()
+        mock_get.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
 
-    def test_anvil_exists_group_does_not_exist(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
+    def test_anvil_exists_group_does_not_exist(self, mock_get):
         group = factories.GroupFactory()
-        # self.mock_get.return_value = mock.Mock(status_code = 200, json=lambda: {})
-        self.set_mock_get(404)
+        mock_get.return_value = self.get_mock_response(404)
         self.assertIs(group.anvil_exists(), False)
-        self.mock_get.assert_called_once()
+        mock_get.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
 
-    def test_anvil_exists_forbidden(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
+    def test_anvil_exists_forbidden(self, mock_get):
         group = factories.GroupFactory()
-        self.set_mock_get(403)
+        mock_get.return_value = self.get_mock_response(403)
         with self.assertRaises(anvil_api.AnVILAPIError403):
             group.anvil_exists()
-        self.mock_get.assert_called_once()
+        mock_get.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
 
-    def test_anvil_exists_internal_error(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
+    def test_anvil_exists_internal_error(self, mock_get):
         group = factories.GroupFactory()
-        self.set_mock_get(500)
+        mock_get.return_value = self.get_mock_response(500)
         with self.assertRaises(anvil_api.AnVILAPIError500):
             group.anvil_exists()
-        self.mock_get.assert_called_once()
+        mock_get.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
 
-    def test_anvil_create_successful(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.post")
+    def test_anvil_create_successful(self, mock_post):
         group = factories.GroupFactory()
-        self.set_mock_post(201)
+        mock_post.return_value = self.get_mock_response(201)
         group.anvil_create()
-        self.mock_post.assert_called_once()
+        mock_post.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
 
-    def test_anvil_create_already_exists(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.post")
+    def test_anvil_create_already_exists(self, mock_post):
         """Returns documented response code when a group already exists. Unfortunately the actual return code is 201."""
         group = factories.GroupFactory()
-        self.set_mock_post(409)
+        mock_post.return_value = self.get_mock_response(409)
         with self.assertRaises(anvil_api.AnVILAPIError409):
             group.anvil_create()
-        self.mock_post.assert_called_once()
+        mock_post.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
 
-    def test_anvil_create_internal_error(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.post")
+    def test_anvil_create_internal_error(self, mock_post):
         group = factories.GroupFactory()
-        self.set_mock_post(500)
+        mock_post.return_value = self.get_mock_response(500)
         with self.assertRaises(anvil_api.AnVILAPIError500):
             group.anvil_create()
-        self.mock_post.assert_called_once()
+        mock_post.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
 
-    def test_anvil_create_other(self):
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.post")
+    def test_anvil_create_other(self, mock_post):
         group = factories.GroupFactory()
-        self.set_mock_post(404)
+        mock_post.return_value = self.get_mock_response(404)
         with self.assertRaises(anvil_api.AnVILAPIError):
             group.anvil_create()
-        self.mock_post.assert_called_once()
+        mock_post.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
