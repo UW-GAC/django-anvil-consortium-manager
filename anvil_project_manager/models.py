@@ -2,6 +2,8 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
+from .anvil_api import AnVILAPISession
+
 
 class BillingProject(models.Model):
     """A model to store information about AnVIL billing projects."""
@@ -76,6 +78,11 @@ class Group(models.Model):
         for child in these_children:
             children = children.union(child.get_all_children())
         return children
+
+    def anvil_exists(self):
+        """Check if the group exists on AnVIL."""
+        response = AnVILAPISession().get_group(self.name)
+        return response.status_code == 200
 
 
 class Workspace(models.Model):

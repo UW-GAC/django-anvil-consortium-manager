@@ -21,3 +21,8 @@ class AnVILAPISession(AuthorizedSession):
         )[0]
         super().__init__(self.credentials)
         self.endpoint = endpoint
+
+    def get_group(self, group_name):
+        url = self.endpoint + "groups/" + group_name
+        print(url)
+        return self.get(url)
