@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.test import TestCase
 
-from .. import anvil_api, models
+from .. import anvil_api
 from . import factories
 
 
@@ -10,14 +10,8 @@ class GroupAnVILAPIMockTest(TestCase):
     def setUp(self):
         """Setup method to mock requests."""
         super().setUp()
-        # Mock the underlying get method.
-        #
-        # Previously I had overriden the get method to make the get call and then handle some common response error
-        # codes. However, because of the mock, it was not even calling the overridden get function so the exceptions
-        # were never raised. Instead, give AnVILAPISession a separate _get() method that calls the superclass get()
-        # method, and then handles the response errors codes. This is not great and it would be better to figure out
-        # how to mock just the superclass get method. I'm sure there's a way, just haven't figured out how yet.
-        patcher = mock.patch.object(models.AnVILAPISession, "get")
+        # Mock the superclass get method, not my subclass get method. This lets us test that exceptions are raised.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.get")
         self.mock_get = patcher.start()
         self.addCleanup(patcher.stop)
 

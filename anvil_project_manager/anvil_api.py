@@ -22,9 +22,8 @@ class AnVILAPISession(AuthorizedSession):
         super().__init__(self.credentials)
         self.endpoint = endpoint
 
-    def _get(self, *args, **kwargs):
-        """Class to call get and then handle exceptions. Easier to test?"""
-        response = self.get(*args, **kwargs)
+    def get(self, *args, **kwargs):
+        response = super().get(*args, **kwargs)
         # Handle common error codes here.
         print(response)
         if response.status_code == 403:
@@ -38,7 +37,7 @@ class AnVILAPISession(AuthorizedSession):
     def get_group(self, group_name):
         url = self.endpoint + "groups/" + group_name
         print(url)
-        return self._get(url)
+        return self.get(url)
 
 
 # Exceptions for working with the API.
