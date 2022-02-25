@@ -35,9 +35,23 @@ class AnVILAPISession(AuthorizedSession):
             raise AnVILAPIError500(response.json()["message"], response)
         return response
 
+    def post(self, method, *args, **kwargs):
+        url = self.entry_point + method
+        response = super().post(url, *args, **kwargs)
+        print(response)
+        if response.status_code == 409:
+            raise AnVILAPIError409(response.json()["message"], response)
+        if response.status_code == 500:
+            raise AnVILAPIError500(response.json()["message"], response)
+        return response
+
     def get_group(self, group_name):
         method = "groups/" + group_name
         return self.get(method)
+
+    def create_group(self, group_name):
+        method = "groups/" + group_name
+        return self.post(method)
 
 
 # Exceptions for working with the API.
@@ -62,6 +76,13 @@ class AnVILAPIError404(AnVILAPIError):
 
     def __init__(self, message, response):
         super().__init__(404, message, response)
+
+
+class AnVILAPIError409(AnVILAPIError):
+    """Exception for a 409 response."""
+
+    def __init__(self, message, response):
+        super().__init__(409, message, response)
 
 
 class AnVILAPIError500(AnVILAPIError):

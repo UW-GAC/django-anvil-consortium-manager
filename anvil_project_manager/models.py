@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
-from .anvil_api import AnVILAPIError404, AnVILAPISession
+from .anvil_api import AnVILAPIError, AnVILAPIError404, AnVILAPISession
 
 
 class BillingProject(models.Model):
@@ -86,9 +86,17 @@ class Group(models.Model):
         except AnVILAPIError404:
             # The group was not found on AnVIL.
             return False
+        return response.status_code == 200
+
+    def anvil_create(self):
+        """Creates a group on AnVIL."""
+        response = AnVILAPISession().create_group(self.name)
         print(response.status_code)
         print(response.json())
-        return response.status_code == 200
+        if response.status_code != 201:
+            raise AnVILAPIError(
+                response.status_code, "Unexpected response code", response
+            )
 
 
 class Workspace(models.Model):
