@@ -8,11 +8,11 @@ import google.auth
 from google.auth.transport.requests import AuthorizedSession
 
 # Will eventually want to make this a setting.
-ANVIL_API_ENDPOINT = "https://api.firecloud.org/api/"
+ANVIL_API_ENTRY_POINT = "https://api.firecloud.org/api/"
 
 
 class AnVILAPISession(AuthorizedSession):
-    def __init__(self, endpoint=ANVIL_API_ENDPOINT):
+    def __init__(self, entry_point=ANVIL_API_ENTRY_POINT):
         self.credentials = google.auth.default(
             [
                 "https://www.googleapis.com/auth/userinfo.profile",
@@ -20,10 +20,11 @@ class AnVILAPISession(AuthorizedSession):
             ]
         )[0]
         super().__init__(self.credentials)
-        self.endpoint = endpoint
+        self.entry_point = entry_point
 
-    def get(self, *args, **kwargs):
-        response = super().get(*args, **kwargs)
+    def get(self, method, *args, **kwargs):
+        url = self.entry_point + method
+        response = super().get(url, *args, **kwargs)
         # Handle common error codes here.
         print(response)
         if response.status_code == 403:
@@ -35,9 +36,8 @@ class AnVILAPISession(AuthorizedSession):
         return response
 
     def get_group(self, group_name):
-        url = self.endpoint + "groups/" + group_name
-        print(url)
-        return self.get(url)
+        method = "groups/" + group_name
+        return self.get(method)
 
 
 # Exceptions for working with the API.
