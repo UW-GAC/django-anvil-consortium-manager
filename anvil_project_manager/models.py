@@ -94,9 +94,7 @@ class Group(models.Model):
         print(response.status_code)
         print(response.json())
         if response.status_code != 201:
-            raise AnVILAPIError(
-                response.status_code, "Unexpected response code", response
-            )
+            raise AnVILAPIError(response)
 
 
 class Workspace(models.Model):

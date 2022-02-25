@@ -28,11 +28,11 @@ class AnVILAPISession(AuthorizedSession):
         # Handle common error codes here.
         print(response)
         if response.status_code == 403:
-            raise AnVILAPIError403(response.json()["message"], response)
+            raise AnVILAPIError403(response)
         elif response.status_code == 404:
-            raise AnVILAPIError404(response.json()["message"], response)
+            raise AnVILAPIError404(response)
         elif response.status_code == 500:
-            raise AnVILAPIError500(response.json()["message"], response)
+            raise AnVILAPIError500(response)
         return response
 
     def post(self, method, *args, **kwargs):
@@ -40,9 +40,9 @@ class AnVILAPISession(AuthorizedSession):
         response = super().post(url, *args, **kwargs)
         print(response)
         if response.status_code == 409:
-            raise AnVILAPIError409(response.json()["message"], response)
+            raise AnVILAPIError409(response)
         if response.status_code == 500:
-            raise AnVILAPIError500(response.json()["message"], response)
+            raise AnVILAPIError500(response)
         return response
 
     def get_group(self, group_name):
@@ -58,35 +58,39 @@ class AnVILAPISession(AuthorizedSession):
 class AnVILAPIError(Exception):
     """Base class for all exceptions in this module."""
 
-    def __init__(self, status_code, message, response):
-        self.status_code = status_code
-        self.message = message
+    def __init__(self, response):
+        super().__init__(response.json()["message"])
+        self.status_code = response.status_code
         self.response = response
 
 
 class AnVILAPIError403(AnVILAPIError):
     """Exception for a Forbidden 403 response."""
 
-    def __init__(self, message, response):
-        super().__init__(403, message, response)
+    def __init__(self, response):
+        assert response.status_code == 403
+        super().__init__(response)
 
 
 class AnVILAPIError404(AnVILAPIError):
     """Exception for a 404 Not Found response."""
 
-    def __init__(self, message, response):
-        super().__init__(404, message, response)
+    def __init__(self, response):
+        assert response.status_code == 404
+        super().__init__(response)
 
 
 class AnVILAPIError409(AnVILAPIError):
     """Exception for a 409 response."""
 
-    def __init__(self, message, response):
-        super().__init__(409, message, response)
+    def __init__(self, response):
+        assert response.status_code == 409
+        super().__init__(response)
 
 
 class AnVILAPIError500(AnVILAPIError):
     """Exception for a 500 Internal Error response."""
 
-    def __init__(self, message, response):
-        super().__init__(500, message, response)
+    def __init__(self, response):
+        assert response.status_code == 500
+        super().__init__(response)
