@@ -22,7 +22,51 @@ class AnVILAPISession(AuthorizedSession):
         super().__init__(self.credentials)
         self.endpoint = endpoint
 
+    def _get(self, *args, **kwargs):
+        """Class to call get and then handle exceptions. Easier to test?"""
+        response = self.get(*args, **kwargs)
+        # Handle common error codes here.
+        print(response)
+        if response.status_code == 403:
+            raise AnVILAPIError403(response.json()["message"], response)
+        elif response.status_code == 404:
+            raise AnVILAPIError404(response.json()["message"], response)
+        elif response.status_code == 500:
+            raise AnVILAPIError500(response.json()["message"], response)
+        return response
+
     def get_group(self, group_name):
         url = self.endpoint + "groups/" + group_name
         print(url)
-        return self.get(url)
+        return self._get(url)
+
+
+# Exceptions for working with the API.
+class AnVILAPIError(Exception):
+    """Base class for all exceptions in this module."""
+
+    def __init__(self, status_code, message, response):
+        self.status_code = status_code
+        self.message = message
+        self.response = response
+
+
+class AnVILAPIError403(AnVILAPIError):
+    """Exception for a Forbidden 403 response."""
+
+    def __init__(self, message, response):
+        super().__init__(403, message, response)
+
+
+class AnVILAPIError404(AnVILAPIError):
+    """Exception for a 404 Not Found response."""
+
+    def __init__(self, message, response):
+        super().__init__(404, message, response)
+
+
+class AnVILAPIError500(AnVILAPIError):
+    """Exception for a 500 Internal Error response."""
+
+    def __init__(self, message, response):
+        super().__init__(500, message, response)
