@@ -89,13 +89,13 @@ class Group(models.Model):
         return response.status_code == 200
 
     def anvil_create(self):
-        """Creates a group on AnVIL."""
+        """Creates the group on AnVIL."""
         response = AnVILAPISession().create_group(self.name)
         if response.status_code != 201:
             raise AnVILAPIError(response)
 
     def anvil_delete(self):
-        """Deletes a group on AnVIL."""
+        """Deletes the group on AnVIL."""
         response = AnVILAPISession().delete_group(self.name)
         if response.status_code != 204:
             raise AnVILAPIError(response)
@@ -131,6 +131,32 @@ class Workspace(models.Model):
         return "{billing_project}/{name}".format(
             billing_project=self.billing_project, name=self.name
         )
+
+    def anvil_exists(self):
+        """Check if the workspace exists on AnVIL."""
+        try:
+            response = AnVILAPISession().get_workspace(
+                self.billing_project.name, self.name
+            )
+        except AnVILAPIError404:
+            return False
+        return response.status_code == 200
+
+    def anvil_create(self):
+        """Create the workspace on AnVIL."""
+        response = AnVILAPISession().create_workspace(
+            self.billing_project.name, self.name
+        )
+        if response.status_code != 201:
+            raise AnVILAPIError(response)
+
+    def anvil_delete(self):
+        """Delete the workspace on AnVIL."""
+        response = AnVILAPISession().delete_workspace(
+            self.billing_project.name, self.name
+        )
+        if response.status_code != 202:
+            raise AnVILAPIError(response)
 
 
 class GroupGroupMembership(models.Model):

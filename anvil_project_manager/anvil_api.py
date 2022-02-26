@@ -38,6 +38,8 @@ class AnVILAPISession(AuthorizedSession):
         url = self.entry_point + method
         response = super().post(url, *args, **kwargs)
         print(response)
+        if response.status_code == 403:
+            raise AnVILAPIError403(response)
         if response.status_code == 409:
             raise AnVILAPIError409(response)
         if response.status_code == 500:
@@ -67,6 +69,23 @@ class AnVILAPISession(AuthorizedSession):
 
     def delete_group(self, group_name):
         method = "groups/" + group_name
+        return self.delete(method)
+
+    def get_workspace(self, workspace_namespace, workspace_name):
+        method = "workspaces/" + workspace_namespace + "/" + workspace_name
+        return self.get(method)
+
+    def create_workspace(self, workspace_namespace, workspace_name):
+        method = "workspaces"
+        body = {
+            "namespace": workspace_namespace,
+            "name": workspace_name,
+            "attributes": {},
+        }
+        return self.post(method, json=body)
+
+    def delete_workspace(self, workspace_namespace, workspace_name):
+        method = "workspaces/" + workspace_namespace + "/" + workspace_name
         return self.delete(method)
 
 
