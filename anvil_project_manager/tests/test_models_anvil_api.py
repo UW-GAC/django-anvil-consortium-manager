@@ -88,3 +88,52 @@ class GroupAnVILAPIMockTest(TestCase):
         mock_post.assert_called_once_with(
             "https://api.firecloud.org/api/groups/" + group.name
         )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_existing_group(self, mock_delete):
+        group = factories.GroupFactory()
+        mock_delete.return_value = self.get_mock_response(204)
+        group.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_forbidden(self, mock_delete):
+        group = factories.GroupFactory()
+        mock_delete.return_value = self.get_mock_response(403)
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            group.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_not_found(self, mock_delete):
+        group = factories.GroupFactory()
+        mock_delete.return_value = self.get_mock_response(404)
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            group.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_in_use(self, mock_delete):
+        group = factories.GroupFactory()
+        mock_delete.return_value = self.get_mock_response(409)
+        with self.assertRaises(anvil_api.AnVILAPIError409):
+            group.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_other(self, mock_delete):
+        group = factories.GroupFactory()
+        mock_delete.return_value = self.get_mock_response(499)
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            group.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/" + group.name
+        )

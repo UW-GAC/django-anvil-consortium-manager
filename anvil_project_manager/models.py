@@ -91,9 +91,13 @@ class Group(models.Model):
     def anvil_create(self):
         """Creates a group on AnVIL."""
         response = AnVILAPISession().create_group(self.name)
-        print(response.status_code)
-        print(response.json())
         if response.status_code != 201:
+            raise AnVILAPIError(response)
+
+    def anvil_delete(self):
+        """Deletes a group on AnVIL."""
+        response = AnVILAPISession().delete_group(self.name)
+        if response.status_code != 204:
             raise AnVILAPIError(response)
 
 

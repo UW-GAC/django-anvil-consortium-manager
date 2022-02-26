@@ -44,6 +44,19 @@ class AnVILAPISession(AuthorizedSession):
             raise AnVILAPIError500(response)
         return response
 
+    def delete(self, method, *args, **kwargs):
+        url = self.entry_point + method
+        response = super().delete(url, *args, **kwargs)
+        if response.status_code == 403:
+            raise AnVILAPIError403(response)
+        if response.status_code == 404:
+            raise AnVILAPIError404(response)
+        if response.status_code == 409:
+            raise AnVILAPIError409(response)
+        if response.status_code == 500:
+            raise AnVILAPIError500(response)
+        return response
+
     def get_group(self, group_name):
         method = "groups/" + group_name
         return self.get(method)
@@ -51,6 +64,10 @@ class AnVILAPISession(AuthorizedSession):
     def create_group(self, group_name):
         method = "groups/" + group_name
         return self.post(method)
+
+    def delete_group(self, group_name):
+        method = "groups/" + group_name
+        return self.delete(method)
 
 
 # Exceptions for working with the API.
