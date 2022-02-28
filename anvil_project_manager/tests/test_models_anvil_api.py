@@ -329,6 +329,15 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTest):
         )
 
 
+class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTest):
+    def setUp(self, *args, **kwargs):
+        parent_group = factories.GroupFactory(name="parent-group")
+        child_group = factories.GroupFactory(name="child-group")
+        self.object = factories.GroupGroupMembershipFactory(
+            parent_group=parent_group, child_group=child_group
+        )
+
+
 class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
         billing_project = factories.BillingProjectFactory.create(

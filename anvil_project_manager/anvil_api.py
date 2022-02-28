@@ -9,20 +9,71 @@ import json
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
 
-# Will eventually want to make this a setting.
-ANVIL_API_ENTRY_POINT = "https://api.firecloud.org/api/"
+
+class AnVILAPIClient:
+    # Class variable for auth session.
+    auth_session = None
+
+    def __init__(self):
+        if AnVILAPIClient.auth_session is None:
+            # TODO: Think about how to set the credentials as a project settings, and if it's necessary.
+            # Do we need to think about refreshing the credentials/session?
+            credentials = google.auth.default(
+                [
+                    "https://www.googleapis.com/auth/userinfo.profile",
+                    "https://www.googleapis.com/auth/userinfo.email",
+                ]
+            )[0]
+            AnVILAPIClient.auth_session = AnVILAPISession(credentials)
+
+    def get_group(self, group_name):
+        method = "groups/" + group_name
+        return self.auth_session.get(method, 200)
+
+    def create_group(self, group_name):
+        method = "groups/" + group_name
+        return self.auth_session.post(method, 201)
+
+    def delete_group(self, group_name):
+        method = "groups/" + group_name
+        return self.auth_session.delete(method, 204)
+
+    def get_workspace(self, workspace_namespace, workspace_name):
+        method = "workspaces/" + workspace_namespace + "/" + workspace_name
+        return self.auth_session.get(method, 200)
+
+    def create_workspace(self, workspace_namespace, workspace_name):
+        method = "workspaces"
+        body = {
+            "namespace": workspace_namespace,
+            "name": workspace_name,
+            "attributes": {},
+        }
+        return self.auth_session.post(method, 201, json=body)
+
+    def delete_workspace(self, workspace_namespace, workspace_name):
+        method = "workspaces/" + workspace_namespace + "/" + workspace_name
+        return self.auth_session.delete(method, 202)
+
+    def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
+        method = (
+            "workspaces/"
+            + workspace_namespace
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        # False here means do not invite unregistered users.
+        updates = json.dumps(acl_updates)
+        return self.auth_session.patch(
+            method, 200, headers={"Content-type": "application/json"}, data=updates
+        )
 
 
 class AnVILAPISession(AuthorizedSession):
-    def __init__(self, entry_point=ANVIL_API_ENTRY_POINT):
-        self.credentials = google.auth.default(
-            [
-                "https://www.googleapis.com/auth/userinfo.profile",
-                "https://www.googleapis.com/auth/userinfo.email",
-            ]
-        )[0]
-        super().__init__(self.credentials)
-        self.entry_point = entry_point
+
+    # May eventually want to make this a setting?
+    entry_point = "https://api.firecloud.org/api/"
 
     def get(self, method, success_code, *args, **kwargs):
         url = self.entry_point + method
@@ -64,49 +115,6 @@ class AnVILAPISession(AuthorizedSession):
             raise AnVILAPIError500(response)
         elif response.status_code != success_code:
             raise AnVILAPIError(response)
-
-    def get_group(self, group_name):
-        method = "groups/" + group_name
-        return self.get(method, 200)
-
-    def create_group(self, group_name):
-        method = "groups/" + group_name
-        return self.post(method, 201)
-
-    def delete_group(self, group_name):
-        method = "groups/" + group_name
-        return self.delete(method, 204)
-
-    def get_workspace(self, workspace_namespace, workspace_name):
-        method = "workspaces/" + workspace_namespace + "/" + workspace_name
-        return self.get(method, 200)
-
-    def create_workspace(self, workspace_namespace, workspace_name):
-        method = "workspaces"
-        body = {
-            "namespace": workspace_namespace,
-            "name": workspace_name,
-            "attributes": {},
-        }
-        return self.post(method, 201, json=body)
-
-    def delete_workspace(self, workspace_namespace, workspace_name):
-        method = "workspaces/" + workspace_namespace + "/" + workspace_name
-        return self.delete(method, 202)
-
-    def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
-        method = (
-            "workspaces/"
-            + workspace_namespace
-            + "/"
-            + workspace_name
-            + "/acl?inviteUsersNotFound=false"
-        )
-        # False here means do not invite unregistered users.
-        updates = json.dumps(acl_updates)
-        return self.patch(
-            method, 200, headers={"Content-type": "application/json"}, data=updates
-        )
 
 
 # Exceptions for working with the API.

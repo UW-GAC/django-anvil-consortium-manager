@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
-from .anvil_api import AnVILAPIError404, AnVILAPISession
+from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
 class BillingProject(models.Model):
@@ -86,7 +86,7 @@ class Group(models.Model):
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""
         try:
-            response = AnVILAPISession().get_group(self.name)
+            response = AnVILAPIClient().get_group(self.name)
         except AnVILAPIError404:
             # The group was not found on AnVIL.
             return False
@@ -94,11 +94,11 @@ class Group(models.Model):
 
     def anvil_create(self):
         """Creates the group on AnVIL."""
-        AnVILAPISession().create_group(self.name)
+        AnVILAPIClient().create_group(self.name)
 
     def anvil_delete(self):
         """Deletes the group on AnVIL."""
-        AnVILAPISession().delete_group(self.name)
+        AnVILAPIClient().delete_group(self.name)
 
 
 class Workspace(models.Model):
@@ -135,7 +135,7 @@ class Workspace(models.Model):
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""
         try:
-            response = AnVILAPISession().get_workspace(
+            response = AnVILAPIClient().get_workspace(
                 self.billing_project.name, self.name
             )
         except AnVILAPIError404:
@@ -144,11 +144,11 @@ class Workspace(models.Model):
 
     def anvil_create(self):
         """Create the workspace on AnVIL."""
-        AnVILAPISession().create_workspace(self.billing_project.name, self.name)
+        AnVILAPIClient().create_workspace(self.billing_project.name, self.name)
 
     def anvil_delete(self):
         """Delete the workspace on AnVIL."""
-        AnVILAPISession().delete_workspace(self.billing_project.name, self.name)
+        AnVILAPIClient().delete_workspace(self.billing_project.name, self.name)
 
 
 class GroupGroupMembership(models.Model):
@@ -292,7 +292,7 @@ class WorkspaceGroupAccess(models.Model):
                 "canCompute": False,
             }
         ]
-        AnVILAPISession().update_workspace_acl(
+        AnVILAPIClient().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )
 
@@ -305,6 +305,6 @@ class WorkspaceGroupAccess(models.Model):
                 "canCompute": False,
             }
         ]
-        AnVILAPISession().update_workspace_acl(
+        AnVILAPIClient().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )
