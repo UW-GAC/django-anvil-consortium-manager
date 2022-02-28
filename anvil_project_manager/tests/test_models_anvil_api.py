@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.test import TestCase
 
-from .. import anvil_api
+from .. import anvil_api, models
 from . import factories
 
 
@@ -327,3 +327,93 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTest):
             + "/"
             + self.object.name
         )
+
+
+class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTest):
+    def setUp(self, *args, **kwargs):
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-workspace"
+        )
+        group = factories.GroupFactory.create(name="test-group")
+        self.object = factories.WorkspaceGroupAccessFactory(
+            workspace=workspace, group=group, access=models.WorkspaceGroupAccess.READER
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_create_or_update_successful(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(200)
+        self.object.anvil_create_or_update()
+        mock_patch.assert_called_once_with(
+            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
+            headers={"Content-type": "application/json"},
+            data='[{"email": "test-group@firecloud.org", "accessLevel": "READER", "canShare": false, "canCompute": false}]',  # noqa
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_create_or_update_unsuccessful_400(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(400)
+        with self.assertRaises(anvil_api.AnVILAPIError400):
+            self.object.anvil_create_or_update()
+        mock_patch.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_create_or_update_unsuccessful_workspace_not_found(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(404)
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.object.anvil_create_or_update()
+        mock_patch.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_create_or_update_unsuccessful_internal_error(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(500)
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            self.object.anvil_create_or_update()
+        mock_patch.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_create_or_update_unsuccessful_other(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(401)
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.anvil_create_or_update()
+        mock_patch.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_delete_successful(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(200)
+        self.object.anvil_delete()
+        mock_patch.assert_called_once_with(
+            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
+            headers={"Content-type": "application/json"},
+            data='[{"email": "test-group@firecloud.org", "accessLevel": "NO ACCESS", "canShare": false, "canCompute": false}]',  # noqa
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_delete_unsuccessful_400(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(400)
+        with self.assertRaises(anvil_api.AnVILAPIError400):
+            self.object.anvil_delete()
+        mock_patch.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_delete_unsuccessful_workspace_not_found(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(404)
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.object.anvil_delete()
+        mock_patch.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_delete_unsuccessful_internal_error(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(500)
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            self.object.anvil_delete()
+        mock_patch.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+    def test_anvil_delete_unsuccessful_other(self, mock_patch):
+        mock_patch.return_value = self.get_mock_response(401)
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.anvil_delete()
+        mock_patch.assert_called_once()

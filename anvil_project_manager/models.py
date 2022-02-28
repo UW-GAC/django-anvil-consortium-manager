@@ -48,6 +48,10 @@ class Group(models.Model):
     def get_absolute_url(self):
         return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})
 
+    def get_email(self):
+        # Email suffix is hardcoded by Terra, I think.
+        return self.name + "@firecloud.org"
+
     def get_direct_parents(self):
         """Return a queryset of the direct parents of this group. Does not include grandparents."""
         return Group.objects.filter(child_memberships__child_group=self)
@@ -290,3 +294,33 @@ class WorkspaceGroupAccess(models.Model):
             "anvil_project_manager:workspace_group_access:detail",
             kwargs={"pk": self.pk},
         )
+
+    def anvil_create_or_update(self):
+        acl_updates = [
+            {
+                "email": self.group.get_email(),
+                "accessLevel": self.access,
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        response = AnVILAPISession().update_workspace_acl(
+            self.workspace.billing_project.name, self.workspace.name, acl_updates
+        )
+        if response.status_code != 200:
+            raise AnVILAPIError(response)
+
+    def anvil_delete(self):
+        acl_updates = [
+            {
+                "email": self.group.get_email(),
+                "accessLevel": "NO ACCESS",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        response = AnVILAPISession().update_workspace_acl(
+            self.workspace.billing_project.name, self.workspace.name, acl_updates
+        )
+        if response.status_code != 200:
+            raise AnVILAPIError(response)

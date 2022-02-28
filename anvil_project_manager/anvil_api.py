@@ -4,6 +4,8 @@
 # These don't work with python3.10, don't allow us to do everything we need,
 # and have some dependency resolution issues with this project. Therefore, we'll
 # have to reproduce some of the API to make the calls we would like to make. Alas.
+import json
+
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
 
@@ -59,6 +61,17 @@ class AnVILAPISession(AuthorizedSession):
             raise AnVILAPIError500(response)
         return response
 
+    def patch(self, method, *args, **kwargs):
+        url = self.entry_point + method
+        response = super().patch(url, *args, **kwargs)
+        if response.status_code == 400:
+            raise AnVILAPIError400(response)
+        if response.status_code == 404:
+            raise AnVILAPIError404(response)
+        if response.status_code == 500:
+            raise AnVILAPIError500(response)
+        return response
+
     def get_group(self, group_name):
         method = "groups/" + group_name
         return self.get(method)
@@ -88,6 +101,20 @@ class AnVILAPISession(AuthorizedSession):
         method = "workspaces/" + workspace_namespace + "/" + workspace_name
         return self.delete(method)
 
+    def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
+        method = (
+            "workspaces/"
+            + workspace_namespace
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        # False here means do not invite unregistered users.
+        updates = json.dumps(acl_updates)
+        return self.patch(
+            method, headers={"Content-type": "application/json"}, data=updates
+        )
+
 
 # Exceptions for working with the API.
 class AnVILAPIError(Exception):
@@ -97,6 +124,14 @@ class AnVILAPIError(Exception):
         super().__init__(response.json()["message"])
         self.status_code = response.status_code
         self.response = response
+
+
+class AnVILAPIError400(AnVILAPIError):
+    """Exception for a 400 Bad Request response."""
+
+    def __init__(self, response):
+        assert response.status_code == 400
+        super().__init__(response)
 
 
 class AnVILAPIError403(AnVILAPIError):
