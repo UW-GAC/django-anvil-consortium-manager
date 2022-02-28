@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.urls import reverse
 
-from .anvil_api import AnVILAPIError, AnVILAPIError404, AnVILAPISession
+from .anvil_api import AnVILAPIError404, AnVILAPISession
 
 
 class BillingProject(models.Model):
@@ -94,15 +94,11 @@ class Group(models.Model):
 
     def anvil_create(self):
         """Creates the group on AnVIL."""
-        response = AnVILAPISession().create_group(self.name)
-        if response.status_code != 201:
-            raise AnVILAPIError(response)
+        AnVILAPISession().create_group(self.name)
 
     def anvil_delete(self):
         """Deletes the group on AnVIL."""
-        response = AnVILAPISession().delete_group(self.name)
-        if response.status_code != 204:
-            raise AnVILAPIError(response)
+        AnVILAPISession().delete_group(self.name)
 
 
 class Workspace(models.Model):
@@ -148,19 +144,11 @@ class Workspace(models.Model):
 
     def anvil_create(self):
         """Create the workspace on AnVIL."""
-        response = AnVILAPISession().create_workspace(
-            self.billing_project.name, self.name
-        )
-        if response.status_code != 201:
-            raise AnVILAPIError(response)
+        AnVILAPISession().create_workspace(self.billing_project.name, self.name)
 
     def anvil_delete(self):
         """Delete the workspace on AnVIL."""
-        response = AnVILAPISession().delete_workspace(
-            self.billing_project.name, self.name
-        )
-        if response.status_code != 202:
-            raise AnVILAPIError(response)
+        AnVILAPISession().delete_workspace(self.billing_project.name, self.name)
 
 
 class GroupGroupMembership(models.Model):
@@ -304,11 +292,9 @@ class WorkspaceGroupAccess(models.Model):
                 "canCompute": False,
             }
         ]
-        response = AnVILAPISession().update_workspace_acl(
+        AnVILAPISession().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )
-        if response.status_code != 200:
-            raise AnVILAPIError(response)
 
     def anvil_delete(self):
         acl_updates = [
@@ -319,8 +305,6 @@ class WorkspaceGroupAccess(models.Model):
                 "canCompute": False,
             }
         ]
-        response = AnVILAPISession().update_workspace_acl(
+        AnVILAPISession().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )
-        if response.status_code != 200:
-            raise AnVILAPIError(response)

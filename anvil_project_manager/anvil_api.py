@@ -24,33 +24,36 @@ class AnVILAPISession(AuthorizedSession):
         super().__init__(self.credentials)
         self.entry_point = entry_point
 
-    def get(self, method, *args, **kwargs):
+    def get(self, method, success_code, *args, **kwargs):
         url = self.entry_point + method
         response = super().get(url, *args, **kwargs)
-        # Handle common error codes here.
-        if response.status_code == 403:
-            raise AnVILAPIError403(response)
-        elif response.status_code == 404:
-            raise AnVILAPIError404(response)
-        elif response.status_code == 500:
-            raise AnVILAPIError500(response)
+        self._handle_response(success_code, response)
         return response
 
-    def post(self, method, *args, **kwargs):
+    def post(self, method, success_code, *args, **kwargs):
         url = self.entry_point + method
         response = super().post(url, *args, **kwargs)
         print(response)
-        if response.status_code == 403:
-            raise AnVILAPIError403(response)
-        if response.status_code == 409:
-            raise AnVILAPIError409(response)
-        if response.status_code == 500:
-            raise AnVILAPIError500(response)
+        self._handle_response(success_code, response)
         return response
 
-    def delete(self, method, *args, **kwargs):
+    def delete(self, method, success_code, *args, **kwargs):
         url = self.entry_point + method
         response = super().delete(url, *args, **kwargs)
+        self._handle_response(success_code, response)
+        return response
+
+    def patch(self, method, success_code, *args, **kwargs):
+        url = self.entry_point + method
+        response = super().patch(url, *args, **kwargs)
+        self._handle_response(success_code, response)
+        return response
+
+    def _handle_response(self, success_code, response):
+        """Checks for a successful response code and raises an Exception if the code is different."""
+        # Check for standard error codes.
+        if response.status_code == 400:
+            raise AnVILAPIError400(response)
         if response.status_code == 403:
             raise AnVILAPIError403(response)
         if response.status_code == 404:
@@ -59,34 +62,24 @@ class AnVILAPISession(AuthorizedSession):
             raise AnVILAPIError409(response)
         if response.status_code == 500:
             raise AnVILAPIError500(response)
-        return response
-
-    def patch(self, method, *args, **kwargs):
-        url = self.entry_point + method
-        response = super().patch(url, *args, **kwargs)
-        if response.status_code == 400:
-            raise AnVILAPIError400(response)
-        if response.status_code == 404:
-            raise AnVILAPIError404(response)
-        if response.status_code == 500:
-            raise AnVILAPIError500(response)
-        return response
+        elif response.status_code != success_code:
+            raise AnVILAPIError(response)
 
     def get_group(self, group_name):
         method = "groups/" + group_name
-        return self.get(method)
+        return self.get(method, 200)
 
     def create_group(self, group_name):
         method = "groups/" + group_name
-        return self.post(method)
+        return self.post(method, 201)
 
     def delete_group(self, group_name):
         method = "groups/" + group_name
-        return self.delete(method)
+        return self.delete(method, 204)
 
     def get_workspace(self, workspace_namespace, workspace_name):
         method = "workspaces/" + workspace_namespace + "/" + workspace_name
-        return self.get(method)
+        return self.get(method, 200)
 
     def create_workspace(self, workspace_namespace, workspace_name):
         method = "workspaces"
@@ -95,11 +88,11 @@ class AnVILAPISession(AuthorizedSession):
             "name": workspace_name,
             "attributes": {},
         }
-        return self.post(method, json=body)
+        return self.post(method, 201, json=body)
 
     def delete_workspace(self, workspace_namespace, workspace_name):
         method = "workspaces/" + workspace_namespace + "/" + workspace_name
-        return self.delete(method)
+        return self.delete(method, 202)
 
     def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
         method = (
@@ -112,7 +105,7 @@ class AnVILAPISession(AuthorizedSession):
         # False here means do not invite unregistered users.
         updates = json.dumps(acl_updates)
         return self.patch(
-            method, headers={"Content-type": "application/json"}, data=updates
+            method, 200, headers={"Content-type": "application/json"}, data=updates
         )
 
 
