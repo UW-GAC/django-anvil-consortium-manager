@@ -428,6 +428,87 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTest):
         )
 
 
+class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTest):
+    def setUp(self, *args, **kwargs):
+        group = factories.GroupFactory(name="test-group")
+        account = factories.AccountFactory(email="test-account@example.com")
+        self.object = factories.GroupAccountMembershipFactory(
+            group=group, account=account, role=models.GroupAccountMembership.MEMBER
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_successful(self, mock_put):
+        mock_put.return_value = self.get_mock_response(204)
+        self.object.anvil_create()
+        mock_put.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/test-group@firecloud.org/MEMBER/test-account@example.com"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_403(self, mock_put):
+        mock_put.return_value = self.get_mock_response(403)
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            self.object.anvil_create()
+        mock_put.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_404(self, mock_put):
+        mock_put.return_value = self.get_mock_response(404)
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.object.anvil_create()
+        mock_put.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_500(self, mock_put):
+        mock_put.return_value = self.get_mock_response(500)
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            self.object.anvil_create()
+        mock_put.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_other(self, mock_put):
+        mock_put.return_value = self.get_mock_response(499)
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.anvil_create()
+        mock_put.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_successful(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(204)
+        self.object.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/test-group@firecloud.org/MEMBER/test-account@example.com"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_403(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(403)
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_404(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(404)
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_500(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(500)
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_other(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(499)
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once()
+
+
 class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
         billing_project = factories.BillingProjectFactory.create(
