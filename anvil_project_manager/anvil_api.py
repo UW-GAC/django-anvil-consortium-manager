@@ -38,6 +38,14 @@ class AnVILAPIClient:
         method = "groups/" + group_name
         return self.auth_session.delete(method, 204)
 
+    def add_user_to_group(self, group_name, role, user_email):
+        method = "groups/" + group_name + "/" + role + "/" + user_email
+        return self.auth_session.put(method, 204)
+
+    def remove_user_from_group(self, group_name, role, user_email):
+        method = "groups/" + group_name + "/" + role + "/" + user_email
+        return self.auth_session.delete(method, 204)
+
     def get_workspace(self, workspace_namespace, workspace_name):
         method = "workspaces/" + workspace_namespace + "/" + workspace_name
         return self.auth_session.get(method, 200)
@@ -97,6 +105,12 @@ class AnVILAPISession(AuthorizedSession):
     def patch(self, method, success_code, *args, **kwargs):
         url = self.entry_point + method
         response = super().patch(url, *args, **kwargs)
+        self._handle_response(success_code, response)
+        return response
+
+    def put(self, method, success_code, *args, **kwargs):
+        url = self.entry_point + method
+        response = super().put(url, *args, **kwargs)
         self._handle_response(success_code, response)
         return response
 

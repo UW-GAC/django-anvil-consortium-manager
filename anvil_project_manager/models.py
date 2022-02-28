@@ -209,6 +209,18 @@ class GroupGroupMembership(models.Model):
             # This should already be handled elsewhere - in other field clean or form methods.
             pass
 
+    def anvil_create(self):
+        """Add the child group to the parent group on AnVIL."""
+        AnVILAPIClient().add_user_to_group(
+            self.parent_group.get_email(), self.role, self.child_group.get_email()
+        )
+
+    def anvil_delete(self):
+        """Remove the child group from the parent on AnVIL"""
+        AnVILAPIClient().remove_user_from_group(
+            self.parent_group.get_email(), self.role, self.child_group.get_email()
+        )
+
 
 class GroupAccountMembership(models.Model):
     """A model to store which accounts are in a group."""

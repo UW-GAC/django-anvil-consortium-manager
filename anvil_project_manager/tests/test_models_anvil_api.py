@@ -334,7 +334,97 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTest):
         parent_group = factories.GroupFactory(name="parent-group")
         child_group = factories.GroupFactory(name="child-group")
         self.object = factories.GroupGroupMembershipFactory(
-            parent_group=parent_group, child_group=child_group
+            parent_group=parent_group,
+            child_group=child_group,
+            role=models.GroupGroupMembership.MEMBER,
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_successful(self, mock_put):
+        mock_put.return_value = self.get_mock_response(204)
+        self.object.anvil_create()
+        mock_put.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_403(self, mock_put):
+        mock_put.return_value = self.get_mock_response(403)
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            self.object.anvil_create()
+        mock_put.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_404(self, mock_put):
+        mock_put.return_value = self.get_mock_response(404)
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.object.anvil_create()
+        mock_put.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_500(self, mock_put):
+        mock_put.return_value = self.get_mock_response(500)
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            self.object.anvil_create()
+        mock_put.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+    def test_anvil_create_unsuccessful_other(self, mock_put):
+        mock_put.return_value = self.get_mock_response(499)
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.anvil_create()
+        mock_put.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_successful(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(204)
+        self.object.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_403(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(403)
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_404(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(404)
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_500(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(500)
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+    def test_anvil_delete_unsuccessful_other(self, mock_delete):
+        mock_delete.return_value = self.get_mock_response(499)
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.anvil_delete()
+        mock_delete.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/parent-group@firecloud.org/MEMBER/child-group@firecloud.org"
         )
 
 
