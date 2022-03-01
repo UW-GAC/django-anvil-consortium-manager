@@ -18,6 +18,14 @@ class BillingProject(models.Model):
             "anvil_project_manager:billing_projects:detail", kwargs={"pk": self.pk}
         )
 
+    def anvil_exists(self):
+        try:
+            response = AnVILAPIClient().get_billing_project(self.name)
+        except AnVILAPIError404:
+            # The billing project was not found on AnVIL.
+            return False
+        return response.status_code == 200
+
 
 class Account(models.Model):
     """A model to store information about AnVIL accounts."""

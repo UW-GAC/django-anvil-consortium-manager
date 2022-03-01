@@ -26,6 +26,10 @@ class AnVILAPIClient:
             )[0]
             AnVILAPIClient.auth_session = AnVILAPISession(credentials)
 
+    def get_billing_project(self, billing_project):
+        method = "billing/v2/" + billing_project
+        return self.auth_session.get(method, 200)
+
     def get_group(self, group_name):
         method = "groups/" + group_name
         return self.auth_session.get(method, 200)
@@ -145,7 +149,11 @@ class AnVILAPIError(Exception):
     """Base class for all exceptions in this module."""
 
     def __init__(self, response):
-        super().__init__(response.json()["message"])
+        try:
+            msg = response.json()["message"]
+        except (KeyError, TypeError):
+            msg = response.text
+        super().__init__(msg)
         self.status_code = response.status_code
         self.response = response
 

@@ -10,6 +10,22 @@ class AnVILAPIClientTest(TestCase):
     def setUpClass(cls):
         cls.client = anvil_api.AnVILAPIClient()
 
+    def test_billing_project(self):
+        test_billing_project = "gregor-adrienne"
+
+        # Try to get a billing project that exists.
+        response = self.client.get_billing_project(test_billing_project)
+        self.assertEqual(response.status_code, 200)
+        json = response.json()
+        self.assertIn("projectName", json.keys())
+        self.assertEqual(json["projectName"], test_billing_project)
+        self.assertIn("invalidBillingAccount", json.keys())
+        self.assertEqual(json["invalidBillingAccount"], False)
+
+        # try to get a billing project that doesn't exist.
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            response = self.client.get_billing_project("asdfghjkl")
+
     def test_groups(self):
         """Tests group methods."""
         test_group = "django-anvil-project-manager-integration-test-group"

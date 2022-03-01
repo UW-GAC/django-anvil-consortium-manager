@@ -14,6 +14,25 @@ class AnVILAPIMockTest(TestCase):
         return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
 
+class BillingProjectAnVILAPIMockTest(AnVILAPIMockTest):
+    def setUp(self, *args, **kwargs):
+        self.object = factories.BillingProjectFactory()
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
+    def test_anvil_exists_does_exist(self, mock_get):
+        mock_get.return_value = self.get_mock_response(200)
+        self.assertIs(self.object.anvil_exists(), True)
+        mock_get.assert_called_once_with(
+            "https://api.firecloud.org/api/billing/v2/" + self.object.name
+        )
+
+    @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
+    def test_anvil_exists_does_not_exist(self, mock_get):
+        mock_get.return_value = self.get_mock_response(404)
+        self.assertIs(self.object.anvil_exists(), False)
+        mock_get.assert_called_once()
+
+
 class GroupAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
         self.object = factories.GroupFactory()
