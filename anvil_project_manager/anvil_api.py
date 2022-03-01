@@ -83,35 +83,40 @@ class AnVILAPISession(AuthorizedSession):
     # May eventually want to make this a setting?
     entry_point = "https://api.firecloud.org/api/"
 
-    def get(self, method, success_code, *args, **kwargs):
+    def get(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
         response = super().get(url, *args, **kwargs)
-        self._handle_response(success_code, response)
+        if success_code is not None:
+            self._handle_response(success_code, response)
         return response
 
-    def post(self, method, success_code, *args, **kwargs):
+    def post(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
         response = super().post(url, *args, **kwargs)
         print(response)
-        self._handle_response(success_code, response)
+        if success_code is not None:
+            self._handle_response(success_code, response)
         return response
 
-    def delete(self, method, success_code, *args, **kwargs):
+    def delete(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
         response = super().delete(url, *args, **kwargs)
-        self._handle_response(success_code, response)
+        if success_code is not None:
+            self._handle_response(success_code, response)
         return response
 
-    def patch(self, method, success_code, *args, **kwargs):
+    def patch(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
         response = super().patch(url, *args, **kwargs)
-        self._handle_response(success_code, response)
+        if success_code is not None:
+            self._handle_response(success_code, response)
         return response
 
-    def put(self, method, success_code, *args, **kwargs):
+    def put(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
         response = super().put(url, *args, **kwargs)
-        self._handle_response(success_code, response)
+        if success_code is not None:
+            self._handle_response(success_code, response)
         return response
 
     def _handle_response(self, success_code, response):
