@@ -334,9 +334,28 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
 
+        # Check ACLs for a workspace that doesn't exist.
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            response = self.client.get_workspace_acl(
+                test_billing_project, test_workspace
+            )
+
         # Create the workspace.
         response = self.client.create_workspace(test_billing_project, test_workspace)
         self.assertEqual(response.status_code, 201)
+
+        # Check ACLs
+        response = self.client.get_workspace_acl(test_billing_project, test_workspace)
+        json = response.json()
+        self.assertIn("acl", json.keys())
+        self.assertEqual(len(json["acl"]), 1)
+        owner = list(json["acl"].keys())[0]  # This is the owner of the workspace.
+        owner_acl = json["acl"][owner]
+        self.assertIn("accessLevel", owner_acl.keys())
+        self.assertEqual(owner_acl["accessLevel"], "OWNER")
+        # self.assertEqual(group_acl['canCompute'], False)
+        # self.assertEqual(group_acl['canShare'], False)
+        # self.assertEqual(group_acl['pending'], False)
 
         # Try to add a group that doesn't exist to the workspace.
         response = self.client.update_workspace_acl(
@@ -353,6 +372,14 @@ class AnVILAPIClientTest(TestCase):
         )
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
+
+        # Check ACLs.
+        response = self.client.get_workspace_acl(test_billing_project, test_workspace)
+        json = response.json()
+        self.assertIn("acl", json.keys())
+        self.assertEqual(len(json["acl"]), 1)
+        self.assertIn(owner, json["acl"].keys())
+        self.assertEqual(json["acl"][owner], owner_acl)
 
         # Create the group
         response = self.client.create_group(test_group)
@@ -374,7 +401,24 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
 
-        # Share the workspace witht he group a second time.
+        # Check ACL.
+        response = self.client.get_workspace_acl(test_billing_project, test_workspace)
+        json = response.json()
+        self.assertIn("acl", json.keys())
+        self.assertEqual(len(json["acl"]), 2)
+        self.assertIn(owner, json["acl"])
+        self.assertEqual(
+            json["acl"][owner], owner_acl
+        )  # Service account permissions haven't changed.
+        self.assertIn(test_group + "@firecloud.org", json["acl"])
+        group_acl = json["acl"][test_group + "@firecloud.org"]
+        self.assertIn("accessLevel", group_acl)
+        self.assertEqual(group_acl["accessLevel"], "READER")
+        self.assertEqual(group_acl["canCompute"], False)
+        self.assertEqual(group_acl["canShare"], False)
+        self.assertEqual(group_acl["pending"], False)
+
+        # Share the workspace with the group a second time.
         response = self.client.update_workspace_acl(
             test_billing_project, test_workspace, acl_updates
         )
@@ -386,6 +430,23 @@ class AnVILAPIClientTest(TestCase):
         self.assertEqual(json["usersNotFound"], [])
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
+
+        # Check ACL.
+        response = self.client.get_workspace_acl(test_billing_project, test_workspace)
+        json = response.json()
+        self.assertIn("acl", json.keys())
+        self.assertEqual(len(json["acl"]), 2)
+        self.assertIn(owner, json["acl"])
+        self.assertEqual(
+            json["acl"][owner], owner_acl
+        )  # Service account permissions haven't changed.
+        self.assertIn(test_group + "@firecloud.org", json["acl"])
+        group_acl = json["acl"][test_group + "@firecloud.org"]
+        self.assertIn("accessLevel", group_acl)
+        self.assertEqual(group_acl["accessLevel"], "READER")  # Still a READER.
+        self.assertEqual(group_acl["canCompute"], False)
+        self.assertEqual(group_acl["canShare"], False)
+        self.assertEqual(group_acl["pending"], False)
 
         # Change the group's access to WRITER.
         acl_updates[0]["accessLevel"] = "WRITER"
@@ -404,6 +465,23 @@ class AnVILAPIClientTest(TestCase):
         self.assertEqual(json["usersNotFound"], [])
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
+
+        # Check ACL.
+        response = self.client.get_workspace_acl(test_billing_project, test_workspace)
+        json = response.json()
+        self.assertIn("acl", json.keys())
+        self.assertEqual(len(json["acl"]), 2)
+        self.assertIn(owner, json["acl"])
+        self.assertEqual(
+            json["acl"][owner], owner_acl
+        )  # Service account permissions haven't changed.
+        self.assertIn(test_group + "@firecloud.org", json["acl"])
+        group_acl = json["acl"][test_group + "@firecloud.org"]
+        self.assertIn("accessLevel", group_acl)
+        self.assertEqual(group_acl["accessLevel"], "WRITER")  # Changed to WRITER.
+        self.assertEqual(group_acl["canCompute"], False)
+        self.assertEqual(group_acl["canShare"], False)
+        self.assertEqual(group_acl["pending"], False)
 
         # Try to share the workspace with an invalid access level.
         acl_updates[0]["accessLevel"] = "foo"
@@ -429,6 +507,17 @@ class AnVILAPIClientTest(TestCase):
         self.assertEqual(json["usersNotFound"], [])
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
+
+        # Check ACL.
+        response = self.client.get_workspace_acl(test_billing_project, test_workspace)
+        json = response.json()
+        self.assertIn("acl", json.keys())
+        self.assertEqual(len(json["acl"]), 1)
+        self.assertIn(owner, json["acl"])
+        self.assertEqual(
+            json["acl"][owner], owner_acl
+        )  # Service account permissions haven't changed.
+        self.assertNotIn(test_group + "@firecloud.org", json["acl"])
 
         # Delete the workspace.
         response = self.client.delete_workspace(test_billing_project, test_workspace)

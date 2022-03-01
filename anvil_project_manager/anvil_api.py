@@ -63,6 +63,10 @@ class AnVILAPIClient:
         method = "workspaces/" + workspace_namespace + "/" + workspace_name
         return self.auth_session.delete(method, 202)
 
+    def get_workspace_acl(self, workspace_namespace, workspace_name):
+        method = "workspaces/" + workspace_namespace + "/" + workspace_name + "/acl"
+        return self.auth_session.get(method, 200)
+
     def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
         method = (
             "workspaces/"
