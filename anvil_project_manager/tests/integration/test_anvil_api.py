@@ -77,12 +77,6 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("membersEmails", json.keys())
         self.assertEqual(json["membersEmails"], [])
 
-        # Try to create a group that already exists and someone else owns.
-        # This one already exists on AnVIL and we are not admins.
-        # This is not documented it the API, but it makes sense.
-        with self.assertRaises(anvil_api.AnVILAPIError403):
-            self.client.create_group("test-group")
-
         # Delete the group.
         response = self.client.delete_group(test_group)
         self.assertEqual(response.status_code, 204)
@@ -91,6 +85,21 @@ class AnVILAPIClientTest(TestCase):
         # Make sure it's deleted.
         with self.assertRaises(anvil_api.AnVILAPIError404):
             self.client.get_group(test_group)
+
+        # Try to create a group that already exists and someone else owns.
+        # This one already exists on AnVIL and we are not admins.
+        # This is not documented it the API, but it makes sense.
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            self.client.create_group("test-group")
+
+        # Try to delete a group that already exists and someone else owns.
+        # This one already exists on AnVIL and we are not admins.
+        # EXPECTED behavior:
+        # with self.assertRaises(anvil_api.AnVILAPIError403):
+        #     self.client.delete_group("test-group")
+        # ACTUAL behavior:
+        response = self.client.delete_group("test-group")
+        self.assertEqual(response.status_code, 204)
 
     def test_group_membership(self):
         test_group_1 = "django-anvil-project-manager-integration-test-group-1"

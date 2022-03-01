@@ -1,3 +1,5 @@
+from unittest import mock, skip
+
 from django.http.response import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
@@ -742,9 +744,19 @@ class GroupDetailTest(TestCase):
 
 
 class GroupCreateTest(TestCase):
+
+    api_success_code = 201
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.post")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, message="mock message"):
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -760,6 +772,11 @@ class GroupCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_mock_not_called_on_get(self):
+        request = self.factory.get(self.get_url())
+        self.get_view()(request)
+        self.mock_request.assert_not_called()
+
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
@@ -768,18 +785,24 @@ class GroupCreateTest(TestCase):
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(), {"name": "test-group"})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Group.objects.latest("pk")
         self.assertIsInstance(new_object, models.Group)
+        self.mock_request.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/test-group"
+        )
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         new_object = models.Group.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
+        self.mock_request.assert_called_once()
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two groups with the same name."""
@@ -795,6 +818,7 @@ class GroupCreateTest(TestCase):
             models.Group.objects.all(),
             models.Group.objects.filter(pk=obj.pk),
         )
+        self.mock_request.assert_not_called()
 
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
@@ -806,6 +830,7 @@ class GroupCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Group.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -817,6 +842,30 @@ class GroupCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Group.objects.count(), 0)
+        self.mock_request.assert_not_called()
+
+    def test_api_error_message(self):
+        """Shows a method if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        self.mock_request.return_value = self.get_mock_response(
+            500, message="test error"
+        )
+        response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("AnVIL API Error: test error", str(messages[0]))
+        self.mock_request.assert_called_once()
+        # Make sure that no object is created.
+        self.assertEqual(models.Group.objects.count(), 0)
+
+    @skip
+    def test_api_group_already_exists(self):
+        self.fail(
+            "AnVIL API returns 201 instead of ??? when trying to create a group that already exists."
+        )
 
 
 class GroupListTest(TestCase):
@@ -868,9 +917,19 @@ class GroupListTest(TestCase):
 
 
 class GroupDeleteTest(TestCase):
+
+    api_success_code = 204
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, message="mock message"):
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -886,25 +945,32 @@ class GroupDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
+        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
+        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.GroupFactory.create()
+        object = factories.GroupFactory.create(name="test-group")
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Group.objects.count(), 0)
+        self.mock_request.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/test-group"
+        )
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.GroupFactory.create()
         other_object = factories.GroupFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -913,14 +979,46 @@ class GroupDeleteTest(TestCase):
             models.Group.objects.all(),
             models.Group.objects.filter(pk=other_object.pk),
         )
+        self.mock_request.assert_called_once()
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("anvil_project_manager:groups:list"))
+        self.mock_request.assert_called_once()
+
+    def test_success_with_api_error_message(self):
+        """Shows a method if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupFactory.create()
+        self.mock_request.return_value = self.get_mock_response(
+            500, message="test error"
+        )
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("AnVIL API Error: test error", str(messages[0]))
+        self.mock_request.assert_called_once()
+        # Make sure that the object still exists.
+        self.assertEqual(models.Group.objects.count(), 1)
+
+    @skip
+    def test_api_not_admin_of_group(self):
+        self.fail(
+            "AnVIL API returns 204 instead of 403 when trying to delete a group you are not an admin of."
+        )
+
+    @skip
+    def test_api_group_does_not_exist(self):
+        self.fail(
+            "AnVIL API returns 204 instead of 404 when trying to delete a group that doesn't exist."
+        )
 
 
 class WorkspaceDetailTest(TestCase):

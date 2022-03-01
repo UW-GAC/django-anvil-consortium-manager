@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.urls import reverse
 from django.views.generic import (
     CreateView,
@@ -9,6 +10,7 @@ from django.views.generic import (
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import models, tables
+from .anvil_api import AnVILAPIError
 
 
 class Index(TemplateView):
@@ -90,6 +92,23 @@ class GroupCreate(CreateView):
     model = models.Group
     fields = ("name",)
 
+    def form_valid(self, form):
+        """If the form is valid, save the associated model and create it on AnVIL."""
+        # Create but don't save the new group.
+        self.object = form.save(commit=False)
+        # Make an API call to AnVIL to create the group.
+        try:
+            self.object.anvil_create()
+        except AnVILAPIError as e:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        # Save the group.
+        self.object.save()
+        return super().form_valid(form)
+
 
 class GroupList(SingleTableView):
     model = models.Group
@@ -101,6 +120,23 @@ class GroupDelete(DeleteView):
 
     def get_success_url(self):
         return reverse("anvil_project_manager:groups:list")
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Make an API call to AnVIL and then call the delete method on the object.
+        """
+        self.object = self.get_object()
+        print("trying to delete group")
+        try:
+            self.object.anvil_delete()
+        except AnVILAPIError as e:
+            # The AnVIL call has failed for some reason.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            # Rerender the same page with an error message.
+            return self.render_to_response(self.get_context_data())
+        return super().delete(request, *args, **kwargs)
 
 
 class WorkspaceDetail(SingleTableMixin, DetailView):
