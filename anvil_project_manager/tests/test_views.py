@@ -861,7 +861,7 @@ class GroupCreateTest(TestCase):
         # Make sure that no object is created.
         self.assertEqual(models.Group.objects.count(), 0)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_group_already_exists(self):
         self.fail(
             "AnVIL API returns 201 instead of ??? when trying to create a group that already exists."
@@ -1008,13 +1008,13 @@ class GroupDeleteTest(TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_not_admin_of_group(self):
         self.fail(
             "AnVIL API returns 204 instead of 403 when trying to delete a group you are not an admin of."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_group_does_not_exist(self):
         self.fail(
             "AnVIL API returns 204 instead of 404 when trying to delete a group that doesn't exist."
@@ -1895,25 +1895,25 @@ class GroupGroupMembershipCreateTest(TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_no_permission_for_parent_group(self):
         self.fail(
             "Trying to add a child group to a parent group that you don't have permission for returns a successful code."  # noqa
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_child_group_exists_parent_group_does_not_exist(self):
         self.fail(
             "Trying to add a group that exists to a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
         self.fail(
             "Trying to add a group that doesn't exist to a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_exists(self):
         self.fail(
             "Trying to add a group that doesn't exist to a group that exists returns a successful code."
@@ -2072,25 +2072,25 @@ class GroupGroupMembershipDeleteTest(TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_no_permission_for_parent_group(self):
         self.fail(
             "Trying to remove a child group from a parent group that you don't have permission for returns a successful code."  # noqa
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_child_group_exists_parent_group_does_not_exist(self):
         self.fail(
             "Trying to remove a group that exists from a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
         self.fail(
             "Trying to remove a group that doesn't exist from a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_exists(self):
         self.fail(
             "Trying to remove a group that doesn't exist from a group that exists returns a successful code."
@@ -2466,25 +2466,25 @@ class GroupAccountMembershipCreateTest(TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_no_permission_for_group(self):
         self.fail(
             "Trying to add a user to a group that you don't have permission for returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_user_exists_group_does_not_exist(self):
         self.fail(
             "Trying to add a user that exists to a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_does_not_exist(self):
         self.fail(
             "Trying to add a user that doesn't exist to a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_exists(self):
         self.fail(
             "Trying to add a user that doesn't exist to a group that exists returns a successful code."
@@ -2638,25 +2638,25 @@ class GroupAccountMembershipDeleteTest(TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_no_permission_for_group(self):
         self.fail(
             "Trying to delete a user that exists to a group that you don't have permission for returns a successful code."  # noqa
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_user_exists_group_does_not_exist(self):
         self.fail(
             "Trying to delete a user that exists from a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_does_not_exist(self):
         self.fail(
             "Trying to delete a user that doesn't exist from a group that doesn't exist returns a successful code."
         )
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_exists(self):
         self.fail(
             "Trying to delete a user that doesn't exist from a group that exists returns a successful code."
@@ -3085,7 +3085,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
         self,
     ):
@@ -3286,7 +3286,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_updating_access_to_workspace_that_doesnt_exist_for_group_that_doesnt_exist(
         self,
     ):
@@ -3453,7 +3453,7 @@ class WorkspaceGroupAccessDeleteTest(TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
 
-    @skip
+    @skip("AnVIL API issue")
     def test_api_removing_access_to_workspace_that_doesnt_exist_for_group_that_doesnt_exist(
         self,
     ):
