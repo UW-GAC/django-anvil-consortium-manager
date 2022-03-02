@@ -1896,9 +1896,27 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     @skip
-    def test_api_user_and_group_does_not_exist(self):
+    def test_api_no_permission_for_parent_group(self):
         self.fail(
-            "Trying to add a user to a group that doesn't exist returns a successful code."
+            "Trying to add a child group to a parent group that you don't have permission for returns a successful code."  # noqa
+        )
+
+    @skip
+    def test_api_child_group_exists_parent_group_does_not_exist(self):
+        self.fail(
+            "Trying to add a group that exists to a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
+        self.fail(
+            "Trying to add a group that doesn't exist to a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_child_group_does_not_exist_parent_group_exists(self):
+        self.fail(
+            "Trying to add a group that doesn't exist to a group that exists returns a successful code."
         )
 
 
@@ -2190,15 +2208,27 @@ class GroupGroupMembershipDeleteTest(TestCase):
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
     @skip
-    def test_api_group_does_not_exist(self):
+    def test_api_no_permission_for_parent_group(self):
         self.fail(
-            "Trying to delete a user from a group that doesn't exist returns a successful code."
+            "Trying to remove a child group from a parent group that you don't have permission for returns a successful code."  # noqa
         )
 
     @skip
-    def test_api_no_permission_for_group(self):
+    def test_api_child_group_exists_parent_group_does_not_exist(self):
         self.fail(
-            "Trying to add a user to a group that you don't have permission for returns a successful code."
+            "Trying to remove a group that exists from a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
+        self.fail(
+            "Trying to remove a group that doesn't exist from a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_child_group_does_not_exist_parent_group_exists(self):
+        self.fail(
+            "Trying to remove a group that doesn't exist from a group that exists returns a successful code."
         )
 
 
@@ -2571,6 +2601,30 @@ class GroupAccountMembershipCreateTest(TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
+    @skip
+    def test_api_no_permission_for_group(self):
+        self.fail(
+            "Trying to add a user to a group that you don't have permission for returns a successful code."
+        )
+
+    @skip
+    def test_api_user_exists_group_does_not_exist(self):
+        self.fail(
+            "Trying to add a user that exists to a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_user_does_not_exist_group_does_not_exist(self):
+        self.fail(
+            "Trying to add a user that doesn't exist to a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_user_does_not_exist_group_exists(self):
+        self.fail(
+            "Trying to add a user that doesn't exist to a group that exists returns a successful code."
+        )
+
 
 class GroupAccountMembershipUpdateTest(TestCase):
     def setUp(self):
@@ -2760,9 +2814,19 @@ class GroupAccountMembershipListTest(TestCase):
 
 
 class GroupAccountMembershipDeleteTest(TestCase):
+
+    api_success_code = 204
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, message="mock message"):
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2780,25 +2844,30 @@ class GroupAccountMembershipDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
+        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
+        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.GroupAccountMembershipFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_called_once()
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.GroupAccountMembershipFactory.create()
         other_object = factories.GroupAccountMembershipFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -2807,15 +2876,62 @@ class GroupAccountMembershipDeleteTest(TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=other_object.pk),
         )
+        self.mock_request.assert_called_once()
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupAccountMembershipFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_account_membership:list")
+        )
+        self.mock_request.assert_called_once()
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupAccountMembershipFactory.create()
+        self.mock_request.return_value = self.get_mock_response(
+            500, message="group account membership delete test error"
+        )
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership delete test error",
+            str(messages[0]),
+        )
+        self.mock_request.assert_called_once()
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+
+    @skip
+    def test_api_no_permission_for_group(self):
+        self.fail(
+            "Trying to delete a user that exists to a group that you don't have permission for returns a successful code."  # noqa
+        )
+
+    @skip
+    def test_api_user_exists_group_does_not_exist(self):
+        self.fail(
+            "Trying to delete a user that exists from a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_user_does_not_exist_group_does_not_exist(self):
+        self.fail(
+            "Trying to delete a user that doesn't exist from a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_user_does_not_exist_group_exists(self):
+        self.fail(
+            "Trying to delete a user that doesn't exist from a group that exists returns a successful code."
         )
 
 
