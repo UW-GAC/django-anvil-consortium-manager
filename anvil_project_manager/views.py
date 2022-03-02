@@ -232,12 +232,6 @@ class GroupGroupMembershipCreate(CreateView):
         return super().form_valid(form)
 
 
-class GroupGroupMembershipUpdate(UpdateView):
-    model = models.GroupGroupMembership
-    fields = ("role",)
-    template_name = "anvil_project_manager/groupgroupmembership_update.html"
-
-
 class GroupGroupMembershipList(SingleTableView):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
@@ -293,12 +287,6 @@ class GroupAccountMembershipCreate(CreateView):
         # Save the group.
         self.object.save()
         return super().form_valid(form)
-
-
-class GroupAccountMembershipUpdate(UpdateView):
-    model = models.GroupAccountMembership
-    fields = ("role",)
-    template_name = "anvil_project_manager/groupaccountmembership_update.html"
 
 
 class GroupAccountMembershipList(SingleTableView):

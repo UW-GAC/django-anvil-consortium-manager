@@ -54,9 +54,6 @@ group_group_membership_patterns = (
             views.GroupGroupMembershipDelete.as_view(),
             name="delete",
         ),
-        path(
-            "<int:pk>/update", views.GroupGroupMembershipUpdate.as_view(), name="update"
-        ),
     ],
     "group_group_membership",
 )
@@ -70,11 +67,6 @@ group_account_membership_patterns = (
             "<int:pk>/delete",
             views.GroupAccountMembershipDelete.as_view(),
             name="delete",
-        ),
-        path(
-            "<int:pk>/update",
-            views.GroupAccountMembershipUpdate.as_view(),
-            name="update",
         ),
     ],
     "group_account_membership",
