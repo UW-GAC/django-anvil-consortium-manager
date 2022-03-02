@@ -109,9 +109,9 @@ class AnVILAPIClientTest(TestCase):
         # We still want to clean up after ourselves if the test fails.
         self.addCleanup(self.client.auth_session.delete, "groups/" + test_group_1)
         self.addCleanup(self.client.auth_session.delete, "groups/" + test_group_2)
+
         # Try adding the user as a member to a group that doesn't exist.
         # This is undocumented in the API.
-
         response = self.client.add_user_to_group(test_group_1, "MEMBER", test_user)
         self.assertEqual(
             response.status_code, 204
@@ -125,10 +125,49 @@ class AnVILAPIClientTest(TestCase):
         )  # Interesting - I'm surprised this isn't a 404.
         self.assertEqual(response.text, "")
 
+        # Try adding a group that doesn't exist as a member to another group that doesn't exist.
+        # This is undocumented in the API.
+        response = self.client.add_user_to_group(
+            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
+        )
+        self.assertEqual(
+            response.status_code, 204
+        )  # Interesting - I'm surprised this isn't a 404.
+        self.assertEqual(response.text, "")
+        # Try removing a user from a group that doesn't exist.
+        # This is undocumented in the API.
+        response = self.client.remove_user_from_group(
+            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
+        )
+        self.assertEqual(
+            response.status_code, 204
+        )  # Interesting - I'm surprised this isn't a 404.
+        self.assertEqual(response.text, "")
+
         # Create the group.
         response = self.client.create_group(test_group_1)
 
-        # Add the user to the group.
+        # Add a user that doesn't exist to the group.
+        # Try adding a user that doesn't exist yet to the group.
+        # EXPECTED behavior:
+        # with self.assertRaises(anvil_api.AnVILAPIError404):
+        #     response = self.client.add_user_to_group(test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com")
+        # ACTUAL behavior:
+        response = self.client.add_user_to_group(
+            test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com"
+        )
+        self.assertEqual(response.status_code, 204)
+        # Remove a user that doesn't exist from the group.
+        # EXPECTED behavior:
+        # with self.assertRaises(anvil_api.AnVILAPIError404):
+        #     response = self.client.remove_user_from_group(test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com")
+        # ACTUAL behavior:
+        response = self.client.remove_user_from_group(
+            test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com"
+        )
+        self.assertEqual(response.status_code, 204)
+
+        # Add a user that exists to the group.
         response = self.client.add_user_to_group(test_group_1, "MEMBER", test_user)
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response.text, "")
@@ -207,6 +246,25 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("membersEmails", json.keys())
         self.assertNotIn(test_user, json["membersEmails"])  # No longer a member.
 
+        # Try adding a group that doesn't exist yet to the group.
+        # EXPECTED behavior:
+        # with self.assertRaises(anvil_api.AnVILAPIError404):
+        #     response = self.client.add_user_to_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
+        # ACTUAL behavior:
+        response = self.client.add_user_to_group(
+            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
+        )
+        self.assertEqual(response.status_code, 204)
+        # Remove a group that doesn't exist from the group.
+        # EXPECTED behavior:
+        # with self.assertRaises(anvil_api.AnVILAPIError404):
+        #     response = self.client.remove_user_from_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
+        # ACTUAL behavior:
+        response = self.client.remove_user_from_group(
+            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
+        )
+        self.assertEqual(response.status_code, 204)
+
         # Create another group.
         response = self.client.create_group(test_group_2)
         self.assertEqual(response.status_code, 201)
@@ -256,6 +314,26 @@ class AnVILAPIClientTest(TestCase):
 
         # Delete the groups.
         self.client.delete_group(test_group_1)
+
+        # Add a group that exists to a group that doesn't exist.
+        response = self.client.add_user_to_group(
+            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
+        )
+        self.assertEqual(
+            response.status_code, 204
+        )  # Interesting - I'm surprised this isn't a 404.
+        self.assertEqual(response.text, "")
+        # Try removing a group that exists from a group that doesn't exist.
+        # This is undocumented in the API.
+        response = self.client.remove_user_from_group(
+            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
+        )
+        self.assertEqual(
+            response.status_code, 204
+        )  # Interesting - I'm surprised this isn't a 404.
+        self.assertEqual(response.text, "")
+
+        # Delete the second group.
         self.client.delete_group(test_group_2)
 
     def test_workspaces(self):
