@@ -3270,7 +3270,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
 
-class WorkspaceGroupAccessTest(TestCase):
+class WorkspaceGroupAccessUpdateTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
