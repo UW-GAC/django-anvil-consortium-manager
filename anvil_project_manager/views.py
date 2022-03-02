@@ -363,6 +363,23 @@ class WorkspaceGroupAccessUpdate(UpdateView):
     fields = ("access",)
     template_name = "anvil_project_manager/workspacegroupaccess_update.html"
 
+    def form_valid(self, form):
+        """If the form is valid, save the associated model and create it on AnVIL."""
+        # Create but don't save the new group.
+        self.object = form.save(commit=False)
+        # Make an API call to AnVIL to create the group.
+        try:
+            self.object.anvil_create_or_update()
+        except AnVILAPIError as e:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        # Save the group.
+        self.object.save()
+        return super().form_valid(form)
+
 
 class WorkspaceGroupAccessList(SingleTableView):
     model = models.WorkspaceGroupAccess

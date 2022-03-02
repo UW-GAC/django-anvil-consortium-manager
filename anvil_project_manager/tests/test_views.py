@@ -3367,9 +3367,18 @@ class WorkspaceGroupAccessCreateTest(TestCase):
 
 
 class WorkspaceGroupAccessUpdateTest(TestCase):
+    api_success_code = 200
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, message="mock message"):
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -3385,6 +3394,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+        self.mock_request.assert_not_called()
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
@@ -3392,12 +3402,21 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
+        self.mock_request.assert_not_called()
 
     def test_can_update_role(self):
         """Can update the role through the view."""
-        obj = factories.WorkspaceGroupAccessFactory(
-            access=models.WorkspaceGroupAccess.READER
+        group = factories.GroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
         )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        obj = factories.WorkspaceGroupAccessFactory.create(
+            group=group, workspace=workspace
+        )
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(obj.pk),
             {
@@ -3408,6 +3427,11 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+        self.mock_request.assert_called_once_with(
+            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
+            headers={"Content-type": "application/json"},
+            data='[{"email": "test-group@firecloud.org", "accessLevel": "WRITER", "canShare": false, "canCompute": false}]',  # noqa
+        )
 
     def test_redirects_to_detail(self):
         """After successfully updating an object, view redirects to the model's get_absolute_url."""
@@ -3415,6 +3439,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         obj = factories.WorkspaceGroupAccessFactory(
             access=models.WorkspaceGroupAccess.READER
         )
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -3422,6 +3447,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             },
         )
         self.assertRedirects(response, obj.get_absolute_url())
+        self.mock_request.assert_called_once()
 
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not update the object."""
@@ -3440,6 +3466,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertIn("required", form.errors["access"][0])
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+        self.mock_request.assert_not_called()
 
     def test_post_invalid_data_access(self):
         """Posting invalid data to the access field does not update the object."""
@@ -3458,6 +3485,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertIn("valid choice", form.errors["access"][0])
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+        self.mock_request.assert_not_called()
 
     def test_post_group_pk(self):
         """Posting a group pk has no effect."""
@@ -3466,6 +3494,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             group=original_group, access=models.WorkspaceGroupAccess.READER
         )
         new_group = factories.GroupFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(obj.pk),
             {
@@ -3477,6 +3506,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.group, original_group)
+        self.mock_request.assert_called_once()
 
     def test_post_workspace_pk(self):
         """Posting a workspace pk has no effect."""
@@ -3485,6 +3515,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             workspace=original_workspace, access=models.WorkspaceGroupAccess.READER
         )
         new_workspace = factories.WorkspaceFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(obj.pk),
             {
@@ -3496,6 +3527,44 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.workspace, original_workspace)
+        self.mock_request.assert_called_once()
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        obj = factories.WorkspaceGroupAccessFactory.create(
+            access=models.WorkspaceGroupAccess.READER
+        )
+        self.mock_request.return_value = self.get_mock_response(
+            500, message="workspace group access update test error"
+        )
+        response = self.client.post(
+            self.get_url(obj.pk),
+            {
+                "access": models.WorkspaceGroupAccess.WRITER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: workspace group access update test error",
+            str(messages[0]),
+        )
+        self.mock_request.assert_called_once()
+        # Make sure that the object was not created.
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+
+    @skip
+    def test_api_updating_access_to_workspace_that_doesnt_exist_for_group_that_doesnt_exist(
+        self,
+    ):
+        self.fail(
+            "Updating access from workspace that doesn't exist for a group that doesn't exist returns a successful code."  # noqa
+        )
 
 
 class WorkspaceGroupAccessListTest(TestCase):
