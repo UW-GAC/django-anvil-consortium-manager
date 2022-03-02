@@ -268,13 +268,13 @@ class GroupAccountMembership(models.Model):
     def anvil_create(self):
         """Add the account to the group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.group.get_email(), self.role, self.account.email
+            self.group.name, self.role, self.account.email
         )
 
     def anvil_delete(self):
         """Remove the account from the group on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.group.get_email(), self.role, self.account.email
+            self.group.name, self.role, self.account.email
         )
 
 

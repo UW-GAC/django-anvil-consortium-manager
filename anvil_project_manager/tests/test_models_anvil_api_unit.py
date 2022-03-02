@@ -444,7 +444,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTest):
         mock_put.return_value = self.get_mock_response(204)
         self.object.anvil_create()
         mock_put.assert_called_once_with(
-            "https://api.firecloud.org/api/groups/test-group@firecloud.org/MEMBER/test-account@example.com"
+            "https://api.firecloud.org/api/groups/test-group/MEMBER/test-account@example.com"
         )
 
     @mock.patch("google.auth.transport.requests.AuthorizedSession.put")
@@ -480,7 +480,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTest):
         mock_delete.return_value = self.get_mock_response(204)
         self.object.anvil_delete()
         mock_delete.assert_called_once_with(
-            "https://api.firecloud.org/api/groups/test-group@firecloud.org/MEMBER/test-account@example.com"
+            "https://api.firecloud.org/api/groups/test-group/MEMBER/test-account@example.com"
         )
 
     @mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
