@@ -214,6 +214,23 @@ class GroupGroupMembershipCreate(CreateView):
     def get_success_url(self):
         return reverse("anvil_project_manager:group_group_membership:list")
 
+    def form_valid(self, form):
+        """If the form is valid, save the associated model and create it on AnVIL."""
+        # Create but don't save the new group.
+        self.object = form.save(commit=False)
+        # Make an API call to AnVIL to create the group.
+        try:
+            self.object.anvil_create()
+        except AnVILAPIError as e:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        # Save the group.
+        self.object.save()
+        return super().form_valid(form)
+
 
 class GroupGroupMembershipUpdate(UpdateView):
     model = models.GroupGroupMembership
@@ -231,6 +248,22 @@ class GroupGroupMembershipDelete(DeleteView):
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_group_membership:list")
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Make an API call to AnVIL and then call the delete method on the object.
+        """
+        self.object = self.get_object()
+        try:
+            self.object.anvil_delete()
+        except AnVILAPIError as e:
+            # The AnVIL call has failed for some reason.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            # Rerender the same page with an error message.
+            return self.render_to_response(self.get_context_data())
+        return super().delete(request, *args, **kwargs)
 
 
 class GroupAccountMembershipDetail(DetailView):

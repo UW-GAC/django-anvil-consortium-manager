@@ -1487,9 +1487,19 @@ class GroupGroupMembershipDetailTest(TestCase):
 
 
 class GroupGroupMembershipCreateTest(TestCase):
+
+    api_success_code = 204
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, message="mock message"):
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1504,17 +1514,20 @@ class GroupGroupMembershipCreateTest(TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+        self.mock_request.assert_not_called()
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.mock_request.assert_not_called()
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         parent_group = factories.GroupFactory.create(name="group-1")
         child_group = factories.GroupFactory.create(name="group-2")
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1528,11 +1541,13 @@ class GroupGroupMembershipCreateTest(TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.mock_request.assert_called_once()
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         parent_group = factories.GroupFactory.create(name="group-1")
         child_group = factories.GroupFactory.create(name="group-2")
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1546,12 +1561,14 @@ class GroupGroupMembershipCreateTest(TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        self.mock_request.assert_called_once()
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         parent_group = factories.GroupFactory.create(name="group-1")
         child_group = factories.GroupFactory.create(name="group-2")
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         response = self.client.post(
             self.get_url(),
             {
@@ -1563,6 +1580,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_group_membership:list")
         )
+        self.mock_request.assert_called_once()
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -1586,6 +1604,7 @@ class GroupGroupMembershipCreateTest(TestCase):
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
+        self.mock_request.assert_not_called()
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with a different role."""
@@ -1613,6 +1632,7 @@ class GroupGroupMembershipCreateTest(TestCase):
             models.GroupGroupMembership.objects.first().role,
             models.GroupGroupMembership.MEMBER,
         )
+        self.mock_request.assert_not_called()
 
     def test_can_add_two_groups_to_one_parent(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
@@ -1621,6 +1641,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=group_1
         )
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1632,6 +1653,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+        self.mock_request.assert_called_once()
 
     def test_can_add_a_child_group_to_two_parents(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
@@ -1640,6 +1662,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=group_1, child_group=child
         )
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1651,6 +1674,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+        self.mock_request.assert_called_once()
 
     def test_invalid_input_child(self):
         """Posting invalid data to child_group field does not create an object."""
@@ -1670,6 +1694,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("child_group", form.errors.keys())
         self.assertIn("valid choice", form.errors["child_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_invalid_input_parent(self):
         """Posting invalid data to parent group field does not create an object."""
@@ -1689,6 +1714,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("parent_group", form.errors.keys())
         self.assertIn("valid choice", form.errors["parent_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
@@ -1709,6 +1735,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("valid choice", form.errors["role"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -1724,6 +1751,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data_parent_group(self):
         """Posting blank data to the parent_group field does not create an object."""
@@ -1739,6 +1767,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("parent_group", form.errors.keys())
         self.assertIn("required", form.errors["parent_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data_child_group(self):
         """Posting blank data to the child_group field does not create an object."""
@@ -1754,6 +1783,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("child_group", form.errors.keys())
         self.assertIn("required", form.errors["child_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -1770,6 +1800,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_cant_add_a_group_to_itself_member(self):
         """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
@@ -1788,6 +1819,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("add a group to itself", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_cant_add_a_group_to_itself_admin(self):
         """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
@@ -1806,6 +1838,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("add a group to itself", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_cant_add_circular_relationship(self):
         """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
@@ -1832,6 +1865,41 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("circular", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+        self.mock_request.assert_not_called()
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        parent_group = factories.GroupFactory.create()
+        child_group = factories.GroupFactory.create()
+        self.mock_request.return_value = self.get_mock_response(
+            500, message="group group membership create test error"
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        self.mock_request.assert_called_once()
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    @skip
+    def test_api_user_and_group_does_not_exist(self):
+        self.fail(
+            "Trying to add a user to a group that doesn't exist returns a successful code."
+        )
 
 
 class GroupGroupMembershipUpdateTest(TestCase):
@@ -2020,9 +2088,18 @@ class GroupGroupMembershipListTest(TestCase):
 
 
 class GroupGroupMembershipDeleteTest(TestCase):
+    api_success_code = 204
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, message="mock message"):
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2038,25 +2115,38 @@ class GroupGroupMembershipDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
+        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
+        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.GroupGroupMembershipFactory.create()
+        group_1 = factories.GroupFactory.create(name="test-group-1")
+        group_2 = factories.GroupFactory.create(name="test-group-2")
+        object = factories.GroupGroupMembershipFactory.create(
+            parent_group=group_1,
+            child_group=group_2,
+            role=models.GroupGroupMembership.MEMBER,
+        )
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.mock_request.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/test-group-1/MEMBER/test-group-2@firecloud.org"
+        )
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.GroupGroupMembershipFactory.create()
         other_object = factories.GroupGroupMembershipFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -2065,15 +2155,50 @@ class GroupGroupMembershipDeleteTest(TestCase):
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=other_object.pk),
         )
+        self.mock_request.assert_called_once()
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupGroupMembershipFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_group_membership:list")
+        )
+        self.mock_request.assert_called_once()
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupGroupMembershipFactory.create()
+        self.mock_request.return_value = self.get_mock_response(
+            500, message="group group membership delete test error"
+        )
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        self.mock_request.assert_called_once()
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+
+    @skip
+    def test_api_group_does_not_exist(self):
+        self.fail(
+            "Trying to delete a user from a group that doesn't exist returns a successful code."
+        )
+
+    @skip
+    def test_api_no_permission_for_group(self):
+        self.fail(
+            "Trying to add a user to a group that you don't have permission for returns a successful code."
         )
 
 
