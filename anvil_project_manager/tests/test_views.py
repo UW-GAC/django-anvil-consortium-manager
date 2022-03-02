@@ -3085,13 +3085,13 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
-        @skip
-        def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
-            self,
-        ):
-            self.fail(
-                "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
-            )
+    @skip
+    def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
+        self,
+    ):
+        self.fail(
+            "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
+        )
 
 
 class WorkspaceGroupAccessUpdateTest(TestCase):
