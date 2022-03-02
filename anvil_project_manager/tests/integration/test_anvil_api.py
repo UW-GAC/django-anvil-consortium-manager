@@ -10,6 +10,27 @@ class AnVILAPIClientTest(TestCase):
     def setUpClass(cls):
         cls.client = anvil_api.AnVILAPIClient()
 
+    def test_status(self):
+        """Tests the status method."""
+        response = self.client.status()
+        self.assertEqual(response.status_code, 200)
+        json = response.json()
+        self.assertEqual(len(json), 2)
+        self.assertIn("ok", json)
+        self.assertIsInstance(json["ok"], bool)
+        self.assertIn("systems", json)
+        for system in json["systems"]:
+            # When running these tests with pytest, subTest stops after the first failure.
+            with self.subTest(system=system):
+                self.assertIn("ok", json["systems"][system])
+                self.assertIsInstance(json["systems"][system]["ok"], bool)
+                # If the system is ok, the length is one.
+                if json["systems"][system]["ok"]:
+                    self.assertEqual(len(json["systems"][system]), 1)
+                else:
+                    self.assertEqual(len(json["systems"][system]), 2)
+                    self.assertIn("messages", json["systems"][system])
+
     def test_billing_project(self):
         test_billing_project = "gregor-adrienne"
 
