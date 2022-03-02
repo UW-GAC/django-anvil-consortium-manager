@@ -27,35 +27,35 @@ class AnVILAPIClient:
             AnVILAPIClient.auth_session = AnVILAPISession(credentials)
 
     def get_billing_project(self, billing_project):
-        method = "billing/v2/" + billing_project
+        method = "api/billing/v2/" + billing_project
         return self.auth_session.get(method, 200)
 
     def get_group(self, group_name):
-        method = "groups/" + group_name
+        method = "api/groups/" + group_name
         return self.auth_session.get(method, 200)
 
     def create_group(self, group_name):
-        method = "groups/" + group_name
+        method = "api/groups/" + group_name
         return self.auth_session.post(method, 201)
 
     def delete_group(self, group_name):
-        method = "groups/" + group_name
+        method = "api/groups/" + group_name
         return self.auth_session.delete(method, 204)
 
     def add_user_to_group(self, group_name, role, user_email):
-        method = "groups/" + group_name + "/" + role + "/" + user_email
+        method = "api/groups/" + group_name + "/" + role + "/" + user_email
         return self.auth_session.put(method, 204)
 
     def remove_user_from_group(self, group_name, role, user_email):
-        method = "groups/" + group_name + "/" + role + "/" + user_email
+        method = "api/groups/" + group_name + "/" + role + "/" + user_email
         return self.auth_session.delete(method, 204)
 
     def get_workspace(self, workspace_namespace, workspace_name):
-        method = "workspaces/" + workspace_namespace + "/" + workspace_name
+        method = "api/workspaces/" + workspace_namespace + "/" + workspace_name
         return self.auth_session.get(method, 200)
 
     def create_workspace(self, workspace_namespace, workspace_name):
-        method = "workspaces"
+        method = "api/workspaces"
         body = {
             "namespace": workspace_namespace,
             "name": workspace_name,
@@ -64,16 +64,16 @@ class AnVILAPIClient:
         return self.auth_session.post(method, 201, json=body)
 
     def delete_workspace(self, workspace_namespace, workspace_name):
-        method = "workspaces/" + workspace_namespace + "/" + workspace_name
+        method = "api/workspaces/" + workspace_namespace + "/" + workspace_name
         return self.auth_session.delete(method, 202)
 
     def get_workspace_acl(self, workspace_namespace, workspace_name):
-        method = "workspaces/" + workspace_namespace + "/" + workspace_name + "/acl"
+        method = "api/workspaces/" + workspace_namespace + "/" + workspace_name + "/acl"
         return self.auth_session.get(method, 200)
 
     def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
         method = (
-            "workspaces/"
+            "api/workspaces/"
             + workspace_namespace
             + "/"
             + workspace_name
@@ -89,7 +89,7 @@ class AnVILAPIClient:
 class AnVILAPISession(AuthorizedSession):
 
     # May eventually want to make this a setting?
-    entry_point = "https://api.firecloud.org/api/"
+    entry_point = "https://api.firecloud.org/"
 
     def get(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method

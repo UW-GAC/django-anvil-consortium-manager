@@ -26,12 +26,17 @@ class AnVILAPIClientTest(TestCase):
         with self.assertRaises(anvil_api.AnVILAPIError404):
             response = self.client.get_billing_project("asdfghjkl")
 
+        # Try to get a billing project that we are not part of.
+        # This is not really documented.
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            response = self.client.get_billing_project("GREGoR-ben")
+
     def test_groups(self):
         """Tests group methods."""
         test_group = "django-anvil-project-manager-integration-test-group"
         # If the test succeeds, this will run twice but it's ok - it's already deleted.
         # We still want to clean up after ourselves if the test fails.
-        self.addCleanup(self.client.auth_session.delete, "groups/" + test_group)
+        self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_group)
 
         # Try to get info about a group that doesn't exist.
         with self.assertRaises(anvil_api.AnVILAPIError404):
@@ -107,8 +112,8 @@ class AnVILAPIClientTest(TestCase):
         test_user = "amstilp@uw.edu"
         # If the test succeeds, this will run twice but it's ok - it's already deleted.
         # We still want to clean up after ourselves if the test fails.
-        self.addCleanup(self.client.auth_session.delete, "groups/" + test_group_1)
-        self.addCleanup(self.client.auth_session.delete, "groups/" + test_group_2)
+        self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_group_1)
+        self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_group_2)
 
         # Try adding the user as a member to a group that doesn't exist.
         # This is undocumented in the API.
@@ -348,7 +353,7 @@ class AnVILAPIClientTest(TestCase):
             self.client.auth_session.delete,
             "workspaces/" + test_billing_project + "/" + test_workspace,
         )
-        self.addCleanup(self.client.auth_session.delete, "groups/" + test_group)
+        self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_group)
 
         # Try to get info about a workspace that doesn't exist.
         with self.assertRaises(anvil_api.AnVILAPIError404):
@@ -406,7 +411,7 @@ class AnVILAPIClientTest(TestCase):
             self.client.auth_session.delete,
             "workspaces/" + test_billing_project + "/" + test_workspace,
         )
-        self.addCleanup(self.client.auth_session.delete, "groups/" + test_group)
+        self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_group)
 
         # Try to share workspace that doesn't exist with a group that doesn't exist.
         acl_updates = [
