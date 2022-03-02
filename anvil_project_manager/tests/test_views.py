@@ -2233,9 +2233,19 @@ class GroupAccountMembershipDetailTest(TestCase):
 
 
 class GroupAccountMembershipCreateTest(TestCase):
+
+    api_success_code = 204
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.put")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, message="mock message"):
+        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2250,17 +2260,20 @@ class GroupAccountMembershipCreateTest(TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+        self.mock_request.assert_not_called()
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.mock_request.assert_not_called()
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create()
-        account = factories.AccountFactory.create()
+        group = factories.GroupFactory.create(name="test-group")
+        account = factories.AccountFactory.create(email="email@example.com")
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2274,11 +2287,15 @@ class GroupAccountMembershipCreateTest(TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
+        self.mock_request.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/test-group/MEMBER/email@example.com"
+        )
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create()
-        account = factories.AccountFactory.create()
+        group = factories.GroupFactory.create(name="test-group")
+        account = factories.AccountFactory.create(email="email@example.com")
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2292,12 +2309,16 @@ class GroupAccountMembershipCreateTest(TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
+        self.mock_request.assert_called_once_with(
+            "https://api.firecloud.org/api/groups/test-group/ADMIN/email@example.com"
+        )
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         group = factories.GroupFactory.create()
         account = factories.AccountFactory.create()
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         response = self.client.post(
             self.get_url(),
             {
@@ -2309,6 +2330,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_account_membership:list")
         )
+        self.mock_request.assert_called_once()
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with the same role."""
@@ -2334,6 +2356,7 @@ class GroupAccountMembershipCreateTest(TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
+        self.mock_request.assert_not_called()
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
@@ -2359,12 +2382,14 @@ class GroupAccountMembershipCreateTest(TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
+        self.mock_request.assert_not_called()
 
     def test_can_add_two_groups_for_one_account(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
         group_2 = factories.GroupFactory.create(name="test-group-2")
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2376,12 +2401,14 @@ class GroupAccountMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        self.mock_request.assert_called_once()
 
     def test_can_add_two_accounts_to_one_group(self):
         group = factories.GroupFactory.create()
         account_1 = factories.AccountFactory.create(email="test_1@example.com")
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
         factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
+        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2393,6 +2420,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        self.mock_request.assert_called_once()
 
     def test_invalid_input_account(self):
         """Posting invalid data to account field does not create an object."""
@@ -2412,6 +2440,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("account", form.errors.keys())
         self.assertIn("valid choice", form.errors["account"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
@@ -2431,6 +2460,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("group", form.errors.keys())
         self.assertIn("valid choice", form.errors["group"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
@@ -2447,6 +2477,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("valid choice", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -2462,6 +2493,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
@@ -2477,6 +2509,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data_account(self):
         """Posting blank data to the account field does not create an object."""
@@ -2492,6 +2525,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("account", form.errors.keys())
         self.assertIn("required", form.errors["account"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -2506,6 +2540,35 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.mock_request.assert_not_called()
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        group = factories.GroupFactory.create()
+        account = factories.AccountFactory.create()
+        self.mock_request.return_value = self.get_mock_response(
+            500, message="group account membership create test error"
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        self.mock_request.assert_called_once()
+        # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
 
