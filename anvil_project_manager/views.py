@@ -17,6 +17,10 @@ class Index(TemplateView):
     template_name = "anvil_project_manager/index.html"
 
 
+class AnVILStatus(TemplateView):
+    template_name = "anvil_project_manager/status.html"
+
+
 class BillingProjectDetail(SingleTableMixin, DetailView):
     model = models.BillingProject
     context_table_name = "workspace_table"

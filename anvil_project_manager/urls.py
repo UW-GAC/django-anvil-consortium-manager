@@ -91,6 +91,7 @@ workspace_group_access_patterns = (
 
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
+    path("status/", views.AnVILStatus.as_view(), name="status"),
     path("accounts/", include(account_patterns)),
     path("groups/", include(group_patterns)),
     path("billing_projects/", include(billing_project_patterns)),

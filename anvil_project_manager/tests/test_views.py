@@ -29,6 +29,27 @@ class IndexTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+class AnVILStatusTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:status", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AnVILStatus.as_view()
+
+    def test_view_success_code(self):
+        """Returns a successful status code."""
+        request = self.factory.get(self.get_url())
+        # request.user = AnonymousUser()
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+
 class BillingProjectDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
