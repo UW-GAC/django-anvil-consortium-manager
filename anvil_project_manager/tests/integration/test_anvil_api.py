@@ -31,6 +31,18 @@ class AnVILAPIClientTest(TestCase):
                     self.assertEqual(len(json["systems"][system]), 2)
                     self.assertIn("messages", json["systems"][system])
 
+    def test_me(self):
+        """Tests the me method."""
+        response = self.client.me()
+        self.assertEqual(response.status_code, 200)
+        json = response.json()
+        self.assertEqual(len(json), 2)
+        self.assertIn("enabled", json)
+        self.assertIn("userInfo", json)
+        self.assertEqual(len(json["userInfo"]), 2)
+        self.assertIn("userEmail", json["userInfo"])
+        self.assertIn("userSubjectId", json["userInfo"])
+
     def test_billing_project(self):
         test_billing_project = "gregor-adrienne"
 

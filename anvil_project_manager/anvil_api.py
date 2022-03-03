@@ -30,6 +30,10 @@ class AnVILAPIClient:
         method = "status"
         return self.auth_session.get(method, 200)
 
+    def me(self):
+        method = "me"
+        return self.auth_session.get(method, 200)
+
     def get_billing_project(self, billing_project):
         method = "api/billing/v2/" + billing_project
         return self.auth_session.get(method, 200)
