@@ -30,9 +30,26 @@ class IndexTest(TestCase):
 
 
 class AnVILStatusTest(TestCase):
+    api_success_code = 201
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Make sure all requests are mocked.
+        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.get")
+        self.mock_request = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_mock_response(self, status_code, status_ok=True):
+        """Return a mock response for the "status" API method."""
+        json_data = {
+            "ok": status_ok,
+            "systems": {
+                "system1": {"ok": True},
+                "system2": {"ok": False, "messages": ["Error"]},
+            },
+        }
+        return mock.Mock(status_code=status_code, json=lambda: json_data)
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -44,10 +61,36 @@ class AnVILStatusTest(TestCase):
 
     def test_view_success_code(self):
         """Returns a successful status code."""
+        self.mock_request.return_value = self.get_mock_response(200)
         request = self.factory.get(self.get_url())
         # request.user = AnonymousUser()
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+        self.mock_request.assert_called_once_with("https://api.firecloud.org/status")
+
+    def test_context_data_anvil_status_ok(self):
+        """Context data contains anvil_status."""
+        self.mock_request.return_value = self.get_mock_response(200)
+        request = self.factory.get(self.get_url())
+        # request.user = AnonymousUser()
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("anvil_status", response.context_data)
+        self.assertEqual(response.context_data["anvil_status"], {"ok": True})
+        self.assertIn("anvil_systems_status", response.context_data)
+        self.mock_request.assert_called_once()
+
+    def test_context_data_anvil_status_not_ok(self):
+        """Context data contains anvil_status."""
+        self.mock_request.return_value = self.get_mock_response(200, status_ok=False)
+        request = self.factory.get(self.get_url())
+        # request.user = AnonymousUser()
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("anvil_status", response.context_data)
+        self.assertEqual(response.context_data["anvil_status"], {"ok": False})
+        self.assertIn("anvil_systems_status", response.context_data)
+        self.mock_request.assert_called_once()
 
 
 class BillingProjectDetailTest(TestCase):

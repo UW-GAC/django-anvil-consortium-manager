@@ -10,7 +10,7 @@ from django.views.generic import (
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import models, tables
-from .anvil_api import AnVILAPIError
+from .anvil_api import AnVILAPIClient, AnVILAPIError
 
 
 class Index(TemplateView):
@@ -19,6 +19,14 @@ class Index(TemplateView):
 
 class AnVILStatus(TemplateView):
     template_name = "anvil_project_manager/status.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        response = AnVILAPIClient().status()
+        json_response = response.json()
+        context["anvil_systems_status"] = json_response.pop("systems")
+        context["anvil_status"] = json_response
+        return context
 
 
 class BillingProjectDetail(SingleTableMixin, DetailView):

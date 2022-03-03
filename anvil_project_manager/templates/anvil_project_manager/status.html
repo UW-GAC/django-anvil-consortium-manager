@@ -7,4 +7,17 @@
 
 <h2>AnVIL Status</h2>
 
+<ul>
+  <li>Status:</li>
+  <code>{{ anvil_status }}</code>
+</ul>
+
+<h3>Systems</h3>
+
+<ul>
+  {% for system, value in anvil_systems_status.items %}
+    <li>{{ system }}</li>
+    <code>{{value}}</code>
+  {% endfor %}
+</ul>
 {% endblock content %}
