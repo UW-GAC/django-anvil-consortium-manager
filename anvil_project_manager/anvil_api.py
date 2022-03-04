@@ -31,7 +31,8 @@ class AnVILAPIClient:
         return self.auth_session.get(method, 200)
 
     def me(self):
-        method = "me"
+        method = "me?userDetailsOnly=true"
+        print(method)
         return self.auth_session.get(method, 200)
 
     def get_billing_project(self, billing_project):

@@ -7,12 +7,13 @@
 
 <h2>AnVIL Status</h2>
 
-<ul>
-  <li>Status:</li>
-  <code>{{ anvil_status }}</code>
-</ul>
+<h3>API User</h3>
+<code>{{ anvil_user }}</code>
 
-<h3>Systems</h3>
+<h3>Overall status</h3>
+  <code>{{ anvil_status }}</code>
+
+<h3>System status</h3>
 
 <ul>
   {% for system, value in anvil_systems_status.items %}

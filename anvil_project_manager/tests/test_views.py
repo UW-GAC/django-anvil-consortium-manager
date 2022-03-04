@@ -38,7 +38,15 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         super().setUp()
         self.factory = RequestFactory()
 
-    def get_json_data(self, status_ok=True):
+    def get_json_me_data(self):
+        json_data = {
+            "enabled": True,
+            "userEmail": "test-user@example.com",
+            "userSubjectId": "121759663603983501425",
+        }
+        return json_data
+
+    def get_json_status_data(self, status_ok=True):
         json_data = {
             "ok": status_ok,
             "systems": {
@@ -58,30 +66,45 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_success_code(self):
         """Returns a successful status code."""
-        url = self.entry_point + "/status"
-        responses.add(responses.GET, url, status=200, json=self.get_json_data())
+        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
+        url_status = self.entry_point + "/status"
+        responses.add(
+            responses.GET, url_status, status=200, json=self.get_json_status_data()
+        )
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url_me, 1)
+        responses.assert_call_count(url_status, 1)
 
     def test_context_data_anvil_status_ok(self):
         """Context data contains anvil_status."""
-        url = self.entry_point + "/status"
-        responses.add(responses.GET, url, status=200, json=self.get_json_data())
+        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
+        url_status = self.entry_point + "/status"
+        responses.add(
+            responses.GET, url_status, status=200, json=self.get_json_status_data()
+        )
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("anvil_status", response.context_data)
         self.assertEqual(response.context_data["anvil_status"], {"ok": True})
         self.assertIn("anvil_systems_status", response.context_data)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url_me, 1)
+        responses.assert_call_count(url_status, 1)
 
     def test_context_data_anvil_status_not_ok(self):
         """Context data contains anvil_status."""
-        url = self.entry_point + "/status"
+        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
+        url_status = self.entry_point + "/status"
         responses.add(
-            responses.GET, url, status=200, json=self.get_json_data(status_ok=False)
+            responses.GET,
+            url_status,
+            status=200,
+            json=self.get_json_status_data(status_ok=False),
         )
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
@@ -89,7 +112,8 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("anvil_status", response.context_data)
         self.assertEqual(response.context_data["anvil_status"], {"ok": False})
         self.assertIn("anvil_systems_status", response.context_data)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url_me, 1)
+        responses.assert_call_count(url_status, 1)
 
 
 class BillingProjectDetailTest(TestCase):

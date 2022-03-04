@@ -22,10 +22,14 @@ class AnVILStatus(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        response = AnVILAPIClient().status()
+        client = AnVILAPIClient()
+        response = client.status()
         json_response = response.json()
         context["anvil_systems_status"] = json_response.pop("systems")
         context["anvil_status"] = json_response
+        response = client.me()
+        print(response.text)
+        context["anvil_user"] = response.json()["userEmail"]
         return context
 
 
