@@ -1,47 +1,12 @@
-from unittest import mock
-
-import google.auth.credentials
-import google.auth.transport.requests
 import responses
 from django.test import TestCase
 
 from .. import anvil_api, models
 from . import factories
+from .utils import AnVILAPIMockTestMixin
 
 
-class AnVILAPIMockTest(TestCase):
-    """Base class for AnVIL API mocked tests."""
-
-    entry_point = "https://api.firecloud.org"
-
-    def setUp(self):
-        """Set up class -- mock credentials for AuthorizedSession."""
-        # Patch the module that checks credentials.
-        # See Google's tests:
-        # https://github.com/googleapis/google-api-python-client/blob/main/tests/test__auth.py
-        self.credential_patcher = mock.patch.object(
-            google.auth, "default", autospec=True
-        )
-        self.credential_patcher.start()
-        self.addCleanup(self.credential_patcher.stop)
-        self.credential_patcher.return_value = (
-            mock.sentinel.credentials,
-            mock.sentinel.project,
-        )
-        responses.start()
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
-        responses.stop()
-        responses.reset()
-
-    # def get_mock_response(self, status_code, message="mock message"):
-    #     """Create a mock response."""
-    #     return mock.Mock(status_code=status_code, json=lambda: {"message": message})
-
-
-class BillingProjectAnVILAPIMockTest(AnVILAPIMockTest):
+class BillingProjectAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.object = factories.BillingProjectFactory()
@@ -61,7 +26,7 @@ class BillingProjectAnVILAPIMockTest(AnVILAPIMockTest):
         responses.assert_call_count(self.url, 1)
 
 
-class GroupAnVILAPIMockTest(AnVILAPIMockTest):
+class GroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         self.object = factories.GroupFactory()
@@ -169,7 +134,7 @@ class GroupAnVILAPIMockTest(AnVILAPIMockTest):
         responses.assert_call_count(self.url, 1)
 
 
-class WorkspaceAnVILAPIMockTest(AnVILAPIMockTest):
+class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         self.object = factories.WorkspaceFactory()
@@ -372,7 +337,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTest):
         responses.assert_call_count(self.url_workspace, 1)
 
 
-class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTest):
+class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         parent_group = factories.GroupFactory(name="parent-group")
@@ -462,7 +427,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTest):
         responses.assert_call_count(self.url, 1)
 
 
-class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTest):
+class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         group = factories.GroupFactory(name="test-group")
@@ -551,7 +516,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTest):
         responses.assert_call_count(self.url, 1)
 
 
-class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTest):
+class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         billing_project = factories.BillingProjectFactory.create(

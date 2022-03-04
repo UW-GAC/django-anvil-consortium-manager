@@ -1,11 +1,13 @@
 from unittest import mock, skip
 
+import responses
 from django.http.response import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from .. import models, tables, views
 from . import factories
+from .utils import AnVILAPIMockTestMixin
 
 
 class IndexTest(TestCase):
@@ -29,19 +31,14 @@ class IndexTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class AnVILStatusTest(TestCase):
-    api_success_code = 201
-
+class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.get")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
 
-    def get_mock_response(self, status_code, status_ok=True):
-        """Return a mock response for the "status" API method."""
+    def get_json_data(self, status_ok=True):
         json_data = {
             "ok": status_ok,
             "systems": {
@@ -49,7 +46,7 @@ class AnVILStatusTest(TestCase):
                 "system2": {"ok": False, "messages": ["Error"]},
             },
         }
-        return mock.Mock(status_code=status_code, json=lambda: json_data)
+        return json_data
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -61,36 +58,38 @@ class AnVILStatusTest(TestCase):
 
     def test_view_success_code(self):
         """Returns a successful status code."""
-        self.mock_request.return_value = self.get_mock_response(200)
+        url = self.entry_point + "/status"
+        responses.add(responses.GET, url, status=200, json=self.get_json_data())
         request = self.factory.get(self.get_url())
-        # request.user = AnonymousUser()
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_called_once_with("https://api.firecloud.org/status")
+        responses.assert_call_count(url, 1)
 
     def test_context_data_anvil_status_ok(self):
         """Context data contains anvil_status."""
-        self.mock_request.return_value = self.get_mock_response(200)
+        url = self.entry_point + "/status"
+        responses.add(responses.GET, url, status=200, json=self.get_json_data())
         request = self.factory.get(self.get_url())
-        # request.user = AnonymousUser()
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("anvil_status", response.context_data)
         self.assertEqual(response.context_data["anvil_status"], {"ok": True})
         self.assertIn("anvil_systems_status", response.context_data)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_context_data_anvil_status_not_ok(self):
         """Context data contains anvil_status."""
-        self.mock_request.return_value = self.get_mock_response(200, status_ok=False)
+        url = self.entry_point + "/status"
+        responses.add(
+            responses.GET, url, status=200, json=self.get_json_data(status_ok=False)
+        )
         request = self.factory.get(self.get_url())
-        # request.user = AnonymousUser()
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("anvil_status", response.context_data)
         self.assertEqual(response.context_data["anvil_status"], {"ok": False})
         self.assertIn("anvil_systems_status", response.context_data)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
 
 class BillingProjectDetailTest(TestCase):
@@ -807,20 +806,15 @@ class GroupDetailTest(TestCase):
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
 
-class GroupCreateTest(TestCase):
+class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 201
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.post")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -836,11 +830,6 @@ class GroupCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
-    def test_mock_not_called_on_get(self):
-        request = self.factory.get(self.get_url())
-        self.get_view()(request)
-        self.mock_request.assert_not_called()
-
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
@@ -849,24 +838,25 @@ class GroupCreateTest(TestCase):
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/groups/" + "test-group"
+        responses.add(responses.POST, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(), {"name": "test-group"})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Group.objects.latest("pk")
         self.assertIsInstance(new_object, models.Group)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/groups/test-group"
-        )
+        self.assertEqual(new_object.name, "test-group")
+        responses.assert_call_count(url, 1)
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/groups/" + "test-group"
+        responses.add(responses.POST, url, status=self.api_success_code)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         new_object = models.Group.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two groups with the same name."""
@@ -882,7 +872,7 @@ class GroupCreateTest(TestCase):
             models.Group.objects.all(),
             models.Group.objects.filter(pk=obj.pk),
         )
-        self.mock_request.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
@@ -894,7 +884,7 @@ class GroupCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Group.objects.count(), 0)
-        self.mock_request.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -906,22 +896,23 @@ class GroupCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Group.objects.count(), 0)
-        self.mock_request.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
     def test_api_error_message(self):
         """Shows a message if an AnVIL API error occurs."""
-        # Need a client to check messages.
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="group create test error"
+        url = self.entry_point + "/api/groups/" + "test-group"
+        responses.add(
+            responses.POST, url, status=500, json={"message": "group create test error"}
         )
+        # Need a client to check messages.
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertIn("AnVIL API Error: group create test error", str(messages[0]))
-        self.mock_request.assert_called_once()
+        self.assertEqual("AnVIL API Error: group create test error", str(messages[0]))
+        responses.assert_call_count(url, 1)
         # Make sure that no object is created.
         self.assertEqual(models.Group.objects.count(), 0)
 
@@ -980,20 +971,15 @@ class GroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class GroupDeleteTest(TestCase):
+class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1009,32 +995,31 @@ class GroupDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
-        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.GroupFactory.create(name="test-group")
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/groups/" + object.name
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        # self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Group.objects.count(), 0)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/groups/test-group"
-        )
+        responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.GroupFactory.create()
         other_object = factories.GroupFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/groups/" + object.name
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -1043,32 +1028,37 @@ class GroupDeleteTest(TestCase):
             models.Group.objects.all(),
             models.Group.objects.filter(pk=other_object.pk),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupFactory.create()
+        url = self.entry_point + "/api/groups/" + object.name
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("anvil_project_manager:groups:list"))
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.GroupFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="group delete test error"
+        url = self.entry_point + "/api/groups/" + object.name
+        responses.add(
+            responses.DELETE,
+            url,
+            status=500,
+            json={"message": "group delete test error"},
         )
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertIn("AnVIL API Error: group delete test error", str(messages[0]))
-        self.mock_request.assert_called_once()
+        self.assertEqual("AnVIL API Error: group delete test error", str(messages[0]))
+        responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
@@ -1159,20 +1149,15 @@ class WorkspaceDetailTest(TestCase):
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
 
-class WorkspaceCreateTest(TestCase):
+class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 201
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.post")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1188,24 +1173,29 @@ class WorkspaceCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
-    def test_mock_not_called_on_get(self):
-        request = self.factory.get(self.get_url())
-        self.get_view()(request)
-        self.mock_request.assert_not_called()
-
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
-        self.mock_request.assert_not_called()
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
@@ -1214,27 +1204,31 @@ class WorkspaceCreateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/workspaces",
-            json={
-                "namespace": "test-billing-project",
-                "name": "test-workspace",
-                "attributes": {},
-            },
-        )
+        responses.assert_call_count(url, 1)
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         billing_project = factories.BillingProjectFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
         )
         new_object = models.Workspace.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two workspaces with the same billing project and name."""
@@ -1252,7 +1246,6 @@ class WorkspaceCreateTest(TestCase):
             models.Workspace.objects.all(),
             models.Workspace.objects.filter(pk=obj.pk),
         )
-        self.mock_request.assert_not_called()
 
     def test_can_create_workspace_with_same_billing_project_different_name(self):
         """Can create a workspace with a different name in the same billing project."""
@@ -1260,7 +1253,18 @@ class WorkspaceCreateTest(TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-name-1"
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-name-2",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-name-2"},
@@ -1272,7 +1276,7 @@ class WorkspaceCreateTest(TestCase):
         models.Workspace.objects.get(
             billing_project=billing_project, name="test-name-2"
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_can_create_workspace_with_same_name_different_billing_project(self):
         """Can create a workspace with the same name in a different billing project."""
@@ -1282,7 +1286,18 @@ class WorkspaceCreateTest(TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project_1, name=workspace_name
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": billing_project_2.name,
+            "name": "test-name",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(),
             {"billing_project": billing_project_2.pk, "name": workspace_name},
@@ -1294,7 +1309,7 @@ class WorkspaceCreateTest(TestCase):
         models.Workspace.objects.get(
             billing_project=billing_project_2, name=workspace_name
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_invalid_input_name(self):
         """Posting invalid data to name field does not create an object."""
@@ -1310,7 +1325,7 @@ class WorkspaceCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("slug", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
-        self.mock_request.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
     def test_invalid_input_billing_project(self):
         """Posting invalid data to billing_project field does not create an object."""
@@ -1324,7 +1339,7 @@ class WorkspaceCreateTest(TestCase):
         self.assertIn("billing_project", form.errors.keys())
         self.assertIn("valid choice", form.errors["billing_project"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
-        self.mock_request.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
     def test_post_invalid_name_billing_project(self):
         """Posting blank data does not create an object."""
@@ -1338,7 +1353,7 @@ class WorkspaceCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
-        self.mock_request.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -1352,15 +1367,25 @@ class WorkspaceCreateTest(TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
-        self.mock_request.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
     def test_api_error_message(self):
         """Shows a method if an AnVIL API error occurs."""
-        # Need a client to check messages.
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="workspace create test error"
-        )
         billing_project = factories.BillingProjectFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=500,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json={"message": "workspace create test error"},
+        )
+        # Need a client to check messages.
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
@@ -1371,7 +1396,7 @@ class WorkspaceCreateTest(TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that no object is created.
         self.assertEqual(models.Workspace.objects.count(), 0)
 
@@ -1424,20 +1449,15 @@ class WorkspaceListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class WorkspaceDeleteTest(TestCase):
+class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 202
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1453,14 +1473,12 @@ class WorkspaceDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
-        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
@@ -1470,20 +1488,26 @@ class WorkspaceDeleteTest(TestCase):
         object = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace"
-        )
+        responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.WorkspaceFactory.create()
         other_object = factories.WorkspaceFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + object.billing_project.name
+            + "/"
+            + object.name
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -1492,24 +1516,41 @@ class WorkspaceDeleteTest(TestCase):
             models.Workspace.objects.all(),
             models.Workspace.objects.filter(pk=other_object.pk),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.WorkspaceFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + object.billing_project.name
+            + "/"
+            + object.name
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("anvil_project_manager:workspaces:list"))
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.WorkspaceFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="workspace delete test error"
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + object.billing_project.name
+            + "/"
+            + object.name
+        )
+        responses.add(
+            responses.DELETE,
+            url,
+            status=500,
+            json={"message": "workspace delete test error"},
         )
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
@@ -1517,7 +1558,7 @@ class WorkspaceDeleteTest(TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace delete test error", str(messages[0]))
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.Workspace.objects.count(), 1)
 
@@ -1550,20 +1591,15 @@ class GroupGroupMembershipDetailTest(TestCase):
             self.get_view()(request, pk=obj.pk + 1)
 
 
-class GroupGroupMembershipCreateTest(TestCase):
+class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.put")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1578,20 +1614,25 @@ class GroupGroupMembershipCreateTest(TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
-        self.mock_request.assert_not_called()
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         parent_group = factories.GroupFactory.create(name="group-1")
         child_group = factories.GroupFactory.create(name="group-2")
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + parent_group.name
+            + "/MEMBER/"
+            + child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1605,13 +1646,20 @@ class GroupGroupMembershipCreateTest(TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         parent_group = factories.GroupFactory.create(name="group-1")
         child_group = factories.GroupFactory.create(name="group-2")
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + parent_group.name
+            + "/ADMIN/"
+            + child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1625,14 +1673,21 @@ class GroupGroupMembershipCreateTest(TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         parent_group = factories.GroupFactory.create(name="group-1")
         child_group = factories.GroupFactory.create(name="group-2")
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + parent_group.name
+            + "/ADMIN/"
+            + child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         response = self.client.post(
             self.get_url(),
             {
@@ -1644,7 +1699,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_group_membership:list")
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -1668,7 +1723,6 @@ class GroupGroupMembershipCreateTest(TestCase):
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
-        self.mock_request.assert_not_called()
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with a different role."""
@@ -1696,7 +1750,6 @@ class GroupGroupMembershipCreateTest(TestCase):
             models.GroupGroupMembership.objects.first().role,
             models.GroupGroupMembership.MEMBER,
         )
-        self.mock_request.assert_not_called()
 
     def test_can_add_two_groups_to_one_parent(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
@@ -1705,7 +1758,14 @@ class GroupGroupMembershipCreateTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=group_1
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + parent.name
+            + "/MEMBER/"
+            + group_2.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1717,7 +1777,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_can_add_a_child_group_to_two_parents(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
@@ -1726,7 +1786,14 @@ class GroupGroupMembershipCreateTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=group_1, child_group=child
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + group_2.name
+            + "/MEMBER/"
+            + child.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -1738,7 +1805,7 @@ class GroupGroupMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_invalid_input_child(self):
         """Posting invalid data to child_group field does not create an object."""
@@ -1758,7 +1825,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("child_group", form.errors.keys())
         self.assertIn("valid choice", form.errors["child_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_invalid_input_parent(self):
         """Posting invalid data to parent group field does not create an object."""
@@ -1778,7 +1844,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("parent_group", form.errors.keys())
         self.assertIn("valid choice", form.errors["parent_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
@@ -1799,7 +1864,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("valid choice", form.errors["role"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -1815,7 +1879,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_parent_group(self):
         """Posting blank data to the parent_group field does not create an object."""
@@ -1831,7 +1894,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("parent_group", form.errors.keys())
         self.assertIn("required", form.errors["parent_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_child_group(self):
         """Posting blank data to the child_group field does not create an object."""
@@ -1847,7 +1909,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("child_group", form.errors.keys())
         self.assertIn("required", form.errors["child_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -1864,7 +1925,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_cant_add_a_group_to_itself_member(self):
         """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
@@ -1883,7 +1943,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("add a group to itself", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_cant_add_a_group_to_itself_admin(self):
         """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
@@ -1902,7 +1961,6 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("add a group to itself", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_cant_add_circular_relationship(self):
         """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
@@ -1929,15 +1987,24 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("circular", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
-        self.mock_request.assert_not_called()
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         parent_group = factories.GroupFactory.create()
         child_group = factories.GroupFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="group group membership create test error"
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + parent_group.name
+            + "/MEMBER/"
+            + child_group.get_email()
+        )
+        responses.add(
+            responses.PUT,
+            url,
+            status=500,
+            json={"message": "group group membership create test error"},
         )
         response = self.client.post(
             self.get_url(),
@@ -1951,11 +2018,11 @@ class GroupGroupMembershipCreateTest(TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertIn(
+        self.assertEqual(
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
@@ -2034,19 +2101,14 @@ class GroupGroupMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class GroupGroupMembershipDeleteTest(TestCase):
+class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 204
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2062,38 +2124,48 @@ class GroupGroupMembershipDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
-        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        group_1 = factories.GroupFactory.create(name="test-group-1")
-        group_2 = factories.GroupFactory.create(name="test-group-2")
         object = factories.GroupGroupMembershipFactory.create(
-            parent_group=group_1,
-            child_group=group_2,
-            role=models.GroupGroupMembership.MEMBER,
+            role=models.GroupGroupMembership.MEMBER
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.parent_group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.child_group.get_email()
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/groups/test-group-1/MEMBER/test-group-2@firecloud.org"
-        )
+        responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.GroupGroupMembershipFactory.create()
         other_object = factories.GroupGroupMembershipFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.parent_group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.child_group.get_email()
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -2102,37 +2174,58 @@ class GroupGroupMembershipDeleteTest(TestCase):
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=other_object.pk),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupGroupMembershipFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.parent_group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.child_group.get_email()
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_group_membership:list")
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.GroupGroupMembershipFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="group group membership delete test error"
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.parent_group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.child_group.get_email()
+        )
+        responses.add(
+            responses.DELETE,
+            url,
+            status=500,
+            json={"message": "group group membership delete test error"},
         )
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertIn(
+        self.assertEqual(
             "AnVIL API Error: group group membership delete test error",
             str(messages[0]),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
@@ -2191,20 +2284,15 @@ class GroupAccountMembershipDetailTest(TestCase):
             self.get_view()(request, pk=obj.pk + 1)
 
 
-class GroupAccountMembershipCreateTest(TestCase):
+class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.put")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2219,20 +2307,21 @@ class GroupAccountMembershipCreateTest(TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
-        self.mock_request.assert_not_called()
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         group = factories.GroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2246,15 +2335,14 @@ class GroupAccountMembershipCreateTest(TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/groups/test-group/MEMBER/email@example.com"
-        )
+        responses.assert_call_count(url, 1)
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         group = factories.GroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2268,16 +2356,15 @@ class GroupAccountMembershipCreateTest(TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/groups/test-group/ADMIN/email@example.com"
-        )
+        responses.assert_call_count(url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         group = factories.GroupFactory.create()
         account = factories.AccountFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
+        responses.add(responses.PUT, url, status=self.api_success_code)
         response = self.client.post(
             self.get_url(),
             {
@@ -2289,7 +2376,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_account_membership:list")
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with the same role."""
@@ -2315,7 +2402,6 @@ class GroupAccountMembershipCreateTest(TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
-        self.mock_request.assert_not_called()
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
@@ -2341,14 +2427,20 @@ class GroupAccountMembershipCreateTest(TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
-        self.mock_request.assert_not_called()
 
     def test_can_add_two_groups_for_one_account(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
         group_2 = factories.GroupFactory.create(name="test-group-2")
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + group_2.name
+            + "/MEMBER/"
+            + account.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2360,14 +2452,21 @@ class GroupAccountMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_can_add_two_accounts_to_one_group(self):
         group = factories.GroupFactory.create()
         account_1 = factories.AccountFactory.create(email="test_1@example.com")
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
         factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + group.name
+            + "/MEMBER/"
+            + account_2.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2379,7 +2478,7 @@ class GroupAccountMembershipCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_invalid_input_account(self):
         """Posting invalid data to account field does not create an object."""
@@ -2399,7 +2498,6 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("account", form.errors.keys())
         self.assertIn("valid choice", form.errors["account"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
@@ -2419,7 +2517,6 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("group", form.errors.keys())
         self.assertIn("valid choice", form.errors["group"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
@@ -2436,7 +2533,6 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("valid choice", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -2452,7 +2548,6 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
@@ -2468,7 +2563,6 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_account(self):
         """Posting blank data to the account field does not create an object."""
@@ -2484,7 +2578,6 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("account", form.errors.keys())
         self.assertIn("required", form.errors["account"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -2500,15 +2593,20 @@ class GroupAccountMembershipCreateTest(TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         group = factories.GroupFactory.create()
         account = factories.AccountFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="group account membership create test error"
+        url = (
+            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
+        )
+        responses.add(
+            responses.PUT,
+            url,
+            status=500,
+            json={"message": "group account membership create test error"},
         )
         response = self.client.post(
             self.get_url(),
@@ -2526,7 +2624,7 @@ class GroupAccountMembershipCreateTest(TestCase):
             "AnVIL API Error: group account membership create test error",
             str(messages[0]),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -2605,20 +2703,15 @@ class GroupAccountMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class GroupAccountMembershipDeleteTest(TestCase):
+class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.delete")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2636,30 +2729,46 @@ class GroupAccountMembershipDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
-        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.GroupAccountMembershipFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.account.email
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.GroupAccountMembershipFactory.create()
         other_object = factories.GroupAccountMembershipFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.account.email
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -2668,26 +2777,47 @@ class GroupAccountMembershipDeleteTest(TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=other_object.pk),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupAccountMembershipFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.account.email
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_project_manager:group_account_membership:list")
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.GroupAccountMembershipFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="group account membership delete test error"
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.account.email
+        )
+        responses.add(
+            responses.DELETE,
+            url,
+            status=500,
+            json={"message": "group account membership delete test error"},
         )
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
@@ -2698,7 +2828,7 @@ class GroupAccountMembershipDeleteTest(TestCase):
             "AnVIL API Error: group account membership delete test error",
             str(messages[0]),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
@@ -2755,17 +2885,15 @@ class WorkspaceGroupAccessDetailTest(TestCase):
             self.get_view()(request, pk=obj.pk + 1)
 
 
-class WorkspaceGroupAccessCreateTest(TestCase):
+class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 200
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
 
     def get_mock_response(self, status_code, message="mock message"):
         return mock.Mock(status_code=status_code, json=lambda: {"message": message})
@@ -2783,14 +2911,12 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
-        self.mock_request.assert_not_called()
 
     def test_can_create_an_object_reader(self):
         """Posting valid data to the form creates an object."""
@@ -2801,7 +2927,24 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(),
             {
@@ -2815,22 +2958,34 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
         self.assertEqual(new_object.access, models.WorkspaceGroupAccess.READER)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
-            headers={"Content-type": "application/json"},
-            data='[{"email": "test-group@firecloud.org", "accessLevel": "READER", "canShare": false, "canCompute": false}]',  # noqa
-        )
+        responses.assert_call_count(url, 1)
 
     def test_can_create_an_object_writer(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create(name="test-group")
-        billing_project = factories.BillingProjectFactory.create(
-            name="test-billing-project"
+        group = factories.GroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
         )
-        workspace = factories.WorkspaceFactory.create(
-            name="test-workspace", billing_project=billing_project
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2844,22 +2999,34 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
         self.assertEqual(new_object.access, models.WorkspaceGroupAccess.WRITER)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
-            headers={"Content-type": "application/json"},
-            data='[{"email": "test-group@firecloud.org", "accessLevel": "WRITER", "canShare": false, "canCompute": false}]',  # noqa
-        )
+        responses.assert_call_count(url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create(name="test-group")
-        billing_project = factories.BillingProjectFactory.create(
-            name="test-billing-project"
+        group = factories.GroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "OWNER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
         )
-        workspace = factories.WorkspaceFactory.create(
-            name="test-workspace", billing_project=billing_project
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(
             self.get_url(),
             {
@@ -2873,18 +3040,35 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
         self.assertEqual(new_object.access, models.WorkspaceGroupAccess.OWNER)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
-            headers={"Content-type": "application/json"},
-            data='[{"email": "test-group@firecloud.org", "accessLevel": "OWNER", "canShare": false, "canCompute": false}]',  # noqa
-        )
+        responses.assert_call_count(url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         group = factories.GroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "OWNER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         response = self.client.post(
             self.get_url(),
             {
@@ -2896,7 +3080,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertRedirects(
             response, reverse("anvil_project_manager:workspace_group_access:list")
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
@@ -2924,7 +3108,6 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             models.WorkspaceGroupAccess.objects.all(),
             models.WorkspaceGroupAccess.objects.filter(pk=obj.pk),
         )
-        self.mock_request.assert_not_called()
 
     def test_cannot_create_duplicate_object_with_different_access(self):
         """Cannot create a second object for the same workspace and group with a different access level."""
@@ -2952,14 +3135,34 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             models.WorkspaceGroupAccess.objects.all(),
             models.WorkspaceGroupAccess.objects.filter(pk=obj.pk),
         )
-        self.mock_request.assert_not_called()
 
     def test_can_have_two_workspaces_for_one_group(self):
         group_1 = factories.GroupFactory.create(name="test-group-1")
         group_2 = factories.GroupFactory.create(name="test-group-2")
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create(group=group_1, workspace=workspace)
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": group_2.get_email(),
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(),
             {
@@ -2971,14 +3174,35 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 2)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_can_have_two_groups_for_one_workspace(self):
         group = factories.GroupFactory.create()
         workspace_1 = factories.WorkspaceFactory.create(name="test-workspace-1")
         workspace_2 = factories.WorkspaceFactory.create(name="test-workspace-2")
         factories.WorkspaceGroupAccessFactory.create(group=group, workspace=workspace_1)
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace_2.billing_project.name
+            + "/"
+            + workspace_2.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(),
             {
@@ -2990,7 +3214,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 2)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
@@ -3010,7 +3234,6 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("group", form.errors.keys())
         self.assertIn("valid choice", form.errors["group"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_invalid_input_workspace(self):
         """Posting invalid data to workspace field does not create an object."""
@@ -3030,7 +3253,6 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("workspace", form.errors.keys())
         self.assertIn("valid choice", form.errors["workspace"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_invalid_input_access(self):
         """Posting invalid data to access field does not create an object."""
@@ -3051,7 +3273,6 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("access", form.errors.keys())
         self.assertIn("valid choice", form.errors["access"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -3067,7 +3288,6 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("access", form.errors.keys())
         self.assertIn("required", form.errors["access"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
@@ -3086,7 +3306,6 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_workspace(self):
         """Posting blank data to the workspace field does not create an object."""
@@ -3102,7 +3321,6 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("workspace", form.errors.keys())
         self.assertIn("required", form.errors["workspace"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not create an object."""
@@ -3119,15 +3337,25 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         self.assertIn("access", form.errors.keys())
         self.assertIn("required", form.errors["access"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_not_called()
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         group = factories.GroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="workspace group access create test error"
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=500,
+            json={"message": "workspace group access create test error"},
         )
         response = self.client.post(
             self.get_url(),
@@ -3145,7 +3373,7 @@ class WorkspaceGroupAccessCreateTest(TestCase):
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
@@ -3158,16 +3386,14 @@ class WorkspaceGroupAccessCreateTest(TestCase):
         )
 
 
-class WorkspaceGroupAccessUpdateTest(TestCase):
+class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 200
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
 
     def get_mock_response(self, status_code, message="mock message"):
         return mock.Mock(status_code=status_code, json=lambda: {"message": message})
@@ -3186,7 +3412,6 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
@@ -3194,7 +3419,6 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
-        self.mock_request.assert_not_called()
 
     def test_can_update_role(self):
         """Can update the role through the view."""
@@ -3206,9 +3430,26 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             name="test-workspace", billing_project=billing_project
         )
         obj = factories.WorkspaceGroupAccessFactory.create(
-            group=group, workspace=workspace
+            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.READER
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(obj.pk),
             {
@@ -3219,11 +3460,6 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
-            headers={"Content-type": "application/json"},
-            data='[{"email": "test-group@firecloud.org", "accessLevel": "WRITER", "canShare": false, "canCompute": false}]',  # noqa
-        )
 
     def test_redirects_to_detail(self):
         """After successfully updating an object, view redirects to the model's get_absolute_url."""
@@ -3231,7 +3467,28 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         obj = factories.WorkspaceGroupAccessFactory(
             access=models.WorkspaceGroupAccess.READER
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": obj.group.get_email(),
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + obj.workspace.billing_project.name
+            + "/"
+            + obj.workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -3239,7 +3496,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             },
         )
         self.assertRedirects(response, obj.get_absolute_url())
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not update the object."""
@@ -3258,7 +3515,6 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertIn("required", form.errors["access"][0])
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
-        self.mock_request.assert_not_called()
 
     def test_post_invalid_data_access(self):
         """Posting invalid data to the access field does not update the object."""
@@ -3277,7 +3533,6 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertIn("valid choice", form.errors["access"][0])
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
-        self.mock_request.assert_not_called()
 
     def test_post_group_pk(self):
         """Posting a group pk has no effect."""
@@ -3286,7 +3541,28 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             group=original_group, access=models.WorkspaceGroupAccess.READER
         )
         new_group = factories.GroupFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": obj.group.get_email(),
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + obj.workspace.billing_project.name
+            + "/"
+            + obj.workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(obj.pk),
             {
@@ -3298,7 +3574,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.group, original_group)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_post_workspace_pk(self):
         """Posting a workspace pk has no effect."""
@@ -3307,7 +3583,28 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             workspace=original_workspace, access=models.WorkspaceGroupAccess.READER
         )
         new_workspace = factories.WorkspaceFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": obj.group.get_email(),
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + obj.workspace.billing_project.name
+            + "/"
+            + obj.workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(
             self.get_url(obj.pk),
             {
@@ -3319,7 +3616,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.workspace, original_workspace)
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -3327,8 +3624,19 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
         obj = factories.WorkspaceGroupAccessFactory.create(
             access=models.WorkspaceGroupAccess.READER
         )
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="workspace group access update test error"
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + obj.workspace.billing_project.name
+            + "/"
+            + obj.workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=500,
+            json={"message": "workspace group access update test error"},
         )
         response = self.client.post(
             self.get_url(obj.pk),
@@ -3344,7 +3652,7 @@ class WorkspaceGroupAccessUpdateTest(TestCase):
             "AnVIL API Error: workspace group access update test error",
             str(messages[0]),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
         obj.refresh_from_db()
@@ -3409,20 +3717,15 @@ class WorkspaceGroupAccessListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class WorkspaceGroupAccessDeleteTest(TestCase):
+class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 200
 
     def setUp(self):
         """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
         self.factory = RequestFactory()
-        # Make sure all requests are mocked.
-        patcher = mock.patch("google.auth.transport.requests.AuthorizedSession.patch")
-        self.mock_request = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -3438,14 +3741,12 @@ class WorkspaceGroupAccessDeleteTest(TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
-        self.mock_request.assert_not_called()
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
-        self.mock_request.assert_not_called()
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
@@ -3459,22 +3760,56 @@ class WorkspaceGroupAccessDeleteTest(TestCase):
         object = factories.WorkspaceGroupAccessFactory.create(
             group=group, workspace=workspace
         )
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": object.group.get_email(),
+                "accessLevel": "NO ACCESS",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
-        self.mock_request.assert_called_once_with(
-            "https://api.firecloud.org/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",  # noqa
-            headers={"Content-type": "application/json"},
-            data='[{"email": "test-group@firecloud.org", "accessLevel": "NO ACCESS", "canShare": false, "canCompute": false}]',  # noqa
-        )
+        responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
         object = factories.WorkspaceGroupAccessFactory.create()
         other_object = factories.WorkspaceGroupAccessFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": object.group.get_email(),
+                "accessLevel": "NO ACCESS",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + object.workspace.billing_project.name
+            + "/"
+            + object.workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -3483,26 +3818,58 @@ class WorkspaceGroupAccessDeleteTest(TestCase):
             models.WorkspaceGroupAccess.objects.all(),
             models.WorkspaceGroupAccess.objects.filter(pk=other_object.pk),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.WorkspaceGroupAccessFactory.create()
-        self.mock_request.return_value = self.get_mock_response(self.api_success_code)
+        json_data = [
+            {
+                "email": object.group.get_email(),
+                "accessLevel": "NO ACCESS",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + object.workspace.billing_project.name
+            + "/"
+            + object.workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_project_manager:workspace_group_access:list")
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.WorkspaceGroupAccessFactory.create()
-        self.mock_request.return_value = self.get_mock_response(
-            500, message="workspace group access delete test error"
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + object.workspace.billing_project.name
+            + "/"
+            + object.workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=500,
+            json={"message": "workspace group access delete test error"},
         )
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
@@ -3513,7 +3880,7 @@ class WorkspaceGroupAccessDeleteTest(TestCase):
             "AnVIL API Error: workspace group access delete test error",
             str(messages[0]),
         )
-        self.mock_request.assert_called_once()
+        responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
 
