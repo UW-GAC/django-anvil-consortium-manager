@@ -23,13 +23,31 @@ class AnVILStatus(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         client = AnVILAPIClient()
-        response = client.status()
-        json_response = response.json()
-        context["anvil_systems_status"] = json_response.pop("systems")
-        context["anvil_status"] = json_response
-        response = client.me()
-        print(response.text)
-        context["anvil_user"] = response.json()["userEmail"]
+        try:
+            response = client.status()
+            json_response = response.json()
+            context["anvil_systems_status"] = json_response.pop("systems")
+            context["anvil_status"] = json_response
+        except AnVILAPIError:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                "AnVIL API Error: error checking API status",
+            )
+            context["anvil_systems_status"] = None
+            context["anvil_status"] = None
+
+        try:
+            response = client.me()
+            json_response = response.json()
+            context["anvil_user"] = response.json()["userEmail"]
+        except AnVILAPIError:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: error checking API user"
+            )
+            context["anvil_user"] = None
         return context
 
 

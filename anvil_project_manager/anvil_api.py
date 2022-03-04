@@ -160,8 +160,8 @@ class AnVILAPIError(Exception):
     def __init__(self, response):
         try:
             msg = response.json()["message"]
-        except (KeyError, TypeError):
-            msg = response.text
+        except Exception:
+            msg = "other error"
         super().__init__(msg)
         self.status_code = response.status_code
         self.response = response

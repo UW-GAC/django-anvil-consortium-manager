@@ -115,6 +115,59 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url_me, 1)
         responses.assert_call_count(url_status, 1)
 
+    def test_context_data_status_api_error(self):
+        """Page still loads if there is an AnVIL API error in the status call."""
+        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
+        # Error in status API
+        url_status = self.entry_point + "/status"
+        responses.add(responses.GET, url_status, status=499)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: error checking API status", str(messages[0]))
+        responses.assert_call_count(url_me, 1)
+        responses.assert_call_count(url_status, 1)
+
+    def test_context_data_status_me_error(self):
+        """Page still loads if there is an AnVIL API error in the me call."""
+        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        responses.add(responses.GET, url_me, status=499)
+        url_status = self.entry_point + "/status"
+        responses.add(
+            responses.GET,
+            url_status,
+            status=200,
+            json=self.get_json_status_data(status_ok=False),
+        )
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: error checking API user", str(messages[0]))
+        responses.assert_call_count(url_me, 1)
+        responses.assert_call_count(url_status, 1)
+
+    def test_context_data_both_api_error(self):
+        """Page still loads if there is an AnVIL API error in both the status and me call."""
+        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        responses.add(responses.GET, url_me, status=499)
+        # Error in status API
+        url_status = self.entry_point + "/status"
+        responses.add(responses.GET, url_status, status=499)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 2)
+        self.assertEqual("AnVIL API Error: error checking API status", str(messages[0]))
+        self.assertEqual("AnVIL API Error: error checking API user", str(messages[1]))
+        responses.assert_call_count(url_me, 1)
+        responses.assert_call_count(url_status, 1)
+
 
 class BillingProjectDetailTest(TestCase):
     def setUp(self):
