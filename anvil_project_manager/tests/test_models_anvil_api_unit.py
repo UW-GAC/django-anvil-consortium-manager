@@ -1,5 +1,7 @@
 from unittest import mock
 
+import google.auth.credentials
+import google.auth.transport.requests
 from django.test import TestCase
 
 from .. import anvil_api, models
@@ -9,13 +11,29 @@ from . import factories
 class AnVILAPIMockTest(TestCase):
     """Base class for AnVIL API mocked tests."""
 
+    def setUp(self):
+        """Set up class -- mock credentials for AuthorizedSession."""
+        # Patch the module that checks credentials.
+        # See Google's tests:
+        # https://github.com/googleapis/google-api-python-client/blob/main/tests/test__auth.py
+        self.credential_patcher = mock.patch.object(
+            google.auth, "default", autospec=True
+        )
+        self.credential_patcher.start()
+        self.addCleanup(self.credential_patcher.stop)
+        self.credential_patcher.return_value = (
+            mock.sentinel.credentials,
+            mock.sentinel.project,
+        )
+
     def get_mock_response(self, status_code, message="mock message"):
         """Create a mock response."""
         return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
 
 class BillingProjectAnVILAPIMockTest(AnVILAPIMockTest):
-    def setUp(self, *args, **kwargs):
+    def setUp(self):
+        super().setUp()
         self.object = factories.BillingProjectFactory()
 
     @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
@@ -35,6 +53,7 @@ class BillingProjectAnVILAPIMockTest(AnVILAPIMockTest):
 
 class GroupAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
+        super().setUp()
         self.object = factories.GroupFactory()
 
     @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
@@ -154,6 +173,7 @@ class GroupAnVILAPIMockTest(AnVILAPIMockTest):
 
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
+        super().setUp()
         self.object = factories.WorkspaceFactory()
 
     @mock.patch("google.auth.transport.requests.AuthorizedSession.get")
@@ -350,6 +370,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTest):
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
+        super().setUp()
         parent_group = factories.GroupFactory(name="parent-group")
         child_group = factories.GroupFactory(name="child-group")
         self.object = factories.GroupGroupMembershipFactory(
@@ -433,6 +454,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTest):
 
 class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
+        super().setUp()
         group = factories.GroupFactory(name="test-group")
         account = factories.AccountFactory(email="test-account@example.com")
         self.object = factories.GroupAccountMembershipFactory(
@@ -514,6 +536,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTest):
 
 class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTest):
     def setUp(self, *args, **kwargs):
+        super().setUp()
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
