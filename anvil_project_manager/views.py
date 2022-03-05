@@ -9,8 +9,7 @@ from django.views.generic import (
 )
 from django_tables2 import SingleTableMixin, SingleTableView
 
-from . import models, tables
-from .anvil_api import AnVILAPIClient, AnVILAPIError
+from . import anvil_api, models, tables
 
 
 class Index(TemplateView):
@@ -22,13 +21,13 @@ class AnVILStatus(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        client = AnVILAPIClient()
+        client = anvil_api.AnVILAPIClient()
         try:
             response = client.status()
             json_response = response.json()
             context["anvil_systems_status"] = json_response.pop("systems")
             context["anvil_status"] = json_response
-        except AnVILAPIError:
+        except anvil_api.AnVILAPIError:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request,
@@ -42,7 +41,7 @@ class AnVILStatus(TemplateView):
             response = client.me()
             json_response = response.json()
             context["anvil_user"] = response.json()["userEmail"]
-        except AnVILAPIError:
+        except anvil_api.AnVILAPIError:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: error checking API user"
@@ -133,7 +132,7 @@ class GroupCreate(CreateView):
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -141,6 +140,43 @@ class GroupCreate(CreateView):
             return self.render_to_response(self.get_context_data(form=form))
         # Save the group.
         self.object.save()
+        return super().form_valid(form)
+
+
+class GroupImport(CreateView):
+    model = models.Group
+    fields = ("name",)
+    template_name = "anvil_project_manager/group_import.html"
+    message_anvil_group_does_not_exist = "Requested group does not exist on AnVIL."
+    message_not_admin_of_anvil_group = "No admin privileges for this group on AnVIL."
+
+    def form_valid(self, form):
+        """If the form is valid, check that the group exists on AnVIL and save the associated model."""
+        # Create the object but do not save it yet.
+        self.object = form.save(commit=False)
+        # Check if the group exists on AnVIL and that we are admins.
+        try:
+            group_exists = self.object.anvil_exists()
+        except anvil_api.AnVILAPIError403:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_admin_of_anvil_group
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        except anvil_api.AnVILAPIError as e:
+            # If the API call failed, rerender the page and show an error message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        if group_exists:
+            # Save the group.
+            self.object.save()
+        else:
+            print("adding a message!")
+            messages.add_message(
+                self.request, messages.ERROR, self.message_anvil_group_does_not_exist
+            )
+            return self.render_to_response(self.get_context_data())
         return super().form_valid(form)
 
 
@@ -162,7 +198,7 @@ class GroupDelete(DeleteView):
         self.object = self.get_object()
         try:
             self.object.anvil_delete()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -197,7 +233,7 @@ class WorkspaceCreate(CreateView):
         # Make an API call to AnVIL to create the workspace.
         try:
             self.object.anvil_create()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -227,7 +263,7 @@ class WorkspaceDelete(DeleteView):
         self.object = self.get_object()
         try:
             self.object.anvil_delete()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -255,7 +291,7 @@ class GroupGroupMembershipCreate(CreateView):
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -284,7 +320,7 @@ class GroupGroupMembershipDelete(DeleteView):
         self.object = self.get_object()
         try:
             self.object.anvil_delete()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -312,7 +348,7 @@ class GroupAccountMembershipCreate(CreateView):
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -341,7 +377,7 @@ class GroupAccountMembershipDelete(DeleteView):
         self.object = self.get_object()
         try:
             self.object.anvil_delete()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -369,7 +405,7 @@ class WorkspaceGroupAccessCreate(CreateView):
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create_or_update()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -392,7 +428,7 @@ class WorkspaceGroupAccessUpdate(UpdateView):
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create_or_update()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -421,7 +457,7 @@ class WorkspaceGroupAccessDelete(DeleteView):
         self.object = self.get_object()
         try:
             self.object.anvil_delete()
-        except AnVILAPIError as e:
+        except anvil_api.AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)

@@ -25,9 +25,7 @@ class AnVILAPIMockTestMixin:
             mock.sentinel.credentials,
             mock.sentinel.project,
         )
+        # Start the responses mixin so we can mock the API responses.
         responses.start()
-
-    def tearDown(self):
-        super().tearDown()
-        responses.stop()
-        responses.reset()
+        self.addCleanup(responses.stop)
+        self.addCleanup(responses.reset)
