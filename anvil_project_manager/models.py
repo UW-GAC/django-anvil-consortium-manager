@@ -1,7 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 
+from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
@@ -157,6 +158,62 @@ class Workspace(models.Model):
     def anvil_delete(self):
         """Delete the workspace on AnVIL."""
         AnVILAPIClient().delete_workspace(self.billing_project.name, self.name)
+
+    @classmethod
+    def anvil_import(cls, billing_project_name, workspace_name):
+        """Create a new instance for a workspace that already exists on AnVIL.
+
+        Methods calling this should handle AnVIL API exceptions appropriately.
+        """
+        # Check if the workspace already exists in the database.
+        try:
+            Workspace.objects.get(
+                billing_project__name=billing_project_name, name=workspace_name
+            )
+            raise exceptions.AnVILAlreadyImported(
+                billing_project_name + "/" + workspace_name
+            )
+        except Workspace.DoesNotExist:
+            # The workspace doesn't exist: continue to creation.
+            pass
+
+        # Run in a transaction since we may need to create the billing project, but we only want
+        # it to be saved if everything succeeds.
+        try:
+            with transaction.atomic():
+                # Get or create the billing project.
+                try:
+                    billing_project = BillingProject.objects.get(
+                        name=billing_project_name
+                    )
+                except BillingProject.DoesNotExist:
+                    billing_project = BillingProject(name=billing_project_name)
+                    billing_project.full_clean()
+                    billing_project.save()
+                # Create the workspace.
+                workspace = Workspace(
+                    billing_project=billing_project, name=workspace_name
+                )
+                workspace.full_clean()
+
+                # Check the workspace on AnVIL.
+                response = AnVILAPIClient().get_workspace(
+                    billing_project_name, workspace_name
+                )
+                workspace_json = response.json()
+                print(workspace_json)
+                # Make sure that we are owners of the workspace.
+                if workspace_json["accessLevel"] != "OWNER":
+                    raise exceptions.AnVILNotWorkspaceOwnerError(
+                        billing_project_name + "/" + workspace_name
+                    )
+
+                workspace.save()
+        except Exception:
+            # If it fails for any reason, we don't want the transaction to happen.
+            raise
+
+        return workspace
 
 
 class GroupGroupMembership(models.Model):

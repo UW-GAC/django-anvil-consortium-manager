@@ -1,7 +1,8 @@
 import responses
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from .. import anvil_api, models
+from .. import anvil_api, exceptions, models
 from . import factories
 from .utils import AnVILAPIMockTestMixin
 
@@ -335,6 +336,223 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(anvil_api.AnVILAPIError):
             self.object.anvil_delete()
         responses.assert_call_count(self.url_workspace, 1)
+
+
+class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests of class methods for the Workspace model."""
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        return (
+            self.entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+        )
+
+    def get_api_json_response(self, billing_project, workspace, access="OWNER"):
+        """Return a pared down version of the json response from the AnVIL API with only fields we need."""
+        json_data = {
+            "accessLevel": access,
+            "owners": [],
+            "workspace": {
+                "authorizationDomain": [],
+                "name": workspace,
+                "namespace": billing_project,
+            },
+        }
+        return json_data
+
+    def test_anvil_import_billing_project_already_exists_in_django_db(self):
+        """A workspace can be imported from AnVIL if we are owners and if the billing project exists."""
+        workspace_name = "test-workspace"
+        billing_project = factories.BillingProjectFactory.create()
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        workspace = models.Workspace.anvil_import(billing_project.name, workspace_name)
+        # Check workspace values.
+        self.assertEqual(workspace.billing_project, billing_project)
+        self.assertEqual(workspace.name, workspace_name)
+        # Check that it was saved.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+        # No additional billing projects were created.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+
+    def test_anvil_import_billing_project_does_not_exist_in_django_db(self):
+        """A workspace can be imported from AnVIL if we are owners and if the billing project does not exist."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # A billing project was created.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        billing_project = models.BillingProject.objects.get()
+        self.assertEqual(billing_project.name, billing_project_name)
+        # Check workspace values.
+        self.assertEqual(workspace.billing_project, billing_project)
+        self.assertEqual(workspace.name, workspace_name)
+        # Check that it was saved.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+
+    def test_anvil_import_not_owners_of_workspace(self):
+        """A workspace cannot be imported from AnVIL if we are not owners."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, access="READER"
+            ),
+        )
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError):
+            models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # Check workspace values.
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_no_access_to_anvil_workspace(self):
+        """A workspace cannot be imported from AnVIL if we do not have access."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=404,  # successful response code.
+            json={
+                "message": billing_project_name
+                + "/"
+                + workspace_name
+                + " does not exist or you do not have permission to use it"
+            },
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # Check workspace values.
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_workspace_exists_in_django_db(self):
+        workspace = factories.WorkspaceFactory.create()
+        # No API calls should be made.
+        with self.assertRaises(exceptions.AnVILAlreadyImported):
+            models.Workspace.anvil_import(
+                workspace.billing_project.name, workspace.name
+            )
+        # No additional objects were created.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        self.assertEqual(models.Workspace.objects.count(), 1)
+
+    def test_anvil_import_api_internal_error(self):
+        """No workspaces are created if there is an internal error from the AnVIL API."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=500,  # successful response code.
+            json={"message": "error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_api_error_other(self):
+        """No workspaces are created if there is some other error from the AnVIL API."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=499,  # successful response code.
+            json={"message": "error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_invalid_billing_project_name(self):
+        """No workspaces are created if the billing project name is invalid."""
+        with self.assertRaises(ValidationError):
+            models.Workspace.anvil_import("test billing project", "test-workspace")
+        # # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_invalid_workspace_name(self):
+        """No workspaces are created if the workspace name is invalid."""
+        with self.assertRaises(ValidationError):
+            models.Workspace.anvil_import("test-billing-project", "test workspace")
+        # # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_different_billing_project_same_workspace_name(self):
+        """Can import a workspace in a different billing project with the same name as another workspace."""
+        workspace_name = "test-workspace"
+        other_billing_project = factories.BillingProjectFactory.create(
+            name="billing-project-1"
+        )
+        factories.WorkspaceFactory.create(
+            billing_project=other_billing_project, name=workspace_name
+        )
+        billing_project_name = "billing-project-2"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # A billing project was created and that the previous billing project exists.
+        self.assertEqual(models.BillingProject.objects.count(), 2)
+        billing_project = models.BillingProject.objects.latest("pk")
+        self.assertEqual(billing_project.name, billing_project_name)
+        # Check workspace.
+        self.assertEqual(models.Workspace.objects.count(), 2)
+        self.assertEqual(workspace.billing_project, billing_project)
+        self.assertEqual(workspace.name, workspace_name)
+
+    def test_anvil_import_same_billing_project_different_workspace_name(self):
+        """Can import a workspace in the same billing project with with a different name as another workspace."""
+        workspace_name = "test-workspace-2"
+        billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-workspace-1"
+        )
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        workspace = models.Workspace.anvil_import(billing_project.name, workspace_name)
+        # No new billing projects were created.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        # Check workspace.
+        self.assertEqual(models.Workspace.objects.count(), 2)
+        self.assertEqual(workspace.billing_project, billing_project)
+        self.assertEqual(workspace.name, workspace_name)
 
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
