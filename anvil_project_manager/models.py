@@ -216,6 +216,23 @@ class Workspace(models.Model):
         return workspace
 
 
+class WorkspaceAuthorizationDomain(models.Model):
+    """A model to track authorization domains (groups) for a workspace."""
+
+    workspace = models.ForeignKey(
+        "Workspace", on_delete=models.CASCADE, related_name="authorization_domain"
+    )
+    group = models.ForeignKey("Group", on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "group"],
+                name="unique_workspace_authorization_domain",
+            )
+        ]
+
+
 class GroupGroupMembership(models.Model):
     """A model to store which groups are in a group."""
 
