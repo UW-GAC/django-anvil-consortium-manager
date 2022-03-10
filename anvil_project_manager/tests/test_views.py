@@ -1,6 +1,5 @@
 from unittest import mock, skip
 
-import faker
 import responses
 from django.http.response import Http404
 from django.test import RequestFactory, TestCase
@@ -9,8 +8,6 @@ from django.urls import reverse
 from .. import forms, models, tables, views
 from . import factories
 from .utils import AnVILAPIMockTestMixin
-
-fake = faker.Faker()
 
 
 class IndexTest(TestCase):
@@ -1001,139 +998,6 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "AnVIL API returns 201 instead of ??? when trying to create a group that already exists."
         )
-
-
-class GroupImportTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the GroupImport view."""
-
-    api_success_code = 200
-
-    def setUp(self):
-        """Set up test class."""
-        # The superclass uses the responses package to mock API responses.
-        super().setUp()
-        self.factory = RequestFactory()
-        self.group_name = fake.slug()
-        self.api_url = self.entry_point + "/api/groups/" + self.group_name
-
-    def get_url(self, *args):
-        """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:groups:import", args=args)
-
-    def get_view(self):
-        """Return the view being tested."""
-        return views.GroupImport.as_view()
-
-    def test_status_code(self):
-        """Returns successful response code."""
-        request = self.factory.get(self.get_url())
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-
-    def test_has_form_in_context(self):
-        """Response includes a form."""
-        request = self.factory.get(self.get_url())
-        response = self.get_view()(request)
-        self.assertTrue("form" in response.context_data)
-
-    def test_creates_an_object_when_group_exists_on_anvil(self):
-        """Posting valid data to the form creates an object when the group exists on AnVIL."""
-        responses.add(responses.GET, self.api_url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(), {"name": self.group_name})
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 302)
-        new_object = models.Group.objects.latest("pk")
-        self.assertIsInstance(new_object, models.Group)
-        self.assertEqual(new_object.name, self.group_name)
-        responses.assert_call_count(self.api_url, 1)
-
-    def test_error_when_importing_group_that_exists_in_db(self):
-        obj = factories.GroupFactory.create(name=self.group_name)
-        request = self.factory.post(self.get_url(), {"name": self.group_name})
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("name", form.errors.keys())
-        self.assertIn("already exists", form.errors["name"][0])
-        self.assertQuerysetEqual(
-            models.Group.objects.all(),
-            models.Group.objects.filter(pk=obj.pk),
-        )
-        self.assertEqual(len(responses.calls), 0)
-
-    def test_group_does_not_exist_on_anvil(self):
-        """Does not create an object when the group does not exist on AnVIL."""
-        responses.add(responses.GET, self.api_url, status=404)
-        response = self.client.post(
-            self.get_url(), {"name": self.group_name}, follow=True
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(models.Group.objects.count(), 0)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertIn("does not exist on AnVIL", str(messages[0]))
-        responses.assert_call_count(self.api_url, 1)
-
-    def test_group_not_admin_on_anvil(self):
-        """Does not create an object when the group exists on AnVIL but we are not admins."""
-        responses.add(responses.GET, self.api_url, status=403)
-        response = self.client.post(self.get_url(), {"name": self.group_name})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(models.Group.objects.count(), 0)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertIn("admin privileges", str(messages[0]))
-        responses.assert_call_count(self.api_url, 1)
-
-    def test_other_api_error(self):
-        """The page displays a message when the API returns an unexpected error code."""
-        responses.add(responses.GET, self.api_url, status=499)
-        response = self.client.post(self.get_url(), {"name": self.group_name})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(models.Group.objects.count(), 0)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertIn("AnVIL API Error", str(messages[0]))
-        responses.assert_call_count(self.api_url, 1)
-
-    @skip("Not implemented")
-    def test_imports_group_membership_one_account_when_account_exists(self):
-        """Successfully imports group membership when one member exists in the database."""
-        pass
-
-    @skip("Not implemented")
-    def test_imports_group_membership_one_account_when_account_does_not_exist(self):
-        """Successfully imports account membership when one member does not exist in the database."""
-        pass
-
-    @skip("Not implemented")
-    def test_imports_group_membership_two_accounts_when_one_account_exists(self):
-        """Successfully imports account membership when one member exists in the database and one does ot."""
-        pass
-
-    @skip("Not implemented")
-    def test_imports_group_group_membership_one_member_exists_in_db(self):
-        """Successfully imports group membership when one member exists in the database."""
-        pass
-
-    @skip("Not implemented")
-    def test_imports_group_group_membership_one_member_does_not_exist_in_db(self):
-        """Successfully imports group membership when one member does not exist in the database."""
-        pass
-
-    @skip("Not implemented")
-    def test_imports_group_group_membership_two_members(self):
-        """Successfully imports group membership when one member exists in the database and one does not."""
-        pass
-
-    @skip("Not implemented")
-    def test_imports_both_account_and_group_membership(self):
-        """Successfully imports both group and account membership."""
-        pass
 
 
 class GroupListTest(TestCase):
