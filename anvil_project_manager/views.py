@@ -4,12 +4,13 @@ from django.views.generic import (
     CreateView,
     DeleteView,
     DetailView,
+    FormView,
     TemplateView,
     UpdateView,
 )
 from django_tables2 import SingleTableMixin, SingleTableView
 
-from . import anvil_api, models, tables
+from . import anvil_api, exceptions, forms, models, tables
 
 
 class Index(TemplateView):
@@ -242,6 +243,54 @@ class WorkspaceCreate(CreateView):
             return self.render_to_response(self.get_context_data(form=form))
         # Save the workspace.
         self.object.save()
+        return super().form_valid(form)
+
+
+class WorkspaceImport(FormView):
+    template_name = "anvil_project_manager/workspace_import.html"
+    form_class = forms.WorkspaceImportForm
+    message_anvil_no_access_to_workspace = (
+        "Requested workspace doesn't exist or you don't have permission to see it."
+    )
+    message_anvil_not_owner = "Not an owner of this workspace."
+    message_workspace_exists = "This workspace already exists in the web app."
+
+    def get_success_url(self):
+        return self.workspace.get_absolute_url()
+
+    def form_valid(self, form):
+        """If the form is valid, check that the workspace exists on AnVIL and save the associated model."""
+        billing_project_name = form.cleaned_data["billing_project_name"]
+        workspace_name = form.cleaned_data["workspace_name"]
+
+        try:
+            self.workspace = models.Workspace.anvil_import(
+                billing_project_name, workspace_name
+            )
+        except exceptions.AnVILAlreadyImported:
+            # The workspace already exists in the database.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_workspace_exists
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        except anvil_api.AnVILAPIError404:
+            # Either the workspace doesn't exist or we don't have permission for it.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_anvil_no_access_to_workspace
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        except anvil_api.AnVILAPIError as e:
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        except exceptions.AnVILNotWorkspaceOwnerError:
+            # We are not an owner of the workspace.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_anvil_not_owner
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+
         return super().form_valid(form)
 
 

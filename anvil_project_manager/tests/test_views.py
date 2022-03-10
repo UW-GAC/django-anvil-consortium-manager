@@ -6,7 +6,7 @@ from django.http.response import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
-from .. import models, tables, views
+from .. import forms, models, tables, views
 from . import factories
 from .utils import AnVILAPIMockTestMixin
 
@@ -1612,6 +1612,329 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
         # Make sure that no object is created.
         self.assertEqual(models.Workspace.objects.count(), 0)
+
+
+class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceImport view."""
+
+    api_success_code = 200
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:workspaces:import", args=args)
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        return (
+            self.entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+        )
+
+    def get_api_json_response(self, billing_project, workspace, access="OWNER"):
+        """Return a pared down version of the json response from the AnVIL API with only fields we need."""
+        json_data = {
+            "accessLevel": access,
+            "owners": [],
+            "workspace": {
+                "authorizationDomain": [],
+                "name": workspace,
+                "namespace": billing_project,
+            },
+        }
+        return json_data
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceImport.as_view()
+
+    def test_status_code(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertTrue("form" in response.context_data)
+        print(type(response.context_data["form"]))
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+
+    def test_can_import_workspace(self):
+        """Can import a workspace from AnVIL."""
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        # Created a billing project.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        new_billing_project = models.BillingProject.objects.latest("pk")
+        self.assertEqual(new_billing_project.name, billing_project_name)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        responses.assert_call_count(url, 1)
+
+    def test_redirects_to_new_object_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertRedirects(response, new_object.get_absolute_url())
+        responses.assert_call_count(url, 1)
+
+    def test_workspace_already_imported(self):
+        """Does not import a workspace that already exists in Django."""
+        workspace = factories.WorkspaceFactory.create()
+        # No API calls.
+        # Messages need the client.
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project_name": workspace.billing_project.name,
+                "workspace_name": workspace.name,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is valid but there was a different error. Is this really what we want?
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(views.WorkspaceImport.message_workspace_exists, str(messages[0]))
+        # Did not create any new BillingProjects.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        # Did not create eany new Workspaces.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+
+    def test_invalid_billing_project(self):
+        """Does not create an object if billing project name is invalid."""
+        billing_project_name = "billing project"
+        workspace_name = "workspace"
+        # No API call.
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project_name", form.errors.keys())
+        self.assertIn("slug", form.errors["billing_project_name"][0])
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+
+    def test_invalid_workspace_name(self):
+        """Does not create an object if workspace name is invalid."""
+        billing_project_name = "billing-project"
+        workspace_name = "workspace name"
+        # No API call.
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("workspace_name", form.errors.keys())
+        self.assertIn("slug", form.errors["workspace_name"][0])
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        request = self.factory.post(self.get_url(), {})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project_name", form.errors.keys())
+        self.assertIn("required", form.errors["billing_project_name"][0])
+        self.assertIn("workspace_name", form.errors.keys())
+        self.assertIn("required", form.errors["workspace_name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_post_blank_data_billing_project(self):
+        """Posting blank data in the billing project name field does not create an object."""
+        request = self.factory.post(
+            self.get_url(), {"workspace_name": "test-workspace"}
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project_name", form.errors.keys())
+        self.assertIn("required", form.errors["billing_project_name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_post_blank_data_workspace_name(self):
+        """Posting blank data in the workspace_name field does not create an object."""
+        request = self.factory.post(
+            self.get_url(), {"billing_project_name": "test-billing-project"}
+        )
+        request = self.factory.post(self.get_url(), {})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("workspace_name", form.errors.keys())
+        self.assertIn("required", form.errors["workspace_name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_no_access_to_workspace(self):
+        """Does not import a workspace if we don't have access to it."""
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=404,
+            json={"message": "api error"},
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is valid but there was a different error. Is this really what we want?
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            views.WorkspaceImport.message_anvil_no_access_to_workspace, str(messages[0])
+        )
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        responses.assert_call_count(url, 1)
+
+    def test_not_owner_of_workspace(self):
+        """Does not import a workspace if we are not an owner."""
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=self.api_success_code,
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, access="READER"
+            ),
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is valid but there was a different error. Is this really what we want?
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(views.WorkspaceImport.message_anvil_not_owner, str(messages[0]))
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        responses.assert_call_count(url, 1)
+
+    def test_other_anvil_api_error(self):
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=500,
+            json={"message": "an error"},
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is valid but there was a different error. Is this really what we want?
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: an error", str(messages[0]))
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        responses.assert_call_count(url, 1)
 
 
 class WorkspaceListTest(TestCase):
