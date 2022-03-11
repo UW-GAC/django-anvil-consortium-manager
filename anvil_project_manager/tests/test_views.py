@@ -1477,6 +1477,221 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that no object is created.
         self.assertEqual(models.Workspace.objects.count(), 0)
 
+    def test_can_create_a_workspace_with_one_authorization_domain(self):
+        """Can create a workspace with one authorization domain."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain = factories.GroupFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk],
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(len(new_object.authorization_domains.all()), 1)
+        self.assertIn(auth_domain, new_object.authorization_domains.all())
+        responses.assert_call_count(url, 1)
+
+    def test_create_workspace_with_two_auth_domains(self):
+        """Can create a workspace with two authorization domains."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain_1 = factories.GroupFactory.create()
+        auth_domain_2 = factories.GroupFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [
+                {"membersGroupName": auth_domain_1.name},
+                {"membersGroupName": auth_domain_2.name},
+            ],
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain_1.pk, auth_domain_2.pk],
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(len(new_object.authorization_domains.all()), 2)
+        self.assertIn(auth_domain_1, new_object.authorization_domains.all())
+        self.assertIn(auth_domain_2, new_object.authorization_domains.all())
+        responses.assert_call_count(url, 1)
+
+    def test_invalid_auth_domain(self):
+        """Does not create a workspace when an invalid authorization domain is specified."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        url = self.entry_point + "/api/workspaces"
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [1],
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("authorization_domains", form.errors.keys())
+        self.assertIn("valid choice", form.errors["authorization_domains"][0])
+        # No object was created.
+        self.assertEqual(len(models.Workspace.objects.all()), 0)
+        # No API calls made.
+        responses.assert_call_count(url, 0)
+
+    def test_one_valid_one_invalid_auth_domain(self):
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain = factories.GroupFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk, auth_domain.pk + 1],
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("authorization_domains", form.errors.keys())
+        self.assertIn("valid choice", form.errors["authorization_domains"][0])
+        # No object was created.
+        self.assertEqual(len(models.Workspace.objects.all()), 0)
+        # No API calls made.
+        responses.assert_call_count(url, 0)
+
+    def test_auth_domain_does_not_exist_on_anvil(self):
+        """No workspace is displayed if the auth domain group doesn't exist on AnVIL."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain = factories.GroupFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [
+                {"membersGroupName": auth_domain.name},
+            ],
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=400,
+            json={"message": "api error"},
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        # Need a client to check messages.
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # The form is valid but there was an API error.
+        form = response.context_data["form"]
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
+        # Did not create any new Workspaces.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        responses.assert_call_count(url, 1)
+
+    def test_not_admin_of_auth_domain_on_anvil(self):
+        """No workspace is displayed if we are not the admins of the auth domain on AnVIL."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain = factories.GroupFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [
+                {"membersGroupName": auth_domain.name},
+            ],
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=400,
+            json={"message": "api error"},
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        # Need a client to check messages.
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # The form is valid but there was an API error.
+        form = response.context_data["form"]
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
+        # Did not create any new Workspaces.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        responses.assert_call_count(url, 1)
+
 
 class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the WorkspaceImport view."""

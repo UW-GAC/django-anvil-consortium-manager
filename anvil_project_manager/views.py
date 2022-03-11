@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.urls import reverse
 from django.views.generic import (
     CreateView,
@@ -186,18 +187,16 @@ class WorkspaceDetail(SingleTableMixin, DetailView):
 
 class WorkspaceCreate(CreateView):
     model = models.Workspace
-    fields = (
-        "billing_project",
-        "name",
-    )
+    fields = ("billing_project", "name", "authorization_domains")
 
+    @transaction.atomic
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
-        # Create but don't save the new workspace.
-        self.object = form.save(commit=False)
-        # Make an API call to AnVIL to create the workspace.
+        # Need to use a transaction because the object needs to be saved to access the many-to-many field.
         try:
-            self.object.anvil_create()
+            with transaction.atomic():
+                self.object = form.save()
+                self.object.anvil_create()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
@@ -205,8 +204,6 @@ class WorkspaceCreate(CreateView):
             )
             print(str(e))
             return self.render_to_response(self.get_context_data(form=form))
-        # Save the workspace.
-        self.object.save()
         return super().form_valid(form)
 
 
