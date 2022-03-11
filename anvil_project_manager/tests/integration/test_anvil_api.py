@@ -75,6 +75,10 @@ class AnVILAPIClientTest(TestCase):
         with self.assertRaises(anvil_api.AnVILAPIError404):
             self.client.get_group(test_group)
 
+        # Try to get info about a group that I am not an admin of.
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            self.client.get_group("test-group")
+
         # Try to delete a group that doesn't exist.
         # EXPECTED behavior:
         # with self.assertRaises(anvil_api.AnVILAPIError404):
