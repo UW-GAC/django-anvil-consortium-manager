@@ -220,7 +220,7 @@ class WorkspaceAuthorizationDomain(models.Model):
     """A model to track authorization domains (groups) for a workspace."""
 
     workspace = models.ForeignKey(
-        "Workspace", on_delete=models.CASCADE, related_name="authorization_domain"
+        "Workspace", on_delete=models.CASCADE, related_name="authorization_domains"
     )
     group = models.ForeignKey("Group", on_delete=models.PROTECT)
 
