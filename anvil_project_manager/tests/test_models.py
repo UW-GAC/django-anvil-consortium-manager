@@ -648,6 +648,40 @@ class WorkspaceTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance.save()
 
+    def test_one_auth_domain(self):
+        """Can create a workspace with one authorization domain."""
+        auth_domain = factories.GroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create(name="test-project")
+        instance = Workspace(billing_project=billing_project, name="test-name")
+        instance.save()
+        instance.authorization_domains.set(Group.objects.all())
+        self.assertEqual(len(instance.authorization_domains.all()), 1)
+        self.assertIn(auth_domain, instance.authorization_domains.all())
+
+    def test_two_auth_domains(self):
+        """Can create a workspace with two authorization domains."""
+        auth_domain_1 = factories.GroupFactory.create()
+        auth_domain_2 = factories.GroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create(name="test-project")
+        instance = Workspace(billing_project=billing_project, name="test-name")
+        instance.save()
+        instance.authorization_domains.set(Group.objects.all())
+        self.assertEqual(len(instance.authorization_domains.all()), 2)
+        self.assertIn(auth_domain_1, instance.authorization_domains.all())
+        self.assertIn(auth_domain_2, instance.authorization_domains.all())
+
+    def test_auth_domain_unique(self):
+        """Adding the same auth domain twice does nothing."""
+        auth_domain = factories.GroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create(name="test-project")
+        instance = Workspace(billing_project=billing_project, name="test-name")
+        instance.save()
+        instance.authorization_domains.add(auth_domain)
+        instance.authorization_domains.add(auth_domain)
+        self.assertEqual(len(instance.authorization_domains.all()), 1)
+        self.assertIn(auth_domain, instance.authorization_domains.all())
+        print(instance.authorization_domains.all())
+
 
 class GroupGroupMembershipTest(TestCase):
     def test_model_saving(self):

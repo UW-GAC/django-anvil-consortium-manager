@@ -46,17 +46,6 @@ class WorkspaceFactory(DjangoModelFactory):
         django_get_or_create = ["billing_project", "name"]
 
 
-class WorkspaceAuthorizationDomainFactory(DjangoModelFactory):
-    """A factory for the WorkspaceAuthorizationDomain model"""
-
-    workspace = SubFactory(WorkspaceFactory)
-    group = SubFactory(GroupFactory)
-
-    class Meta:
-        model = models.WorkspaceAuthorizationDomain
-        django_get_or_create = ["workspace", "group"]
-
-
 class GroupGroupMembershipFactory(DjangoModelFactory):
     """A factory for the GroupGroupMembership model."""
 

@@ -118,6 +118,7 @@ class Workspace(models.Model):
     # For internal consistency, call it "billing project" here.
     billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
+    authorization_domains = models.ManyToManyField(Group, blank=True)
 
     class Meta:
         constraints = [
@@ -214,23 +215,6 @@ class Workspace(models.Model):
             raise
 
         return workspace
-
-
-class WorkspaceAuthorizationDomain(models.Model):
-    """A model to track authorization domains (groups) for a workspace."""
-
-    workspace = models.ForeignKey(
-        "Workspace", on_delete=models.CASCADE, related_name="authorization_domains"
-    )
-    group = models.ForeignKey("Group", on_delete=models.PROTECT)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["workspace", "group"],
-                name="unique_workspace_authorization_domain",
-            )
-        ]
 
 
 class GroupGroupMembership(models.Model):
