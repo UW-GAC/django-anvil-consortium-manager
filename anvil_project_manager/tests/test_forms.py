@@ -20,11 +20,14 @@ class WorkspaceCreateFormTest(TestCase):
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["billing_project"], billing_project)
+        self.assertEqual(form.cleaned_data["name"], "test-workspace")
+        self.assertEqual(len(form.cleaned_data["authorization_domains"]), 0)
 
     def test_valid_one_auth_domain(self):
         """Form is valid with necessary input plus one authorization domain."""
         billing_project = factories.BillingProjectFactory.create()
-        factories.GroupFactory.create()
+        auth_domain = factories.GroupFactory.create()
         form_data = {
             "billing_project": billing_project,
             "name": "test-workspace",
@@ -32,11 +35,14 @@ class WorkspaceCreateFormTest(TestCase):
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
+        self.assertEqual(len(form.cleaned_data["authorization_domains"]), 1)
+        self.assertIn(auth_domain, form.cleaned_data["authorization_domains"])
 
     def test_valid_two_auth_domains(self):
         """Form is valid with necessary input plus two authorization domains."""
         billing_project = factories.BillingProjectFactory.create()
-        factories.GroupFactory.create_batch(2)
+        auth_domain_1 = factories.GroupFactory.create()
+        auth_domain_2 = factories.GroupFactory.create()
         form_data = {
             "billing_project": billing_project,
             "name": "test-workspace",
@@ -44,6 +50,9 @@ class WorkspaceCreateFormTest(TestCase):
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
+        self.assertEqual(len(form.cleaned_data["authorization_domains"]), 2)
+        self.assertIn(auth_domain_1, form.cleaned_data["authorization_domains"])
+        self.assertIn(auth_domain_2, form.cleaned_data["authorization_domains"])
 
     def test_invalid_missing_billing_project(self):
         """Form is invalid when missing a billing project."""
