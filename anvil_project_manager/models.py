@@ -154,7 +154,12 @@ class Workspace(models.Model):
 
     def anvil_create(self):
         """Create the workspace on AnVIL."""
-        AnVILAPIClient().create_workspace(self.billing_project.name, self.name)
+        auth_domains = list(
+            self.authorization_domains.all().values_list("name", flat=True)
+        )
+        AnVILAPIClient().create_workspace(
+            self.billing_project.name, self.name, authorization_domains=auth_domains
+        )
 
     def anvil_delete(self):
         """Delete the workspace on AnVIL."""

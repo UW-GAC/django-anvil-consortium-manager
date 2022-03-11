@@ -288,6 +288,72 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
         responses.assert_call_count(self.url_create, 1)
 
+    def test_anvil_create_one_auth_domain_success(self):
+        """Returns documented response code when trying to create a workspace with a valid auth domain."""
+        auth_domain = factories.GroupFactory.create()
+        self.object.authorization_domains.add(auth_domain)
+        json = {
+            "namespace": self.object.billing_project.name,
+            "name": self.object.name,
+            "attributes": {},
+            "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+        }
+        responses.add(
+            responses.POST,
+            self.url_create,
+            status=201,
+            match=[responses.matchers.json_params_matcher(json)],
+            json={"message": "mock message"},
+        )
+        self.object.anvil_create()
+        responses.assert_call_count(self.url_create, 1)
+
+    def test_anvil_create_two_auth_domains_success(self):
+        """Returns documented response code when trying to create a workspace with two valid auth domains."""
+        auth_domain_1 = factories.GroupFactory.create()
+        auth_domain_2 = factories.GroupFactory.create()
+        self.object.authorization_domains.add(auth_domain_1)
+        self.object.authorization_domains.add(auth_domain_2)
+        json = {
+            "namespace": self.object.billing_project.name,
+            "name": self.object.name,
+            "attributes": {},
+            "authorizationDomain": [
+                {"membersGroupName": auth_domain_1.name},
+                {"membersGroupName": auth_domain_2.name},
+            ],
+        }
+        responses.add(
+            responses.POST,
+            self.url_create,
+            status=201,
+            match=[responses.matchers.json_params_matcher(json)],
+            json={"message": "mock message"},
+        )
+        self.object.anvil_create()
+        responses.assert_call_count(self.url_create, 1)
+
+    def test_anvil_create_one_auth_domain_error(self):
+        """Returns documented response code when trying to create a workspace with a valid auth domain."""
+        auth_domain = factories.GroupFactory.create()
+        self.object.authorization_domains.add(auth_domain)
+        json = {
+            "namespace": self.object.billing_project.name,
+            "name": self.object.name,
+            "attributes": {},
+            "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+        }
+        responses.add(
+            responses.POST,
+            self.url_create,
+            status=400,
+            match=[responses.matchers.json_params_matcher(json)],
+            json={"message": "mock message"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError400):
+            self.object.anvil_create()
+        responses.assert_call_count(self.url_create, 1)
+
     def test_anvil_delete_existing(self):
         responses.add(responses.DELETE, self.url_workspace, status=202)
         self.object.anvil_delete()
