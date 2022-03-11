@@ -63,13 +63,23 @@ class AnVILAPIClient:
         method = "api/workspaces/" + workspace_namespace + "/" + workspace_name
         return self.auth_session.get(method, 200)
 
-    def create_workspace(self, workspace_namespace, workspace_name):
+    def create_workspace(
+        self, workspace_namespace, workspace_name, authorization_domains=[]
+    ):
         method = "api/workspaces"
         body = {
             "namespace": workspace_namespace,
             "name": workspace_name,
             "attributes": {},
         }
+
+        # Add authorization domains.
+        if authorization_domains:
+            if not isinstance(authorization_domains, list):
+                authorization_domains = [authorization_domains]
+            auth_domain = [{"membersGroupName": g} for g in authorization_domains]
+            body["authorizationDomain"] = auth_domain
+
         return self.auth_session.post(method, 201, json=body)
 
     def delete_workspace(self, workspace_namespace, workspace_name):

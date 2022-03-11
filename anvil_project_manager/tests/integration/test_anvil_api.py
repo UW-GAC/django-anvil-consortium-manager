@@ -432,6 +432,104 @@ class AnVILAPIClientTest(TestCase):
         with self.assertRaises(anvil_api.AnVILAPIError404):
             self.client.get_workspace("gregor-adrienne", "api-test-workspace")
 
+    def test_workspace_auth_domains(self):
+        """Tests workspaces with auth domains."""
+        test_billing_project = "gregor-adrienne"
+        test_workspace = "django-anvil-project-manager-integration-test-workspace"
+        test_auth_domain_1 = "django-anvil-project-manager-integration-test-group-1"
+        test_auth_domain_2 = "django-anvil-project-manager-integration-test-group-2"
+
+        # If the test succeeds, this will run twice but it's ok - it's already deleted.
+        # We still want to clean up after ourselves if the test fails.
+        self.addCleanup(
+            self.client.auth_session.delete,
+            "workspaces/" + test_billing_project + "/" + test_workspace,
+        )
+        self.addCleanup(
+            self.client.auth_session.delete, "api/groups/" + test_auth_domain_1
+        )
+        self.addCleanup(
+            self.client.auth_session.delete, "api/groups/" + test_auth_domain_2
+        )
+
+        # Create a workspace with an auth domain group that doesn't exist. Should fail.
+        with self.assertRaises(anvil_api.AnVILAPIError400):
+            self.client.create_workspace(
+                test_billing_project,
+                test_workspace,
+                authorization_domains=[test_auth_domain_1],
+            )
+
+        # Try to create a workspace with a group that we am not the admin for.
+        with self.assertRaises(anvil_api.AnVILAPIError400):
+            self.client.create_workspace(
+                test_billing_project,
+                test_workspace,
+                authorization_domains=[
+                    "adrienne-test"
+                ],  # The service account is not a member of this group.
+            )
+
+        # Create the auth domain group.
+        self.client.create_group(test_auth_domain_1)
+
+        # Create a workspace with the auth domain. Should work.
+        response = self.client.create_workspace(
+            test_billing_project,
+            test_workspace,
+            authorization_domains=[test_auth_domain_1],
+        )
+        self.assertEqual(response.status_code, 201)
+        json = response.json()
+        self.assertIn("authorizationDomain", json)
+        auth = json["authorizationDomain"]
+        self.assertEqual(len(auth), 1)
+        self.assertEqual(auth, [{"membersGroupName": test_auth_domain_1}])
+
+        # Try to delete the group being used as the auth domain and hopefully this will fail.
+        # # EXPECTED BEHAVIOR:
+        # # Raise some sort of error.
+        # with self.assertRaises(self.client.delete_group(test_auth_domain), anvil_api.AnVILAPIError):
+        #     self.client.delete_group(test_auth_domain)
+        # ACTUAL BEHAVIOR:
+        # It appears that the group is deleted but it actually not deleted.
+        response = self.client.delete_group(test_auth_domain_1)
+        self.assertEqual(response.status_code, 204)
+        response = self.client.get_group(test_auth_domain_1)
+        self.assertEqual(response.status_code, 200)
+
+        # Delete the workspace.
+        self.client.delete_workspace(test_billing_project, test_workspace)
+
+        # Create a second group to use as the auth domain.
+        self.client.create_group(test_auth_domain_2)
+
+        # Create the workspace with two auth domains. Should work.
+        response = self.client.create_workspace(
+            test_billing_project,
+            test_workspace,
+            authorization_domains=[test_auth_domain_1, test_auth_domain_2],
+        )
+        self.assertEqual(response.status_code, 201)
+        json = response.json()
+        self.assertIn("authorizationDomain", json)
+        auth = json["authorizationDomain"]
+        self.assertEqual(len(auth), 2)
+        self.assertEqual(
+            auth,
+            [
+                {"membersGroupName": test_auth_domain_1},
+                {"membersGroupName": test_auth_domain_2},
+            ],
+        )
+
+        # Delete the workspace.
+        self.client.delete_workspace(test_billing_project, test_workspace)
+
+        # Delete the groups.
+        self.client.delete_group(test_auth_domain_1)
+        self.client.delete_group(test_auth_domain_2)
+
     def test_workspace_sharing(self):
         """Tests method to share workspaces."""
         test_billing_project = "gregor-adrienne"
