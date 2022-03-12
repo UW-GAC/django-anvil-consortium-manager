@@ -1118,6 +1118,42 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertRedirects(response, reverse("anvil_project_manager:groups:list"))
         responses.assert_call_count(url, 1)
 
+    def test_get_redirect_group_used_as_auth_domain(self):
+        """Redirect when trying to delete a group used as an auth domain with a get request."""
+        group = factories.GroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        # Need to use a client for messages.
+        response = self.client.get(self.get_url(group.pk), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupDelete.message_group_is_auth_domain, str(messages[0])
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.Group.objects.count(), 1)
+
+    def test_post_redirect_group_used_as_auth_domain(self):
+        """Cannot delete a group used as an auth domain with a post request."""
+        group = factories.GroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        # Need to use a client for messages.
+        response = self.client.post(self.get_url(group.pk), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupDelete.message_group_is_auth_domain, str(messages[0])
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.Group.objects.count(), 1)
+
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.

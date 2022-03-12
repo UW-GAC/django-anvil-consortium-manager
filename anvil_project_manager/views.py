@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.db import transaction
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import (
     CreateView,
@@ -153,15 +154,42 @@ class GroupList(SingleTableView):
 
 class GroupDelete(DeleteView):
     model = models.Group
+    message_group_is_auth_domain = (
+        "Cannot delete group since it is an authorization domain for a workspace."
+    )
 
     def get_success_url(self):
         return reverse("anvil_project_manager:groups:list")
+
+    def get(self, *args, **kwargs):
+        response = super().get(self, *args, **kwargs)
+        # check authorization domains
+        if self.object.workspaceauthorizationdomain_set.count() > 0:
+            # Add a message and redirect.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_group_is_auth_domain
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return response
 
     def delete(self, request, *args, **kwargs):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
+
+        # Check if it's an auth domain for any workspaces.
+        if self.object.workspaceauthorizationdomain_set.count() > 0:
+            print("HERE")
+            # Add a message and redirect.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_group_is_auth_domain
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+
         try:
             self.object.anvil_delete()
         except AnVILAPIError as e:

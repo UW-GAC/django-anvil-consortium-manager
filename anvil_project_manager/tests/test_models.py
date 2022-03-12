@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
@@ -9,6 +10,7 @@ from ..models import (
     GroupAccountMembership,
     GroupGroupMembership,
     Workspace,
+    WorkspaceAuthorizationDomain,
     WorkspaceGroupAccess,
 )
 from . import factories
@@ -581,6 +583,15 @@ class GroupTest(TestCase):
         group = factories.GroupFactory.create(name="other-group")
         self.assertEqual(group.get_all_children().count(), 0)
 
+    def test_cannot_delete_group_used_as_auth_domain(self):
+        group = factories.GroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        with self.assertRaises(ProtectedError):
+            group.delete()
+        self.assertEqual(len(Group.objects.all()), 1)
+        self.assertIn(group, Group.objects.all())
+
 
 class WorkspaceTest(TestCase):
     def test_model_saving(self):
@@ -681,6 +692,21 @@ class WorkspaceTest(TestCase):
         self.assertEqual(len(instance.authorization_domains.all()), 1)
         self.assertIn(auth_domain, instance.authorization_domains.all())
         print(instance.authorization_domains.all())
+
+    def test_can_delete_workspace_with_auth_domain(self):
+        auth_domain = factories.GroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create(name="test-project")
+        instance = Workspace(billing_project=billing_project, name="test-name")
+        instance.save()
+        instance.authorization_domains.add(auth_domain)
+        instance.save()
+        # Now try to delete it.
+        instance.refresh_from_db()
+        instance.delete()
+        self.assertEqual(len(Workspace.objects.all()), 0)
+        self.assertEqual(len(WorkspaceAuthorizationDomain.objects.all()), 0)
+        # The group has not been deleted.
+        self.assertIn(auth_domain, Group.objects.all())
 
 
 class GroupGroupMembershipTest(TestCase):
