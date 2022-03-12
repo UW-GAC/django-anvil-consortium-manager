@@ -882,6 +882,68 @@ class GroupDetailTest(TestCase):
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
+    def test_workspace_auth_domain_table(self):
+        """The auth_domain table exists."""
+        obj = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("workspace_authorization_domain_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["workspace_authorization_domain_table"],
+            tables.WorkspaceTable,
+        )
+
+    def test_workspace_auth_domain_table_none(self):
+        """No workspaces are shown if the group is not the auth domain for any workspace."""
+        group = factories.GroupFactory.create()
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_authorization_domain_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["workspace_authorization_domain_table"].rows), 0
+        )
+
+    def test_workspace_auth_domain_table_one(self):
+        """One workspace is shown in if the group is the auth domain for it."""
+        group = factories.GroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_authorization_domain_table", response.context_data)
+        table = response.context_data["workspace_authorization_domain_table"]
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(workspace, table.data)
+
+    def test_workspace_auth_domain_table_two(self):
+        """Two workspaces are shown in if the group is the auth domain for them."""
+        group = factories.GroupFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_1.authorization_domains.add(group)
+        workspace_2 = factories.WorkspaceFactory.create()
+        workspace_2.authorization_domains.add(group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_authorization_domain_table", response.context_data)
+        table = response.context_data["workspace_authorization_domain_table"]
+        self.assertEqual(len(table.rows), 2)
+        self.assertIn(workspace_1, table.data)
+        self.assertIn(workspace_2, table.data)
+
+    def test_workspace_auth_domain_account_for_only_this_group(self):
+        """Only shows workspaces for which this group is the auth domain."""
+        group = factories.GroupFactory.create(name="group")
+        other_group = factories.GroupFactory.create(name="other-group")
+        other_workspace = factories.WorkspaceFactory.create()
+        other_workspace.authorization_domains.add(other_group)
+        factories.GroupGroupMembershipFactory.create(parent_group=other_group)
+        request = self.factory.get(self.get_url(group.pk))
+        response = self.get_view()(request, pk=group.pk)
+        self.assertIn("workspace_authorization_domain_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["workspace_authorization_domain_table"].rows), 0
+        )
+
 
 class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
@@ -1215,41 +1277,42 @@ class WorkspaceDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
-    def test_group_table(self):
+    def test_group_access_table(self):
         """The workspace group access table exists."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
-        self.assertIn("group_table", response.context_data)
+        self.assertIn("group_access_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["group_table"], tables.WorkspaceGroupAccessTable
+            response.context_data["group_access_table"],
+            tables.WorkspaceGroupAccessTable,
         )
 
-    def test_group_table_none(self):
+    def test_group_access_table_none(self):
         """No groups are shown if the workspace has not been shared with any groups."""
         workspace = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(workspace.pk))
         response = self.get_view()(request, pk=workspace.pk)
-        self.assertIn("group_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+        self.assertIn("group_access_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
 
-    def test_group_table_one(self):
+    def test_group_access_table_one(self):
         """One group is shown if the workspace has been shared with one group."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
         request = self.factory.get(self.get_url(workspace.pk))
         response = self.get_view()(request, pk=workspace.pk)
-        self.assertIn("group_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+        self.assertIn("group_access_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_access_table"].rows), 1)
 
-    def test_group_table_two(self):
+    def test_group_access_table_two(self):
         """Two groups are shown if the workspace has been shared with two groups."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create_batch(2, workspace=workspace)
         request = self.factory.get(self.get_url(workspace.pk))
         response = self.get_view()(request, pk=workspace.pk)
-        self.assertIn("group_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_table"].rows), 2)
+        self.assertIn("group_access_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_access_table"].rows), 2)
 
     def test_shows_workspace_group_access_for_only_that_workspace(self):
         """Only shows groups that this workspace has been shared with."""
@@ -1258,8 +1321,68 @@ class WorkspaceDetailTest(TestCase):
         factories.WorkspaceGroupAccessFactory.create(workspace=other_workspace)
         request = self.factory.get(self.get_url(workspace.pk))
         response = self.get_view()(request, pk=workspace.pk)
-        self.assertIn("group_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_table"].rows), 0)
+        self.assertIn("group_access_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
+
+    def test_auth_domain_table(self):
+        """The workspace auth domain table exists."""
+        obj = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertIn("authorization_domain_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["authorization_domain_table"], tables.GroupTable
+        )
+
+    def test_auth_domain_table_none(self):
+        """No groups are shown if the workspace has no auth domains."""
+        workspace = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("authorization_domain_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["authorization_domain_table"].rows), 0
+        )
+
+    def test_auth_domain_table_one(self):
+        """One group is shown if the workspace has one auth domain."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.GroupFactory.create()
+        workspace.authorization_domains.add(group)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("authorization_domain_table", response.context_data)
+        table = response.context_data["authorization_domain_table"]
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(group, table.data)
+
+    def test_auth_domain_table_two(self):
+        """Two groups are shown if the workspace has two auth domains."""
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.GroupFactory.create()
+        workspace.authorization_domains.add(group_1)
+        group_2 = factories.GroupFactory.create()
+        workspace.authorization_domains.add(group_2)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("authorization_domain_table", response.context_data)
+        table = response.context_data["authorization_domain_table"]
+        self.assertEqual(len(table.rows), 2)
+        self.assertIn(group_1, table.data)
+        self.assertIn(group_2, table.data)
+
+    def test_shows_auth_domains_for_only_that_workspace(self):
+        """Only shows auth domains for this workspace."""
+        workspace = factories.WorkspaceFactory.create(name="workspace-1")
+        other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
+        group = factories.GroupFactory.create()
+        other_workspace.authorization_domains.add(group)
+        request = self.factory.get(self.get_url(workspace.pk))
+        response = self.get_view()(request, pk=workspace.pk)
+        self.assertIn("authorization_domain_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["authorization_domain_table"].rows), 0
+        )
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):

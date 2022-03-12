@@ -13,6 +13,9 @@
 
       <h2>Group: {{ object.name }}</h2>
 
+      <h3>Workspaces using this group as an authorization domain:</h3>
+      {% render_table workspace_authorization_domain_table %}
+
       <h3>Workspaces that this group has access to</h3>
       {% render_table workspace_table %}
 

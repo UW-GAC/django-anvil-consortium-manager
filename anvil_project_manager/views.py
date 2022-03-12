@@ -113,6 +113,9 @@ class GroupDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["workspace_authorization_domain_table"] = tables.WorkspaceTable(
+            self.object.workspace_set.all(), exclude="group"
+        )
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="group"
         )
@@ -202,15 +205,18 @@ class GroupDelete(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceDetail(SingleTableMixin, DetailView):
+class WorkspaceDetail(DetailView):
     model = models.Workspace
-    table_class = tables.WorkspaceGroupAccessTable
-    context_table_name = "group_table"
 
-    def get_table(self):
-        return tables.WorkspaceGroupAccessTable(
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["group_access_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="workspace"
         )
+        context["authorization_domain_table"] = tables.GroupTable(
+            self.object.authorization_domains.all(), exclude="workspace"
+        )
+        return context
 
 
 class WorkspaceCreate(CreateView):
