@@ -30,7 +30,7 @@ class GroupTable(tables.Table):
 
     class Meta:
         model = models.Group
-        fields = ("pk", "name")
+        fields = ("pk", "name", "is_managed_by_app")
 
 
 class WorkspaceTable(tables.Table):

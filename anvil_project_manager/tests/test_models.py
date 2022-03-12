@@ -135,6 +135,15 @@ class GroupTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_is_managed_by_app(self):
+        """Can set the is_managed_by_app field."""
+        instance = Group(name="my-group", is_managed_by_app=True)
+        instance.full_clean()
+        instance.save()
+        instance_2 = Group(name="my-group-2", is_managed_by_app=False)
+        instance_2.full_clean()
+        instance_2.save()
+
     def test_get_direct_parents_no_parents(self):
         group = factories.GroupFactory(name="group")
         self.assertEqual(group.get_direct_parents().count(), 0)

@@ -50,6 +50,7 @@ class Group(models.Model):
     """A model to store information about AnVIL groups."""
 
     name = models.SlugField(max_length=64, unique=True)
+    is_managed_by_app = models.BooleanField(default=True)
 
     def __str__(self):
         return "{name}".format(name=self.name)
