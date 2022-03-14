@@ -39,6 +39,10 @@ class AnVILAPIClient:
         method = "api/billing/v2/" + billing_project
         return self.auth_session.get(method, 200)
 
+    def get_groups(self):
+        method = "api/groups"
+        return self.auth_session.get(method, 200)
+
     def get_group(self, group_name):
         method = "api/groups/" + group_name
         return self.auth_session.get(method, 200)

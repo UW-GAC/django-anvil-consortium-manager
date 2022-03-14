@@ -71,6 +71,16 @@ class AnVILAPIClientTest(TestCase):
         # We still want to clean up after ourselves if the test fails.
         self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_group)
 
+        # Get info about the groups I'm part of.
+        response = self.client.get_groups()
+        self.assertEqual(response.status_code, 200)
+        json = response.json()
+        # Make sure the response contains the correct keys.
+        for g in json:
+            self.assertIn("groupEmail", g)
+            self.assertIn("groupName", g)
+            self.assertIn("role", g)
+
         # Try to get info about a group that doesn't exist.
         with self.assertRaises(anvil_api.AnVILAPIError404):
             self.client.get_group(test_group)
