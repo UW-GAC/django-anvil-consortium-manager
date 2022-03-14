@@ -91,7 +91,7 @@ class AccountDetail(SingleTableMixin, DetailView):
         )
 
 
-class AccountCreate(CreateView):
+class AccountImport(CreateView):
     model = models.Account
     fields = ("email", "is_service_account")
 

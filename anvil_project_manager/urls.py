@@ -17,7 +17,7 @@ billing_project_patterns = (
 account_patterns = (
     [
         path("<int:pk>", views.AccountDetail.as_view(), name="detail"),
-        path("new/", views.AccountCreate.as_view(), name="new"),
+        path("import/", views.AccountImport.as_view(), name="import"),
         path("", views.AccountList.as_view(), name="list"),
         path("<int:pk>/delete", views.AccountDelete.as_view(), name="delete"),
     ],

@@ -503,18 +503,18 @@ class AccountDetailTest(TestCase):
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
 
-class AccountCreateTest(TestCase):
+class AccountImportTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:accounts:new", args=args)
+        return reverse("anvil_project_manager:accounts:import", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.AccountCreate.as_view()
+        return views.AccountImport.as_view()
 
     def test_status_code(self):
         """Returns successful response code."""
