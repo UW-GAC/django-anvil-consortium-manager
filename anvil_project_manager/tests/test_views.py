@@ -1192,9 +1192,7 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(
-            views.GroupDelete.message_group_is_auth_domain, str(messages[0])
-        )
+        self.assertEqual(views.GroupDelete.message_is_auth_domain, str(messages[0]))
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
@@ -1210,9 +1208,7 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(
-            views.GroupDelete.message_group_is_auth_domain, str(messages[0])
-        )
+        self.assertEqual(views.GroupDelete.message_is_auth_domain, str(messages[0]))
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
@@ -1247,7 +1243,7 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupDelete.message_not_admin, str(messages[0]))
+        self.assertEqual(views.GroupDelete.message_not_managed_by_app, str(messages[0]))
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
@@ -1261,7 +1257,7 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupDelete.message_not_admin, str(messages[0]))
+        self.assertEqual(views.GroupDelete.message_not_managed_by_app, str(messages[0]))
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
@@ -3072,7 +3068,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupGroupMembershipDelete.message_not_admin_of_parent_group,
+            views.GroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.
@@ -3093,7 +3089,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupGroupMembershipDelete.message_not_admin_of_parent_group,
+            views.GroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.
@@ -3709,7 +3705,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupAccountMembershipDelete.message_not_admin_of_group,
+            views.GroupAccountMembershipDelete.message_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.
@@ -3730,7 +3726,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupAccountMembershipDelete.message_not_admin_of_group,
+            views.GroupAccountMembershipDelete.message_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.

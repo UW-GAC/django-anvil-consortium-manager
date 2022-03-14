@@ -157,8 +157,10 @@ class GroupList(SingleTableView):
 
 class GroupDelete(DeleteView):
     model = models.Group
-    message_not_admin = "Cannot delete group because this app is not an admin."
-    message_group_is_auth_domain = (
+    message_not_managed_by_app = (
+        "Cannot delete group because it is not managed by this app."
+    )
+    message_is_auth_domain = (
         "Cannot delete group since it is an authorization domain for a workspace."
     )
 
@@ -169,14 +171,16 @@ class GroupDelete(DeleteView):
         response = super().get(self, *args, **kwargs)
         # Check if managed by the app.
         if not self.object.is_managed_by_app:
-            messages.add_message(self.request, messages.ERROR, self.message_not_admin)
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_managed_by_app
+            )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Check authorization domains
         if self.object.workspaceauthorizationdomain_set.count() > 0:
             # Add a message and redirect.
             messages.add_message(
-                self.request, messages.ERROR, self.message_group_is_auth_domain
+                self.request, messages.ERROR, self.message_is_auth_domain
             )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
@@ -190,7 +194,9 @@ class GroupDelete(DeleteView):
         self.object = self.get_object()
         # Check that the group is managed by the app.
         if not self.object.is_managed_by_app:
-            messages.add_message(self.request, messages.ERROR, self.message_not_admin)
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_managed_by_app
+            )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Check if it's an auth domain for any workspaces.
@@ -198,7 +204,7 @@ class GroupDelete(DeleteView):
             print("HERE")
             # Add a message and redirect.
             messages.add_message(
-                self.request, messages.ERROR, self.message_group_is_auth_domain
+                self.request, messages.ERROR, self.message_is_auth_domain
             )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
@@ -364,8 +370,8 @@ class GroupGroupMembershipList(SingleTableView):
 class GroupGroupMembershipDelete(DeleteView):
     model = models.GroupGroupMembership
 
-    message_not_admin_of_parent_group = (
-        "Cannot remove members from parent group because this app is not an admin."
+    message_parent_group_not_managed_by_app = (
+        "Cannot remove members from parent group because it is not managed by this app."
     )
 
     def get_success_url(self):
@@ -376,7 +382,9 @@ class GroupGroupMembershipDelete(DeleteView):
         # Check if managed by the app.
         if not self.object.parent_group.is_managed_by_app:
             messages.add_message(
-                self.request, messages.ERROR, self.message_not_admin_of_parent_group
+                self.request,
+                messages.ERROR,
+                self.message_parent_group_not_managed_by_app,
             )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
@@ -391,7 +399,9 @@ class GroupGroupMembershipDelete(DeleteView):
         # Check if managed by the app.
         if not self.object.parent_group.is_managed_by_app:
             messages.add_message(
-                self.request, messages.ERROR, self.message_not_admin_of_parent_group
+                self.request,
+                messages.ERROR,
+                self.message_parent_group_not_managed_by_app,
             )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
@@ -445,8 +455,8 @@ class GroupAccountMembershipList(SingleTableView):
 class GroupAccountMembershipDelete(DeleteView):
     model = models.GroupAccountMembership
 
-    message_not_admin_of_group = (
-        "Cannot remove members from group because this app is not an admin."
+    message_group_not_managed_by_app = (
+        "Cannot remove members from group because it is not managed by this app."
     )
 
     def get_success_url(self):
@@ -457,7 +467,7 @@ class GroupAccountMembershipDelete(DeleteView):
         # Check if managed by the app.
         if not self.object.group.is_managed_by_app:
             messages.add_message(
-                self.request, messages.ERROR, self.message_not_admin_of_group
+                self.request, messages.ERROR, self.message_group_not_managed_by_app
             )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
@@ -472,7 +482,7 @@ class GroupAccountMembershipDelete(DeleteView):
         # Check if managed by the app.
         if not self.object.group.is_managed_by_app:
             messages.add_message(
-                self.request, messages.ERROR, self.message_not_admin_of_group
+                self.request, messages.ERROR, self.message_group_not_managed_by_app
             )
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
