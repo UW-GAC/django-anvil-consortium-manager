@@ -110,6 +110,30 @@ class Group(models.Model):
         """Deletes the group on AnVIL."""
         AnVILAPIClient().delete_group(self.name)
 
+    @classmethod
+    def anvil_import(cls, group_name):
+        """Import an existing group from AnVIL."""
+        # Create the group but don't save it yet.
+        # Assume that it's not managed by the app until we figure out that it is.
+        group = cls(name=group_name, is_managed_by_app=False)
+        # Make sure we don't already have it in the database.
+        group.full_clean()
+        # Note that we have to be a member of the group to import it.
+        response = AnVILAPIClient().get_groups()
+        json = response.json()
+        # Use a generator expression to extract details about the requested group.
+        try:
+            group_details = next(
+                group for group in json if group["groupName"] == group_name
+            )
+        except StopIteration:
+            raise exceptions.AnVILNotGroupMemberError
+        # Check if we're an admin.
+        if group_details["role"] == "Admin":
+            group.is_managed_by_app = True
+        group.save()
+        return group
+
 
 class Workspace(models.Model):
     """A model to store information about AnVIL workspaces."""
@@ -214,8 +238,22 @@ class Workspace(models.Model):
                     raise exceptions.AnVILNotWorkspaceOwnerError(
                         billing_project_name + "/" + workspace_name
                     )
-
                 workspace.save()
+                # Check the authorization domains and import them.
+                auth_domains = [
+                    ad["membersGroupName"]
+                    for ad in workspace_json["workspace"]["authorizationDomain"]
+                ]
+                print(auth_domains)
+                # We don't need to check if we are members of the auth domains, because if we weren't we wouldn't be
+                # able to see the workspace.
+                for auth_domain in auth_domains:
+                    # Either get the group from the Django database or import it.
+                    try:
+                        group = Group.objects.get(name=auth_domain)
+                    except Group.DoesNotExist:
+                        group = Group.anvil_import(auth_domain)
+                    workspace.authorization_domains.add(group)
         except Exception:
             # If it fails for any reason, we don't want the transaction to happen.
             raise

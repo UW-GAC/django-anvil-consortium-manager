@@ -135,6 +135,110 @@ class GroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
+class GroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for class methods of the Group model that make AnVIL API calls."""
+
+    def get_api_url(self):
+        """Return the API url being called by the method."""
+        return self.entry_point + "/api/groups"
+
+    def get_api_json_response(self, group_name, role):
+        """Return json data about groups in the API format. Include groups that aren't being tested."""
+        json_data = [
+            {
+                "groupEmail": "other-member-group@firecloud.org",
+                "groupName": "other-member-group",
+                "role": "Member",
+            },
+            {
+                "groupEmail": "other-admin-group@firecloud.org",
+                "groupName": "other-admin-group",
+                "role": "Admin",
+            },
+            {
+                "groupEmail": group_name + "@firecloud.org",
+                "groupName": group_name,
+                "role": role,
+            },
+        ]
+        return json_data
+
+    def test_anvil_import_admin_on_anvil(self):
+        group_name = "test-group"
+        responses.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(group_name, "Admin"),
+        )
+        group = models.Group.anvil_import(group_name)
+        # Check values.
+        self.assertEqual(group.name, group_name)
+        self.assertEqual(group.is_managed_by_app, True)
+        # Check that it was saved.
+        self.assertEqual(models.Group.objects.count(), 1)
+        # Make sure it's the group that was returned.
+        models.Group.objects.get(pk=group.pk)
+
+    def test_anvil_import_member_on_anviL(self):
+        group_name = "test-group"
+        responses.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(group_name, "Member"),
+        )
+        group = models.Group.anvil_import(group_name)
+        # Check values.
+        self.assertEqual(group.name, group_name)
+        self.assertEqual(group.is_managed_by_app, False)
+        # Check that it was saved.
+        self.assertEqual(models.Group.objects.count(), 1)
+        # Make sure it's the group that was returned.
+        models.Group.objects.get(pk=group.pk)
+
+    def test_anvil_import_not_member_or_admin(self):
+        group_name = "test-group"
+        responses.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            # Specify a different group so that we're not part of the group being imported.
+            json=self.get_api_json_response("different-group", "Member"),
+        )
+        with self.assertRaises(exceptions.AnVILNotGroupMemberError):
+            models.Group.anvil_import(group_name)
+        # Check that no group was saved.
+        self.assertEqual(models.Group.objects.count(), 0)
+
+    def test_anvil_import_group_already_exists_in_django_db(self):
+        group = factories.GroupFactory.create()
+        with self.assertRaises(ValidationError):
+            models.Group.anvil_import(group.name)
+        # Check that no new group was saved.
+        self.assertEqual(models.Group.objects.count(), 1)
+
+    def test_anvil_import_invalid_group_name(self):
+        group = factories.GroupFactory.create(name="an invalid name")
+        with self.assertRaises(ValidationError):
+            models.Group.anvil_import(group.name)
+        # Check that no new group was saved.
+        self.assertEqual(models.Group.objects.count(), 1)
+
+    def test_anvil_import_api_internal_error(self):
+        group_name = "test-group"
+        responses.add(
+            responses.GET,
+            self.get_api_url(),
+            status=500,
+            json={"message": "api error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            models.Group.anvil_import(group_name)
+        # No object was saved.
+        self.assertEqual(models.Group.objects.count(), 0)
+
+
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
@@ -416,13 +520,15 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             + workspace_name
         )
 
-    def get_api_json_response(self, billing_project, workspace, access="OWNER"):
+    def get_api_json_response(
+        self, billing_project, workspace, access="OWNER", auth_domains=[]
+    ):
         """Return a pared down version of the json response from the AnVIL API with only fields we need."""
         json_data = {
             "accessLevel": access,
             "owners": [],
             "workspace": {
-                "authorizationDomain": [],
+                "authorizationDomain": [{"membersGroupName": g} for g in auth_domains],
                 "name": workspace,
                 "namespace": billing_project,
             },
@@ -619,6 +725,218 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 2)
         self.assertEqual(workspace.billing_project, billing_project)
         self.assertEqual(workspace.name, workspace_name)
+
+    def test_anvil_import_one_auth_group_member_does_not_exist_in_django(self):
+        """Imports an auth group that the app is a member of for a workspace."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        # Response for workspace query.
+        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            workspace_url,
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, auth_domains=["auth-group"]
+            ),
+        )
+        # Response for group query.
+        group_url = self.entry_point + "/api/groups"
+        responses.add(
+            responses.GET,
+            group_url,
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json=[
+                {
+                    "groupEmail": "auth-group@firecloud.org",
+                    "groupName": "auth-group",
+                    "role": "Member",
+                }
+            ],
+        )
+        # A workspace was created.
+        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertEqual(workspace.name, workspace_name)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+        # The group was imported.
+        self.assertEqual(models.Group.objects.count(), 1)
+        group = models.Group.objects.latest("pk")
+        self.assertEqual(group.name, "auth-group")
+        self.assertEqual(group.is_managed_by_app, False)
+        # The group was marked as an auth group of the workspace.
+        self.assertEqual(workspace.authorization_domains.count(), 1)
+        self.assertEqual(workspace.authorization_domains.get(), group)
+        responses.assert_call_count(workspace_url, 1)
+        responses.assert_call_count(group_url, 1)
+
+    def test_anvil_import_one_auth_group_exists_in_django(self):
+        """Imports a workspace with an auth group that already exists in the app with app as member."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        group = factories.GroupFactory.create(name="auth-group")
+        # Response for workspace query.
+        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            workspace_url,
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, auth_domains=["auth-group"]
+            ),
+        )
+        # A workspace was created.
+        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertEqual(workspace.name, workspace_name)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+        # No new groups were imported.
+        self.assertEqual(models.Group.objects.count(), 1)
+        chk = models.Group.objects.latest("pk")
+        self.assertEqual(chk, group)
+        # The group was marked as an auth group of the workspace.
+        self.assertEqual(workspace.authorization_domains.count(), 1)
+        self.assertEqual(workspace.authorization_domains.get(), group)
+        responses.assert_call_count(workspace_url, 1)
+
+    def test_anvil_import_one_auth_group_admin_does_not_exist_in_django(self):
+        """Imports a workspace with an auth group that the app is a member."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        # Response for workspace query.
+        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            workspace_url,
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, auth_domains=["auth-group"]
+            ),
+        )
+        # Response for group query.
+        group_url = self.entry_point + "/api/groups"
+        responses.add(
+            responses.GET,
+            group_url,
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json=[
+                {
+                    "groupEmail": "auth-group@firecloud.org",
+                    "groupName": "auth-group",
+                    "role": "Admin",
+                }
+            ],
+        )
+        # A workspace was created.
+        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertEqual(workspace.name, workspace_name)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+        # The group was imported.
+        self.assertEqual(models.Group.objects.count(), 1)
+        group = models.Group.objects.latest("pk")
+        self.assertEqual(group.name, "auth-group")
+        self.assertEqual(group.is_managed_by_app, True)
+        # The group was marked as an auth group of the workspace.
+        self.assertEqual(workspace.authorization_domains.count(), 1)
+        self.assertEqual(workspace.authorization_domains.get(), group)
+        responses.assert_call_count(workspace_url, 1)
+        responses.assert_call_count(group_url, 1)
+
+    def test_anvil_import_two_auth_groups(self):
+        """Imports two auth groups for a workspace."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        # Response for workspace query.
+        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            workspace_url,
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                billing_project_name,
+                workspace_name,
+                auth_domains=["auth-member", "auth-admin"],
+            ),
+        )
+        # Response for group query.
+        group_url = self.entry_point + "/api/groups"
+        responses.add(
+            responses.GET,
+            group_url,
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json=[
+                {
+                    "groupEmail": "auth-member@firecloud.org",
+                    "groupName": "auth-member",
+                    "role": "Member",
+                },
+                {
+                    "groupEmail": "auth-admin@firecloud.org",
+                    "groupName": "auth-admin",
+                    "role": "Admin",
+                },
+            ],
+        )
+        # A workspace was created.
+        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertEqual(workspace.name, workspace_name)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+        # Both groups were imported.
+        self.assertEqual(models.Group.objects.count(), 2)
+        member_group = models.Group.objects.get(name="auth-member")
+        self.assertEqual(member_group.is_managed_by_app, False)
+        admin_group = models.Group.objects.get(name="auth-admin")
+        self.assertEqual(admin_group.is_managed_by_app, True)
+        # The groups were marked as an auth domain of the workspace.
+        self.assertEqual(workspace.authorization_domains.count(), 2)
+        self.assertIn(member_group, workspace.authorization_domains.all())
+        self.assertIn(admin_group, workspace.authorization_domains.all())
+        responses.assert_call_count(workspace_url, 1)
+        responses.assert_call_count(group_url, 2)
+
+    def test_api_internal_error_group_call(self):
+        """Nothing is added when there is an API error on the /api/groups call."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        # Response for workspace query.
+        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            workspace_url,
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, auth_domains=["auth-group"]
+            ),
+        )
+        # Response for group query.
+        group_url = self.entry_point + "/api/groups"
+        responses.add(
+            responses.GET,
+            group_url,
+            status=500,
+            # Assume we are not members since we didn't create the group ourselves.
+            json={"message": "group error"},
+        )
+        # A workspace was created.
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # No workspaces were imported.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        # No groups were imported.
+        self.assertEqual(models.Group.objects.count(), 0)
+        # No auth domains were recorded.
+        self.assertEqual(models.WorkspaceAuthorizationDomain.objects.count(), 0)
+        responses.assert_call_count(workspace_url, 1)
+        responses.assert_call_count(group_url, 1)
 
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
