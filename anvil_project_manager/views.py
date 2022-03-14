@@ -157,6 +157,7 @@ class GroupList(SingleTableView):
 
 class GroupDelete(DeleteView):
     model = models.Group
+    message_not_admin = "Cannot delete group because this app is not an admin."
     message_group_is_auth_domain = (
         "Cannot delete group since it is an authorization domain for a workspace."
     )
@@ -166,7 +167,12 @@ class GroupDelete(DeleteView):
 
     def get(self, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
-        # check authorization domains
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(self.request, messages.ERROR, self.message_not_admin)
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Check authorization domains
         if self.object.workspaceauthorizationdomain_set.count() > 0:
             # Add a message and redirect.
             messages.add_message(
@@ -182,7 +188,11 @@ class GroupDelete(DeleteView):
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
-
+        # Check that the group is managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(self.request, messages.ERROR, self.message_not_admin)
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
         # Check if it's an auth domain for any workspaces.
         if self.object.workspaceauthorizationdomain_set.count() > 0:
             print("HERE")

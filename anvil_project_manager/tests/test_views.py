@@ -1237,6 +1237,34 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
+    def test_get_redirect_group_not_managed_by_app(self):
+        """Redirect when trying to delete a group that the app doesn't manage."""
+        group = factories.GroupFactory.create(is_managed_by_app=False)
+        # Need to use a client for messages.
+        response = self.client.get(self.get_url(group.pk), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.GroupDelete.message_not_admin, str(messages[0]))
+        # Make sure that the object still exists.
+        self.assertEqual(models.Group.objects.count(), 1)
+
+    def test_post_redirect_group_not_managed_by_app(self):
+        """Redirect when trying to delete a group that the app doesn't manage with a post request."""
+        group = factories.GroupFactory.create(is_managed_by_app=False)
+        # Need to use a client for messages.
+        response = self.client.post(self.get_url(group.pk), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.GroupDelete.message_not_admin, str(messages[0]))
+        # Make sure that the object still exists.
+        self.assertEqual(models.Group.objects.count(), 1)
+
     @skip("AnVIL API issue")
     def test_api_not_admin_of_group(self):
         self.fail(
