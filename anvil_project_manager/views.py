@@ -364,14 +364,38 @@ class GroupGroupMembershipList(SingleTableView):
 class GroupGroupMembershipDelete(DeleteView):
     model = models.GroupGroupMembership
 
+    message_not_admin_of_parent_group = (
+        "Cannot remove members from parent group because this app is not an admin."
+    )
+
     def get_success_url(self):
         return reverse("anvil_project_manager:group_group_membership:list")
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(self, *args, **kwargs)
+        # Check if managed by the app.
+        if not self.object.parent_group.is_managed_by_app:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_admin_of_parent_group
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return response
 
     def delete(self, request, *args, **kwargs):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.parent_group.is_managed_by_app:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_admin_of_parent_group
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Try to delete it on AnVIL.
         try:
             self.object.anvil_delete()
         except AnVILAPIError as e:
@@ -421,14 +445,38 @@ class GroupAccountMembershipList(SingleTableView):
 class GroupAccountMembershipDelete(DeleteView):
     model = models.GroupAccountMembership
 
+    message_not_admin_of_group = (
+        "Cannot remove members from group because this app is not an admin."
+    )
+
     def get_success_url(self):
         return reverse("anvil_project_manager:group_account_membership:list")
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(self, *args, **kwargs)
+        # Check if managed by the app.
+        if not self.object.group.is_managed_by_app:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_admin_of_group
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return response
 
     def delete(self, request, *args, **kwargs):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.group.is_managed_by_app:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_admin_of_group
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Try to delete from AnVIL.
         try:
             self.object.anvil_delete()
         except AnVILAPIError as e:

@@ -3057,6 +3057,48 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
+    def test_get_redirect_parent_group_not_managed_by_app(self):
+        """Redirect get when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
+        parent_group = factories.GroupFactory.create(is_managed_by_app=False)
+        child_group = factories.GroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=child_group
+        )
+        # Need to use a client for messages.
+        response = self.client.get(self.get_url(membership.pk), follow=True)
+        self.assertRedirects(response, membership.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipDelete.message_not_admin_of_parent_group,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+
+    def test_post_redirect_parent_group_not_managed_by_app(self):
+        """Redirect post when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
+        parent_group = factories.GroupFactory.create(is_managed_by_app=False)
+        child_group = factories.GroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=child_group
+        )
+        # Need to use a client for messages.
+        response = self.client.post(self.get_url(membership.pk), follow=True)
+        self.assertRedirects(response, membership.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipDelete.message_not_admin_of_parent_group,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+
     @skip("AnVIL API issue")
     def test_api_no_permission_for_parent_group(self):
         self.fail(
@@ -3651,6 +3693,48 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             response, reverse("anvil_project_manager:group_account_membership:list")
         )
         responses.assert_call_count(url, 1)
+
+    def test_get_redirect_group_not_managed_by_app(self):
+        """Redirect get when trying to delete GroupAccountMembership when the group is not managed by the app."""
+        group = factories.GroupFactory.create(is_managed_by_app=False)
+        account = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group, account=account
+        )
+        # Need to use a client for messages.
+        response = self.client.get(self.get_url(membership.pk), follow=True)
+        self.assertRedirects(response, membership.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupAccountMembershipDelete.message_not_admin_of_group,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+
+    def test_post_redirect_group_not_managed_by_app(self):
+        """Redirect post when trying to delete GroupAccountMembership when the group is not managed by the app."""
+        group = factories.GroupFactory.create(is_managed_by_app=False)
+        account = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group, account=account
+        )
+        # Need to use a client for messages.
+        response = self.client.post(self.get_url(membership.pk), follow=True)
+        self.assertRedirects(response, membership.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupAccountMembershipDelete.message_not_admin_of_group,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
