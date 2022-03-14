@@ -43,6 +43,12 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("userEmail", json["userInfo"])
         self.assertIn("userSubjectId", json["userInfo"])
 
+    def test_proxy_group(self):
+        """Tests proxy group methods."""
+        response = self.client.get_proxy_group("amstilp@uw.edu")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), str)
+
     def test_billing_project(self):
         test_billing_project = "gregor-adrienne"
 

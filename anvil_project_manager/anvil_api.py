@@ -35,6 +35,11 @@ class AnVILAPIClient:
         print(method)
         return self.auth_session.get(method, 200)
 
+    def get_proxy_group(self, email):
+        """Get the proxy group created for a specific AnVIL user/email."""
+        method = "api/proxyGroup/" + email
+        return self.auth_session.get(method, 200)
+
     def get_billing_project(self, billing_project):
         method = "api/billing/v2/" + billing_project
         return self.auth_session.get(method, 200)
