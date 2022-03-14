@@ -2790,6 +2790,32 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("circular", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
 
+    def test_cannot_add_child_group_if_parent_not_managed_by_app(self):
+        """Cannot add a child group to a parent group if the parent group is not managed by the app."""
+        parent_group = factories.GroupFactory.create(
+            name="group-1", is_managed_by_app=False
+        )
+        child_group = factories.GroupFactory.create(name="group-2")
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertEqual(
+            form.errors["parent_group"][0],
+            forms.GroupGroupMembershipForm.error_not_admin_of_parent_group,
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
@@ -3395,6 +3421,30 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_cannot_add_account_if_group_not_managed_by_app(self):
+        """Cannot add an account to a group if the group is not managed by the app."""
+        group = factories.GroupFactory.create(is_managed_by_app=False)
+        account = factories.AccountFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors.keys())
+        self.assertEqual(
+            form.errors["group"][0],
+            forms.GroupAccountMembershipForm.error_not_admin_of_group,
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""

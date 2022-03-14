@@ -333,7 +333,7 @@ class GroupGroupMembershipDetail(DetailView):
 
 class GroupGroupMembershipCreate(CreateView):
     model = models.GroupGroupMembership
-    fields = ("parent_group", "child_group", "role")
+    form_class = forms.GroupGroupMembershipForm
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_group_membership:list")
@@ -390,7 +390,7 @@ class GroupAccountMembershipDetail(DetailView):
 
 class GroupAccountMembershipCreate(CreateView):
     model = models.GroupAccountMembership
-    fields = ("account", "group", "role")
+    form_class = forms.GroupAccountMembershipForm
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_account_membership:list")
