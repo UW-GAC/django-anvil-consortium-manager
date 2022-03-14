@@ -27,6 +27,25 @@ class BillingProjectAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
+class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.object = factories.AccountFactory.create()
+        self.url = self.entry_point + "/api/proxyGroup/" + self.object.email
+
+    def test_anvil_exists_does_exist(self):
+        responses.add(responses.GET, self.url, status=200)
+        self.assertIs(self.object.anvil_exists(), True)
+        responses.assert_call_count(self.url, 1)
+
+    def test_anvil_exists_does_not_exist(self):
+        responses.add(
+            responses.GET, self.url, status=404, json={"message": "mock message"}
+        )
+        self.assertIs(self.object.anvil_exists(), False)
+        responses.assert_call_count(self.url, 1)
+
+
 class GroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()

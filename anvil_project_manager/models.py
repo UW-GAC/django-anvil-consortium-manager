@@ -45,6 +45,14 @@ class Account(models.Model):
     def get_absolute_url(self):
         return reverse("anvil_project_manager:accounts:detail", kwargs={"pk": self.pk})
 
+    def anvil_exists(self):
+        """Check if this account exists on AnVIL."""
+        try:
+            AnVILAPIClient().get_proxy_group(self.email)
+        except AnVILAPIError404:
+            return False
+        return True
+
 
 class Group(models.Model):
     """A model to store information about AnVIL groups."""
