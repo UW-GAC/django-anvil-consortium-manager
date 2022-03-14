@@ -176,13 +176,13 @@ class Workspace(models.Model):
         """
         # Check if the workspace already exists in the database.
         try:
-            Workspace.objects.get(
+            cls.objects.get(
                 billing_project__name=billing_project_name, name=workspace_name
             )
             raise exceptions.AnVILAlreadyImported(
                 billing_project_name + "/" + workspace_name
             )
-        except Workspace.DoesNotExist:
+        except cls.DoesNotExist:
             # The workspace doesn't exist: continue to creation.
             pass
 
@@ -200,9 +200,7 @@ class Workspace(models.Model):
                     billing_project.full_clean()
                     billing_project.save()
                 # Create the workspace.
-                workspace = Workspace(
-                    billing_project=billing_project, name=workspace_name
-                )
+                workspace = cls(billing_project=billing_project, name=workspace_name)
                 workspace.full_clean()
 
                 # Check the workspace on AnVIL.
