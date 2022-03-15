@@ -14,7 +14,7 @@
 
       <h2>{{ object }}</h2>
 
-      <p>Are you sure you want to remove <a href="{{ object.child_group.get_absolute_url }}">{{ object.child_group }}</a> from <a href="{{ object.parent_group.get_absolute_url }}">{{ object.parent_group }}</a>?</p>
+      <p>Are you sure you want to remove <a href="{{ object.child_group.get_absolute_url }}">{{ object.child_group }}</a> from <a href="{{ object.parent_group.get_absolute_url }}">{{ object.parent_group }}</a> on AnVIL?</p>
 
       <form method="POST">{% csrf_token %}
           {{ form }}
