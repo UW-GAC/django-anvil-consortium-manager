@@ -17,3 +17,4 @@ django-redis==5.2.0  # https://github.com/jazzband/django-redis
 # My additions
 # ------------------------------------------------------------------------------
 django-tables2==2.4.1
+google-auth==2.6.0

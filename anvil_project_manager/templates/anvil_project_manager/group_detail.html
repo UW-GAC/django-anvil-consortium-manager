@@ -13,6 +13,11 @@
 
       <h2>Group: {{ object.name }}</h2>
 
+      Is managed by app? {{ object.is_managed_by_app }}
+
+      <h3>Workspaces using this group as an authorization domain:</h3>
+      {% render_table workspace_authorization_domain_table %}
+
       <h3>Workspaces that this group has access to</h3>
       {% render_table workspace_table %}
 
@@ -27,7 +32,7 @@
     </div>
   </div>
 
-  <a href="{% url 'anvil_project_manager:groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete</a>
+  <a href="{% url 'anvil_project_manager:groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 
 
 </div>
