@@ -1320,13 +1320,13 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.Group.objects.count(), 1)
 
-    @skip("AnVIL API issue")
+    @skip("AnVIL API issue - covered by model fields")
     def test_api_not_admin_of_group(self):
         self.fail(
             "AnVIL API returns 204 instead of 403 when trying to delete a group you are not an admin of."
         )
 
-    @skip("AnVIL API issue")
+    @skip("AnVIL API issue - covered by model fields")
     def test_api_group_does_not_exist(self):
         self.fail(
             "AnVIL API returns 204 instead of 404 when trying to delete a group that doesn't exist."
@@ -2909,7 +2909,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
+    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_parent_group(self):
         self.fail(
             "Trying to add a child group to a parent group that you don't have permission for returns a successful code."  # noqa
@@ -3154,7 +3154,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
+    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_parent_group(self):
         self.fail(
             "Trying to remove a child group from a parent group that you don't have permission for returns a successful code."  # noqa
@@ -3577,7 +3577,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
+    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):
         self.fail(
             "Trying to add a user to a group that you don't have permission for returns a successful code."
@@ -3823,7 +3823,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
+    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):
         self.fail(
             "Trying to delete a user that exists to a group that you don't have permission for returns a successful code."  # noqa
