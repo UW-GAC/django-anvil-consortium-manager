@@ -59,6 +59,13 @@ class AccountTest(TestCase):
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "email@example.com")
 
+    def test_email_validation_case_insensitive(self):
+        instance = Account(email="email@example.com", is_service_account=False)
+        instance.save()
+        instance2 = Account(email="EMAIL@example.com", is_service_account=False)
+        with self.assertRaises(ValidationError):
+            instance2.full_clean()
+
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
         instance = factories.AccountFactory()
@@ -73,7 +80,7 @@ class AccountTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
-    def test_unique_email_case_insensitive(self):
+    def test_save_unique_email_case_insensitive(self):
         """Email uniqueness does not depend on case."""
         instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
@@ -120,6 +127,14 @@ class GroupTest(TestCase):
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my_group")
+
+    def test_case_insensitivity(self):
+        """Cannot create two models with the same case-insensitive name."""
+        name = "AbAbA"
+        factories.GroupFactory.create(name=name)
+        instance = Group(name=name.lower())
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
 
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
