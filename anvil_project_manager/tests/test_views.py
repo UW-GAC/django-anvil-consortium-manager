@@ -1,4 +1,4 @@
-from unittest import mock, skip
+from unittest import skip
 
 import responses
 from django.http.response import Http404
@@ -1205,7 +1205,6 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.GroupFactory.create(name="test-group")
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        # self.mock_request.return_value = self.get_mock_response(self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -3886,9 +3885,6 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         super().setUp()
         self.factory = RequestFactory()
 
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
-
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse("anvil_project_manager:workspace_group_access:new", args=args)
@@ -4385,9 +4381,6 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
-
-    def get_mock_response(self, status_code, message="mock message"):
-        return mock.Mock(status_code=status_code, json=lambda: {"message": message})
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
