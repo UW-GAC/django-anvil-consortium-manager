@@ -718,6 +718,24 @@ class WorkspaceTest(TestCase):
         self.assertIn(auth_domain, Group.objects.all())
 
 
+class WorkspaceAuthorizationDomainTestCase(TestCase):
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.GroupFactory.create()
+        instance = WorkspaceAuthorizationDomain(workspace=workspace, group=group)
+        instance.save()
+        self.assertIsInstance(instance, WorkspaceAuthorizationDomain)
+
+    def test_str_method(self):
+        """Creation using the model constructor and .save() works."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.GroupFactory.create()
+        instance = WorkspaceAuthorizationDomain(workspace=workspace, group=group)
+        instance.save()
+        self.assertIsInstance(instance, WorkspaceAuthorizationDomain)
+
+
 class GroupGroupMembershipTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""

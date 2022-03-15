@@ -282,6 +282,12 @@ class WorkspaceAuthorizationDomain(models.Model):
             )
         ]
 
+    def __str__(self):
+        """String method for WorkspaceAuthorizationDomains"""
+        return "Auth domain {group} for {workspace}".format(
+            group=self.group.name, workspace=self.workspace
+        )
+
 
 class GroupGroupMembership(models.Model):
     """A model to store which groups are in a group."""
