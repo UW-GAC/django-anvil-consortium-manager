@@ -733,7 +733,7 @@ class WorkspaceAuthorizationDomainTestCase(TestCase):
         group = factories.GroupFactory.create()
         instance = WorkspaceAuthorizationDomain(workspace=workspace, group=group)
         instance.save()
-        self.assertIsInstance(instance, WorkspaceAuthorizationDomain)
+        self.assertIsInstance(instance.__str__(), str)
 
 
 class GroupGroupMembershipTest(TestCase):
