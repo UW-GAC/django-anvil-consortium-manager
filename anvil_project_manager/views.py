@@ -94,6 +94,28 @@ class AccountDetail(SingleTableMixin, DetailView):
 class AccountImport(CreateView):
     model = models.Account
     fields = ("email", "is_service_account")
+    message_account_does_not_exist = "This account does not exist on AnVIL."
+
+    def form_valid(self, form):
+        """If the form is valid, check that the account exists on AnVIL and save the associated model."""
+        object = form.save(commit=False)
+        try:
+            account_exists = object.anvil_exists()
+        except AnVILAPIError as e:
+            # If the API call failed for some other reason, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        if not account_exists:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_does_not_exist
+            )
+            # Re-render the page with a message.
+            return self.render_to_response(self.get_context_data(form=form))
+
+        # Otherwise, proceed as if
+        return super().form_valid(form)
 
 
 class AccountList(SingleTableView):

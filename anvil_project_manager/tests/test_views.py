@@ -503,10 +503,15 @@ class AccountDetailTest(TestCase):
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
 
-class AccountImportTest(TestCase):
+class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         """Set up test class."""
+        super().setUp()
         self.factory = RequestFactory()
+
+    def get_api_url(self, email):
+        """Get the AnVIL API url that is called by the anvil_exists method."""
+        return self.entry_point + "/api/proxyGroup/" + email
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -530,7 +535,9 @@ class AccountImportTest(TestCase):
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
-        request = self.factory.post(self.get_url(), {"email": "test@example.com"})
+        email = "test@example.com"
+        responses.add(responses.GET, self.get_api_url(email), status=200)
+        request = self.factory.post(self.get_url(), {"email": email})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Account.objects.latest("pk")
@@ -540,7 +547,9 @@ class AccountImportTest(TestCase):
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        response = self.client.post(self.get_url(), {"email": "test@example.com"})
+        email = "test@example.com"
+        responses.add(responses.GET, self.get_api_url(email), status=200)
+        response = self.client.post(self.get_url(), {"email": email})
         new_object = models.Account.objects.latest("pk")
         self.assertRedirects(
             response,
@@ -586,14 +595,64 @@ class AccountImportTest(TestCase):
 
     def test_can_create_service_account(self):
         """Can create a service account."""
+        email = "test@example.com"
+        responses.add(responses.GET, self.get_api_url(email), status=200)
         request = self.factory.post(
-            self.get_url(), {"email": "test@example.com", "is_service_account": True}
+            self.get_url(), {"email": email, "is_service_account": True}
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Account.objects.latest("pk")
         self.assertIsInstance(new_object, models.Account)
         self.assertTrue(new_object.is_service_account)
+
+    def test_does_not_exist_on_anvil(self):
+        """Does not create a new Account when it doesn't exist on AnVIL."""
+        email = "test@example.com"
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=404,
+            json={"message": "other error"},
+        )
+        # Need the client for messages.
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but the account doesn't exist on AnVIL
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountImport.message_account_does_not_exist
+        )
+        # No accounts were created.
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_api_error(self):
+        """Does not create a new Account if the API returns some other error."""
+        email = "test@example.com"
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=500,
+            json={"message": "other error"},
+        )
+        # Need the client for messages.
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but there was some error from the API.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: other error", str(messages[0]))
+        # No accounts were created.
+        self.assertEqual(models.Account.objects.count(), 0)
 
 
 class AccountListTest(TestCase):
