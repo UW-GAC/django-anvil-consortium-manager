@@ -64,21 +64,9 @@ class BillingProjectDetail(SingleTableMixin, DetailView):
         )
 
 
-class BillingProjectCreate(CreateView):
-    model = models.BillingProject
-    fields = ("name",)
-
-
 class BillingProjectList(SingleTableView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
-
-
-class BillingProjectDelete(DeleteView):
-    model = models.BillingProject
-
-    def get_success_url(self):
-        return reverse("anvil_project_manager:billing_projects:list")
 
 
 class AccountDetail(SingleTableMixin, DetailView):
