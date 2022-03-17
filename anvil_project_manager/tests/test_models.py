@@ -21,13 +21,13 @@ from . import factories
 class BillingProjectTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        instance = BillingProject(name="my_project")
+        instance = BillingProject(name="my_project", has_app_as_user=True)
         instance.save()
         self.assertIsInstance(instance, BillingProject)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        instance = BillingProject(name="my_project")
+        instance = BillingProject(name="my_project", has_app_as_user=True)
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my_project")
@@ -40,9 +40,9 @@ class BillingProjectTest(TestCase):
     def test_unique_name(self):
         """Saving a model with a duplicate name fails."""
         name = "my_project"
-        instance = BillingProject(name=name)
+        instance = BillingProject(name=name, has_app_as_user=True)
         instance.save()
-        instance2 = BillingProject(name=name)
+        instance2 = BillingProject(name=name, has_app_as_user=False)
         with self.assertRaises(IntegrityError):
             instance2.save()
 

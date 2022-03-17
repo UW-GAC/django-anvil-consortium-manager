@@ -19,6 +19,7 @@ class BillingProject(models.Model):
     name = models.SlugField(
         max_length=64, unique=True, validators=[validate_billing_project_name]
     )
+    has_app_as_user = models.BooleanField()
 
     def __str__(self):
         return self.name
@@ -35,6 +36,11 @@ class BillingProject(models.Model):
             # The billing project was not found on AnVIL.
             return False
         return response.status_code == 200
+
+    @classmethod
+    def anvil_import(cls, billing_project_name):
+        """BiillingProject class method to import an existing billing project from AnVIL."""
+        pass
 
 
 def validate_account_email(value):
