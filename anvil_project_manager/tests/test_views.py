@@ -169,10 +169,20 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url_status, 1)
 
 
-class BillingProjectImportTest(TestCase):
+class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         """Set up test class."""
+        super().setUp()
         self.factory = RequestFactory()
+
+    def get_api_url(self, billing_project_name):
+        """Get the AnVIL API url that is called by the anvil_exists method."""
+        return self.entry_point + "/api/billing/v2/" + billing_project_name
+
+    def get_api_json_response(self):
+        return {
+            "roles": ["User"],
+        }
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -180,7 +190,7 @@ class BillingProjectImportTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.BillingProjectCreate.as_view()
+        return views.BillingProjectImport.as_view()
 
     def test_status_code(self):
         """Returns successful response code."""
@@ -196,21 +206,29 @@ class BillingProjectImportTest(TestCase):
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
-        request = self.factory.post(self.get_url(), {"name": "test-group"})
+        billing_project_name = "test-billing"
+        url = self.get_api_url(billing_project_name)
+        responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        request = self.factory.post(self.get_url(), {"name": billing_project_name})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.BillingProject.objects.latest("pk")
         self.assertIsInstance(new_object, models.BillingProject)
+        self.assertEqual(new_object.name, billing_project_name)
+        self.assertEqual(new_object.has_app_as_user, True)
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        response = self.client.post(self.get_url(), {"name": "test-group"})
+        billing_project_name = "test-billing"
+        url = self.get_api_url(billing_project_name)
+        responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        response = self.client.post(self.get_url(), {"name": billing_project_name})
         new_object = models.BillingProject.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
 
     def test_cannot_create_duplicate_object(self):
-        """Cannot create two groups with the same name."""
+        """Cannot create two billing projects with the same name."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
         response = self.get_view()(request)
@@ -244,6 +262,54 @@ class BillingProjectImportTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_not_users_of_billing_project(self):
+        """Posting valid data to the form does not create an object if we are not users on AnVIL."""
+        billing_project_name = "test-billing"
+        url = self.get_api_url(billing_project_name)
+        responses.add(responses.GET, url, status=404, json={"message": "other"})
+        # Need a client to check messages.
+        response = self.client.post(self.get_url(), {"name": billing_project_name})
+        self.assertEqual(response.status_code, 200)
+        # the form is valid...
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        self.assertTrue(form.is_valid())
+        # ...but there were issues with the API call.
+        # No object was created.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        # There is a message on the page.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]),
+            views.BillingProjectImport.message_not_users_of_billing_project,
+        )
+        # No accounts were created.
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_api_error(self):
+        """Does not create a new Account if the API returns some other error."""
+        billing_project_name = "test-billing"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name),
+            status=500,
+            json={"message": "other error"},
+        )
+        # Need the client for messages.
+        response = self.client.post(self.get_url(), {"name": billing_project_name})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but there was some error from the API.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: other error", str(messages[0]))
+        # No accounts were created.
         self.assertEqual(models.BillingProject.objects.count(), 0)
 
 

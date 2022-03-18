@@ -37,7 +37,6 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         return {
             "roles": ["User"],
         }
-        pass
 
     def test_can_import_billing_project_where_we_are_users(self):
         """A BillingProject is created if there if we are users of the billing project on AnVIL."""
