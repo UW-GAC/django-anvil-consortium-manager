@@ -54,9 +54,10 @@ class AnVILStatus(TemplateView):
         return context
 
 
-class BillingProjectCreate(CreateView):
+class BillingProjectImport(CreateView):
     model = models.BillingProject
     fields = ("name",)
+    template_name = "anvil_project_manager/billingproject_import.html"
 
 
 class BillingProjectDetail(SingleTableMixin, DetailView):

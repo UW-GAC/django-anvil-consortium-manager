@@ -169,14 +169,14 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url_status, 1)
 
 
-class BillingProjectCreateTest(TestCase):
+class BillingProjectImportTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:billing_projects:new", args=args)
+        return reverse("anvil_project_manager:billing_projects:import", args=args)
 
     def get_view(self):
         """Return the view being tested."""
