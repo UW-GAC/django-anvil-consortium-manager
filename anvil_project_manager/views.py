@@ -54,6 +54,11 @@ class AnVILStatus(TemplateView):
         return context
 
 
+class BillingProjectCreate(CreateView):
+    model = models.BillingProject
+    fields = ("name",)
+
+
 class BillingProjectDetail(SingleTableMixin, DetailView):
     model = models.BillingProject
     context_table_name = "workspace_table"

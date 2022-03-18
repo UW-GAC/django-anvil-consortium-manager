@@ -169,6 +169,84 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url_status, 1)
 
 
+class BillingProjectCreateTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_project_manager:billing_projects:new", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.BillingProjectCreate.as_view()
+
+    def test_status_code(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertTrue("form" in response.context_data)
+
+    def test_can_create_an_object(self):
+        """Posting valid data to the form creates an object."""
+        request = self.factory.post(self.get_url(), {"name": "test-group"})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        new_object = models.BillingProject.objects.latest("pk")
+        self.assertIsInstance(new_object, models.BillingProject)
+
+    def test_redirects_to_new_object_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        response = self.client.post(self.get_url(), {"name": "test-group"})
+        new_object = models.BillingProject.objects.latest("pk")
+        self.assertRedirects(response, new_object.get_absolute_url())
+
+    def test_cannot_create_duplicate_object(self):
+        """Cannot create two groups with the same name."""
+        obj = factories.BillingProjectFactory.create()
+        request = self.factory.post(self.get_url(), {"name": obj.name})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("already exists", form.errors["name"][0])
+        self.assertQuerysetEqual(
+            models.BillingProject.objects.all(),
+            models.BillingProject.objects.filter(pk=obj.pk),
+        )
+
+    def test_invalid_input(self):
+        """Posting invalid data does not create an object."""
+        request = self.factory.post(self.get_url(), {"name": ""})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("required", form.errors["name"][0])
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        request = self.factory.post(self.get_url(), {})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("required", form.errors["name"][0])
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+
 class BillingProjectDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
