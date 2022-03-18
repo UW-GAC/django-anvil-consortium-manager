@@ -1853,10 +1853,15 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         print(type(response.context_data["form"]))
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
 
-    def test_can_import_workspace(self):
-        """Can import a workspace from AnVIL."""
+    def test_can_import_workspace_and_billing_project_as_user(self):
+        """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
         billing_project_name = "billing-project"
         workspace_name = "workspace"
+        # Billing project API call.
+        billing_project_url = (
+            self.entry_point + "/api/billing/v2/" + billing_project_name
+        )
+        responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
         responses.add(
             responses.GET,
@@ -1877,6 +1882,73 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.BillingProject.objects.count(), 1)
         new_billing_project = models.BillingProject.objects.latest("pk")
         self.assertEqual(new_billing_project.name, billing_project_name)
+        self.assertEqual(new_billing_project.has_app_as_user, True)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        responses.assert_call_count(billing_project_url, 1)
+        responses.assert_call_count(url, 1)
+
+    def test_can_import_workspace_and_billing_project_as_not_user(self):
+        """Can import a workspace from AnVIL when the billing project does not exist in Django and we are not users."""
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        # Billing project API call.
+        billing_project_url = (
+            self.entry_point + "/api/billing/v2/" + billing_project_name
+        )
+        responses.add(
+            responses.GET, billing_project_url, status=404, json={"message": "other"}
+        )
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
+        # Created a billing project.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        new_billing_project = models.BillingProject.objects.latest("pk")
+        self.assertEqual(new_billing_project.name, billing_project_name)
+        self.assertEqual(new_billing_project.has_app_as_user, False)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        responses.assert_call_count(billing_project_url, 1)
+        responses.assert_call_count(url, 1)
+
+    def test_can_import_workspace_with_existing_billing_project(self):
+        """Can import a workspace from AnVIL when the billing project exists in Django."""
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        url = self.get_api_url(billing_project.name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project.name,
+                "workspace_name": workspace_name,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 302)
         # Created a workspace.
         self.assertEqual(models.Workspace.objects.count(), 1)
         new_workspace = models.Workspace.objects.latest("pk")
@@ -1886,19 +1958,19 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
-        url = self.get_api_url(billing_project_name, workspace_name)
+        url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             url,
             status=self.api_success_code,
-            json=self.get_api_json_response(billing_project_name, workspace_name),
+            json=self.get_api_json_response(billing_project.name, workspace_name),
         )
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": billing_project_name,
+                "billing_project_name": billing_project.name,
                 "workspace_name": workspace_name,
             },
         )

@@ -622,6 +622,9 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests of class methods for the Workspace model."""
 
+    def get_billing_project_api_url(self, billing_project_name):
+        return self.entry_point + "/api/billing/v2/" + billing_project_name
+
     def get_api_url(self, billing_project_name, workspace_name):
         return (
             self.entry_point
@@ -647,9 +650,11 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         return json_data
 
     def test_anvil_import_billing_project_already_exists_in_django_db(self):
+        """Can import a workspace if we are user of the billing project and already exists in Django."""
         """A workspace can be imported from AnVIL if we are owners and if the billing project exists."""
         workspace_name = "test-workspace"
         billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
         responses.add(
             responses.GET,
             self.get_api_url(billing_project.name, workspace_name),
@@ -668,9 +673,16 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.BillingProject.objects.count(), 1)
 
     def test_anvil_import_billing_project_does_not_exist_in_django_db(self):
-        """A workspace can be imported from AnVIL if we are owners and if the billing project does not exist."""
+        """Can import a workspace if we are user of the billing project but it does not exist in Django yet."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        responses.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response from checking the workspace.
         responses.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -682,6 +694,39 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.BillingProject.objects.count(), 1)
         billing_project = models.BillingProject.objects.get()
         self.assertEqual(billing_project.name, billing_project_name)
+        self.assertEqual(billing_project.has_app_as_user, True)
+        # Check workspace values.
+        self.assertEqual(workspace.billing_project, billing_project)
+        self.assertEqual(workspace.name, workspace_name)
+        # Check that it was saved.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+
+    def test_anvil_import_not_users_of_billing_group(self):
+        """Can import a workspace if we are not users of the billing project and it does not exist in Django yet."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        responses.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=404,  # billing project does not exist.
+            json={"message": "other"},
+        )
+        # Response from checking the workspace.
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # A billing project was created.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        billing_project = models.BillingProject.objects.get()
+        self.assertEqual(billing_project.name, billing_project_name)
+        self.assertEqual(billing_project.has_app_as_user, False)
         # Check workspace values.
         self.assertEqual(workspace.billing_project, billing_project)
         self.assertEqual(workspace.name, workspace_name)
@@ -691,9 +736,10 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         models.Workspace.objects.get(pk=workspace.pk)
 
     def test_anvil_import_not_owners_of_workspace(self):
-        """A workspace cannot be imported from AnVIL if we are not owners."""
+        """Cannot import a workspace if we are not owners of it and the billing project doesn't exist in Django yet."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # No billing project API calls.
         responses.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -707,12 +753,37 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Check workspace values.
         # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
+        # No billing project was created.
         self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_not_owners_of_workspace_billing_project_exists(self):
+        """Cannot import a workspace if we are not owners of the workspace but the billing project exists."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace_name = "test-workspace"
+        # No billing project API calls.
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                billing_project.name, workspace_name, access="READER"
+            ),
+        )
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError):
+            models.Workspace.anvil_import(billing_project.name, workspace_name)
+        # Check workspace values.
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        # Same billing project.
+        self.assertEqual(models.BillingProject.objects.latest("pk"), billing_project)
 
     def test_anvil_import_no_access_to_anvil_workspace(self):
         """A workspace cannot be imported from AnVIL if we do not have access."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # No API call for billing projects.
         responses.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -731,7 +802,33 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.BillingProject.objects.count(), 0)
 
+    def test_anvil_import_no_access_to_anvil_workspace_billing_project_exist(self):
+        """A workspace cannot be imported from AnVIL if we do not have access but the BillingProject is in Django."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace_name = "test-workspace"
+        # No API call for billing projects.
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=404,  # successful response code.
+            json={
+                "message": billing_project.name
+                + "/"
+                + workspace_name
+                + " does not exist or you do not have permission to use it"
+            },
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            models.Workspace.anvil_import(billing_project.name, workspace_name)
+        # Check workspace values.
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.latest("pk"), billing_project)
+
     def test_anvil_import_workspace_exists_in_django_db(self):
+        """Does not import a workspace if it already exists in Django."""
         workspace = factories.WorkspaceFactory.create()
         # No API calls should be made.
         with self.assertRaises(exceptions.AnVILAlreadyImported):
@@ -742,14 +839,14 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.BillingProject.objects.count(), 1)
         self.assertEqual(models.Workspace.objects.count(), 1)
 
-    def test_anvil_import_api_internal_error(self):
-        """No workspaces are created if there is an internal error from the AnVIL API."""
+    def test_anvil_import_api_internal_error_workspace_call(self):
+        """No workspaces are created if there is an internal error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         responses.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
-            status=500,  # successful response code.
+            status=500,
             json={"message": "error"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError500):
@@ -758,14 +855,60 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.BillingProject.objects.count(), 0)
 
-    def test_anvil_import_api_error_other(self):
-        """No workspaces are created if there is some other error from the AnVIL API."""
+    def test_anvil_import_api_error_other_workspace_call(self):
+        """No workspaces are created if there is some other error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         responses.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
-            status=499,  # successful response code.
+            status=499,
+            json={"message": "error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_api_internal_error_billing_project_call(self):
+        """No workspaces are created if there is an internal error from the AnVIL API for the billing project call."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        # Error in billing project call.
+        responses.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=500,  # error
+            json={"message": "error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_api_error_other_billing_project_call(self):
+        """No workspaces are created if there is another error from the AnVIL API for the billing project call."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        # Error in billing project call.
+        responses.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=499,
             json={"message": "error"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError):
@@ -784,6 +927,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_invalid_workspace_name(self):
         """No workspaces are created if the workspace name is invalid."""
+        # No API calls.
         with self.assertRaises(ValidationError):
             models.Workspace.anvil_import("test-billing-project", "test workspace")
         # # Check that no objects were saved.
@@ -800,6 +944,11 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             billing_project=other_billing_project, name=workspace_name
         )
         billing_project_name = "billing-project-2"
+        responses.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,  # successful response code.
+        )
         responses.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -823,6 +972,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace-1"
         )
+        # No billing project API calls.
         responses.add(
             responses.GET,
             self.get_api_url(billing_project.name, workspace_name),
@@ -839,16 +989,18 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_one_auth_group_member_does_not_exist_in_django(self):
         """Imports an auth group that the app is a member of for a workspace."""
-        billing_project_name = "test-billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
         workspace_name = "test-workspace"
         # Response for workspace query.
-        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        workspace_url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
             json=self.get_api_json_response(
-                billing_project_name, workspace_name, auth_domains=["auth-group"]
+                billing_project.name, workspace_name, auth_domains=["auth-group"]
             ),
         )
         # Response for group query.
@@ -867,7 +1019,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # A workspace was created.
-        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        workspace = models.Workspace.anvil_import(billing_project.name, workspace_name)
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
         # Make sure it's the workspace returned.
@@ -885,21 +1037,23 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_one_auth_group_exists_in_django(self):
         """Imports a workspace with an auth group that already exists in the app with app as member."""
-        billing_project_name = "test-billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
         workspace_name = "test-workspace"
         group = factories.GroupFactory.create(name="auth-group")
         # Response for workspace query.
-        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        workspace_url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
             json=self.get_api_json_response(
-                billing_project_name, workspace_name, auth_domains=["auth-group"]
+                billing_project.name, workspace_name, auth_domains=["auth-group"]
             ),
         )
         # A workspace was created.
-        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        workspace = models.Workspace.anvil_import(billing_project.name, workspace_name)
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
         # Make sure it's the workspace returned.
@@ -915,16 +1069,18 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_one_auth_group_admin_does_not_exist_in_django(self):
         """Imports a workspace with an auth group that the app is a member."""
-        billing_project_name = "test-billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
         workspace_name = "test-workspace"
         # Response for workspace query.
-        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        workspace_url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
             json=self.get_api_json_response(
-                billing_project_name, workspace_name, auth_domains=["auth-group"]
+                billing_project.name, workspace_name, auth_domains=["auth-group"]
             ),
         )
         # Response for group query.
@@ -943,7 +1099,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # A workspace was created.
-        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        workspace = models.Workspace.anvil_import(billing_project.name, workspace_name)
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
         # Make sure it's the workspace returned.
@@ -961,16 +1117,18 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_two_auth_groups(self):
         """Imports two auth groups for a workspace."""
-        billing_project_name = "test-billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
         workspace_name = "test-workspace"
         # Response for workspace query.
-        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        workspace_url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
             json=self.get_api_json_response(
-                billing_project_name,
+                billing_project.name,
                 workspace_name,
                 auth_domains=["auth-member", "auth-admin"],
             ),
@@ -996,7 +1154,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # A workspace was created.
-        workspace = models.Workspace.anvil_import(billing_project_name, workspace_name)
+        workspace = models.Workspace.anvil_import(billing_project.name, workspace_name)
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
         # Make sure it's the workspace returned.
@@ -1018,6 +1176,11 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """Nothing is added when there is an API error on the /api/groups call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # Response for billing project query.
+        billing_project_url = self.get_billing_project_api_url(billing_project_name)
+        responses.add(
+            responses.GET, billing_project_url, status=200  # successful response code.
+        )
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project_name, workspace_name)
         responses.add(
@@ -1040,12 +1203,15 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # A workspace was created.
         with self.assertRaises(anvil_api.AnVILAPIError500):
             models.Workspace.anvil_import(billing_project_name, workspace_name)
+        # No billing projects were created.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
         # No workspaces were imported.
         self.assertEqual(models.Workspace.objects.count(), 0)
         # No groups were imported.
         self.assertEqual(models.Group.objects.count(), 0)
         # No auth domains were recorded.
         self.assertEqual(models.WorkspaceAuthorizationDomain.objects.count(), 0)
+        responses.assert_call_count(billing_project_url, 1)
         responses.assert_call_count(workspace_url, 1)
         responses.assert_call_count(group_url, 1)
 
