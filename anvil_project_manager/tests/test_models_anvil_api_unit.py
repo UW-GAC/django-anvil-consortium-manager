@@ -27,6 +27,98 @@ class BillingProjectAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
+class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for class methods of the BillingProject model that make AnVIL API calls."""
+
+    def get_api_url(self, billing_project_name):
+        return self.entry_point + "/api/billing/v2/" + billing_project_name
+
+    def get_api_json_response(self):
+        return {
+            "roles": ["User"],
+        }
+        pass
+
+    def test_can_import_billing_project_where_we_are_users(self):
+        """A BillingProject is created if there if we are users of the billing project on AnVIL."""
+        billing_project_name = "test-billing-project"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name),
+            status=200,
+            json=self.get_api_json_response(),
+        )
+        billing_project = models.BillingProject.anvil_import(billing_project_name)
+        # Check values.
+        self.assertEqual(billing_project.name, billing_project_name)
+        # Check that it was saved.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        # Make sure it's the workspace returned.
+        models.BillingProject.objects.get(pk=billing_project.pk)
+
+    def test_cannot_import_billing_project_where_we_are_not_users(self):
+        """No BillingProjects are created if there if we are not users of the billing project."""
+        billing_project_name = "test-billing-project"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name),
+            status=404,
+            json={"message": "other error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            models.BillingProject.anvil_import(billing_project_name)
+        # Check no objects were saved.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_billing_project_already_exists_in_db(self):
+        """No new BillingProjects are created when the billing project already exists in the database."""
+        billing_project = factories.BillingProjectFactory.create()
+        # No API calls should be made.
+        with self.assertRaises(exceptions.AnVILAlreadyImported):
+            models.BillingProject.anvil_import(billing_project.name)
+        # Check that it was not saved.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        self.assertEqual(
+            models.BillingProject.objects.get(pk=billing_project.pk), billing_project
+        )
+
+    def test_anvil_import_api_internal_error(self):
+        """No BillingProjects are created if there is an internal error from the AnVIL API."""
+        billing_project_name = "test-billing-project"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name),
+            status=500,  # error response code.
+            json={"message": "error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            models.BillingProject.anvil_import(billing_project_name)
+        # Check that no objects were saved.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_api_error_other(self):
+        """No BillingProjects are created if there is some other error from the AnVIL API."""
+        billing_project_name = "test-billing-project"
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project_name),
+            status=499,  # error response code.
+            json={"message": "error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            models.BillingProject.anvil_import(billing_project_name)
+        # Check that no objects were saved.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_invalid_billing_project_name(self):
+        """No BillingProjects are created if the billing project name is invalid."""
+        # No API calls should be made.
+        with self.assertRaises(ValidationError):
+            models.BillingProject.anvil_import("test billing project")
+        # Check that no objects were saved.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+
 class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         super().setUp()

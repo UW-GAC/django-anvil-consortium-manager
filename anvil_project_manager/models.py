@@ -40,7 +40,21 @@ class BillingProject(models.Model):
     @classmethod
     def anvil_import(cls, billing_project_name):
         """BiillingProject class method to import an existing billing project from AnVIL."""
-        pass
+        try:
+            billing_project = cls.objects.get(name=billing_project_name)
+        except cls.DoesNotExist:
+            billing_project = cls(name=billing_project_name, has_app_as_user=True)
+            billing_project.full_clean()
+        else:
+            # The billing project already exists in the database.
+            raise exceptions.AnVILAlreadyImported(
+                "BillingProject: " + billing_project_name
+            )
+        # I think we only care if this doesn't raise an exception.
+        # That should mean that it is successful, and we don't care about any of the information returned.
+        AnVILAPIClient().get_billing_project(billing_project_name)
+        billing_project.save()
+        return billing_project
 
 
 def validate_account_email(value):
