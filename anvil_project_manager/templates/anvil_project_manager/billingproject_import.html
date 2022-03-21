@@ -1,12 +1,15 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}New Billing Project{% endblock title %}
+{% block title %}Import an existing Billing Project{% endblock title %}
 
 {% block content %}
+
+<h2>Import an existing Billing Project from AnVIL</h2>
+
   <form method="post">
     {% csrf_token %}
     {{ form|crispy }}
-    <button type="submit" class="btn btn-success">Save billing project</button>
+    <button type="submit" class="btn btn-success">Import billing project</button>
   </form>
 {% endblock %}
