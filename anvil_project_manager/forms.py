@@ -6,6 +6,19 @@ from django.core.exceptions import ValidationError
 from . import models
 
 
+class WorkspaceCreateForm(forms.ModelForm):
+    """Form to create a new workspace on AnVIL."""
+
+    # Only allow billing groups where we can create a workspace.
+    billing_project = forms.ModelChoiceField(
+        queryset=models.BillingProject.objects.filter(has_app_as_user=True)
+    )
+
+    class Meta:
+        model = models.Workspace
+        fields = ("billing_project", "name", "authorization_domains")
+
+
 class WorkspaceImportForm(forms.Form):
     """Form to import a workspace from AnVIL."""
 

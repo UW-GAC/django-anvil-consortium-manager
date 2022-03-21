@@ -6,6 +6,74 @@ from .. import forms, models
 from . import factories
 
 
+class WorkspaceCreateFormTest(TestCase):
+    """Tests for the WorkspaceCreateForm class."""
+
+    form_class = forms.WorkspaceCreateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_missing_billing_project(self):
+        """Form is invalid when missing billing_project_name."""
+        form_data = {"name": "test-workspace"}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project", form.errors)
+        print(form.errors)
+        self.assertEqual(len(form.errors), 1)
+
+    def test_invalid_missing_workspace(self):
+        """Form is invalid when missing billing_project_name."""
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {"billing_project": billing_project}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors), 1)
+
+    def test_valid_with_one_authorization_domain(self):
+        billing_project = factories.BillingProjectFactory.create()
+        factories.GroupFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": models.Group.objects.all(),
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_with_two_authorization_domains(self):
+        billing_project = factories.BillingProjectFactory.create()
+        factories.GroupFactory.create_batch(2)
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": models.Group.objects.all(),
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_not_user_of_billing_project(self):
+        billing_project = factories.BillingProjectFactory.create(has_app_as_user=False)
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project", form.errors)
+        print(form.errors)
+        self.assertEqual(len(form.errors), 1)
+
+
 class WorkspaceImportFormTest(TestCase):
     form_class = forms.WorkspaceImportForm
 

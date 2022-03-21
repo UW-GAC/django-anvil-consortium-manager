@@ -1941,6 +1941,25 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 0)
         responses.assert_call_count(url, 1)
 
+    def test_not_user_of_billing_project(self):
+        """Posting a billing project where we are not users does not create an object."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project", has_app_as_user=False
+        )
+        request = self.factory.post(
+            self.get_url(),
+            {"billing_project": billing_project.pk, "name": "test-workspace"},
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("valid choice", form.errors["billing_project"][0])
+        # No workspace was created.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+
 
 class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the WorkspaceImport view."""

@@ -276,7 +276,7 @@ class WorkspaceDetail(DetailView):
 
 class WorkspaceCreate(CreateView):
     model = models.Workspace
-    fields = ("billing_project", "name", "authorization_domains")
+    form_class = forms.WorkspaceCreateForm
 
     @transaction.atomic
     def form_valid(self, form):
