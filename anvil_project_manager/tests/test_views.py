@@ -2963,10 +2963,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("parent_group", form.errors.keys())
-        self.assertEqual(
-            form.errors["parent_group"][0],
-            forms.GroupGroupMembershipForm.error_not_admin_of_parent_group,
-        )
+        self.assertIn("valid choice", form.errors["parent_group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_api_error(self):
@@ -3635,10 +3632,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
-        self.assertEqual(
-            form.errors["group"][0],
-            forms.GroupAccountMembershipForm.error_not_admin_of_group,
-        )
+        self.assertIn("valid choice", form.errors["group"][0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_api_error(self):

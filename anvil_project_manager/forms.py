@@ -1,7 +1,6 @@
 """Forms classes for the anvil_project_manager app."""
 
 from django import forms
-from django.core.exceptions import ValidationError
 
 from . import models
 
@@ -31,36 +30,31 @@ class WorkspaceImportForm(forms.Form):
 class GroupGroupMembershipForm(forms.ModelForm):
     """Form for the GroupGroupMembership model."""
 
-    error_not_admin_of_parent_group = (
-        "Please select a group that is managed by this app as the parent."
+    parent_group = forms.ModelChoiceField(
+        queryset=models.Group.objects.filter(is_managed_by_app=True)
     )
 
     class Meta:
         model = models.GroupGroupMembership
         fields = ("parent_group", "child_group", "role")
 
-    def clean_parent_group(self):
-        parent_group = self.cleaned_data["parent_group"]
-        if not parent_group.is_managed_by_app:
-            raise ValidationError(
-                self.error_not_admin_of_parent_group, code="not_admin"
-            )
-        return parent_group
+    #
+    # def clean_parent_group(self):
+    #     parent_group = self.cleaned_data["parent_group"]
+    #     if not parent_group.is_managed_by_app:
+    #         raise ValidationError(
+    #             self.error_not_admin_of_parent_group, code="not_admin"
+    #         )
+    #     return parent_group
 
 
 class GroupAccountMembershipForm(forms.ModelForm):
     """Form for the GroupAccountMembership model."""
 
-    error_not_admin_of_group = (
-        "Please select a group that is managed by this app as the parent."
+    group = forms.ModelChoiceField(
+        queryset=models.Group.objects.filter(is_managed_by_app=True)
     )
 
     class Meta:
         model = models.GroupAccountMembership
         fields = ("group", "account", "role")
-
-    def clean_group(self):
-        parent_group = self.cleaned_data["group"]
-        if not parent_group.is_managed_by_app:
-            raise ValidationError(self.error_not_admin_of_group, code="not_admin")
-        return parent_group
