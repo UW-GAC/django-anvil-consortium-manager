@@ -56,6 +56,9 @@ class WorkspaceTable(tables.Table):
 
     name = tables.Column(linkify=True, verbose_name="Workspace")
     billing_project = tables.Column(linkify=True)
+    has_authorization_domains = tables.Column(
+        accessor="authorization_domains__count", orderable=False
+    )
     number_groups = tables.Column(
         verbose_name="Number of groups with access", empty_values=(), orderable=False
     )
