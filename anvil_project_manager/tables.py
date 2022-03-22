@@ -8,15 +8,15 @@ class BillingProjectTable(tables.Table):
 
     name = tables.Column(linkify=True)
     number_workspaces = tables.Column(
-        verbose_name="Number of workspaces", empty_values=(), orderable=False
+        verbose_name="Number of workspaces",
+        empty_values=(),
+        orderable=False,
+        accessor="workspace_set__count",
     )
 
     class Meta:
         model = models.BillingProject
         fields = ("name", "has_app_as_user")
-
-    def render_number_workspaces(self, record):
-        return record.workspace_set.count()
 
 
 class AccountTable(tables.Table):
@@ -34,21 +34,21 @@ class GroupTable(tables.Table):
 
     name = tables.Column(linkify=True)
     number_groups = tables.Column(
-        verbose_name="Number of groups", empty_values=(), orderable=False
+        verbose_name="Number of groups",
+        empty_values=(),
+        orderable=False,
+        accessor="child_memberships__count",
     )
     number_accounts = tables.Column(
-        verbose_name="Number of accounts", empty_values=(), orderable=False
+        verbose_name="Number of accounts",
+        empty_values=(),
+        orderable=False,
+        accessor="groupaccountmembership_set__count",
     )
 
     class Meta:
         model = models.Group
         fields = ("name", "is_managed_by_app")
-
-    def render_number_accounts(self, record):
-        return record.groupaccountmembership_set.count()
-
-    def render_number_groups(self, record):
-        return record.child_memberships.count()
 
 
 class WorkspaceTable(tables.Table):
@@ -60,7 +60,10 @@ class WorkspaceTable(tables.Table):
         accessor="authorization_domains__count", orderable=False
     )
     number_groups = tables.Column(
-        verbose_name="Number of groups with access", empty_values=(), orderable=False
+        verbose_name="Number of groups with access",
+        empty_values=(),
+        orderable=False,
+        accessor="workspacegroupaccess_set__count",
     )
 
     class Meta:
@@ -70,9 +73,6 @@ class WorkspaceTable(tables.Table):
     def render_name(self, record):
         """Show the full name (including billing project) for the workspace."""
         return record.__str__()
-
-    def render_number_groups(self, record):
-        return record.workspacegroupaccess_set.count()
 
 
 class GroupGroupMembershipTable(tables.Table):
