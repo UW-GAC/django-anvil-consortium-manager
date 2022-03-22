@@ -7,10 +7,16 @@ class BillingProjectTable(tables.Table):
     name = tables.LinkColumn(
         "anvil_project_manager:billing_projects:detail", args=[tables.utils.A("pk")]
     )
+    number_workspaces = tables.Column(
+        verbose_name="Number of workspaces", empty_values=(), orderable=False
+    )
 
     class Meta:
         model = models.BillingProject
         fields = ("pk", "name", "has_app_as_user")
+
+    def render_number_workspaces(self, record):
+        return record.workspace_set.count()
 
 
 class AccountTable(tables.Table):
@@ -27,20 +33,38 @@ class GroupTable(tables.Table):
     name = tables.LinkColumn(
         "anvil_project_manager:groups:detail", args=[tables.utils.A("pk")]
     )
+    number_groups = tables.Column(
+        verbose_name="Number of groups", empty_values=(), orderable=False
+    )
+    number_accounts = tables.Column(
+        verbose_name="Number of accounts", empty_values=(), orderable=False
+    )
 
     class Meta:
         model = models.Group
         fields = ("pk", "name", "is_managed_by_app")
+
+    def render_number_accounts(self, record):
+        return record.groupaccountmembership_set.count()
+
+    def render_number_groups(self, record):
+        return record.child_memberships.count()
 
 
 class WorkspaceTable(tables.Table):
     pk = tables.LinkColumn(
         "anvil_project_manager:workspaces:detail", args=[tables.utils.A("pk")]
     )
+    number_groups = tables.Column(
+        verbose_name="Number of groups with access", empty_values=(), orderable=False
+    )
 
     class Meta:
         model = models.Workspace
         fields = ("pk", "billing_project", "name")
+
+    def render_number_groups(self, record):
+        return record.workspacegroupaccess_set.count()
 
 
 class GroupGroupMembershipTable(tables.Table):
