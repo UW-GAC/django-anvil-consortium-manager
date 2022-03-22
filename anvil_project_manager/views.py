@@ -54,6 +54,35 @@ class AnVILStatus(TemplateView):
         return context
 
 
+class BillingProjectImport(CreateView):
+    model = models.BillingProject
+    fields = ("name",)
+    template_name = "anvil_project_manager/billingproject_import.html"
+    message_not_users_of_billing_project = (
+        "Not a user of requested billing project or it doesn't exist on AnVIL."
+    )
+
+    def form_valid(self, form):
+        """If the form is valid, check that we can access the BillingProject on AnVIL and save the associated model."""
+        try:
+            self.object = models.BillingProject.anvil_import(form.cleaned_data["name"])
+            self.object.save()
+        except anvil_api.AnVILAPIError404:
+            # Either the workspace doesn't exist or we don't have permission for it.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_not_users_of_billing_project
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        except anvil_api.AnVILAPIError as e:
+            # If the API call failed for some other reason, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+
+        return HttpResponseRedirect(self.get_success_url())
+
+
 class BillingProjectDetail(SingleTableMixin, DetailView):
     model = models.BillingProject
     context_table_name = "workspace_table"
@@ -247,7 +276,7 @@ class WorkspaceDetail(DetailView):
 
 class WorkspaceCreate(CreateView):
     model = models.Workspace
-    fields = ("billing_project", "name", "authorization_domains")
+    form_class = forms.WorkspaceCreateForm
 
     @transaction.atomic
     def form_valid(self, form):

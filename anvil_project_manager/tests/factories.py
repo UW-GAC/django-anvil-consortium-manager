@@ -8,6 +8,7 @@ class BillingProjectFactory(DjangoModelFactory):
     """A factory for the BillingProject model."""
 
     name = Faker("slug")
+    has_app_as_user = True
 
     class Meta:
         model = models.BillingProject

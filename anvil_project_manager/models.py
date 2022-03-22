@@ -19,6 +19,7 @@ class BillingProject(models.Model):
     name = models.SlugField(
         max_length=64, unique=True, validators=[validate_billing_project_name]
     )
+    has_app_as_user = models.BooleanField()
 
     def __str__(self):
         return self.name
@@ -35,6 +36,25 @@ class BillingProject(models.Model):
             # The billing project was not found on AnVIL.
             return False
         return response.status_code == 200
+
+    @classmethod
+    def anvil_import(cls, billing_project_name):
+        """BiillingProject class method to import an existing billing project from AnVIL."""
+        try:
+            billing_project = cls.objects.get(name=billing_project_name)
+        except cls.DoesNotExist:
+            billing_project = cls(name=billing_project_name, has_app_as_user=True)
+            billing_project.full_clean()
+        else:
+            # The billing project already exists in the database.
+            raise exceptions.AnVILAlreadyImported(
+                "BillingProject: " + billing_project_name
+            )
+        # I think we only care if this doesn't raise an exception.
+        # That should mean that it is successful, and we don't care about any of the information returned.
+        AnVILAPIClient().get_billing_project(billing_project_name)
+        billing_project.save()
+        return billing_project
 
 
 def validate_account_email(value):
@@ -263,37 +283,68 @@ class Workspace(models.Model):
         # it to be saved if everything succeeds.
         try:
             with transaction.atomic():
-                # Get or create the billing project.
+                # Make temporary versions of the objects to validate them before checking for the workspace.
+                # This is primarily to check that the fields are valid.
+                # We only want ot make the API call if they are valid.
                 try:
                     billing_project = BillingProject.objects.get(
                         name=billing_project_name
                     )
+                    billing_project_exists = True
                 except BillingProject.DoesNotExist:
-                    billing_project = BillingProject(name=billing_project_name)
-                    billing_project.full_clean()
-                    billing_project.save()
-                # Create the workspace.
-                workspace = cls(billing_project=billing_project, name=workspace_name)
-                workspace.full_clean()
+                    temporary_billing_project = BillingProject(
+                        name=billing_project_name, has_app_as_user=False
+                    )
+                    temporary_billing_project.clean_fields()
+                    billing_project_exists = False
 
-                # Check the workspace on AnVIL.
+                # Do not set the Billing yet, since we might be importing it or creating it later.
+                # This is only to validate the other fields.
+                workspace = cls(name=workspace_name)
+                workspace.clean_fields(exclude="billing_project")
+                # At this point, they should be valid objects.
+
+                # Make sure we actually have access to the workspace.
                 response = AnVILAPIClient().get_workspace(
                     billing_project_name, workspace_name
                 )
                 workspace_json = response.json()
-                print(workspace_json)
+
                 # Make sure that we are owners of the workspace.
                 if workspace_json["accessLevel"] != "OWNER":
                     raise exceptions.AnVILNotWorkspaceOwnerError(
                         billing_project_name + "/" + workspace_name
                     )
+
+                # Now we can proceed with saving the objects.
+
+                # Import the billing project from AnVIL if it doesn't already exist.
+                if not billing_project_exists:
+                    try:
+                        billing_project = BillingProject.anvil_import(
+                            billing_project_name
+                        )
+                    except AnVILAPIError404:
+                        # We are not users, but we want a record of it anyway.
+                        # We may want to modify BillingProject.anvil_import to throw a better exception here.
+                        billing_project = BillingProject(
+                            name=billing_project_name, has_app_as_user=False
+                        )
+                        billing_project.full_clean()
+                        billing_project.save()
+
+                # Finally, set the workspace's billing project to the existing or newly-added BillingProject.
+                workspace.billing_project = billing_project
+                # Redo cleaning, including checks for uniqueness.
+                workspace.full_clean()
                 workspace.save()
+
                 # Check the authorization domains and import them.
                 auth_domains = [
                     ad["membersGroupName"]
                     for ad in workspace_json["workspace"]["authorizationDomain"]
                 ]
-                print(auth_domains)
+
                 # We don't need to check if we are members of the auth domains, because if we weren't we wouldn't be
                 # able to see the workspace.
                 for auth_domain in auth_domains:
@@ -304,7 +355,7 @@ class Workspace(models.Model):
                         group = Group.anvil_import(auth_domain)
                     workspace.authorization_domains.add(group)
         except Exception:
-            # If it fails for any reason, we don't want the transaction to happen.
+            # If it fails for any reason we haven't already handled, we don't want the transaction to happen.
             raise
 
         return workspace

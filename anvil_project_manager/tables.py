@@ -10,7 +10,7 @@ class BillingProjectTable(tables.Table):
 
     class Meta:
         model = models.BillingProject
-        fields = ("pk", "name")
+        fields = ("pk", "name", "has_app_as_user")
 
 
 class AccountTable(tables.Table):

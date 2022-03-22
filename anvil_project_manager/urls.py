@@ -7,6 +7,7 @@ app_name = "anvil_project_manager"
 billing_project_patterns = (
     [
         path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
+        path("import/", views.BillingProjectImport.as_view(), name="import"),
         path("", views.BillingProjectList.as_view(), name="list"),
     ],
     "billing_projects",
