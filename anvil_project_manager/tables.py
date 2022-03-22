@@ -4,35 +4,35 @@ from . import models
 
 
 class BillingProjectTable(tables.Table):
-    name = tables.LinkColumn(
-        "anvil_project_manager:billing_projects:detail", args=[tables.utils.A("pk")]
-    )
+    """Class to display a BillingProject table."""
+
+    name = tables.Column(linkify=True)
     number_workspaces = tables.Column(
         verbose_name="Number of workspaces", empty_values=(), orderable=False
     )
 
     class Meta:
         model = models.BillingProject
-        fields = ("pk", "name", "has_app_as_user")
+        fields = ("name", "has_app_as_user")
 
     def render_number_workspaces(self, record):
         return record.workspace_set.count()
 
 
 class AccountTable(tables.Table):
-    email = tables.LinkColumn(
-        "anvil_project_manager:accounts:detail", args=[tables.utils.A("pk")]
-    )
+    """Class to display a BillingProject table."""
+
+    email = tables.Column(linkify=True)
 
     class Meta:
         model = models.Account
-        fields = ("pk", "email", "is_service_account")
+        fields = ("email", "is_service_account")
 
 
 class GroupTable(tables.Table):
-    name = tables.LinkColumn(
-        "anvil_project_manager:groups:detail", args=[tables.utils.A("pk")]
-    )
+    """Class to display a Group table."""
+
+    name = tables.Column(linkify=True)
     number_groups = tables.Column(
         verbose_name="Number of groups", empty_values=(), orderable=False
     )
@@ -42,7 +42,7 @@ class GroupTable(tables.Table):
 
     class Meta:
         model = models.Group
-        fields = ("pk", "name", "is_managed_by_app")
+        fields = ("name", "is_managed_by_app")
 
     def render_number_accounts(self, record):
         return record.groupaccountmembership_set.count()
@@ -52,69 +52,70 @@ class GroupTable(tables.Table):
 
 
 class WorkspaceTable(tables.Table):
-    pk = tables.LinkColumn(
-        "anvil_project_manager:workspaces:detail", args=[tables.utils.A("pk")]
-    )
+    """Class to display a Workspace table."""
+
+    name = tables.Column(linkify=True, verbose_name="Workspace")
+    billing_project = tables.Column(linkify=True)
     number_groups = tables.Column(
         verbose_name="Number of groups with access", empty_values=(), orderable=False
     )
 
     class Meta:
         model = models.Workspace
-        fields = ("pk", "billing_project", "name")
+        fields = ("name", "billing_project")
+
+    def render_name(self, record):
+        """Show the full name (including billing project) for the workspace."""
+        return record.__str__()
 
     def render_number_groups(self, record):
         return record.workspacegroupaccess_set.count()
 
 
 class GroupGroupMembershipTable(tables.Table):
-    pk = tables.LinkColumn(
-        "anvil_project_manager:group_group_membership:detail",
-        args=[tables.utils.A("pk")],
-    )
-    parent_group = tables.RelatedLinkColumn(accessor="parent_group")
-    child_group = tables.RelatedLinkColumn(accessor="child_group")
+    """Class to render a GroupGroupMembership table."""
+
+    pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
+    parent_group = tables.Column(linkify=True)
+    child_group = tables.Column(linkify=True)
     role = tables.Column()
 
     class Meta:
         models = models.GroupAccountMembership
         fields = ("pk", "parent_group", "child_group", "role")
 
+    def render_pk(self, record):
+        return "See details"
+
 
 class GroupAccountMembershipTable(tables.Table):
-    pk = tables.LinkColumn(
-        "anvil_project_manager:group_account_membership:detail",
-        args=[tables.utils.A("pk")],
-    )
-    account = tables.LinkColumn(
-        "anvil_project_manager:accounts:detail",
-        args=[tables.utils.A("account__pk")],
-    )
+    """Class to render a GroupAccountMembership table."""
+
+    pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
+    account = tables.Column(linkify=True)
     is_service_account = tables.BooleanColumn(accessor="account__is_service_account")
-    group = tables.LinkColumn(
-        "anvil_project_manager:groups:detail", args=[tables.utils.A("group__pk")]
-    )
+    group = tables.Column(linkify=True)
     role = tables.Column()
 
     class Meta:
         models = models.GroupAccountMembership
         fields = ("pk", "account", "is_service_account", "group", "role")
 
+    def render_pk(self, record):
+        return "See details"
+
 
 class WorkspaceGroupAccessTable(tables.Table):
-    pk = tables.LinkColumn(
-        "anvil_project_manager:workspace_group_access:detail",
-        args=[tables.utils.A("pk")],
-    )
-    workspace = tables.LinkColumn(
-        "anvil_project_manager:workspaces:detail",
-        args=[tables.utils.A("workspace__pk")],
-    )
-    group = tables.LinkColumn(
-        "anvil_project_manager:groups:detail", args=[tables.utils.A("group__pk")]
-    )
+    """Class to render a WorkspaceGroupAccess table."""
+
+    pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
+    workspace = tables.Column(linkify=True)
+    group = tables.Column(linkify=True)
     access = tables.Column()
 
     class Meta:
         model = models.WorkspaceGroupAccess
         fields = ("pk", "workspace", "group", "access")
+
+    def render_pk(self, record):
+        return "See details"
