@@ -34,6 +34,7 @@
       <h2 class="accordion-header" id="headingGroupsOne">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
           View groups that have access
+          <span class="badge mx-2 bg-secondary pill"> {{ group_access_table.rows|length }}</span>
         </button>
       </h2>
       <div id="collapseGroupsOne" class="accordion-collapse collapse" aria-labelledby="headingGroupsOne" data-bs-parent="#accordionGroups">

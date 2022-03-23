@@ -24,6 +24,7 @@
       <h2 class="accordion-header" id="headingWorkspacesOne">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspacesOne" aria-expanded="false" aria-controls="collapseWorkspacesOne">
           View workspaces that this group has access to
+          <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
         </button>
       </h2>
       <div id="collapseWorkspacesOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspacesOne" data-bs-parent="#accordionWorkspaces">
@@ -44,6 +45,7 @@
       <h2 class="accordion-header" id="headingMembersOne">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersOne" aria-expanded="false" aria-controls="collapseMembersOne">
           View group members
+          <span class="badge mx-2 bg-secondary pill"> {{ group_table.rows|length }}</span>
         </button>
       </h2>
       <div id="collapseMembersOne" class="accordion-collapse collapse" aria-labelledby="headingMembersOne">
@@ -57,6 +59,7 @@
       <h2 class="accordion-header" id="headingMembersTwo">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersTwo" aria-expanded="false" aria-controls="collapseMembersTwo">
           View account members
+          <span class="badge mx-2 bg-secondary pill"> {{ account_table.rows|length }}</span>
         </button>
       </h2>
       <div id="collapseMembersTwo" class="accordion-collapse collapse" aria-labelledby="headingMembersTwo">
