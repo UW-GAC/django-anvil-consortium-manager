@@ -6,34 +6,68 @@
 {% block title %}Group: {{ object.name }}{% endblock %}
 
 {% block content %}
-<div class="container">
 
-  <div class="row">
-    <div class="col-sm-12">
+<h2>Group Details</h2>
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <p>Name: {{ object.name }}</p>
+  <p>Is managed by app? {{ object.is_managed_by_app }}</p>
+</div>
 
-      <h2>Group: {{ object.name }}</h2>
 
-      Is managed by app? {{ object.is_managed_by_app }}
 
-      <h3>Workspaces using this group as an authorization domain:</h3>
-      {% render_table workspace_authorization_domain_table %}
+<div class="my-3">
+  <div class="card">
 
-      <h3>Workspaces that this group has access to</h3>
-      {% render_table workspace_table %}
+    <h4 class="card-header">Workspaces that this group has access to</h4>
 
-      <h3>Members of this group</h3>
+    <div class="card-body">
+        <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_workspace_table" aria-expanded="false" aria-controls="collapse_workspace_table">
+          See groups
+        </button>
+      <div class="p-3">
+        <div class="collapse" id="collapse_workspace_table">
+            {% render_table workspace_table %}
+        </div>
+      </div>
+    </div>
 
-      <h4>Accounts</h4>
-      {% render_table account_table %}
+  </div>
+</div>
 
-      <h4>Groups</h4>
-      {% render_table group_table %}
+
+<div class="my-3">
+  <div class="card">
+
+    <h4 class="card-header">Members of this group</h4>
+
+    <div class="card-body">
+
+      <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_group_table" aria-expanded="false" aria-controls="collapse_group_table">
+        See groups
+      </button>
+      <div class="p-3">
+        <div class="collapse" id="collapse_group_table">
+          {% render_table group_table %}
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_account_table" aria-expanded="false" aria-controls="collapse_account_table">
+        See accounts
+      </button>
+      <div class="p-3">
+        <div class="collapse" id="collapse_account_table">
+          {% render_table account_table %}
+        </div>
+      </div>
 
     </div>
+
   </div>
-
-  <a href="{% url 'anvil_project_manager:groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-
-
 </div>
+
+
+<p>
+  <a href="{% url 'anvil_project_manager:groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+</p>
+
 {% endblock content %}
