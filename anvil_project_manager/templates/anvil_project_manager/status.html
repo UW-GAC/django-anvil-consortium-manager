@@ -7,18 +7,40 @@
 
 <h2>AnVIL Status</h2>
 
-<h3>API User</h3>
-<code>{{ anvil_user }}</code>
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <ul>
+    <li>API user: <code>{{ anvil_user }}</code></li>
+    <li>Overall status: <code>{{ anvil_status }}</code></li>
+  </ul>
+</div>
 
-<h3>Overall status</h3>
-  <code>{{ anvil_status }}</code>
 
-<h3>System status</h3>
 
-<ul>
-  {% for system, value in anvil_systems_status.items %}
-    <li>{{ system }}</li>
-    <code>{{value}}</code>
-  {% endfor %}
-</ul>
+<div class="card">
+  <h4 class="card-header">
+    System status
+  </h4>
+  <div class="card-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="col-sm-1" scope="col">System</th>
+          <th class="col-sm-11" scope="col">Status</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for system, status in anvil_systems_status.items %}
+          <tr>
+            <td>{{ system }}</td>
+            <td><code>{{ status }}</code></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+</div>
+
+
 {% endblock content %}
