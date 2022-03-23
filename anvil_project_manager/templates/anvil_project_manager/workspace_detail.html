@@ -13,14 +13,18 @@
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <p>Workspace: {{ object }}</p>
   <p>Billing project: {{ object.billing_project }}</p>
-
-  <p>Authorization domains</p>
-  <div class="p-3">
-        {% render_table authorization_domain_table %}
-  </div>
-
 </div>
 
+<div class="card">
+  <div class="card-header">
+    Authorization domains
+  </div>
+  <div class="card-body">
+    <p class="card-text">
+      {% render_table authorization_domain_table %}
+    </p>
+  </div>
+</div>
 
 <div class="my-3">
   <div class="accordion" id="accordionGroups">
