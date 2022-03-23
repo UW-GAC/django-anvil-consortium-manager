@@ -4,23 +4,18 @@
 {% block title %}Group account membership: {{ object }}{% endblock %}
 
 {% block content %}
-<div class="container">
 
-  <div class="row">
-    <div class="col-sm-12">
-
-      <h2>Group account membership: {{ object }}</h2>
-
-      <ul>
-        <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>
-        <li>Account: <a href="{{object.account.get_absolute_url}}"> {{ object.account}} </a></li>
-        <li>Role: {{ object.role }}</li>
-      </ul>
-
-    </div>
-  </div>
-
-  <a href="{% url 'anvil_project_manager:group_account_membership:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-
+<h2>Group Account Membership Details</h2>
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <ul>
+    <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>
+    <li>Account: <a href="{{object.account.get_absolute_url}}"> {{ object.account}} </a></li>
+    <li>Role: {{ object.role }}</li>
+  </ul>
 </div>
+
+<p>
+  <a href="{% url 'anvil_project_manager:group_account_membership:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+</p>
+
 {% endblock content %}
