@@ -32,7 +32,6 @@ class AnVILAPIClient:
 
     def me(self):
         method = "me?userDetailsOnly=true"
-        print(method)
         return self.auth_session.get(method, 200)
 
     def get_proxy_group(self, email):
@@ -129,7 +128,6 @@ class AnVILAPISession(AuthorizedSession):
     def post(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
         response = super().post(url, *args, **kwargs)
-        print(response)
         if success_code is not None:
             self._handle_response(success_code, response)
         return response
