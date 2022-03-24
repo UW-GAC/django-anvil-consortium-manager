@@ -10,6 +10,8 @@ import logging
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
 
+logger = logging.getLogger(__name__)
+
 
 class AnVILAPIClient:
     # Class variable for auth session.
@@ -169,14 +171,14 @@ class AnVILAPISession(AuthorizedSession):
         msg = "Starting request...\n  {request_type}: {url}\n  args: {args}\n  kwargs: {kwargs}".format(
             request_type=request_type, url=url, args=args, kwargs=kwargs
         )
-        logging.info(msg)
+        logger.info(msg)
 
     def _log_response(self, response):
         """Log info about the response."""
         msg = "Got response...\n  status_code: {status_code}\n  text: {text}".format(
             status_code=response.status_code, text=response.text
         )
-        logging.info(msg)
+        logger.info(msg)
 
     def _handle_response(self, success_code, response):
         """Checks for a successful response code and raises an Exception if the code is different."""
