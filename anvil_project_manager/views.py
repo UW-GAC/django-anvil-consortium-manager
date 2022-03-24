@@ -104,7 +104,8 @@ class AccountDetail(SingleTableMixin, DetailView):
 
     def get_table(self):
         return tables.GroupAccountMembershipTable(
-            self.object.groupaccountmembership_set.all(), exclude="account"
+            self.object.groupaccountmembership_set.all(),
+            exclude=["account", "is_service_account"],
         )
 
 
@@ -269,7 +270,8 @@ class WorkspaceDetail(DetailView):
             self.object.workspacegroupaccess_set.all(), exclude="workspace"
         )
         context["authorization_domain_table"] = tables.GroupTable(
-            self.object.authorization_domains.all(), exclude="workspace"
+            self.object.authorization_domains.all(),
+            exclude=["workspace", "number_groups", "number_accounts"],
         )
         return context
 

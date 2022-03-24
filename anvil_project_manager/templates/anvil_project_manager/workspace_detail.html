@@ -6,23 +6,49 @@
 {% block title %}Workspace: {{ object }}{% endblock %}
 
 {% block content %}
-<div class="container">
 
-  <div class="row">
-    <div class="col-sm-12">
 
-      <h2>Workspace: {{ object }}</h2>
 
-      <h3>Authorization domains:</h3>
+<h2>Workspace Details</h2>
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <ul>
+    <li>Workspace: {{ object }}</li>
+    <li>Billing project: {{ object.billing_project }}</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="fa-solid fa-shield mx-2"></span>
+    Authorization domains
+  </div>
+  <div class="card-body">
       {% render_table authorization_domain_table %}
+  </div>
+</div>
 
-      <h3>Groups that have access to this workspace</h3>
-      {% render_table group_access_table %}
-
+<div class="my-3">
+  <div class="accordion" id="accordionGroups">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingGroupsOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
+          <span class="fa-solid fa-user-group mx-2"></span>
+          View groups that have access
+          <span class="badge mx-2 bg-secondary pill"> {{ group_access_table.rows|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseGroupsOne" class="accordion-collapse collapse" aria-labelledby="headingGroupsOne" data-bs-parent="#accordionGroups">
+        <div class="accordion-body">
+          {% render_table group_access_table %}
+        </div>
+      </div>
     </div>
   </div>
-
-  <a href="{% url 'anvil_project_manager:workspaces:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-
 </div>
+
+
+<p>
+  <a href="{% url 'anvil_project_manager:workspaces:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+</p>
+
 {% endblock content %}

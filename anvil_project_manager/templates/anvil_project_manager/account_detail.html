@@ -6,20 +6,43 @@
 {% block title %}Account: {{ object.username }}{% endblock %}
 
 {% block content %}
-<div class="container">
 
-  <div class="row">
-    <div class="col-sm-12">
+<h2>Account Details</h2>
 
-      <h2>Account: {{ object.email }}</h2>
+{% if object.is_service_account %}
+  <span class="badge bg-info">Service account</span>
+{% else %}
+  <span class="badge bg-primary">User account</span>
+{% endif %}
 
-      <h3>Groups</h3>
-      {% render_table group_table %}
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <ul>
+    <li>Email: {{ object.email }}</li>
+  </ul>
+</div>
 
+
+<div class="my-3">
+  <div class="accordion" id="accordionGroups">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingGroupsOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
+          <span class="fa-solid fa-user-group mx-2"></span>
+          View groups that this account is a member of
+          <span class="badge mx-2 bg-secondary pill"> {{ group_table.rows|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseGroupsOne" class="accordion-collapse collapse" aria-labelledby="headingGroupsOne" data-bs-parent="#accordionGroups">
+        <div class="accordion-body">
+          {% render_table group_table %}
+        </div>
+      </div>
     </div>
   </div>
-
-  <a href="{% url 'anvil_project_manager:accounts:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete from app</a>
-
 </div>
+
+<p>
+  <a href="{% url 'anvil_project_manager:accounts:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete from app</a>
+</p>
+
 {% endblock content %}

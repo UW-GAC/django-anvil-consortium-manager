@@ -6,18 +6,39 @@
 {% block title %}Billing project: {{ object.name }}{% endblock %}
 
 {% block content %}
-<div class="container">
 
-  <div class="row">
-    <div class="col-sm-12">
+<h2>Billing Project Details</h2>
 
-      <h2>Billing project: {{ object.name }}</h2>
+{% if object.has_app_as_user %}
+  <span class="badge bg-success">Has app as user</span>
+{% else %}
+  <span class="badge bg-secondary">Does not have app as user</span>
+{% endif %}
 
-      <h3>Workspaces</h3>
-      {% render_table workspace_table %}
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <ul>
+    <li>Name: {{ object.name }}</li>
+  </ul>
+</div>
 
+<div class="my-3">
+  <div class="accordion" id="accordionWorkspaces">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingWorkspacesOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspacesOne" aria-expanded="false" aria-controls="collapseWorkspacesOne">
+          <span class="fa-solid fa-computer mx-2"></span>
+          View workspaces in this billing project
+          <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseWorkspacesOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspacesOne" data-bs-parent="#accordionWorkspaces">
+        <div class="accordion-body">
+          {% render_table workspace_table %}
+        </div>
+      </div>
     </div>
   </div>
-
 </div>
+
+
 {% endblock content %}

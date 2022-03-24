@@ -30,6 +30,9 @@
       <!-- place project specific Javascript in this file -->
       <script defer src="{% static 'js/project.js' %}"></script>
 
+      <!-- font awesome icons -->
+      <script src="{% static 'fontawesomefree/js/all.min.js' %}"></script>
+
     {% endblock javascript %}
 
   </head>
@@ -145,7 +148,17 @@
       {% endif %}
 
       {% block content %}
-        <p>Use this document as a way to quick start any new project.</p>
+
+      <section class="py-5 text-center container">
+        <div class="row py-lg-5">
+          <div class="col-lg-6 col-md-8 mx-auto">
+            <h1 class="fw-light">AnVIL Project Manager</h1>
+            <p class="lead text-muted">With this app, you can manage workspaces, groups, and data access on <a href="https://anvilproject.org/">the AnVIL</a>.</p>
+          </div>
+        </div>
+      </section>
+
+
       {% endblock content %}
 
     </div> <!-- /container -->

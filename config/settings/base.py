@@ -75,6 +75,7 @@ THIRD_PARTY_APPS = [
     "crispy_forms",
     "crispy_bootstrap5",
     "django_tables2",
+    "fontawesomefree",  # icons
 ]
 
 LOCAL_APPS = [

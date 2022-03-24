@@ -333,6 +333,13 @@ class BillingProjectDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
+    def test_view_status_code_with_existing_object_not_user(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.BillingProjectFactory.create(has_app_as_user=False)
+        # Only clients load the template.
+        response = self.client.get(self.get_url(obj.pk))
+        self.assertEqual(response.status_code, 200)
+
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.BillingProjectFactory.create()
@@ -455,6 +462,13 @@ class AccountDetailTest(TestCase):
         obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_existing_object_service_account(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.AccountFactory.create(is_service_account=True)
+        # Only clients load the template.
+        response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
@@ -802,6 +816,13 @@ class GroupDetailTest(TestCase):
         obj = factories.GroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_existing_object_not_managed(self):
+        """Returns a successful status code for an existing object pk."""
+        obj = factories.GroupFactory.create(is_managed_by_app=False)
+        # Only clients load the template.
+        response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
@@ -2372,6 +2393,11 @@ class WorkspaceListTest(TestCase):
     def test_view_status_code(self):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_client(self):
+        factories.WorkspaceFactory()
+        response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
     def test_view_has_correct_table_class(self):
