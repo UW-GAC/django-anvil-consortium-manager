@@ -7,11 +7,17 @@
 
 {% block content %}
 
-<h2>Group Details</h2>
+<h2>
+  Group Details
+</h2>
+{% if object.is_managed_by_app %}
+  <span class="badge bg-success">Managed by app</span>
+{% else %}
+  <span class="badge bg-secondary">Not managed by app</span>
+{% endif %}
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Name: {{ object.name }}</li>
-    <li>Is managed by app? {{ object.is_managed_by_app }}</li>
   </ul>
 </div>
 

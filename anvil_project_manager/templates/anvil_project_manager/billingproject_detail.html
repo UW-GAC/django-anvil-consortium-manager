@@ -8,6 +8,13 @@
 {% block content %}
 
 <h2>Billing Project Details</h2>
+
+{% if object.has_app_as_user %}
+  <span class="badge bg-success">Has app as user</span>
+{% else %}
+  <span class="badge bg-secondary">Does not have app as user</span>
+{% endif %}
+
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Name: {{ object.name }}</li>

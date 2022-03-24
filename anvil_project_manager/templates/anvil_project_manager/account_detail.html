@@ -8,10 +8,16 @@
 {% block content %}
 
 <h2>Account Details</h2>
+
+{% if object.is_service_account %}
+  <span class="badge bg-info">Service account</span>
+{% else %}
+  <span class="badge bg-primary">User account</span>
+{% endif %}
+
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Email: {{ object.email }}</li>
-    <li>Is service account: {{ object.is_service_account }}</li>
   </ul>
 </div>
 
