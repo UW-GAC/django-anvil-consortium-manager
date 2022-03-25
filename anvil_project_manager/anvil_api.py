@@ -5,9 +5,12 @@
 # and have some dependency resolution issues with this project. Therefore, we'll
 # have to reproduce some of the API to make the calls we would like to make. Alas.
 import json
+import logging
 
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
+
+logger = logging.getLogger(__name__)
 
 
 class AnVILAPIClient:
@@ -32,7 +35,6 @@ class AnVILAPIClient:
 
     def me(self):
         method = "me?userDetailsOnly=true"
-        print(method)
         return self.auth_session.get(method, 200)
 
     def get_proxy_group(self, email):
@@ -121,39 +123,62 @@ class AnVILAPISession(AuthorizedSession):
 
     def get(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
+        self._log_request("GET", url, *args, **kwargs)
         response = super().get(url, *args, **kwargs)
+        self._log_response(response)
         if success_code is not None:
             self._handle_response(success_code, response)
         return response
 
     def post(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
+        self._log_request("POST", url, *args, **kwargs)
         response = super().post(url, *args, **kwargs)
-        print(response)
+        self._log_response(response)
         if success_code is not None:
             self._handle_response(success_code, response)
         return response
 
     def delete(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
+        self._log_request("DELETE", url, *args, **kwargs)
         response = super().delete(url, *args, **kwargs)
+        self._log_response(response)
         if success_code is not None:
             self._handle_response(success_code, response)
         return response
 
     def patch(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
+        self._log_request("PATCH", url, *args, **kwargs)
         response = super().patch(url, *args, **kwargs)
+        self._log_response(response)
         if success_code is not None:
             self._handle_response(success_code, response)
         return response
 
     def put(self, method, success_code=None, *args, **kwargs):
         url = self.entry_point + method
+        self._log_request("PUT", url, *args, **kwargs)
         response = super().put(url, *args, **kwargs)
+        self._log_response(response)
         if success_code is not None:
             self._handle_response(success_code, response)
         return response
+
+    def _log_request(self, request_type, url, *args, **kwargs):
+        """Log info about the request."""
+        msg = "Starting request...\n  {request_type}: {url}\n  args: {args}\n  kwargs: {kwargs}".format(
+            request_type=request_type, url=url, args=args, kwargs=kwargs
+        )
+        logger.info(msg)
+
+    def _log_response(self, response):
+        """Log info about the response."""
+        msg = "Got response...\n  status_code: {status_code}\n  text: {text}".format(
+            status_code=response.status_code, text=response.text
+        )
+        logger.info(msg)
 
     def _handle_response(self, success_code, response):
         """Checks for a successful response code and raises an Exception if the code is different."""
