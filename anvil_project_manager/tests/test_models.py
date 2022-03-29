@@ -651,6 +651,11 @@ class GroupTest(TestCase):
         self.assertEqual(len(Group.objects.all()), 1)
         self.assertIn(group, Group.objects.all())
 
+    def test_get_anvil_url(self):
+        """get_anvil_url returns a string."""
+        group = factories.GroupFactory.create()
+        self.assertIsInstance(group.get_anvil_url(), str)
+
 
 class WorkspaceTest(TestCase):
     def test_model_saving(self):
@@ -785,6 +790,11 @@ class WorkspaceTest(TestCase):
         self.assertEqual(len(WorkspaceAuthorizationDomain.objects.all()), 0)
         # The group has not been deleted.
         self.assertIn(auth_domain, Group.objects.all())
+
+    def test_get_anvil_url(self):
+        """get_anvil_url returns a string."""
+        instance = factories.WorkspaceFactory.create()
+        self.assertIsInstance(instance.get_anvil_url(), str)
 
 
 class WorkspaceAuthorizationDomainTestCase(TestCase):

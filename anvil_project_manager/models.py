@@ -146,6 +146,10 @@ class Group(models.Model):
             children = children.union(child.get_all_children())
         return children
 
+    def get_anvil_url(self):
+        """Return the URL of the group on AnVIL."""
+        return "https://app.terra.bio/#groups/{group}".format(group=self.name)
+
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""
         try:
@@ -236,6 +240,12 @@ class Workspace(models.Model):
     def get_full_name(self):
         return "{billing_project}/{name}".format(
             billing_project=self.billing_project, name=self.name
+        )
+
+    def get_anvil_url(self):
+        """Return the URL of the workspace on AnVIL."""
+        return "https://app.terra.bio/#workspaces/{billing_project}/{group}".format(
+            billing_project=self.billing_project.name, group=self.name
         )
 
     def anvil_exists(self):
