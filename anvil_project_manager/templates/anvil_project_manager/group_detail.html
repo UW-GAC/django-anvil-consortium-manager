@@ -9,7 +9,12 @@
 
 <h2>
   Group Details
+    <a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
+      <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
+      View on AnVIL
+    </a>
 </h2>
+
 {% if object.is_managed_by_app %}
   <span class="badge bg-success">Managed by app</span>
 {% else %}
@@ -20,7 +25,6 @@
     <li>Name: {{ object.name }}</li>
   </ul>
 </div>
-
 
 
 

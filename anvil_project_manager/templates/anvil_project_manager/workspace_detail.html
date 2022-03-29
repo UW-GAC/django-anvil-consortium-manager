@@ -9,7 +9,13 @@
 
 
 
-<h2>Workspace Details</h2>
+<h2>
+  Workspace Details
+  <a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
+    <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
+    View on AnVIL
+  </a>
+</h2>
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Workspace: {{ object }}</li>
