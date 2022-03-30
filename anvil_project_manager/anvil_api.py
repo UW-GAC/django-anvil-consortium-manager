@@ -7,8 +7,9 @@
 import json
 import logging
 
-import google.auth
+from django.conf import settings
 from google.auth.transport.requests import AuthorizedSession
+from google.oauth2 import service_account
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +20,17 @@ class AnVILAPIClient:
 
     def __init__(self):
         if AnVILAPIClient.auth_session is None:
-            # TODO: Think about how to set the credentials as a project settings, and if it's necessary.
-            # Do we need to think about refreshing the credentials/session?
-            credentials = google.auth.default(
+
+            credentials = service_account.Credentials.from_service_account_file(
+                settings.ANVIL_API_SERVICE_ACCOUNT_FILE
+            )
+            scoped_credentials = credentials.with_scopes(
                 [
                     "https://www.googleapis.com/auth/userinfo.profile",
                     "https://www.googleapis.com/auth/userinfo.email",
                 ]
-            )[0]
-            AnVILAPIClient.auth_session = AnVILAPISession(credentials)
+            )
+            AnVILAPIClient.auth_session = AnVILAPISession(scoped_credentials)
 
     def status(self):
         method = "status"

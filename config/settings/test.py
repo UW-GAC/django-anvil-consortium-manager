@@ -30,3 +30,7 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 # Required for coverage to work
 TEMPLATES[0]["OPTIONS"]["debug"] = True  # noqa
+
+# Path to the service account to use for managing access.
+# Because the calls are mocked, we don't need to set this.
+ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
