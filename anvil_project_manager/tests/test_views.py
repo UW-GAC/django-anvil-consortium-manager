@@ -798,43 +798,43 @@ class AccountDeleteTest(TestCase):
         self.assertRedirects(response, reverse("anvil_project_manager:accounts:list"))
 
 
-class GroupDetailTest(TestCase):
+class ManagedGroupDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:groups:detail", args=args)
+        return reverse("anvil_project_manager:managed_groups:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupDetail.as_view()
+        return views.ManagedGroupDetail.as_view()
 
     def test_view_status_code_with_existing_object(self):
         """Returns a successful status code for an existing object pk."""
-        obj = factories.GroupFactory.create()
+        obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_existing_object_not_managed(self):
         """Returns a successful status code for an existing object pk."""
-        obj = factories.GroupFactory.create(is_managed_by_app=False)
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Only clients load the template.
         response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.GroupFactory.create()
+        obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
     def test_workspace_table(self):
         """The workspace table exists."""
-        obj = factories.GroupFactory.create()
+        obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("workspace_table", response.context_data)
@@ -844,7 +844,7 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_table_none(self):
         """No workspaces are shown if the group does not have access to any workspaces."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_table", response.context_data)
@@ -852,7 +852,7 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_table_one(self):
         """One workspace is shown if the group have access to one workspace."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         factories.WorkspaceGroupAccessFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -861,7 +861,7 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_table_two(self):
         """Two workspaces are shown if the group have access to two workspaces."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         factories.WorkspaceGroupAccessFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -870,8 +870,8 @@ class GroupDetailTest(TestCase):
 
     def test_shows_workspace_for_only_this_group(self):
         """Only shows workspcaes that this group has access to."""
-        group = factories.GroupFactory.create(name="group-1")
-        other_group = factories.GroupFactory.create(name="group-2")
+        group = factories.ManagedGroupFactory.create(name="group-1")
+        other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.WorkspaceGroupAccessFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -880,7 +880,7 @@ class GroupDetailTest(TestCase):
 
     def test_account_table(self):
         """The account table exists."""
-        obj = factories.GroupFactory.create()
+        obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("account_table", response.context_data)
@@ -890,7 +890,7 @@ class GroupDetailTest(TestCase):
 
     def test_account_table_none(self):
         """No accounts are shown if the group has no accounts."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("account_table", response.context_data)
@@ -898,7 +898,7 @@ class GroupDetailTest(TestCase):
 
     def test_account_table_one(self):
         """One accounts is shown if the group has only that account."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -907,7 +907,7 @@ class GroupDetailTest(TestCase):
 
     def test_account_table_two(self):
         """Two accounts are shown if the group has only those accounts."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -916,8 +916,8 @@ class GroupDetailTest(TestCase):
 
     def test_shows_account_for_only_this_group(self):
         """Only shows accounts that are in this group."""
-        group = factories.GroupFactory.create(name="group-1")
-        other_group = factories.GroupFactory.create(name="group-2")
+        group = factories.ManagedGroupFactory.create(name="group-1")
+        other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupAccountMembershipFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -926,7 +926,7 @@ class GroupDetailTest(TestCase):
 
     def test_group_table(self):
         """The group table exists."""
-        obj = factories.GroupFactory.create()
+        obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
@@ -936,7 +936,7 @@ class GroupDetailTest(TestCase):
 
     def test_group_table_none(self):
         """No groups are shown if the group has no member groups."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
@@ -944,7 +944,7 @@ class GroupDetailTest(TestCase):
 
     def test_group_table_one(self):
         """One group is shown if the group has only that member group."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         factories.GroupGroupMembershipFactory.create(parent_group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -953,7 +953,7 @@ class GroupDetailTest(TestCase):
 
     def test_group_table_two(self):
         """Two groups are shown if the group has only those member groups."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         factories.GroupGroupMembershipFactory.create_batch(2, parent_group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -962,8 +962,8 @@ class GroupDetailTest(TestCase):
 
     def test_group_account_for_only_this_group(self):
         """Only shows member groups that are in this group."""
-        group = factories.GroupFactory.create(name="group-1")
-        other_group = factories.GroupFactory.create(name="group-2")
+        group = factories.ManagedGroupFactory.create(name="group-1")
+        other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupGroupMembershipFactory.create(parent_group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
@@ -972,7 +972,7 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_auth_domain_table(self):
         """The auth_domain table exists."""
-        obj = factories.GroupFactory.create()
+        obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
@@ -983,7 +983,7 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_auth_domain_table_none(self):
         """No workspaces are shown if the group is not the auth domain for any workspace."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
@@ -993,7 +993,7 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_auth_domain_table_one(self):
         """One workspace is shown in if the group is the auth domain for it."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
         request = self.factory.get(self.get_url(group.pk))
@@ -1005,7 +1005,7 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_auth_domain_table_two(self):
         """Two workspaces are shown in if the group is the auth domain for them."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_1.authorization_domains.add(group)
         workspace_2 = factories.WorkspaceFactory.create()
@@ -1020,8 +1020,8 @@ class GroupDetailTest(TestCase):
 
     def test_workspace_auth_domain_account_for_only_this_group(self):
         """Only shows workspaces for which this group is the auth domain."""
-        group = factories.GroupFactory.create(name="group")
-        other_group = factories.GroupFactory.create(name="other-group")
+        group = factories.ManagedGroupFactory.create(name="group")
+        other_group = factories.ManagedGroupFactory.create(name="other-group")
         other_workspace = factories.WorkspaceFactory.create()
         other_workspace.authorization_domains.add(other_group)
         factories.GroupGroupMembershipFactory.create(parent_group=other_group)
@@ -1033,7 +1033,7 @@ class GroupDetailTest(TestCase):
         )
 
 
-class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
+class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 201
 
@@ -1045,11 +1045,11 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:groups:new", args=args)
+        return reverse("anvil_project_manager:managed_groups:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupCreate.as_view()
+        return views.ManagedGroupCreate.as_view()
 
     def test_status_code(self):
         """Returns successful response code."""
@@ -1070,8 +1070,8 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.post(self.get_url(), {"name": "test-group"})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.Group.objects.latest("pk")
-        self.assertIsInstance(new_object, models.Group)
+        new_object = models.ManagedGroup.objects.latest("pk")
+        self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.name, "test-group")
         responses.assert_call_count(url, 1)
 
@@ -1081,13 +1081,13 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
         response = self.client.post(self.get_url(), {"name": "test-group"})
-        new_object = models.Group.objects.latest("pk")
+        new_object = models.ManagedGroup.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
         responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two groups with the same name."""
-        obj = factories.GroupFactory.create()
+        obj = factories.ManagedGroupFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1096,8 +1096,8 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("name", form.errors.keys())
         self.assertIn("already exists", form.errors["name"][0])
         self.assertQuerysetEqual(
-            models.Group.objects.all(),
-            models.Group.objects.filter(pk=obj.pk),
+            models.ManagedGroup.objects.all(),
+            models.ManagedGroup.objects.filter(pk=obj.pk),
         )
         self.assertEqual(len(responses.calls), 0)
 
@@ -1110,7 +1110,7 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
-        self.assertEqual(models.Group.objects.count(), 0)
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
         self.assertEqual(len(responses.calls), 0)
 
     def test_post_blank_data(self):
@@ -1122,7 +1122,7 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
         self.assertIn("required", form.errors["name"][0])
-        self.assertEqual(models.Group.objects.count(), 0)
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
         self.assertEqual(len(responses.calls), 0)
 
     def test_api_error_message(self):
@@ -1141,7 +1141,7 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: group create test error", str(messages[0]))
         responses.assert_call_count(url, 1)
         # Make sure that no object is created.
-        self.assertEqual(models.Group.objects.count(), 0)
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
     @skip("AnVIL API issue")
     def test_api_group_already_exists(self):
@@ -1150,18 +1150,18 @@ class GroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
-class GroupListTest(TestCase):
+class ManagedGroupListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:groups:list", args=args)
+        return reverse("anvil_project_manager:managed_groups:list", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupList.as_view()
+        return views.ManagedGroupList.as_view()
 
     def test_view_status_code(self):
         request = self.factory.get(self.get_url())
@@ -1172,7 +1172,7 @@ class GroupListTest(TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupTable)
+        self.assertIsInstance(response.context_data["table"], tables.ManagedGroupTable)
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
@@ -1182,7 +1182,7 @@ class GroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_one_object(self):
-        factories.GroupFactory()
+        factories.ManagedGroupFactory()
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1190,7 +1190,7 @@ class GroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.GroupFactory.create_batch(2)
+        factories.ManagedGroupFactory.create_batch(2)
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -1198,7 +1198,7 @@ class GroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
+class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
@@ -1210,15 +1210,15 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:groups:delete", args=args)
+        return reverse("anvil_project_manager:managed_groups:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.GroupDelete.as_view()
+        return views.ManagedGroupDelete.as_view()
 
     def test_view_status_code(self):
         """Returns a successful status code for an existing object."""
-        object = factories.GroupFactory.create()
+        object = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
@@ -1231,45 +1231,47 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.GroupFactory.create(name="test-group")
+        object = factories.ManagedGroupFactory.create(name="test-group")
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.Group.objects.count(), 0)
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
         responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        object = factories.GroupFactory.create()
-        other_object = factories.GroupFactory.create()
+        object = factories.ManagedGroupFactory.create()
+        other_object = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
         self.assertQuerysetEqual(
-            models.Group.objects.all(),
-            models.Group.objects.filter(pk=other_object.pk),
+            models.ManagedGroup.objects.all(),
+            models.ManagedGroup.objects.filter(pk=other_object.pk),
         )
         responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        object = factories.GroupFactory.create()
+        object = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse("anvil_project_manager:groups:list"))
+        self.assertRedirects(
+            response, reverse("anvil_project_manager:managed_groups:list")
+        )
         responses.assert_call_count(url, 1)
 
     def test_get_redirect_group_used_as_auth_domain(self):
         """Redirect when trying to delete a group used as an auth domain with a get request."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
         # Need to use a client for messages.
@@ -1279,13 +1281,15 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupDelete.message_is_auth_domain, str(messages[0]))
+        self.assertEqual(
+            views.ManagedGroupDelete.message_is_auth_domain, str(messages[0])
+        )
         # Make sure that the object still exists.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
     def test_post_redirect_group_used_as_auth_domain(self):
         """Cannot delete a group used as an auth domain with a post request."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
         # Need to use a client for messages.
@@ -1295,14 +1299,16 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupDelete.message_is_auth_domain, str(messages[0]))
+        self.assertEqual(
+            views.ManagedGroupDelete.message_is_auth_domain, str(messages[0])
+        )
         # Make sure that the object still exists.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        object = factories.GroupFactory.create()
+        object = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(
             responses.DELETE,
@@ -1318,11 +1324,11 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: group delete test error", str(messages[0]))
         responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
     def test_get_redirect_group_not_managed_by_app(self):
         """Redirect when trying to delete a group that the app doesn't manage."""
-        group = factories.GroupFactory.create(is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Need to use a client for messages.
         response = self.client.get(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
@@ -1330,13 +1336,15 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupDelete.message_not_managed_by_app, str(messages[0]))
+        self.assertEqual(
+            views.ManagedGroupDelete.message_not_managed_by_app, str(messages[0])
+        )
         # Make sure that the object still exists.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
     def test_post_redirect_group_not_managed_by_app(self):
         """Redirect when trying to delete a group that the app doesn't manage with a post request."""
-        group = factories.GroupFactory.create(is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Need to use a client for messages.
         response = self.client.post(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
@@ -1344,9 +1352,11 @@ class GroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupDelete.message_not_managed_by_app, str(messages[0]))
+        self.assertEqual(
+            views.ManagedGroupDelete.message_not_managed_by_app, str(messages[0])
+        )
         # Make sure that the object still exists.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
     @skip("AnVIL API issue - covered by model fields")
     def test_api_not_admin_of_group(self):
@@ -1442,7 +1452,8 @@ class WorkspaceDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["authorization_domain_table"], tables.GroupTable
+            response.context_data["authorization_domain_table"],
+            tables.ManagedGroupTable,
         )
 
     def test_auth_domain_table_none(self):
@@ -1458,7 +1469,7 @@ class WorkspaceDetailTest(TestCase):
     def test_auth_domain_table_one(self):
         """One group is shown if the workspace has one auth domain."""
         workspace = factories.WorkspaceFactory.create()
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace.authorization_domains.add(group)
         request = self.factory.get(self.get_url(workspace.pk))
         response = self.get_view()(request, pk=workspace.pk)
@@ -1470,9 +1481,9 @@ class WorkspaceDetailTest(TestCase):
     def test_auth_domain_table_two(self):
         """Two groups are shown if the workspace has two auth domains."""
         workspace = factories.WorkspaceFactory.create()
-        group_1 = factories.GroupFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
         workspace.authorization_domains.add(group_1)
-        group_2 = factories.GroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
         workspace.authorization_domains.add(group_2)
         request = self.factory.get(self.get_url(workspace.pk))
         response = self.get_view()(request, pk=workspace.pk)
@@ -1486,7 +1497,7 @@ class WorkspaceDetailTest(TestCase):
         """Only shows auth domains for this workspace."""
         workspace = factories.WorkspaceFactory.create(name="workspace-1")
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         other_workspace.authorization_domains.add(group)
         request = self.factory.get(self.get_url(workspace.pk))
         response = self.get_view()(request, pk=workspace.pk)
@@ -1752,7 +1763,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
@@ -1787,8 +1798,8 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        auth_domain_1 = factories.GroupFactory.create()
-        auth_domain_2 = factories.GroupFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
@@ -1852,7 +1863,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/workspaces"
         request = self.factory.post(
             self.get_url(),
@@ -1879,7 +1890,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
@@ -1923,7 +1934,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
@@ -2604,8 +2615,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        parent_group = factories.GroupFactory.create(name="group-1")
-        child_group = factories.GroupFactory.create(name="group-2")
+        parent_group = factories.ManagedGroupFactory.create(name="group-1")
+        child_group = factories.ManagedGroupFactory.create(name="group-2")
         url = (
             self.entry_point
             + "/api/groups/"
@@ -2631,8 +2642,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        parent_group = factories.GroupFactory.create(name="group-1")
-        child_group = factories.GroupFactory.create(name="group-2")
+        parent_group = factories.ManagedGroupFactory.create(name="group-1")
+        child_group = factories.ManagedGroupFactory.create(name="group-2")
         url = (
             self.entry_point
             + "/api/groups/"
@@ -2659,8 +2670,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        parent_group = factories.GroupFactory.create(name="group-1")
-        child_group = factories.GroupFactory.create(name="group-2")
+        parent_group = factories.ManagedGroupFactory.create(name="group-1")
+        child_group = factories.ManagedGroupFactory.create(name="group-2")
         url = (
             self.entry_point
             + "/api/groups/"
@@ -2733,9 +2744,9 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_can_add_two_groups_to_one_parent(self):
-        group_1 = factories.GroupFactory.create(name="test-group-1")
-        group_2 = factories.GroupFactory.create(name="test-group-2")
-        parent = factories.GroupFactory.create(name="parent-group")
+        group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
+        group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
+        parent = factories.ManagedGroupFactory.create(name="parent-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=group_1
         )
@@ -2761,9 +2772,9 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
 
     def test_can_add_a_child_group_to_two_parents(self):
-        group_1 = factories.GroupFactory.create(name="test-group-1")
-        group_2 = factories.GroupFactory.create(name="test-group-2")
-        child = factories.GroupFactory.create(name="child_1-group")
+        group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
+        group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
+        child = factories.ManagedGroupFactory.create(name="child_1-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=group_1, child_group=child
         )
@@ -2790,7 +2801,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_invalid_input_child(self):
         """Posting invalid data to child_group field does not create an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -2809,7 +2820,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_invalid_input_parent(self):
         """Posting invalid data to parent group field does not create an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -2828,8 +2839,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
-        parent_group = factories.GroupFactory.create()
-        child_group = factories.GroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -2863,7 +2874,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_blank_data_parent_group(self):
         """Posting blank data to the parent_group field does not create an object."""
-        child_group = factories.GroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {"child_group": child_group.pk, "role": "foo"},
@@ -2878,7 +2889,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_blank_data_child_group(self):
         """Posting blank data to the child_group field does not create an object."""
-        parent_group = factories.GroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {"parent_group": parent_group.pk, "role": "foo"},
@@ -2893,8 +2904,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
-        parent_group = factories.GroupFactory.create(name="parent")
-        child_group = factories.GroupFactory.create(name="child")
+        parent_group = factories.ManagedGroupFactory.create(name="parent")
+        child_group = factories.ManagedGroupFactory.create(name="child")
         request = self.factory.post(
             self.get_url(),
             {"parent_group": parent_group.pk, "child_group": child_group.pk},
@@ -2909,7 +2920,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cant_add_a_group_to_itself_member(self):
         """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -2927,7 +2938,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cant_add_a_group_to_itself_admin(self):
         """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -2945,9 +2956,9 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cant_add_circular_relationship(self):
         """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
-        grandparent = factories.GroupFactory.create()
-        parent = factories.GroupFactory.create()
-        child = factories.GroupFactory.create()
+        grandparent = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -2971,10 +2982,10 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_add_child_group_if_parent_not_managed_by_app(self):
         """Cannot add a child group to a parent group if the parent group is not managed by the app."""
-        parent_group = factories.GroupFactory.create(
+        parent_group = factories.ManagedGroupFactory.create(
             name="group-1", is_managed_by_app=False
         )
-        child_group = factories.GroupFactory.create(name="group-2")
+        child_group = factories.ManagedGroupFactory.create(name="group-2")
         request = self.factory.post(
             self.get_url(),
             {
@@ -2995,8 +3006,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        parent_group = factories.GroupFactory.create()
-        child_group = factories.GroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3235,8 +3246,8 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_get_redirect_parent_group_not_managed_by_app(self):
         """Redirect get when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
-        parent_group = factories.GroupFactory.create(is_managed_by_app=False)
-        child_group = factories.GroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        child_group = factories.ManagedGroupFactory.create()
         membership = factories.GroupGroupMembershipFactory.create(
             parent_group=parent_group, child_group=child_group
         )
@@ -3256,8 +3267,8 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_redirect_parent_group_not_managed_by_app(self):
         """Redirect post when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
-        parent_group = factories.GroupFactory.create(is_managed_by_app=False)
-        child_group = factories.GroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        child_group = factories.ManagedGroupFactory.create()
         membership = factories.GroupGroupMembershipFactory.create(
             parent_group=parent_group, child_group=child_group
         )
@@ -3362,7 +3373,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create(name="test-group")
+        group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
         url = (
             self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
@@ -3385,7 +3396,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create(name="test-group")
+        group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
         url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
         responses.add(responses.PUT, url, status=self.api_success_code)
@@ -3407,7 +3418,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
         responses.add(responses.PUT, url, status=self.api_success_code)
@@ -3426,7 +3437,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with the same role."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         obj = factories.GroupAccountMembershipFactory(
             group=group, account=account, role=models.GroupAccountMembership.MEMBER
@@ -3451,7 +3462,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         obj = factories.GroupAccountMembershipFactory(
             group=group, account=account, role=models.GroupAccountMembership.MEMBER
@@ -3475,8 +3486,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_can_add_two_groups_for_one_account(self):
-        group_1 = factories.GroupFactory.create(name="test-group-1")
-        group_2 = factories.GroupFactory.create(name="test-group-2")
+        group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
+        group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
         url = (
@@ -3501,7 +3512,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
 
     def test_can_add_two_accounts_to_one_group(self):
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account_1 = factories.AccountFactory.create(email="test_1@example.com")
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
         factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
@@ -3528,7 +3539,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_invalid_input_account(self):
         """Posting invalid data to account field does not create an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -3566,7 +3577,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
@@ -3612,7 +3623,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_blank_data_account(self):
         """Posting blank data to the account field does not create an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {"group": group.pk, "role": models.GroupAccountMembership.MEMBER},
@@ -3628,7 +3639,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
         account = factories.AccountFactory.create()
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(), {"group": group.pk, "account": account.pk}
         )
@@ -3642,7 +3653,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_add_account_if_group_not_managed_by_app(self):
         """Cannot add an account to a group if the group is not managed by the app."""
-        group = factories.GroupFactory.create(is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
@@ -3664,7 +3675,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         url = (
             self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
@@ -3869,7 +3880,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_get_redirect_group_not_managed_by_app(self):
         """Redirect get when trying to delete GroupAccountMembership when the group is not managed by the app."""
-        group = factories.GroupFactory.create(is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         account = factories.AccountFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(
             group=group, account=account
@@ -3890,7 +3901,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_redirect_group_not_managed_by_app(self):
         """Redirect post when trying to delete GroupAccountMembership when the group is not managed by the app."""
-        group = factories.GroupFactory.create(is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         account = factories.AccountFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(
             group=group, account=account
@@ -4026,7 +4037,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_reader(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create(name="test-group")
+        group = factories.ManagedGroupFactory.create(name="test-group")
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
@@ -4068,7 +4079,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_writer(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
@@ -4109,7 +4120,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
@@ -4151,7 +4162,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
@@ -4190,7 +4201,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         obj = factories.WorkspaceGroupAccessFactory(
             group=group,
@@ -4217,7 +4228,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object_with_different_access(self):
         """Cannot create a second object for the same workspace and group with a different access level."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         obj = factories.WorkspaceGroupAccessFactory(
             group=group,
@@ -4243,8 +4254,8 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_can_have_two_workspaces_for_one_group(self):
-        group_1 = factories.GroupFactory.create(name="test-group-1")
-        group_2 = factories.GroupFactory.create(name="test-group-2")
+        group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
+        group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create(group=group_1, workspace=workspace)
         json_data = [
@@ -4283,7 +4294,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
 
     def test_can_have_two_groups_for_one_workspace(self):
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace_1 = factories.WorkspaceFactory.create(name="test-workspace-1")
         workspace_2 = factories.WorkspaceFactory.create(name="test-workspace-2")
         factories.WorkspaceGroupAccessFactory.create(group=group, workspace=workspace_1)
@@ -4343,7 +4354,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_invalid_input_workspace(self):
         """Posting invalid data to workspace field does not create an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -4363,7 +4374,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_input_access(self):
         """Posting invalid data to access field does not create an object."""
         workspace = factories.WorkspaceFactory.create()
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
@@ -4415,7 +4426,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_blank_data_workspace(self):
         """Posting blank data to the workspace field does not create an object."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {"group": group.pk, "access": models.WorkspaceGroupAccess.READER},
@@ -4431,7 +4442,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not create an object."""
         workspace = factories.WorkspaceFactory.create()
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {"group": group.pk, "workspace": workspace.pk},
@@ -4447,7 +4458,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         url = (
             self.entry_point
@@ -4525,7 +4536,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_update_role(self):
         """Can update the role through the view."""
-        group = factories.GroupFactory.create(name="test-group")
+        group = factories.ManagedGroupFactory.create(name="test-group")
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
@@ -4639,11 +4650,11 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_group_pk(self):
         """Posting a group pk has no effect."""
-        original_group = factories.GroupFactory.create()
+        original_group = factories.ManagedGroupFactory.create()
         obj = factories.WorkspaceGroupAccessFactory(
             group=original_group, access=models.WorkspaceGroupAccess.READER
         )
-        new_group = factories.GroupFactory.create()
+        new_group = factories.ManagedGroupFactory.create()
         json_data = [
             {
                 "email": obj.group.get_email(),
@@ -4853,7 +4864,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        group = factories.GroupFactory.create(name="test-group")
+        group = factories.ManagedGroupFactory.create(name="test-group")
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )

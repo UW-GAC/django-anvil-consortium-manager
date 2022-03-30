@@ -84,14 +84,14 @@
 
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDarkDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  Groups
+                  Managed Groups
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:list' %}">List groups</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:managed_groups:list' %}">List groups</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:groups:new' %}">Add a group</a>
+                    <a class="dropdown-item" href="{% url 'anvil_project_manager:managed_groups:new' %}">Add a group</a>
                   </li>
                   <li>
                     <a class="dropdown-item" href="{% url 'anvil_project_manager:group_account_membership:list' %}">Group-account membership</a>

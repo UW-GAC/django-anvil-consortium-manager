@@ -23,14 +23,14 @@ account_patterns = (
     "accounts",
 )
 
-group_patterns = (
+managed_group_patterns = (
     [
-        path("<int:pk>", views.GroupDetail.as_view(), name="detail"),
-        path("new/", views.GroupCreate.as_view(), name="new"),
-        path("", views.GroupList.as_view(), name="list"),
-        path("<int:pk>/delete", views.GroupDelete.as_view(), name="delete"),
+        path("<int:pk>", views.ManagedGroupDetail.as_view(), name="detail"),
+        path("new/", views.ManagedGroupCreate.as_view(), name="new"),
+        path("", views.ManagedGroupList.as_view(), name="list"),
+        path("<int:pk>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
     ],
-    "groups",
+    "managed_groups",
 )
 
 workspace_patterns = (
@@ -93,7 +93,7 @@ urlpatterns = [
     path("", views.Index.as_view(), name="index"),
     path("status/", views.AnVILStatus.as_view(), name="status"),
     path("accounts/", include(account_patterns)),
-    path("groups/", include(group_patterns)),
+    path("managed_groups/", include(managed_group_patterns)),
     path("billing_projects/", include(billing_project_patterns)),
     path("workspaces/", include(workspace_patterns)),
     path("group_group_membership/", include(group_group_membership_patterns)),

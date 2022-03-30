@@ -22,9 +22,9 @@ class AccountAdmin(admin.ModelAdmin):
     search_fields = ("email",)
 
 
-@admin.register(models.Group)
-class GroupAdmin(admin.ModelAdmin):
-    """Admin class for the Group model."""
+@admin.register(models.ManagedGroup)
+class ManagedGroupAdmin(admin.ModelAdmin):
+    """Admin class for the ManagedGroup model."""
 
     list_display = ("name", "is_managed_by_app")
     list_filter = ("is_managed_by_app",)

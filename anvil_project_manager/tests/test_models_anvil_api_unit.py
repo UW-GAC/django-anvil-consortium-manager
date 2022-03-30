@@ -137,10 +137,10 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
-class GroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
-        self.object = factories.GroupFactory()
+        self.object = factories.ManagedGroupFactory()
         self.url = self.entry_point + "/api/groups/" + self.object.name
 
     def test_anvil_exists_does_exist(self):
@@ -245,7 +245,7 @@ class GroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
-class GroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+class ManagedGroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for class methods of the Group model that make AnVIL API calls."""
 
     def get_api_url(self):
@@ -281,14 +281,14 @@ class GroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,  # successful response code.
             json=self.get_api_json_response(group_name, "Admin"),
         )
-        group = models.Group.anvil_import(group_name)
+        group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
         self.assertEqual(group.name, group_name)
         self.assertEqual(group.is_managed_by_app, True)
         # Check that it was saved.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
         # Make sure it's the group that was returned.
-        models.Group.objects.get(pk=group.pk)
+        models.ManagedGroup.objects.get(pk=group.pk)
 
     def test_anvil_import_member_on_anviL(self):
         group_name = "test-group"
@@ -298,14 +298,14 @@ class GroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,  # successful response code.
             json=self.get_api_json_response(group_name, "Member"),
         )
-        group = models.Group.anvil_import(group_name)
+        group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
         self.assertEqual(group.name, group_name)
         self.assertEqual(group.is_managed_by_app, False)
         # Check that it was saved.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
         # Make sure it's the group that was returned.
-        models.Group.objects.get(pk=group.pk)
+        models.ManagedGroup.objects.get(pk=group.pk)
 
     def test_anvil_import_not_member_or_admin(self):
         group_name = "test-group"
@@ -317,23 +317,23 @@ class GroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response("different-group", "Member"),
         )
         with self.assertRaises(exceptions.AnVILNotGroupMemberError):
-            models.Group.anvil_import(group_name)
+            models.ManagedGroup.anvil_import(group_name)
         # Check that no group was saved.
-        self.assertEqual(models.Group.objects.count(), 0)
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
     def test_anvil_import_group_already_exists_in_django_db(self):
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         with self.assertRaises(ValidationError):
-            models.Group.anvil_import(group.name)
+            models.ManagedGroup.anvil_import(group.name)
         # Check that no new group was saved.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
     def test_anvil_import_invalid_group_name(self):
-        group = factories.GroupFactory.create(name="an invalid name")
+        group = factories.ManagedGroupFactory.create(name="an invalid name")
         with self.assertRaises(ValidationError):
-            models.Group.anvil_import(group.name)
+            models.ManagedGroup.anvil_import(group.name)
         # Check that no new group was saved.
-        self.assertEqual(models.Group.objects.count(), 1)
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
     def test_anvil_import_api_internal_error(self):
         group_name = "test-group"
@@ -344,9 +344,9 @@ class GroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "api error"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError500):
-            models.Group.anvil_import(group_name)
+            models.ManagedGroup.anvil_import(group_name)
         # No object was saved.
-        self.assertEqual(models.Group.objects.count(), 0)
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
 
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
@@ -504,7 +504,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_create_one_auth_domain_success(self):
         """Returns documented response code when trying to create a workspace with a valid auth domain."""
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         self.object.authorization_domains.add(auth_domain)
         json = {
             "namespace": self.object.billing_project.name,
@@ -524,8 +524,8 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_create_two_auth_domains_success(self):
         """Returns documented response code when trying to create a workspace with two valid auth domains."""
-        auth_domain_1 = factories.GroupFactory.create()
-        auth_domain_2 = factories.GroupFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
         self.object.authorization_domains.add(auth_domain_1)
         self.object.authorization_domains.add(auth_domain_2)
         json = {
@@ -549,7 +549,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_create_one_auth_domain_error(self):
         """Returns documented response code when trying to create a workspace with a valid auth domain."""
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         self.object.authorization_domains.add(auth_domain)
         json = {
             "namespace": self.object.billing_project.name,
@@ -1024,8 +1024,8 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the workspace returned.
         models.Workspace.objects.get(pk=workspace.pk)
         # The group was imported.
-        self.assertEqual(models.Group.objects.count(), 1)
-        group = models.Group.objects.latest("pk")
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        group = models.ManagedGroup.objects.latest("pk")
         self.assertEqual(group.name, "auth-group")
         self.assertEqual(group.is_managed_by_app, False)
         # The group was marked as an auth group of the workspace.
@@ -1040,7 +1040,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         workspace_name = "test-workspace"
-        group = factories.GroupFactory.create(name="auth-group")
+        group = factories.ManagedGroupFactory.create(name="auth-group")
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
@@ -1058,8 +1058,8 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the workspace returned.
         models.Workspace.objects.get(pk=workspace.pk)
         # No new groups were imported.
-        self.assertEqual(models.Group.objects.count(), 1)
-        chk = models.Group.objects.latest("pk")
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        chk = models.ManagedGroup.objects.latest("pk")
         self.assertEqual(chk, group)
         # The group was marked as an auth group of the workspace.
         self.assertEqual(workspace.authorization_domains.count(), 1)
@@ -1104,8 +1104,8 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the workspace returned.
         models.Workspace.objects.get(pk=workspace.pk)
         # The group was imported.
-        self.assertEqual(models.Group.objects.count(), 1)
-        group = models.Group.objects.latest("pk")
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        group = models.ManagedGroup.objects.latest("pk")
         self.assertEqual(group.name, "auth-group")
         self.assertEqual(group.is_managed_by_app, True)
         # The group was marked as an auth group of the workspace.
@@ -1159,10 +1159,10 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the workspace returned.
         models.Workspace.objects.get(pk=workspace.pk)
         # Both groups were imported.
-        self.assertEqual(models.Group.objects.count(), 2)
-        member_group = models.Group.objects.get(name="auth-member")
+        self.assertEqual(models.ManagedGroup.objects.count(), 2)
+        member_group = models.ManagedGroup.objects.get(name="auth-member")
         self.assertEqual(member_group.is_managed_by_app, False)
-        admin_group = models.Group.objects.get(name="auth-admin")
+        admin_group = models.ManagedGroup.objects.get(name="auth-admin")
         self.assertEqual(admin_group.is_managed_by_app, True)
         # The groups were marked as an auth domain of the workspace.
         self.assertEqual(workspace.authorization_domains.count(), 2)
@@ -1207,7 +1207,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # No workspaces were imported.
         self.assertEqual(models.Workspace.objects.count(), 0)
         # No groups were imported.
-        self.assertEqual(models.Group.objects.count(), 0)
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
         # No auth domains were recorded.
         self.assertEqual(models.WorkspaceAuthorizationDomain.objects.count(), 0)
         responses.assert_call_count(billing_project_url, 1)
@@ -1218,8 +1218,8 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
-        parent_group = factories.GroupFactory(name="parent-group")
-        child_group = factories.GroupFactory(name="child-group")
+        parent_group = factories.ManagedGroupFactory(name="parent-group")
+        child_group = factories.ManagedGroupFactory(name="child-group")
         self.object = factories.GroupGroupMembershipFactory(
             parent_group=parent_group,
             child_group=child_group,
@@ -1308,7 +1308,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
-        group = factories.GroupFactory(name="test-group")
+        group = factories.ManagedGroupFactory(name="test-group")
         account = factories.AccountFactory(email="test-account@example.com")
         self.object = factories.GroupAccountMembershipFactory(
             group=group, account=account, role=models.GroupAccountMembership.MEMBER
@@ -1403,7 +1403,7 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        group = factories.GroupFactory.create(name="test-group")
+        group = factories.ManagedGroupFactory.create(name="test-group")
         self.object = factories.WorkspaceGroupAccessFactory(
             workspace=workspace, group=group, access=models.WorkspaceGroupAccess.READER
         )

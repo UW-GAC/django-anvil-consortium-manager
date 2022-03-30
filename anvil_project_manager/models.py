@@ -92,13 +92,13 @@ class Account(models.Model):
 
 def validate_group_name(value):
     """Custom validator for unique case-insensitive names. This primarily provides a nice message on a form."""
-    if Group.objects.filter(name__iexact=value).exists():
+    if ManagedGroup.objects.filter(name__iexact=value).exists():
         raise ValidationError("Group with this Name already exists.")
     return value
 
 
-class Group(models.Model):
-    """A model to store information about AnVIL groups."""
+class ManagedGroup(models.Model):
+    """A model to store information about AnVIL Managed Groups."""
 
     name = models.SlugField(
         max_length=64, unique=True, validators=[validate_group_name]
@@ -109,7 +109,9 @@ class Group(models.Model):
         return "{name}".format(name=self.name)
 
     def get_absolute_url(self):
-        return reverse("anvil_project_manager:groups:detail", kwargs={"pk": self.pk})
+        return reverse(
+            "anvil_project_manager:managed_groups:detail", kwargs={"pk": self.pk}
+        )
 
     def get_email(self):
         # Email suffix is hardcoded by Terra, I think.
@@ -117,11 +119,11 @@ class Group(models.Model):
 
     def get_direct_parents(self):
         """Return a queryset of the direct parents of this group. Does not include grandparents."""
-        return Group.objects.filter(child_memberships__child_group=self)
+        return ManagedGroup.objects.filter(child_memberships__child_group=self)
 
     def get_direct_children(self):
         """Return a queryset of the direct children of this group. Does not include grandchildren."""
-        return Group.objects.filter(parent_memberships__parent_group=self)
+        return ManagedGroup.objects.filter(parent_memberships__parent_group=self)
 
     def get_all_parents(self):
         """Return a queryset of all direct and indirect parents of this group. Includes all grandparents.
@@ -201,7 +203,7 @@ class Workspace(models.Model):
     billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
     authorization_domains = models.ManyToManyField(
-        Group, through="WorkspaceAuthorizationDomain", blank=True
+        "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
     )
 
     class Meta:
@@ -360,9 +362,9 @@ class Workspace(models.Model):
                 for auth_domain in auth_domains:
                     # Either get the group from the Django database or import it.
                     try:
-                        group = Group.objects.get(name=auth_domain)
-                    except Group.DoesNotExist:
-                        group = Group.anvil_import(auth_domain)
+                        group = ManagedGroup.objects.get(name=auth_domain)
+                    except ManagedGroup.DoesNotExist:
+                        group = ManagedGroup.anvil_import(auth_domain)
                     workspace.authorization_domains.add(group)
         except Exception:
             # If it fails for any reason we haven't already handled, we don't want the transaction to happen.
@@ -374,7 +376,7 @@ class Workspace(models.Model):
 class WorkspaceAuthorizationDomain(models.Model):
     """Through table for the Workspace authorization_domains field."""
 
-    group = models.ForeignKey(Group, on_delete=models.PROTECT)
+    group = models.ForeignKey(ManagedGroup, on_delete=models.PROTECT)
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE)
 
     class Meta:
@@ -403,10 +405,10 @@ class GroupGroupMembership(models.Model):
     ]
 
     parent_group = models.ForeignKey(
-        "Group", on_delete=models.CASCADE, related_name="child_memberships"
+        "ManagedGroup", on_delete=models.CASCADE, related_name="child_memberships"
     )
     child_group = models.ForeignKey(
-        "Group", on_delete=models.CASCADE, related_name="parent_memberships"
+        "ManagedGroup", on_delete=models.CASCADE, related_name="parent_memberships"
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
@@ -474,7 +476,7 @@ class GroupAccountMembership(models.Model):
     ]
 
     account = models.ForeignKey("Account", on_delete=models.CASCADE)
-    group = models.ForeignKey("Group", on_delete=models.CASCADE)
+    group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
     class Meta:
@@ -523,7 +525,7 @@ class WorkspaceGroupAccess(models.Model):
         (READER, "Reader"),
     ]
 
-    group = models.ForeignKey("Group", on_delete=models.CASCADE)
+    group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
 

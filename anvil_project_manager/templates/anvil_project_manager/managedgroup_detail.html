@@ -3,12 +3,12 @@
 
 {% load render_table from django_tables2 %}
 
-{% block title %}Group: {{ object.name }}{% endblock %}
+{% block title %}Managed Group: {{ object.name }}{% endblock %}
 
 {% block content %}
 
 <h2>
-  Group Details
+  Managed Group Details
     <a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
       <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
       View on AnVIL
@@ -89,7 +89,7 @@
 
 
 <p>
-  <a href="{% url 'anvil_project_manager:groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  <a href="{% url 'anvil_project_manager:managed_groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
 
 {% endblock content %}

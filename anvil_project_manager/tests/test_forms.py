@@ -41,22 +41,22 @@ class WorkspaceCreateFormTest(TestCase):
 
     def test_valid_with_one_authorization_domain(self):
         billing_project = factories.BillingProjectFactory.create()
-        factories.GroupFactory.create()
+        factories.ManagedGroupFactory.create()
         form_data = {
             "billing_project": billing_project,
             "name": "test-workspace",
-            "authorization_domains": models.Group.objects.all(),
+            "authorization_domains": models.ManagedGroup.objects.all(),
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_valid_with_two_authorization_domains(self):
         billing_project = factories.BillingProjectFactory.create()
-        factories.GroupFactory.create_batch(2)
+        factories.ManagedGroupFactory.create_batch(2)
         form_data = {
             "billing_project": billing_project,
             "name": "test-workspace",
-            "authorization_domains": models.Group.objects.all(),
+            "authorization_domains": models.ManagedGroup.objects.all(),
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
@@ -108,8 +108,8 @@ class GroupGroupMembershipFormTest(TestCase):
 
     def test_valid(self):
         """Form is valid with necessary input."""
-        parent = factories.GroupFactory.create(name="parent")
-        child = factories.GroupFactory.create(name="child")
+        parent = factories.ManagedGroupFactory.create(name="parent")
+        child = factories.ManagedGroupFactory.create(name="child")
         form_data = {
             "parent_group": parent,
             "child_group": child,
@@ -120,7 +120,7 @@ class GroupGroupMembershipFormTest(TestCase):
 
     def test_invalid_missing_parent_group(self):
         """Form is invalid when missing the parent group."""
-        child = factories.GroupFactory.create(name="child")
+        child = factories.ManagedGroupFactory.create(name="child")
         form_data = {
             "child_group": child,
             "role": models.GroupGroupMembership.MEMBER,
@@ -132,7 +132,7 @@ class GroupGroupMembershipFormTest(TestCase):
 
     def test_invalid_missing_child_group(self):
         """Form is invalid when missing the child group."""
-        parent = factories.GroupFactory.create(name="parent")
+        parent = factories.ManagedGroupFactory.create(name="parent")
         form_data = {
             "parent_group": parent,
             "role": models.GroupGroupMembership.MEMBER,
@@ -144,8 +144,8 @@ class GroupGroupMembershipFormTest(TestCase):
 
     def test_invalid_missing_role(self):
         """Form is invalid when missing the role."""
-        parent = factories.GroupFactory.create(name="parent")
-        child = factories.GroupFactory.create(name="child")
+        parent = factories.ManagedGroupFactory.create(name="parent")
+        child = factories.ManagedGroupFactory.create(name="child")
         form_data = {
             "parent_group": parent,
             "child_group": child,
@@ -158,8 +158,10 @@ class GroupGroupMembershipFormTest(TestCase):
 
     def test_invalid_parent_not_managed(self):
         """Form is invalid when the parent group is not managed by the app."""
-        parent = factories.GroupFactory.create(name="parent", is_managed_by_app=False)
-        child = factories.GroupFactory.create(name="child")
+        parent = factories.ManagedGroupFactory.create(
+            name="parent", is_managed_by_app=False
+        )
+        child = factories.ManagedGroupFactory.create(name="child")
         form_data = {
             "parent_group": parent,
             "child_group": child,
@@ -176,7 +178,7 @@ class GroupAccountMembershipFormTest(TestCase):
 
     def test_valid(self):
         """Form is valid with necessary input."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         form_data = {
             "group": group,
@@ -200,7 +202,7 @@ class GroupAccountMembershipFormTest(TestCase):
 
     def test_invalid_missing_child_group(self):
         """Form is invalid when missing the account."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         form_data = {
             "group": group,
             "role": models.GroupAccountMembership.MEMBER,
@@ -212,7 +214,7 @@ class GroupAccountMembershipFormTest(TestCase):
 
     def test_invalid_missing_role(self):
         """Form is invalid when missing the role."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         form_data = {
             "group": group,
@@ -225,7 +227,7 @@ class GroupAccountMembershipFormTest(TestCase):
 
     def test_invalid_parent_not_managed(self):
         """Form is invalid when the group is not managed by the app."""
-        group = factories.GroupFactory.create(is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         account = factories.AccountFactory.create()
         form_data = {
             "group": group,

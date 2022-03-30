@@ -55,10 +55,10 @@ class AccountTableTest(TestCase):
         self.assertEqual(len(table.rows), 2)
 
 
-class GroupTableTest(TestCase):
-    model = models.Group
-    model_factory = factories.GroupFactory
-    table_class = tables.GroupTable
+class ManagedGroupTableTest(TestCase):
+    model = models.ManagedGroup
+    model_factory = factories.ManagedGroupFactory
+    table_class = tables.ManagedGroupTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
