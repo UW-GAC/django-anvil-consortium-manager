@@ -17,7 +17,9 @@ class AnVILAPIMockTestMixin:
         # See Google's tests:
         # https://github.com/googleapis/google-api-python-client/blob/main/tests/test__auth.py
         self.credential_patcher = mock.patch.object(
-            google.auth, "default", autospec=True
+            google.oauth2.service_account.Credentials,
+            "from_service_account_file",
+            autospec=True,
         )
         self.credential_patcher.start()
         self.addCleanup(self.credential_patcher.stop)
