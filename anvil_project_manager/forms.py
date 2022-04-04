@@ -27,15 +27,15 @@ class WorkspaceImportForm(forms.Form):
     # Consider adding validation to check if the workspace already exists in Django.
 
 
-class ManagedGroupGroupMembershipForm(forms.ModelForm):
-    """Form for the ManagedGroupGroupMembership model."""
+class GroupGroupMembershipForm(forms.ModelForm):
+    """Form for the GroupGroupMembership model."""
 
     parent_group = forms.ModelChoiceField(
         queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True)
     )
 
     class Meta:
-        model = models.ManagedGroupGroupMembership
+        model = models.GroupGroupMembership
         fields = ("parent_group", "child_group", "role")
 
     #
@@ -48,13 +48,13 @@ class ManagedGroupGroupMembershipForm(forms.ModelForm):
     #     return parent_group
 
 
-class ManagedGroupAccountMembershipForm(forms.ModelForm):
-    """Form for the ManagedGroupAccountMembership model."""
+class GroupAccountMembershipForm(forms.ModelForm):
+    """Form for the GroupAccountMembership model."""
 
     group = forms.ModelChoiceField(
         queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True)
     )
 
     class Meta:
-        model = models.ManagedGroupAccountMembership
+        model = models.GroupAccountMembership
         fields = ("group", "account", "role")

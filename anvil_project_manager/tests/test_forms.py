@@ -103,8 +103,8 @@ class WorkspaceImportFormTest(TestCase):
         self.assertEqual(len(form.errors), 1)
 
 
-class ManagedGroupGroupMembershipFormTest(TestCase):
-    form_class = forms.ManagedGroupGroupMembershipForm
+class GroupGroupMembershipFormTest(TestCase):
+    form_class = forms.GroupGroupMembershipForm
 
     def test_valid(self):
         """Form is valid with necessary input."""
@@ -113,7 +113,7 @@ class ManagedGroupGroupMembershipFormTest(TestCase):
         form_data = {
             "parent_group": parent,
             "child_group": child,
-            "role": models.ManagedGroupGroupMembership.MEMBER,
+            "role": models.GroupGroupMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
@@ -123,7 +123,7 @@ class ManagedGroupGroupMembershipFormTest(TestCase):
         child = factories.ManagedGroupFactory.create(name="child")
         form_data = {
             "child_group": child,
-            "role": models.ManagedGroupGroupMembership.MEMBER,
+            "role": models.GroupGroupMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
@@ -135,7 +135,7 @@ class ManagedGroupGroupMembershipFormTest(TestCase):
         parent = factories.ManagedGroupFactory.create(name="parent")
         form_data = {
             "parent_group": parent,
-            "role": models.ManagedGroupGroupMembership.MEMBER,
+            "role": models.GroupGroupMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
@@ -149,7 +149,7 @@ class ManagedGroupGroupMembershipFormTest(TestCase):
         form_data = {
             "parent_group": parent,
             "child_group": child,
-            # "role": models.ManagedGroupGroupMembership.MEMBER,
+            # "role": models.GroupGroupMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
@@ -165,7 +165,7 @@ class ManagedGroupGroupMembershipFormTest(TestCase):
         form_data = {
             "parent_group": parent,
             "child_group": child,
-            "role": models.ManagedGroupGroupMembership.MEMBER,
+            "role": models.GroupGroupMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
@@ -173,8 +173,8 @@ class ManagedGroupGroupMembershipFormTest(TestCase):
         self.assertEqual(len(form.errors), 1)
 
 
-class ManagedGroupAccountMembershipFormTest(TestCase):
-    form_class = forms.ManagedGroupAccountMembershipForm
+class GroupAccountMembershipFormTest(TestCase):
+    form_class = forms.GroupAccountMembershipForm
 
     def test_valid(self):
         """Form is valid with necessary input."""
@@ -183,7 +183,7 @@ class ManagedGroupAccountMembershipFormTest(TestCase):
         form_data = {
             "group": group,
             "account": account,
-            "role": models.ManagedGroupAccountMembership.MEMBER,
+            "role": models.GroupAccountMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
@@ -193,7 +193,7 @@ class ManagedGroupAccountMembershipFormTest(TestCase):
         account = factories.AccountFactory.create()
         form_data = {
             "account": account,
-            "role": models.ManagedGroupAccountMembership.MEMBER,
+            "role": models.GroupAccountMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
@@ -205,7 +205,7 @@ class ManagedGroupAccountMembershipFormTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         form_data = {
             "group": group,
-            "role": models.ManagedGroupAccountMembership.MEMBER,
+            "role": models.GroupAccountMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
@@ -232,7 +232,7 @@ class ManagedGroupAccountMembershipFormTest(TestCase):
         form_data = {
             "group": group,
             "account": account,
-            "role": models.ManagedGroupAccountMembership.MEMBER,
+            "role": models.GroupAccountMembership.MEMBER,
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())

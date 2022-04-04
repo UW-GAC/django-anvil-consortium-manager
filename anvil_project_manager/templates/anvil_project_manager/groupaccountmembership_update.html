@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}Modify Managed Group Account Membership{% endblock title %}
+{% block title %}Modify Group Account Membership{% endblock title %}
 
 {% block content %}
 
-  <h2>Modify Managed Group Account Membership Role</h2>
+  <h2>Modify Group Account Membership Role</h2>
 
   <ul>
-    <li>Managed Group: {{ object.group }}</li>
+    <li>Group: {{ object.group }}</li>
     <li>Account: {{ object.account }}</li>
     <li>Role: {{ object.role }}</li>
   </ul>

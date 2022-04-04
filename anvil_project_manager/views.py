@@ -103,8 +103,8 @@ class AccountDetail(SingleTableMixin, DetailView):
     context_table_name = "group_table"
 
     def get_table(self):
-        return tables.ManagedGroupAccountMembershipTable(
-            self.object.managedgroupaccountmembership_set.all(),
+        return tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
         )
 
@@ -159,10 +159,10 @@ class ManagedGroupDetail(DetailView):
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="group"
         )
-        context["account_table"] = tables.ManagedGroupAccountMembershipTable(
-            self.object.managedgroupaccountmembership_set.all(), exclude="group"
+        context["account_table"] = tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(), exclude="group"
         )
-        context["group_table"] = tables.ManagedGroupGroupMembershipTable(
+        context["group_table"] = tables.GroupGroupMembershipTable(
             self.object.child_memberships.all(), exclude="parent_group"
         )
         return context
@@ -374,13 +374,13 @@ class WorkspaceDelete(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class ManagedGroupGroupMembershipDetail(DetailView):
-    model = models.ManagedGroupGroupMembership
+class GroupGroupMembershipDetail(DetailView):
+    model = models.GroupGroupMembership
 
 
-class ManagedGroupGroupMembershipCreate(CreateView):
-    model = models.ManagedGroupGroupMembership
-    form_class = forms.ManagedGroupGroupMembershipForm
+class GroupGroupMembershipCreate(CreateView):
+    model = models.GroupGroupMembership
+    form_class = forms.GroupGroupMembershipForm
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_group_membership:list")
@@ -403,13 +403,13 @@ class ManagedGroupGroupMembershipCreate(CreateView):
         return super().form_valid(form)
 
 
-class ManagedGroupGroupMembershipList(SingleTableView):
-    model = models.ManagedGroupGroupMembership
-    table_class = tables.ManagedGroupGroupMembershipTable
+class GroupGroupMembershipList(SingleTableView):
+    model = models.GroupGroupMembership
+    table_class = tables.GroupGroupMembershipTable
 
 
-class ManagedGroupGroupMembershipDelete(DeleteView):
-    model = models.ManagedGroupGroupMembership
+class GroupGroupMembershipDelete(DeleteView):
+    model = models.GroupGroupMembership
 
     message_parent_group_not_managed_by_app = (
         "Cannot remove members from parent group because it is not managed by this app."
@@ -459,13 +459,13 @@ class ManagedGroupGroupMembershipDelete(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class ManagedGroupAccountMembershipDetail(DetailView):
-    model = models.ManagedGroupAccountMembership
+class GroupAccountMembershipDetail(DetailView):
+    model = models.GroupAccountMembership
 
 
-class ManagedGroupAccountMembershipCreate(CreateView):
-    model = models.ManagedGroupAccountMembership
-    form_class = forms.ManagedGroupAccountMembershipForm
+class GroupAccountMembershipCreate(CreateView):
+    model = models.GroupAccountMembership
+    form_class = forms.GroupAccountMembershipForm
 
     def get_success_url(self):
         return reverse("anvil_project_manager:group_account_membership:list")
@@ -488,13 +488,13 @@ class ManagedGroupAccountMembershipCreate(CreateView):
         return super().form_valid(form)
 
 
-class ManagedGroupAccountMembershipList(SingleTableView):
-    model = models.ManagedGroupAccountMembership
-    table_class = tables.ManagedGroupAccountMembershipTable
+class GroupAccountMembershipList(SingleTableView):
+    model = models.GroupAccountMembership
+    table_class = tables.GroupAccountMembershipTable
 
 
-class ManagedGroupAccountMembershipDelete(DeleteView):
-    model = models.ManagedGroupAccountMembership
+class GroupAccountMembershipDelete(DeleteView):
+    model = models.GroupAccountMembership
 
     message_group_not_managed_by_app = (
         "Cannot remove members from group because it is not managed by this app."

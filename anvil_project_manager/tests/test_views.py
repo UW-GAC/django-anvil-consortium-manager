@@ -485,8 +485,7 @@ class AccountDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["group_table"],
-            tables.ManagedGroupAccountMembershipTable,
+            response.context_data["group_table"], tables.GroupAccountMembershipTable
         )
 
     def test_group_account_membership_none(self):
@@ -500,7 +499,7 @@ class AccountDetailTest(TestCase):
     def test_group_account_membership_one(self):
         """One group is shown if the account is part of one group."""
         account = factories.AccountFactory.create()
-        factories.ManagedGroupAccountMembershipFactory.create(account=account)
+        factories.GroupAccountMembershipFactory.create(account=account)
         request = self.factory.get(self.get_url(account.pk))
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
@@ -509,7 +508,7 @@ class AccountDetailTest(TestCase):
     def test_group_account_membership_two(self):
         """Two groups are shown if the account is part of two groups."""
         account = factories.AccountFactory.create()
-        factories.ManagedGroupAccountMembershipFactory.create_batch(2, account=account)
+        factories.GroupAccountMembershipFactory.create_batch(2, account=account)
         request = self.factory.get(self.get_url(account.pk))
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
@@ -519,7 +518,7 @@ class AccountDetailTest(TestCase):
         """Only shows groups that this research is part of."""
         account = factories.AccountFactory.create(email="email_1@example.com")
         other_account = factories.AccountFactory.create(email="email_2@example.com")
-        factories.ManagedGroupAccountMembershipFactory.create(account=other_account)
+        factories.GroupAccountMembershipFactory.create(account=other_account)
         request = self.factory.get(self.get_url(account.pk))
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
@@ -886,8 +885,7 @@ class ManagedGroupDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("account_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["account_table"],
-            tables.ManagedGroupAccountMembershipTable,
+            response.context_data["account_table"], tables.GroupAccountMembershipTable
         )
 
     def test_account_table_none(self):
@@ -901,7 +899,7 @@ class ManagedGroupDetailTest(TestCase):
     def test_account_table_one(self):
         """One accounts is shown if the group has only that account."""
         group = factories.ManagedGroupFactory.create()
-        factories.ManagedGroupAccountMembershipFactory.create(group=group)
+        factories.GroupAccountMembershipFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("account_table", response.context_data)
@@ -910,7 +908,7 @@ class ManagedGroupDetailTest(TestCase):
     def test_account_table_two(self):
         """Two accounts are shown if the group has only those accounts."""
         group = factories.ManagedGroupFactory.create()
-        factories.ManagedGroupAccountMembershipFactory.create_batch(2, group=group)
+        factories.GroupAccountMembershipFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("account_table", response.context_data)
@@ -920,7 +918,7 @@ class ManagedGroupDetailTest(TestCase):
         """Only shows accounts that are in this group."""
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
-        factories.ManagedGroupAccountMembershipFactory.create(group=other_group)
+        factories.GroupAccountMembershipFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("account_table", response.context_data)
@@ -933,8 +931,7 @@ class ManagedGroupDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["group_table"],
-            tables.ManagedGroupGroupMembershipTable,
+            response.context_data["group_table"], tables.GroupGroupMembershipTable
         )
 
     def test_group_table_none(self):
@@ -948,7 +945,7 @@ class ManagedGroupDetailTest(TestCase):
     def test_group_table_one(self):
         """One group is shown if the group has only that member group."""
         group = factories.ManagedGroupFactory.create()
-        factories.ManagedGroupGroupMembershipFactory.create(parent_group=group)
+        factories.GroupGroupMembershipFactory.create(parent_group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
@@ -957,7 +954,7 @@ class ManagedGroupDetailTest(TestCase):
     def test_group_table_two(self):
         """Two groups are shown if the group has only those member groups."""
         group = factories.ManagedGroupFactory.create()
-        factories.ManagedGroupGroupMembershipFactory.create_batch(2, parent_group=group)
+        factories.GroupGroupMembershipFactory.create_batch(2, parent_group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
@@ -967,7 +964,7 @@ class ManagedGroupDetailTest(TestCase):
         """Only shows member groups that are in this group."""
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
-        factories.ManagedGroupGroupMembershipFactory.create(parent_group=other_group)
+        factories.GroupGroupMembershipFactory.create(parent_group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
@@ -1027,7 +1024,7 @@ class ManagedGroupDetailTest(TestCase):
         other_group = factories.ManagedGroupFactory.create(name="other-group")
         other_workspace = factories.WorkspaceFactory.create()
         other_workspace.authorization_domains.add(other_group)
-        factories.ManagedGroupGroupMembershipFactory.create(parent_group=other_group)
+        factories.GroupGroupMembershipFactory.create(parent_group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
@@ -2558,7 +2555,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 1)
 
 
-class ManagedGroupGroupMembershipDetailTest(TestCase):
+class GroupGroupMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -2569,24 +2566,24 @@ class ManagedGroupGroupMembershipDetailTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupGroupMembershipDetail.as_view()
+        return views.GroupGroupMembershipDetail.as_view()
 
     def test_view_status_code_with_existing_object(self):
         """Returns a successful status code for an existing object pk."""
-        obj = factories.ManagedGroupGroupMembershipFactory.create()
+        obj = factories.GroupGroupMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.ManagedGroupGroupMembershipFactory.create()
+        obj = factories.GroupGroupMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
 
-class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
+class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
@@ -2602,7 +2599,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupGroupMembershipCreate.as_view()
+        return views.GroupGroupMembershipCreate.as_view()
 
     def test_status_code(self):
         """Returns successful response code."""
@@ -2633,14 +2630,14 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.ManagedGroupGroupMembership.objects.latest("pk")
-        self.assertIsInstance(new_object, models.ManagedGroupGroupMembership)
-        self.assertEqual(new_object.role, models.ManagedGroupGroupMembership.MEMBER)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         responses.assert_call_count(url, 1)
 
     def test_can_create_an_object_admin(self):
@@ -2660,14 +2657,14 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.ManagedGroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.ManagedGroupGroupMembership.objects.latest("pk")
-        self.assertIsInstance(new_object, models.ManagedGroupGroupMembership)
-        self.assertEqual(new_object.role, models.ManagedGroupGroupMembership.ADMIN)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
         responses.assert_call_count(url, 1)
 
     def test_redirects_to_list(self):
@@ -2688,7 +2685,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.ManagedGroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.ADMIN,
             },
         )
         self.assertRedirects(
@@ -2697,16 +2694,16 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
-        """Cannot create a second ManagedGroupGroupMembership object for the same parent/child with the same role."""
-        obj = factories.ManagedGroupGroupMembershipFactory.create(
-            role=models.ManagedGroupGroupMembership.MEMBER
+        """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "parent_group": obj.parent_group.pk,
                 "child_group": obj.child_group.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -2715,21 +2712,21 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.ManagedGroupGroupMembership.objects.all(),
-            models.ManagedGroupGroupMembership.objects.filter(pk=obj.pk),
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
 
     def test_cannot_create_duplicate_object_with_different_role(self):
-        """Cannot create a second ManagedGroupGroupMembership object for same parent/child with a different role."""
-        obj = factories.ManagedGroupGroupMembershipFactory.create(
-            role=models.ManagedGroupGroupMembership.MEMBER
+        """Cannot create a second GroupGroupMembership object for the same parent and child with a different role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "parent_group": obj.parent_group.pk,
                 "child_group": obj.child_group.pk,
-                "role": models.ManagedGroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
@@ -2738,19 +2735,19 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.ManagedGroupGroupMembership.objects.all(),
-            models.ManagedGroupGroupMembership.objects.filter(pk=obj.pk),
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
         self.assertEqual(
-            models.ManagedGroupGroupMembership.objects.first().role,
-            models.ManagedGroupGroupMembership.MEMBER,
+            models.GroupGroupMembership.objects.first().role,
+            models.GroupGroupMembership.MEMBER,
         )
 
     def test_can_add_two_groups_to_one_parent(self):
         group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
         group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         parent = factories.ManagedGroupFactory.create(name="parent-group")
-        factories.ManagedGroupGroupMembershipFactory.create(
+        factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=group_1
         )
         url = (
@@ -2766,19 +2763,19 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent.pk,
                 "child_group": group_2.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 2)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
 
     def test_can_add_a_child_group_to_two_parents(self):
         group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
         group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         child = factories.ManagedGroupFactory.create(name="child_1-group")
-        factories.ManagedGroupGroupMembershipFactory.create(
+        factories.GroupGroupMembershipFactory.create(
             parent_group=group_1, child_group=child
         )
         url = (
@@ -2794,12 +2791,12 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group_2.pk,
                 "child_group": child.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 2)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
 
     def test_invalid_input_child(self):
@@ -2810,7 +2807,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group.pk,
                 "child_group": group.pk + 1,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -2819,7 +2816,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("child_group", form.errors.keys())
         self.assertIn("valid choice", form.errors["child_group"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_invalid_input_parent(self):
         """Posting invalid data to parent group field does not create an object."""
@@ -2829,7 +2826,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group.pk + 1,
                 "child_group": group.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -2838,7 +2835,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("parent_group", form.errors.keys())
         self.assertIn("valid choice", form.errors["parent_group"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
@@ -2858,7 +2855,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("valid choice", form.errors["role"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -2873,7 +2870,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", form.errors["child_group"][0])
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_post_blank_data_parent_group(self):
         """Posting blank data to the parent_group field does not create an object."""
@@ -2888,7 +2885,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("parent_group", form.errors.keys())
         self.assertIn("required", form.errors["parent_group"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_post_blank_data_child_group(self):
         """Posting blank data to the child_group field does not create an object."""
@@ -2903,7 +2900,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("child_group", form.errors.keys())
         self.assertIn("required", form.errors["child_group"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -2919,17 +2916,17 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_cant_add_a_group_to_itself_member(self):
-        """Cannot create a ManagedGroupGroupMembership object where the parent and child are the same group."""
+        """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
                 "parent_group": group.pk,
                 "child_group": group.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -2937,17 +2934,17 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("add a group to itself", form.non_field_errors()[0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_cant_add_a_group_to_itself_admin(self):
-        """Cannot create a ManagedGroupGroupMembership object where the parent and child are the same group."""
+        """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
                 "parent_group": group.pk,
                 "child_group": group.pk,
-                "role": models.ManagedGroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
@@ -2955,17 +2952,17 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("add a group to itself", form.non_field_errors()[0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_cant_add_circular_relationship(self):
-        """Cannot create a ManagedGroupGroupMembership object that makes a cirular relationship."""
+        """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
         grandparent = factories.ManagedGroupFactory.create()
         parent = factories.ManagedGroupFactory.create()
         child = factories.ManagedGroupFactory.create()
-        factories.ManagedGroupGroupMembershipFactory.create(
+        factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
-        factories.ManagedGroupGroupMembershipFactory.create(
+        factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         request = self.factory.post(
@@ -2973,7 +2970,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": child.pk,
                 "child_group": grandparent.pk,
-                "role": models.ManagedGroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
@@ -2981,7 +2978,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("circular", form.non_field_errors()[0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 2)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
 
     def test_cannot_add_child_group_if_parent_not_managed_by_app(self):
         """Cannot add a child group to a parent group if the parent group is not managed by the app."""
@@ -2994,7 +2991,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -3004,7 +3001,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("parent_group", form.errors.keys())
         self.assertIn("valid choice", form.errors["parent_group"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -3029,7 +3026,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -3042,7 +3039,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_parent_group(self):
@@ -3069,7 +3066,7 @@ class ManagedGroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
-class ManagedGroupGroupMembershipListTest(TestCase):
+class GroupGroupMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -3080,7 +3077,7 @@ class ManagedGroupGroupMembershipListTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupGroupMembershipList.as_view()
+        return views.GroupGroupMembershipList.as_view()
 
     def test_view_status_code(self):
         request = self.factory.get(self.get_url())
@@ -3092,7 +3089,7 @@ class ManagedGroupGroupMembershipListTest(TestCase):
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
-            response.context_data["table"], tables.ManagedGroupGroupMembershipTable
+            response.context_data["table"], tables.GroupGroupMembershipTable
         )
 
     def test_view_with_no_objects(self):
@@ -3103,7 +3100,7 @@ class ManagedGroupGroupMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_one_object(self):
-        factories.ManagedGroupGroupMembershipFactory()
+        factories.GroupGroupMembershipFactory()
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -3111,7 +3108,7 @@ class ManagedGroupGroupMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.ManagedGroupGroupMembershipFactory.create_batch(2)
+        factories.GroupGroupMembershipFactory.create_batch(2)
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -3119,7 +3116,7 @@ class ManagedGroupGroupMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
+class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 204
 
     def setUp(self):
@@ -3134,11 +3131,11 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupGroupMembershipDelete.as_view()
+        return views.GroupGroupMembershipDelete.as_view()
 
     def test_view_status_code(self):
         """Returns a successful status code for an existing object."""
-        object = factories.ManagedGroupGroupMembershipFactory.create()
+        object = factories.GroupGroupMembershipFactory.create()
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
@@ -3151,8 +3148,8 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.ManagedGroupGroupMembershipFactory.create(
-            role=models.ManagedGroupGroupMembership.MEMBER
+        object = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
         )
         url = (
             self.entry_point
@@ -3167,13 +3164,13 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        object = factories.ManagedGroupGroupMembershipFactory.create()
-        other_object = factories.ManagedGroupGroupMembershipFactory.create()
+        object = factories.GroupGroupMembershipFactory.create()
+        other_object = factories.GroupGroupMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3187,16 +3184,16 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 1)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
         self.assertQuerysetEqual(
-            models.ManagedGroupGroupMembership.objects.all(),
-            models.ManagedGroupGroupMembership.objects.filter(pk=other_object.pk),
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=other_object.pk),
         )
         responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        object = factories.ManagedGroupGroupMembershipFactory.create()
+        object = factories.GroupGroupMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3218,7 +3215,7 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        object = factories.ManagedGroupGroupMembershipFactory.create()
+        object = factories.GroupGroupMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3245,13 +3242,13 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 1)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
     def test_get_redirect_parent_group_not_managed_by_app(self):
-        """Redirect get when trying to delete ManagedGroupGroupMembership when parent group is not managed by app."""
+        """Redirect get when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
         parent_group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         child_group = factories.ManagedGroupFactory.create()
-        membership = factories.ManagedGroupGroupMembershipFactory.create(
+        membership = factories.GroupGroupMembershipFactory.create(
             parent_group=parent_group, child_group=child_group
         )
         # Need to use a client for messages.
@@ -3262,17 +3259,17 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.ManagedGroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
+            views.GroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 1)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
     def test_post_redirect_parent_group_not_managed_by_app(self):
-        """Redirect post when trying to delete ManagedGroupGroupMembership when parent group is not managed by app."""
+        """Redirect post when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
         parent_group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         child_group = factories.ManagedGroupFactory.create()
-        membership = factories.ManagedGroupGroupMembershipFactory.create(
+        membership = factories.GroupGroupMembershipFactory.create(
             parent_group=parent_group, child_group=child_group
         )
         # Need to use a client for messages.
@@ -3283,11 +3280,11 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.ManagedGroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
+            views.GroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 1)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
     @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_parent_group(self):
@@ -3314,7 +3311,7 @@ class ManagedGroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
-class ManagedGroupAccountMembershipDetailTest(TestCase):
+class GroupAccountMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -3327,24 +3324,24 @@ class ManagedGroupAccountMembershipDetailTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupAccountMembershipDetail.as_view()
+        return views.GroupAccountMembershipDetail.as_view()
 
     def test_view_status_code_with_existing_object(self):
         """Returns a successful status code for an existing object pk."""
-        obj = factories.ManagedGroupAccountMembershipFactory.create()
+        obj = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.ManagedGroupAccountMembershipFactory.create()
+        obj = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
 
-class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
+class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
@@ -3360,7 +3357,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupAccountMembershipCreate.as_view()
+        return views.GroupAccountMembershipCreate.as_view()
 
     def test_status_code(self):
         """Returns successful response code."""
@@ -3387,14 +3384,14 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.ManagedGroupAccountMembership.objects.latest("pk")
-        self.assertIsInstance(new_object, models.ManagedGroupAccountMembership)
-        self.assertEqual(new_object.role, models.ManagedGroupAccountMembership.MEMBER)
+        new_object = models.GroupAccountMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupAccountMembership)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         responses.assert_call_count(url, 1)
 
     def test_can_create_an_object_admin(self):
@@ -3408,14 +3405,14 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        new_object = models.ManagedGroupAccountMembership.objects.latest("pk")
-        self.assertIsInstance(new_object, models.ManagedGroupAccountMembership)
-        self.assertEqual(new_object.role, models.ManagedGroupAccountMembership.ADMIN)
+        new_object = models.GroupAccountMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupAccountMembership)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
         responses.assert_call_count(url, 1)
 
     def test_redirects_to_list(self):
@@ -3430,7 +3427,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.ADMIN,
             },
         )
         self.assertRedirects(
@@ -3439,20 +3436,18 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
-        """Cannot create a second ManagedGroupAccountMembership object for the same account/group with same role."""
+        """Cannot create a second GroupAccountMembership object for the same account and group with the same role."""
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
-        obj = factories.ManagedGroupAccountMembershipFactory(
-            group=group,
-            account=account,
-            role=models.ManagedGroupAccountMembership.MEMBER,
+        obj = factories.GroupAccountMembershipFactory(
+            group=group, account=account, role=models.GroupAccountMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -3461,25 +3456,23 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.ManagedGroupAccountMembership.objects.all(),
-            models.ManagedGroupAccountMembership.objects.filter(pk=obj.pk),
+            models.GroupAccountMembership.objects.all(),
+            models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
 
     def test_cannot_create_duplicate_object_with_different_role(self):
-        """Cannot create second ManagedGroupAccountMembership object for the same account/group with different role."""
+        """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
-        obj = factories.ManagedGroupAccountMembershipFactory(
-            group=group,
-            account=account,
-            role=models.ManagedGroupAccountMembership.MEMBER,
+        obj = factories.GroupAccountMembershipFactory(
+            group=group, account=account, role=models.GroupAccountMembership.MEMBER
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.ADMIN,
             },
         )
         response = self.get_view()(request)
@@ -3488,17 +3481,15 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.ManagedGroupAccountMembership.objects.all(),
-            models.ManagedGroupAccountMembership.objects.filter(pk=obj.pk),
+            models.GroupAccountMembership.objects.all(),
+            models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
 
     def test_can_add_two_groups_for_one_account(self):
         group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
         group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         account = factories.AccountFactory.create()
-        factories.ManagedGroupAccountMembershipFactory.create(
-            group=group_1, account=account
-        )
+        factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3512,21 +3503,19 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group_2.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 2)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
 
     def test_can_add_two_accounts_to_one_group(self):
         group = factories.ManagedGroupFactory.create()
         account_1 = factories.AccountFactory.create(email="test_1@example.com")
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
-        factories.ManagedGroupAccountMembershipFactory.create(
-            group=group, account=account_1
-        )
+        factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3540,12 +3529,12 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account_2.pk,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 2)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
 
     def test_invalid_input_account(self):
@@ -3556,7 +3545,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": 1,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -3565,7 +3554,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("account", form.errors.keys())
         self.assertIn("valid choice", form.errors["account"][0])
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
@@ -3575,7 +3564,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": 1,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -3584,7 +3573,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("valid choice", form.errors["group"][0])
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_invalid_input_role(self):
         """Posting invalid data to group field does not create an object."""
@@ -3600,7 +3589,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("valid choice", form.errors["role"][0])
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -3615,17 +3604,14 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", form.errors["account"][0])
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
         account = factories.AccountFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {
-                "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
-            },
+            {"account": account.pk, "role": models.GroupAccountMembership.MEMBER},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -3633,14 +3619,14 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data_account(self):
         """Posting blank data to the account field does not create an object."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {"group": group.pk, "role": models.ManagedGroupAccountMembership.MEMBER},
+            {"group": group.pk, "role": models.GroupAccountMembership.MEMBER},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -3648,7 +3634,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("account", form.errors.keys())
         self.assertIn("required", form.errors["account"][0])
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_post_blank_data_role(self):
         """Posting blank data to the role field does not create an object."""
@@ -3663,7 +3649,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("role", form.errors.keys())
         self.assertIn("required", form.errors["role"][0])
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_cannot_add_account_if_group_not_managed_by_app(self):
         """Cannot add an account to a group if the group is not managed by the app."""
@@ -3674,7 +3660,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         response = self.get_view()(request)
@@ -3684,7 +3670,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("valid choice", form.errors["group"][0])
-        self.assertEqual(models.ManagedGroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -3705,7 +3691,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.ManagedGroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -3718,7 +3704,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):
@@ -3745,7 +3731,7 @@ class ManagedGroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
-class ManagedGroupAccountMembershipListTest(TestCase):
+class GroupAccountMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -3756,7 +3742,7 @@ class ManagedGroupAccountMembershipListTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupAccountMembershipList.as_view()
+        return views.GroupAccountMembershipList.as_view()
 
     def test_view_status_code(self):
         request = self.factory.get(self.get_url())
@@ -3768,7 +3754,7 @@ class ManagedGroupAccountMembershipListTest(TestCase):
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
-            response.context_data["table"], tables.ManagedGroupAccountMembershipTable
+            response.context_data["table"], tables.GroupAccountMembershipTable
         )
 
     def test_view_with_no_objects(self):
@@ -3779,7 +3765,7 @@ class ManagedGroupAccountMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_one_object(self):
-        factories.ManagedGroupAccountMembershipFactory()
+        factories.GroupAccountMembershipFactory()
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -3787,7 +3773,7 @@ class ManagedGroupAccountMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.ManagedGroupAccountMembershipFactory.create_batch(2)
+        factories.GroupAccountMembershipFactory.create_batch(2)
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
@@ -3795,7 +3781,7 @@ class ManagedGroupAccountMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
+class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204
 
@@ -3813,11 +3799,11 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupAccountMembershipDelete.as_view()
+        return views.GroupAccountMembershipDelete.as_view()
 
     def test_view_status_code(self):
         """Returns a successful status code for an existing object."""
-        object = factories.ManagedGroupAccountMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
@@ -3830,7 +3816,7 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.ManagedGroupAccountMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3844,13 +3830,13 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        object = factories.ManagedGroupAccountMembershipFactory.create()
-        other_object = factories.ManagedGroupAccountMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
+        other_object = factories.GroupAccountMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3864,16 +3850,16 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
         self.assertQuerysetEqual(
-            models.ManagedGroupAccountMembership.objects.all(),
-            models.ManagedGroupAccountMembership.objects.filter(pk=other_object.pk),
+            models.GroupAccountMembership.objects.all(),
+            models.GroupAccountMembership.objects.filter(pk=other_object.pk),
         )
         responses.assert_call_count(url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        object = factories.ManagedGroupAccountMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
         url = (
             self.entry_point
@@ -3893,10 +3879,10 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
 
     def test_get_redirect_group_not_managed_by_app(self):
-        """Redirect get when trying to delete ManagedGroupAccountMembership when the group is not managed by the app."""
+        """Redirect get when trying to delete GroupAccountMembership when the group is not managed by the app."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         account = factories.AccountFactory.create()
-        membership = factories.ManagedGroupAccountMembershipFactory.create(
+        membership = factories.GroupAccountMembershipFactory.create(
             group=group, account=account
         )
         # Need to use a client for messages.
@@ -3907,17 +3893,17 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.ManagedGroupAccountMembershipDelete.message_group_not_managed_by_app,
+            views.GroupAccountMembershipDelete.message_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
     def test_post_redirect_group_not_managed_by_app(self):
-        """Redirect post when trying to delete ManagedGroupAccountMembership when the group is not managed by app."""
+        """Redirect post when trying to delete GroupAccountMembership when the group is not managed by the app."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         account = factories.AccountFactory.create()
-        membership = factories.ManagedGroupAccountMembershipFactory.create(
+        membership = factories.GroupAccountMembershipFactory.create(
             group=group, account=account
         )
         # Need to use a client for messages.
@@ -3928,16 +3914,16 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.ManagedGroupAccountMembershipDelete.message_group_not_managed_by_app,
+            views.GroupAccountMembershipDelete.message_group_not_managed_by_app,
             str(messages[0]),
         )
         # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        object = factories.ManagedGroupAccountMembershipFactory.create()
+        object = factories.GroupAccountMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
@@ -3964,7 +3950,7 @@ class ManagedGroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroupAccountMembership.objects.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
     @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):

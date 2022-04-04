@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Remove Managed Group Account Membership{% endblock %}
+{% block title %}Remove Group Group Membership{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -10,11 +10,11 @@
     <div class="col-sm-12">
 
 
-      <h2>Remove Managed Group Account Membership</h2>
+      <h2>Remove Group Group Membership</h2>
 
       <h2>{{ object }}</h2>
 
-      <p>Are you sure you want to remove <a href="{{ object.account.get_absolute_url }}">{{ object.account }}</a> from <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a> on AnVIL?</p>
+      <p>Are you sure you want to remove <a href="{{ object.child_group.get_absolute_url }}">{{ object.child_group }}</a> from <a href="{{ object.parent_group.get_absolute_url }}">{{ object.parent_group }}</a> on AnVIL?</p>
 
       <form method="POST">{% csrf_token %}
           {{ form }}

@@ -393,8 +393,8 @@ class WorkspaceAuthorizationDomain(models.Model):
         )
 
 
-class ManagedGroupGroupMembership(models.Model):
-    """A model to store which ManagedGroups are in a ManagedGroup."""
+class GroupGroupMembership(models.Model):
+    """A model to store which groups are in a group."""
 
     MEMBER = "MEMBER"
     ADMIN = "ADMIN"
@@ -464,8 +464,8 @@ class ManagedGroupGroupMembership(models.Model):
         )
 
 
-class ManagedGroupAccountMembership(models.Model):
-    """A model to store which Accounts are in a ManagedGroup."""
+class GroupAccountMembership(models.Model):
+    """A model to store which accounts are in a group."""
 
     MEMBER = "MEMBER"
     ADMIN = "ADMIN"
