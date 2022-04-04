@@ -43,7 +43,7 @@ class ManagedGroupTable(tables.Table):
         verbose_name="Number of accounts",
         empty_values=(),
         orderable=False,
-        accessor="groupaccountmembership_set__count",
+        accessor="managedgroupaccountmembership_set__count",
     )
 
     class Meta:
@@ -75,8 +75,8 @@ class WorkspaceTable(tables.Table):
         return record.__str__()
 
 
-class GroupGroupMembershipTable(tables.Table):
-    """Class to render a GroupGroupMembership table."""
+class ManagedGroupGroupMembershipTable(tables.Table):
+    """Class to render a ManagedGroupGroupMembership table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
     parent_group = tables.Column(linkify=True)
@@ -84,15 +84,15 @@ class GroupGroupMembershipTable(tables.Table):
     role = tables.Column()
 
     class Meta:
-        models = models.GroupAccountMembership
+        models = models.ManagedGroupAccountMembership
         fields = ("pk", "parent_group", "child_group", "role")
 
     def render_pk(self, record):
         return "See details"
 
 
-class GroupAccountMembershipTable(tables.Table):
-    """Class to render a GroupAccountMembership table."""
+class ManagedGroupAccountMembershipTable(tables.Table):
+    """Class to render a ManagedGroupAccountMembership table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
     account = tables.Column(linkify=True)
@@ -101,7 +101,7 @@ class GroupAccountMembershipTable(tables.Table):
     role = tables.Column()
 
     class Meta:
-        models = models.GroupAccountMembership
+        models = models.ManagedGroupAccountMembership
         fields = ("pk", "account", "is_service_account", "group", "role")
 
     def render_pk(self, record):

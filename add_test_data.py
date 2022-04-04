@@ -8,19 +8,27 @@ groups = factories.ManagedGroupFactory.create_batch(5)
 workspaces = factories.WorkspaceFactory.create_batch(5)
 
 # Add some groups to other groups.
-factories.GroupGroupMembershipFactory.create(
+factories.ManagedGroupGroupMembershipFactory.create(
     parent_group=groups[0], child_group=groups[1]
 )
-factories.GroupGroupMembershipFactory.create(
+factories.ManagedGroupGroupMembershipFactory.create(
     parent_group=groups[0], child_group=groups[2]
 )
 
 # Add accounts to groups.
-factories.GroupAccountMembershipFactory.create(group=groups[1], account=accounts[0])
-factories.GroupAccountMembershipFactory.create(group=groups[1], account=accounts[1])
+factories.ManagedGroupAccountMembershipFactory.create(
+    group=groups[1], account=accounts[0]
+)
+factories.ManagedGroupAccountMembershipFactory.create(
+    group=groups[1], account=accounts[1]
+)
 
-factories.GroupAccountMembershipFactory.create(group=groups[2], account=accounts[2])
-factories.GroupAccountMembershipFactory.create(group=groups[2], account=accounts[3])
+factories.ManagedGroupAccountMembershipFactory.create(
+    group=groups[2], account=accounts[2]
+)
+factories.ManagedGroupAccountMembershipFactory.create(
+    group=groups[2], account=accounts[3]
+)
 
 # Share workspaces with a group
 factories.WorkspaceGroupAccessFactory.create(workspace=workspaces[0], group=groups[1])

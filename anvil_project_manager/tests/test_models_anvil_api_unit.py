@@ -1215,15 +1215,15 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(group_url, 1)
 
 
-class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+class ManagedGroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         parent_group = factories.ManagedGroupFactory(name="parent-group")
         child_group = factories.ManagedGroupFactory(name="child-group")
-        self.object = factories.GroupGroupMembershipFactory(
+        self.object = factories.ManagedGroupGroupMembershipFactory(
             parent_group=parent_group,
             child_group=child_group,
-            role=models.GroupGroupMembership.MEMBER,
+            role=models.ManagedGroupGroupMembership.MEMBER,
         )
         self.url = (
             self.entry_point
@@ -1305,13 +1305,15 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
-class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+class ManagedGroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         group = factories.ManagedGroupFactory(name="test-group")
         account = factories.AccountFactory(email="test-account@example.com")
-        self.object = factories.GroupAccountMembershipFactory(
-            group=group, account=account, role=models.GroupAccountMembership.MEMBER
+        self.object = factories.ManagedGroupAccountMembershipFactory(
+            group=group,
+            account=account,
+            role=models.ManagedGroupAccountMembership.MEMBER,
         )
         self.url = (
             self.entry_point + "/api/groups/test-group/MEMBER/test-account@example.com"

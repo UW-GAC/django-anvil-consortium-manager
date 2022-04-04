@@ -62,9 +62,9 @@ class WorkspaceAuthorizationDomainAccess(admin.ModelAdmin):
     )
 
 
-@admin.register(models.GroupGroupMembership)
-class GroupGroupMembershipAdmin(admin.ModelAdmin):
-    """Admin class for the GroupGroupMembership model."""
+@admin.register(models.ManagedGroupGroupMembership)
+class ManagedGroupGroupMembershipAdmin(admin.ModelAdmin):
+    """Admin class for the ManagedGroupGroupMembership model."""
 
     list_display = (
         "pk",
@@ -79,9 +79,9 @@ class GroupGroupMembershipAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(models.GroupAccountMembership)
-class GroupAccountMembershipAdmin(admin.ModelAdmin):
-    """Admin class for the GroupAccountMembership model."""
+@admin.register(models.ManagedGroupAccountMembership)
+class ManagedGroupAccountMembershipAdmin(admin.ModelAdmin):
+    """Admin class for the ManagedGroupAccountMembership model."""
 
     list_display = (
         "pk",

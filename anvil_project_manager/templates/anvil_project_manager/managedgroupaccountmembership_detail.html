@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Group account membership: {{ object }}{% endblock %}
+{% block title %}Managed Group account membership: {{ object }}{% endblock %}
 
 {% block content %}
 
-<h2>Group Account Membership Details</h2>
+<h2>Managed Group Account Membership Details</h2>
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>

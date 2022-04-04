@@ -46,12 +46,14 @@ workspace_patterns = (
 
 group_group_membership_patterns = (
     [
-        path("<int:pk>", views.GroupGroupMembershipDetail.as_view(), name="detail"),
-        path("new/", views.GroupGroupMembershipCreate.as_view(), name="new"),
-        path("", views.GroupGroupMembershipList.as_view(), name="list"),
+        path(
+            "<int:pk>", views.ManagedGroupGroupMembershipDetail.as_view(), name="detail"
+        ),
+        path("new/", views.ManagedGroupGroupMembershipCreate.as_view(), name="new"),
+        path("", views.ManagedGroupGroupMembershipList.as_view(), name="list"),
         path(
             "<int:pk>/delete",
-            views.GroupGroupMembershipDelete.as_view(),
+            views.ManagedGroupGroupMembershipDelete.as_view(),
             name="delete",
         ),
     ],
@@ -60,12 +62,16 @@ group_group_membership_patterns = (
 
 group_account_membership_patterns = (
     [
-        path("<int:pk>", views.GroupAccountMembershipDetail.as_view(), name="detail"),
-        path("new/", views.GroupAccountMembershipCreate.as_view(), name="new"),
-        path("", views.GroupAccountMembershipList.as_view(), name="list"),
+        path(
+            "<int:pk>",
+            views.ManagedGroupAccountMembershipDetail.as_view(),
+            name="detail",
+        ),
+        path("new/", views.ManagedGroupAccountMembershipCreate.as_view(), name="new"),
+        path("", views.ManagedGroupAccountMembershipList.as_view(), name="list"),
         path(
             "<int:pk>/delete",
-            views.GroupAccountMembershipDelete.as_view(),
+            views.ManagedGroupAccountMembershipDelete.as_view(),
             name="delete",
         ),
     ],

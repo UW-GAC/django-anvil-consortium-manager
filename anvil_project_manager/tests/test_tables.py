@@ -79,8 +79,12 @@ class ManagedGroupTableTest(TestCase):
         self.model_factory.create()
         instance_1 = self.model_factory.create()
         instance_2 = self.model_factory.create()
-        factories.GroupGroupMembershipFactory.create_batch(1, parent_group=instance_1)
-        factories.GroupGroupMembershipFactory.create_batch(2, parent_group=instance_2)
+        factories.ManagedGroupGroupMembershipFactory.create_batch(
+            1, parent_group=instance_1
+        )
+        factories.ManagedGroupGroupMembershipFactory.create_batch(
+            2, parent_group=instance_2
+        )
         table = self.table_class(self.model.objects.all())
         self.assertEqual(table.rows[0].get_cell("number_groups"), 0)
         self.assertEqual(table.rows[1].get_cell("number_groups"), 1)
@@ -91,8 +95,8 @@ class ManagedGroupTableTest(TestCase):
         self.model_factory.create()
         instance_1 = self.model_factory.create()
         instance_2 = self.model_factory.create()
-        factories.GroupAccountMembershipFactory.create_batch(1, group=instance_1)
-        factories.GroupAccountMembershipFactory.create_batch(2, group=instance_2)
+        factories.ManagedGroupAccountMembershipFactory.create_batch(1, group=instance_1)
+        factories.ManagedGroupAccountMembershipFactory.create_batch(2, group=instance_2)
         table = self.table_class(self.model.objects.all())
         self.assertEqual(table.rows[0].get_cell("number_accounts"), 0)
         self.assertEqual(table.rows[1].get_cell("number_accounts"), 1)
@@ -131,10 +135,10 @@ class WorkspaceTableTest(TestCase):
         self.assertEqual(table.rows[2].get_cell("number_groups"), 2)
 
 
-class GroupGroupMembershipTableTest(TestCase):
-    model = models.GroupGroupMembership
-    model_factory = factories.GroupGroupMembershipFactory
-    table_class = tables.GroupGroupMembershipTable
+class ManagedGroupGroupMembershipTableTest(TestCase):
+    model = models.ManagedGroupGroupMembership
+    model_factory = factories.ManagedGroupGroupMembershipFactory
+    table_class = tables.ManagedGroupGroupMembershipTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
@@ -151,10 +155,10 @@ class GroupGroupMembershipTableTest(TestCase):
         self.assertEqual(len(table.rows), 2)
 
 
-class GroupAccountMembershipTableTest(TestCase):
-    model = models.GroupAccountMembership
-    model_factory = factories.GroupAccountMembershipFactory
-    table_class = tables.GroupAccountMembershipTable
+class ManagedGroupAccountMembershipTableTest(TestCase):
+    model = models.ManagedGroupAccountMembership
+    model_factory = factories.ManagedGroupAccountMembershipFactory
+    table_class = tables.ManagedGroupAccountMembershipTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
