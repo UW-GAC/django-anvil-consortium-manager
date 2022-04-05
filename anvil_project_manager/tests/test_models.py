@@ -203,6 +203,20 @@ class ManagedGroupTest(TestCase):
         # The membership still exists.
         self.assertEqual(GroupGroupMembership.objects.count(), 1)
 
+    def test_cannot_delete_group_if_it_has_access_to_a_workspace(self):
+        """Group cannot be deleted if it has access to a workspace.
+
+        This is a behavior enforced by AnVIL."""
+        access = factories.WorkspaceGroupAccessFactory.create()
+        with self.assertRaises(ProtectedError):
+            access.group.delete()
+        # The group still exists.
+        self.assertEqual(ManagedGroup.objects.count(), 1)
+        ManagedGroup.objects.get(pk=access.group.pk)
+        # The access still exists.
+        self.assertEqual(WorkspaceGroupAccess.objects.count(), 1)
+        WorkspaceGroupAccess.objects.get(pk=access.pk)
+
     def test_get_direct_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_direct_parents().count(), 0)

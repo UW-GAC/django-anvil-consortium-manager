@@ -1414,6 +1414,60 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
+    def test_get_redirect_group_has_access_to_workspace(self):
+        """Redirect get request when trying to delete a group that has access to a workspace.
+
+        This is a behavior enforced by AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=workspace, group=group
+        )
+        # Need to use a client for messages.
+        response = self.client.get(self.get_url(group.pk), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.ManagedGroupDelete.message_has_access_to_workspace,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        models.ManagedGroup.objects.get(pk=group.pk)
+        # Make sure the relationships still exists.
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        models.WorkspaceGroupAccess.objects.get(pk=access.pk)
+
+    def test_post_redirect_group_has_access_to_workspace(self):
+        """Redirect post request when trying to delete a group that has access to a workspace.
+
+        This is a behavior enforced by AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=workspace, group=group
+        )
+        # Need to use a client for messages.
+        response = self.client.post(self.get_url(group.pk), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.ManagedGroupDelete.message_has_access_to_workspace,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        models.ManagedGroup.objects.get(pk=group.pk)
+        # Make sure the relationships still exists.
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        models.WorkspaceGroupAccess.objects.get(pk=access.pk)
+
     def test_can_delete_group_that_has_child_groups(self):
         """Can delete a group that has other groups as members."""
         parent = factories.ManagedGroupFactory.create()

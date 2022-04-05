@@ -500,7 +500,7 @@ class WorkspaceGroupAccess(models.Model):
         (READER, "Reader"),
     ]
 
-    group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
+    group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
 

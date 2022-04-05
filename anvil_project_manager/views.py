@@ -206,6 +206,9 @@ class ManagedGroupDelete(DeleteView):
     message_is_member_of_another_group = (
         "Cannot delete group since it is a member of another group."
     )
+    message_has_access_to_workspace = (
+        "Cannot delete group because it has access to at least one workspace."
+    )
 
     def get_success_url(self):
         return reverse("anvil_project_manager:managed_groups:list")
@@ -232,6 +235,11 @@ class ManagedGroupDelete(DeleteView):
         if self.object.parent_memberships.count() > 0:
             messages.add_message(
                 self.request, messages.ERROR, self.message_is_member_of_another_group
+            )
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        if self.object.workspacegroupaccess_set.count() > 0:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_has_access_to_workspace
             )
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Otherwise, return the response.
@@ -263,6 +271,11 @@ class ManagedGroupDelete(DeleteView):
         if self.object.parent_memberships.count() > 0:
             messages.add_message(
                 self.request, messages.ERROR, self.message_is_member_of_another_group
+            )
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        if self.object.workspacegroupaccess_set.count() > 0:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_has_access_to_workspace
             )
             return HttpResponseRedirect(self.object.get_absolute_url())
 
