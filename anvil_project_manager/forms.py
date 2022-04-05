@@ -6,6 +6,20 @@ from django.core.exceptions import ValidationError
 from . import models
 
 
+class BillingProjectImportForm(forms.ModelForm):
+    """Form to import a BillingProject from AnVIL"""
+
+    class Meta:
+        model = models.BillingProject
+        fields = ("name",)
+
+    def clean_name(self):
+        value = self.cleaned_data["name"]
+        if models.BillingProject.objects.filter(name__iexact=value).exists():
+            raise ValidationError("BillingProject with this Name already exists.")
+        return value
+
+
 class AccountImportForm(forms.ModelForm):
     """Form to import an Account from AnVIL."""
 

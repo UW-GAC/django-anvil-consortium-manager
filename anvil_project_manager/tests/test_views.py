@@ -203,6 +203,9 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.BillingProjectImportForm
+        )
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
@@ -231,6 +234,22 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two billing projects with the same name."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("already exists", form.errors["name"][0])
+        self.assertQuerysetEqual(
+            models.BillingProject.objects.all(),
+            models.BillingProject.objects.filter(pk=obj.pk),
+        )
+
+    def test_cannot_create_duplicate_object_case_insensitive(self):
+        """Cannot create two billing projects with the same name."""
+        obj = factories.BillingProjectFactory.create(name="project")
+        # No API calls should be made.
+        request = self.factory.post(self.get_url(), {"name": "PROJECT"})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -554,6 +573,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.AccountImportForm)
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
@@ -582,6 +602,22 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two accounts with the same email."""
         obj = factories.AccountFactory.create()
         request = self.factory.post(self.get_url(), {"email": obj.email})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("email", form.errors.keys())
+        self.assertIn("already exists", form.errors["email"][0])
+        self.assertQuerysetEqual(
+            models.Account.objects.all(),
+            models.Account.objects.filter(pk=obj.pk),
+        )
+
+    def test_cannot_create_duplicate_object_case_insensitive(self):
+        """Cannot import two accounts with the same email, regardless of case."""
+        obj = factories.AccountFactory.create(email="foo@example.com")
+        # No API calls should be made.
+        request = self.factory.post(self.get_url(), {"email": "FOO@example.com"})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -1062,6 +1098,9 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.ManagedGroupCreateForm
+        )
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
@@ -1089,6 +1128,22 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two groups with the same name."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("already exists", form.errors["name"][0])
+        self.assertQuerysetEqual(
+            models.ManagedGroup.objects.all(),
+            models.ManagedGroup.objects.filter(pk=obj.pk),
+        )
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_cannot_create_duplicate_object_case_insensitive(self):
+        """Cannot create two groups with the same name, regardless of case."""
+        obj = factories.ManagedGroupFactory.create(name="group")
+        request = self.factory.post(self.get_url(), {"name": "GROUP"})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -1536,6 +1591,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceCreateForm)
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
@@ -2612,6 +2668,9 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.GroupGroupMembershipForm
+        )
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
@@ -3370,6 +3429,9 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.GroupAccountMembershipForm
+        )
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
