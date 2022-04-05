@@ -203,6 +203,22 @@ class ManagedGroupTest(TestCase):
         # The membership still exists.
         self.assertEqual(GroupGroupMembership.objects.count(), 1)
 
+    def test_can_delete_group_if_it_has_child_groups(self):
+        """A group can be deleted if it has other groups as members."""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        parent.delete()
+        # Only the child group still exists.
+        self.assertEqual(ManagedGroup.objects.count(), 1)
+        with self.assertRaises(ManagedGroup.DoesNotExist):
+            ManagedGroup.objects.get(pk=parent.pk)
+        ManagedGroup.objects.get(pk=child.pk)
+        # The membership was deleted.
+        self.assertEqual(GroupGroupMembership.objects.count(), 0)
+
     def test_cannot_delete_group_if_it_has_access_to_a_workspace(self):
         """Group cannot be deleted if it has access to a workspace.
 
