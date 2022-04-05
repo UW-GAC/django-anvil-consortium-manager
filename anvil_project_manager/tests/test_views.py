@@ -2566,6 +2566,28 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
 
+    def test_can_delete_workspace_with_auth_domain(self):
+        """A workspace can be deleted if it has an auth domain, and the auth domain group is not deleted."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        object = factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-workspace"
+        )
+        auth_domain = factories.ManagedGroupFactory.create(name="test-group")
+        object.authorization_domains.add(auth_domain)
+        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.WorkspaceAuthorizationDomain.objects.count(), 0)
+        # The auth domain group still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        models.ManagedGroup.objects.get(pk=auth_domain.pk)
+        responses.assert_call_count(url, 1)
+
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.WorkspaceFactory.create()

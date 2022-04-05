@@ -178,6 +178,15 @@ class ManagedGroupTest(TestCase):
         instance_2.full_clean()
         instance_2.save()
 
+    def test_workspace_on_delete(self):
+        """Group cannot be deleted if it is used as an auth domain for a workspace."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        with self.assertRaises(ProtectedError):
+            group.delete()
+        self.assertEqual(ManagedGroup.objects.count(), 1)
+
     def test_get_direct_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_direct_parents().count(), 0)
@@ -665,6 +674,16 @@ class WorkspaceTest(TestCase):
         """The get_absolute_url() method works."""
         instance = factories.WorkspaceFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
+
+    def test_workspace_on_delete(self):
+        """Workspace can be deleted if it has an authorization domain."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        workspace.delete()
+        self.assertEqual(Workspace.objects.count(), 0)
+        # Also deletes the relationship.
+        self.assertEqual(WorkspaceAuthorizationDomain.objects.count(), 0)
 
     def test_name_validation_case_insensitivity(self):
         """Cannot validate two models with the same case-insensitive name in the same billing project."""
