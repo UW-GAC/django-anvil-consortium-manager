@@ -705,7 +705,7 @@ class WorkspaceTest(TestCase):
         instance = factories.WorkspaceFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
-    def test_workspace_on_delete(self):
+    def test_workspace_on_delete_auth_domain(self):
         """Workspace can be deleted if it has an authorization domain."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
@@ -714,6 +714,16 @@ class WorkspaceTest(TestCase):
         self.assertEqual(Workspace.objects.count(), 0)
         # Also deletes the relationship.
         self.assertEqual(WorkspaceAuthorizationDomain.objects.count(), 0)
+
+    def test_workspace_on_delete_access(self):
+        """Workspace can be deleted if a group has access to it."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory(group=group, workspace=workspace)
+        workspace.delete()
+        self.assertEqual(Workspace.objects.count(), 0)
+        # Also deletes the relationship.
+        self.assertEqual(WorkspaceGroupAccess.objects.count(), 0)
 
     def test_name_validation_case_insensitivity(self):
         """Cannot validate two models with the same case-insensitive name in the same billing project."""
