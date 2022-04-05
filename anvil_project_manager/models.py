@@ -6,19 +6,10 @@ from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
-def validate_billing_project_name(value):
-    """Custom validator for unique case-insensitive emails. This primarily provides a nice message on a form."""
-    if BillingProject.objects.filter(name__iexact=value).exists():
-        raise ValidationError("Billing Project with this Name already exists.")
-    return value
-
-
 class BillingProject(models.Model):
     """A model to store information about AnVIL billing projects."""
 
-    name = models.SlugField(
-        max_length=64, unique=True, validators=[validate_billing_project_name]
-    )
+    name = models.SlugField(max_length=64, unique=True)
     has_app_as_user = models.BooleanField()
 
     def __str__(self):
