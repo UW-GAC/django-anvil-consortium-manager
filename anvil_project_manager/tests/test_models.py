@@ -8,9 +8,9 @@ from django.test import TestCase
 from ..models import (
     Account,
     BillingProject,
-    Group,
     GroupAccountMembership,
     GroupGroupMembership,
+    ManagedGroup,
     Workspace,
     WorkspaceAuthorizationDomain,
     WorkspaceGroupAccess,
@@ -140,16 +140,16 @@ class AccountTest(TestCase):
             instance2.save()
 
 
-class GroupTest(TestCase):
+class ManagedGroupTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        instance = Group(name="my_group")
+        instance = ManagedGroup(name="my_group")
         instance.save()
-        self.assertIsInstance(instance, Group)
+        self.assertIsInstance(instance, ManagedGroup)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        instance = Group(name="my_group")
+        instance = ManagedGroup(name="my_group")
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my_group")
@@ -157,8 +157,8 @@ class GroupTest(TestCase):
     def test_name_validation_case_insensitivity(self):
         """Cannot validate two models with the same case-insensitive name."""
         name = "AbAbA"
-        factories.GroupFactory.create(name=name)
-        instance = Group(name=name.lower())
+        factories.ManagedGroupFactory.create(name=name)
+        instance = ManagedGroup(name=name.lower())
         with self.assertRaises(ValidationError):
             instance.full_clean()
 
@@ -166,54 +166,56 @@ class GroupTest(TestCase):
     def test_name_save_case_insensitivity(self):
         """Cannot save two models with the same case-insensitive name."""
         name = "AbAbA"
-        factories.GroupFactory.create(name=name)
-        instance = Group(name=name.lower())
+        factories.ManagedGroupFactory.create(name=name)
+        instance = ManagedGroup(name=name.lower())
         with self.assertRaises(IntegrityError):
             instance.save()
 
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
-        instance = factories.GroupFactory()
+        instance = factories.ManagedGroupFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_unique_name(self):
         """Saving a model with a duplicate name fails."""
         name = "my_group"
-        instance = Group(name=name)
+        instance = ManagedGroup(name=name)
         instance.save()
-        instance2 = Group(name=name)
+        instance2 = ManagedGroup(name=name)
         with self.assertRaises(IntegrityError):
             instance2.save()
 
     def test_is_managed_by_app(self):
         """Can set the is_managed_by_app field."""
-        instance = Group(name="my-group", is_managed_by_app=True)
+        instance = ManagedGroup(name="my-group", is_managed_by_app=True)
         instance.full_clean()
         instance.save()
-        instance_2 = Group(name="my-group-2", is_managed_by_app=False)
+        instance_2 = ManagedGroup(name="my-group-2", is_managed_by_app=False)
         instance_2.full_clean()
         instance_2.save()
 
     def test_get_direct_parents_no_parents(self):
-        group = factories.GroupFactory(name="group")
+        group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_direct_parents().count(), 0)
-        self.assertQuerysetEqual(group.get_direct_parents(), Group.objects.none())
+        self.assertQuerysetEqual(
+            group.get_direct_parents(), ManagedGroup.objects.none()
+        )
 
     def test_get_direct_parents_one_parent(self):
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_direct_parents().count(), 1)
         self.assertQuerysetEqual(
-            child.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+            child.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
     def test_get_direct_parents_one_child_two_parents(self):
-        parent_1 = factories.GroupFactory(name="parent-group-1")
-        parent_2 = factories.GroupFactory(name="parent-group-2")
-        child = factories.GroupFactory(name="child-group")
+        parent_1 = factories.ManagedGroupFactory(name="parent-group-1")
+        parent_2 = factories.ManagedGroupFactory(name="parent-group-2")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent_1, child_group=child
         )
@@ -223,14 +225,14 @@ class GroupTest(TestCase):
         self.assertEqual(child.get_direct_parents().count(), 2)
         self.assertQuerysetEqual(
             child.get_direct_parents(),
-            Group.objects.filter(pk__in=[parent_1.pk, parent_2.pk]),
+            ManagedGroup.objects.filter(pk__in=[parent_1.pk, parent_2.pk]),
             ordered=False,
         )
 
     def test_get_direct_parents_two_children_one_parent(self):
-        parent = factories.GroupFactory(name="parent-group-1")
-        child_1 = factories.GroupFactory(name="child-group-1")
-        child_2 = factories.GroupFactory(name="child-group-2")
+        parent = factories.ManagedGroupFactory(name="parent-group-1")
+        child_1 = factories.ManagedGroupFactory(name="child-group-1")
+        child_2 = factories.ManagedGroupFactory(name="child-group-2")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child_1
         )
@@ -239,32 +241,32 @@ class GroupTest(TestCase):
         )
         self.assertEqual(child_1.get_direct_parents().count(), 1)
         self.assertQuerysetEqual(
-            child_1.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+            child_1.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
         self.assertEqual(child_2.get_direct_parents().count(), 1)
         self.assertQuerysetEqual(
-            child_2.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+            child_2.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
     def test_get_direct_parents_with_other_group(self):
         # Create a relationship not involving the group in question.
         factories.GroupGroupMembershipFactory.create()
         # Create a group not related to any other group.
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         self.assertEqual(group.get_direct_parents().count(), 0)
 
     def test_get_direct_parents_with_only_child(self):
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         self.assertEqual(parent.get_direct_parents().count(), 0)
 
     def test_get_direct_parents_with_grandparent(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -273,29 +275,31 @@ class GroupTest(TestCase):
         )
         self.assertEqual(child.get_direct_parents().count(), 1)
         self.assertQuerysetEqual(
-            child.get_direct_parents(), Group.objects.filter(pk=parent.pk)
+            child.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
     def test_get_direct_children_no_children(self):
-        group = factories.GroupFactory(name="group")
+        group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_direct_children().count(), 0)
-        self.assertQuerysetEqual(group.get_direct_children(), Group.objects.none())
+        self.assertQuerysetEqual(
+            group.get_direct_children(), ManagedGroup.objects.none()
+        )
 
     def test_get_direct_children_one_child(self):
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         self.assertEqual(parent.get_direct_children().count(), 1)
         self.assertQuerysetEqual(
-            parent.get_direct_children(), Group.objects.filter(pk=child.pk)
+            parent.get_direct_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
 
     def test_get_direct_children_one_parent_two_children(self):
-        child_1 = factories.GroupFactory(name="child-group-1")
-        child_2 = factories.GroupFactory(name="child-group-2")
-        parent = factories.GroupFactory(name="parent-group")
+        child_1 = factories.ManagedGroupFactory(name="child-group-1")
+        child_2 = factories.ManagedGroupFactory(name="child-group-2")
+        parent = factories.ManagedGroupFactory(name="parent-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child_1
         )
@@ -305,14 +309,14 @@ class GroupTest(TestCase):
         self.assertEqual(parent.get_direct_children().count(), 2)
         self.assertQuerysetEqual(
             parent.get_direct_children(),
-            Group.objects.filter(pk__in=[child_1.pk, child_2.pk]),
+            ManagedGroup.objects.filter(pk__in=[child_1.pk, child_2.pk]),
             ordered=False,
         )
 
     def test_get_direct_parents_two_parents_one_child(self):
-        child = factories.GroupFactory(name="child-group-1")
-        parent_1 = factories.GroupFactory(name="parent-group-1")
-        parent_2 = factories.GroupFactory(name="parent-group-2")
+        child = factories.ManagedGroupFactory(name="child-group-1")
+        parent_1 = factories.ManagedGroupFactory(name="parent-group-1")
+        parent_2 = factories.ManagedGroupFactory(name="parent-group-2")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent_1, child_group=child
         )
@@ -321,32 +325,32 @@ class GroupTest(TestCase):
         )
         self.assertEqual(parent_1.get_direct_children().count(), 1)
         self.assertQuerysetEqual(
-            parent_1.get_direct_children(), Group.objects.filter(pk=child.pk)
+            parent_1.get_direct_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
         self.assertEqual(parent_2.get_direct_children().count(), 1)
         self.assertQuerysetEqual(
-            parent_2.get_direct_children(), Group.objects.filter(pk=child.pk)
+            parent_2.get_direct_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
 
     def test_get_direct_children_with_other_group(self):
         # Create a relationship not involving the group in question.
         factories.GroupGroupMembershipFactory.create()
         # Create a group not related to any other group.
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         self.assertEqual(group.get_direct_children().count(), 0)
 
     def test_get_direct_children_with_only_parent(self):
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_direct_children().count(), 0)
 
     def test_get_direct_children_with_grandchildren(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -355,29 +359,29 @@ class GroupTest(TestCase):
         )
         self.assertEqual(grandparent.get_direct_children().count(), 1)
         self.assertQuerysetEqual(
-            grandparent.get_direct_children(), Group.objects.filter(pk=parent.pk)
+            grandparent.get_direct_children(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
     def test_get_all_parents_no_parents(self):
-        group = factories.GroupFactory(name="group")
+        group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_all_parents().count(), 0)
-        self.assertQuerysetEqual(group.get_all_parents(), Group.objects.none())
+        self.assertQuerysetEqual(group.get_all_parents(), ManagedGroup.objects.none())
 
     def test_get_all_parents_one_parent(self):
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_all_parents().count(), 1)
         self.assertQuerysetEqual(
-            child.get_all_parents(), Group.objects.filter(pk=parent.pk)
+            child.get_all_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
     def test_get_all_parents_one_grandparent(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -387,15 +391,15 @@ class GroupTest(TestCase):
         self.assertEqual(child.get_all_parents().count(), 2)
         self.assertQuerysetEqual(
             child.get_all_parents(),
-            Group.objects.filter(pk__in=[grandparent.pk, parent.pk]),
+            ManagedGroup.objects.filter(pk__in=[grandparent.pk, parent.pk]),
             ordered=False,
         )
 
     def test_get_all_parents_two_grandparents_same_parent(self):
-        grandparent_1 = factories.GroupFactory(name="grandparent-group-1")
-        grandparent_2 = factories.GroupFactory(name="grandparent-group-2")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent_1 = factories.ManagedGroupFactory(name="grandparent-group-1")
+        grandparent_2 = factories.ManagedGroupFactory(name="grandparent-group-2")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent_1, child_group=parent
         )
@@ -408,18 +412,18 @@ class GroupTest(TestCase):
         self.assertEqual(child.get_all_parents().count(), 3)
         self.assertQuerysetEqual(
             child.get_all_parents(),
-            Group.objects.filter(
+            ManagedGroup.objects.filter(
                 pk__in=[grandparent_1.pk, grandparent_2.pk, parent.pk]
             ),
             ordered=False,
         )
 
     def test_get_all_parents_two_grandparents_two_parents(self):
-        grandparent_1 = factories.GroupFactory(name="grandparent-group-1")
-        grandparent_2 = factories.GroupFactory(name="grandparent-group-2")
-        parent_1 = factories.GroupFactory(name="parent-group-1")
-        parent_2 = factories.GroupFactory(name="parent-group-2")
-        child = factories.GroupFactory(name="child-group")
+        grandparent_1 = factories.ManagedGroupFactory(name="grandparent-group-1")
+        grandparent_2 = factories.ManagedGroupFactory(name="grandparent-group-2")
+        parent_1 = factories.ManagedGroupFactory(name="parent-group-1")
+        parent_2 = factories.ManagedGroupFactory(name="parent-group-2")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent_1, child_group=parent_1
         )
@@ -435,16 +439,16 @@ class GroupTest(TestCase):
         self.assertEqual(child.get_all_parents().count(), 4)
         self.assertQuerysetEqual(
             child.get_all_parents(),
-            Group.objects.filter(
+            ManagedGroup.objects.filter(
                 pk__in=[grandparent_1.pk, grandparent_2.pk, parent_1.pk, parent_2.pk]
             ),
             ordered=False,
         )
 
     def test_get_all_parents_multiple_paths_to_same_group(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         # Create the standard grandparent-parent-child relationship
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
@@ -459,15 +463,15 @@ class GroupTest(TestCase):
         self.assertEqual(child.get_all_parents().count(), 2)
         self.assertQuerysetEqual(
             child.get_all_parents(),
-            Group.objects.filter(pk__in=[grandparent.pk, parent.pk]),
+            ManagedGroup.objects.filter(pk__in=[grandparent.pk, parent.pk]),
             ordered=False,
         )
 
     def test_all_parents_greatgrandparent(self):
-        greatgrandparent = factories.GroupFactory(name="greatgrandparent-group")
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        greatgrandparent = factories.ManagedGroupFactory(name="greatgrandparent-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         # Create the standard grandparent-parent-child relationship
         factories.GroupGroupMembershipFactory.create(
             parent_group=greatgrandparent, child_group=grandparent
@@ -481,16 +485,16 @@ class GroupTest(TestCase):
         self.assertEqual(child.get_all_parents().count(), 3)
         self.assertQuerysetEqual(
             child.get_all_parents(),
-            Group.objects.filter(
+            ManagedGroup.objects.filter(
                 pk__in=[greatgrandparent.pk, grandparent.pk, parent.pk]
             ),
             ordered=False,
         )
 
     def test_get_all_parents_with_other_group(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         # Create the standard grandparent-parent-child relationship
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
@@ -499,29 +503,29 @@ class GroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         # Create a group with no relationships
-        group = factories.GroupFactory.create(name="other-group")
+        group = factories.ManagedGroupFactory.create(name="other-group")
         self.assertEqual(group.get_all_parents().count(), 0)
 
     def test_get_all_children_no_children(self):
-        group = factories.GroupFactory(name="group")
+        group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_all_children().count(), 0)
-        self.assertQuerysetEqual(group.get_all_children(), Group.objects.none())
+        self.assertQuerysetEqual(group.get_all_children(), ManagedGroup.objects.none())
 
     def test_get_all_children_one_child(self):
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         self.assertEqual(parent.get_all_children().count(), 1)
         self.assertQuerysetEqual(
-            parent.get_all_children(), Group.objects.filter(pk=child.pk)
+            parent.get_all_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
 
     def test_get_all_children_one_grandchild(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -531,15 +535,15 @@ class GroupTest(TestCase):
         self.assertEqual(grandparent.get_all_children().count(), 2)
         self.assertQuerysetEqual(
             grandparent.get_all_children(),
-            Group.objects.filter(pk__in=[parent.pk, child.pk]),
+            ManagedGroup.objects.filter(pk__in=[parent.pk, child.pk]),
             ordered=False,
         )
 
     def test_get_all_children_two_grandchildren_same_parent(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child_1 = factories.GroupFactory(name="child-group-1")
-        child_2 = factories.GroupFactory(name="child-group-2")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child_1 = factories.ManagedGroupFactory(name="child-group-1")
+        child_2 = factories.ManagedGroupFactory(name="child-group-2")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -552,16 +556,16 @@ class GroupTest(TestCase):
         self.assertEqual(grandparent.get_all_children().count(), 3)
         self.assertQuerysetEqual(
             grandparent.get_all_children(),
-            Group.objects.filter(pk__in=[parent.pk, child_1.pk, child_2.pk]),
+            ManagedGroup.objects.filter(pk__in=[parent.pk, child_1.pk, child_2.pk]),
             ordered=False,
         )
 
     def test_get_all_children_two_grandchildren_two_parents(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent_1 = factories.GroupFactory(name="parent-group-1")
-        parent_2 = factories.GroupFactory(name="parent-group-2")
-        child_1 = factories.GroupFactory(name="child-group-1")
-        child_2 = factories.GroupFactory(name="child-group-2")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent_1 = factories.ManagedGroupFactory(name="parent-group-1")
+        parent_2 = factories.ManagedGroupFactory(name="parent-group-2")
+        child_1 = factories.ManagedGroupFactory(name="child-group-1")
+        child_2 = factories.ManagedGroupFactory(name="child-group-2")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent_1
         )
@@ -577,16 +581,16 @@ class GroupTest(TestCase):
         self.assertEqual(grandparent.get_all_children().count(), 4)
         self.assertQuerysetEqual(
             grandparent.get_all_children(),
-            Group.objects.filter(
+            ManagedGroup.objects.filter(
                 pk__in=[parent_1.pk, parent_2.pk, child_1.pk, child_2.pk]
             ),
             ordered=False,
         )
 
     def test_get_all_children_multiple_paths_to_same_group(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         # Create the standard grandparent-parent-child relationship
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
@@ -601,15 +605,15 @@ class GroupTest(TestCase):
         self.assertEqual(grandparent.get_all_children().count(), 2)
         self.assertQuerysetEqual(
             grandparent.get_all_children(),
-            Group.objects.filter(pk__in=[parent.pk, child.pk]),
+            ManagedGroup.objects.filter(pk__in=[parent.pk, child.pk]),
             ordered=False,
         )
 
     def test_all_children_greatgrandparent(self):
-        greatgrandparent = factories.GroupFactory(name="greatgrandparent-group")
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        greatgrandparent = factories.ManagedGroupFactory(name="greatgrandparent-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         # Create the standard grandparent-parent-child relationship
         factories.GroupGroupMembershipFactory.create(
             parent_group=greatgrandparent, child_group=grandparent
@@ -623,14 +627,14 @@ class GroupTest(TestCase):
         self.assertEqual(greatgrandparent.get_all_children().count(), 3)
         self.assertQuerysetEqual(
             greatgrandparent.get_all_children(),
-            Group.objects.filter(pk__in=[grandparent.pk, parent.pk, child.pk]),
+            ManagedGroup.objects.filter(pk__in=[grandparent.pk, parent.pk, child.pk]),
             ordered=False,
         )
 
     def test_get_all_children_with_other_group(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         # Create the standard grandparent-parent-child relationship
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
@@ -639,21 +643,21 @@ class GroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         # Create a group with no relationships
-        group = factories.GroupFactory.create(name="other-group")
+        group = factories.ManagedGroupFactory.create(name="other-group")
         self.assertEqual(group.get_all_children().count(), 0)
 
     def test_cannot_delete_group_used_as_auth_domain(self):
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
         with self.assertRaises(ProtectedError):
             group.delete()
-        self.assertEqual(len(Group.objects.all()), 1)
-        self.assertIn(group, Group.objects.all())
+        self.assertEqual(len(ManagedGroup.objects.all()), 1)
+        self.assertIn(group, ManagedGroup.objects.all())
 
     def test_get_anvil_url(self):
         """get_anvil_url returns a string."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         self.assertIsInstance(group.get_anvil_url(), str)
 
 
@@ -744,29 +748,29 @@ class WorkspaceTest(TestCase):
 
     def test_one_auth_domain(self):
         """Can create a workspace with one authorization domain."""
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.set(Group.objects.all())
+        instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 1)
         self.assertIn(auth_domain, instance.authorization_domains.all())
 
     def test_two_auth_domains(self):
         """Can create a workspace with two authorization domains."""
-        auth_domain_1 = factories.GroupFactory.create()
-        auth_domain_2 = factories.GroupFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.set(Group.objects.all())
+        instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 2)
         self.assertIn(auth_domain_1, instance.authorization_domains.all())
         self.assertIn(auth_domain_2, instance.authorization_domains.all())
 
     def test_auth_domain_unique(self):
         """Adding the same auth domain twice does nothing."""
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
@@ -777,7 +781,7 @@ class WorkspaceTest(TestCase):
         print(instance.authorization_domains.all())
 
     def test_can_delete_workspace_with_auth_domain(self):
-        auth_domain = factories.GroupFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
@@ -789,7 +793,7 @@ class WorkspaceTest(TestCase):
         self.assertEqual(len(Workspace.objects.all()), 0)
         self.assertEqual(len(WorkspaceAuthorizationDomain.objects.all()), 0)
         # The group has not been deleted.
-        self.assertIn(auth_domain, Group.objects.all())
+        self.assertIn(auth_domain, ManagedGroup.objects.all())
 
     def test_get_anvil_url(self):
         """get_anvil_url returns a string."""
@@ -801,7 +805,7 @@ class WorkspaceAuthorizationDomainTestCase(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         workspace = factories.WorkspaceFactory.create()
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         instance = WorkspaceAuthorizationDomain(workspace=workspace, group=group)
         instance.save()
         self.assertIsInstance(instance, WorkspaceAuthorizationDomain)
@@ -809,7 +813,7 @@ class WorkspaceAuthorizationDomainTestCase(TestCase):
     def test_str_method(self):
         """Creation using the model constructor and .save() works."""
         workspace = factories.WorkspaceFactory.create()
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         instance = WorkspaceAuthorizationDomain(workspace=workspace, group=group)
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
@@ -818,8 +822,8 @@ class WorkspaceAuthorizationDomainTestCase(TestCase):
 class GroupGroupMembershipTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        parent_group = factories.GroupFactory.create(name="parent")
-        child_group = factories.GroupFactory.create(name="child")
+        parent_group = factories.ManagedGroupFactory.create(name="parent")
+        child_group = factories.ManagedGroupFactory.create(name="child")
         instance = GroupGroupMembership(
             parent_group=parent_group, child_group=child_group
         )
@@ -827,8 +831,8 @@ class GroupGroupMembershipTest(TestCase):
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        parent_group = factories.GroupFactory.create(name="parent")
-        child_group = factories.GroupFactory.create(name="child")
+        parent_group = factories.ManagedGroupFactory.create(name="parent")
+        child_group = factories.ManagedGroupFactory.create(name="child")
         instance = GroupGroupMembership(
             parent_group=parent_group, child_group=child_group
         )
@@ -843,9 +847,9 @@ class GroupGroupMembershipTest(TestCase):
 
     def test_same_group_with_two_parent_groups(self):
         """The same group can be a child in two groups."""
-        child_group = factories.GroupFactory(name="child")
-        group_1 = factories.GroupFactory(name="parent-1")
-        group_2 = factories.GroupFactory(name="parent-2")
+        child_group = factories.ManagedGroupFactory(name="child")
+        group_1 = factories.ManagedGroupFactory(name="parent-1")
+        group_2 = factories.ManagedGroupFactory(name="parent-2")
         instance = GroupGroupMembership(parent_group=group_1, child_group=child_group)
         instance.save()
         instance = GroupGroupMembership(parent_group=group_2, child_group=child_group)
@@ -854,9 +858,9 @@ class GroupGroupMembershipTest(TestCase):
 
     def test_two_groups_in_same_parent_group(self):
         """Two accounts can be in the same group."""
-        child_1 = factories.GroupFactory(name="child-1")
-        child_2 = factories.GroupFactory(name="child-2")
-        parent = factories.GroupFactory(name="parent")
+        child_1 = factories.ManagedGroupFactory(name="child-1")
+        child_2 = factories.ManagedGroupFactory(name="child-2")
+        parent = factories.ManagedGroupFactory(name="parent")
         instance = GroupGroupMembership(parent_group=parent, child_group=child_1)
         instance.save()
         instance = GroupGroupMembership(parent_group=parent, child_group=child_2)
@@ -865,8 +869,8 @@ class GroupGroupMembershipTest(TestCase):
 
     def test_cannot_have_duplicated_parent_and_child_with_same_role(self):
         """Cannot have the same child in the same group with the same role twice."""
-        child_group = factories.GroupFactory()
-        parent_group = factories.GroupFactory()
+        child_group = factories.ManagedGroupFactory()
+        parent_group = factories.ManagedGroupFactory()
         instance_1 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
@@ -883,8 +887,8 @@ class GroupGroupMembershipTest(TestCase):
 
     def test_cannot_have_duplicated_parent_and_child_with_different_role(self):
         """Cannot have the same child in the same group with a different role twice."""
-        child_group = factories.GroupFactory()
-        parent_group = factories.GroupFactory()
+        child_group = factories.ManagedGroupFactory()
+        parent_group = factories.ManagedGroupFactory()
         instance_1 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
@@ -900,7 +904,7 @@ class GroupGroupMembershipTest(TestCase):
             instance_2.save()
 
     def test_cant_add_a_group_to_itself_member(self):
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         instance = GroupGroupMembership(
             parent_group=group, child_group=group, role=GroupGroupMembership.MEMBER
         )
@@ -908,7 +912,7 @@ class GroupGroupMembershipTest(TestCase):
             instance.clean()
 
     def test_cant_add_a_group_to_itself_admin(self):
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         instance = GroupGroupMembership(
             parent_group=group, child_group=group, role=GroupGroupMembership.ADMIN
         )
@@ -928,9 +932,9 @@ class GroupGroupMembershipTest(TestCase):
             instance.clean()
 
     def test_circular_cant_add_grandparent_group_as_a_grandchild(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -946,9 +950,9 @@ class GroupGroupMembershipTest(TestCase):
             instance.clean()
 
     def test_circular_multiple_paths(self):
-        grandparent = factories.GroupFactory(name="grandparent-group")
-        parent = factories.GroupFactory(name="parent-group")
-        child = factories.GroupFactory(name="child-group")
+        grandparent = factories.ManagedGroupFactory(name="grandparent-group")
+        parent = factories.ManagedGroupFactory(name="parent-group")
+        child = factories.ManagedGroupFactory(name="child-group")
         factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
@@ -972,7 +976,7 @@ class GroupAccountMembershipTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         account = factories.AccountFactory.create()
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         instance = GroupAccountMembership(account=account, group=group)
         self.assertIsInstance(instance, GroupAccountMembership)
 
@@ -981,7 +985,7 @@ class GroupAccountMembershipTest(TestCase):
         email = "email@example.com"
         group = "test-group"
         account = factories.AccountFactory(email=email)
-        group = factories.GroupFactory(name=group)
+        group = factories.ManagedGroupFactory(name=group)
         instance = GroupAccountMembership(
             account=account, group=group, role=GroupAccountMembership.MEMBER
         )
@@ -1000,8 +1004,8 @@ class GroupAccountMembershipTest(TestCase):
     def test_same_account_in_two_groups(self):
         """The same account can be in two groups."""
         account = factories.AccountFactory()
-        group_1 = factories.GroupFactory(name="group-1")
-        group_2 = factories.GroupFactory(name="group-2")
+        group_1 = factories.ManagedGroupFactory(name="group-1")
+        group_2 = factories.ManagedGroupFactory(name="group-2")
         instance = GroupAccountMembership(account=account, group=group_1)
         instance.save()
         instance = GroupAccountMembership(account=account, group=group_2)
@@ -1011,7 +1015,7 @@ class GroupAccountMembershipTest(TestCase):
         """Two accounts can be in the same group."""
         account_1 = factories.AccountFactory(email="email_1@example.com")
         account_2 = factories.AccountFactory(email="email_2@example.com")
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         instance = GroupAccountMembership(account=account_1, group=group)
         instance.save()
         instance = GroupAccountMembership(account=account_2, group=group)
@@ -1020,7 +1024,7 @@ class GroupAccountMembershipTest(TestCase):
     def test_cannot_have_duplicated_account_and_group_with_same_role(self):
         """Cannot have the same account in the same group with the same role twice."""
         account = factories.AccountFactory()
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         instance_1 = GroupAccountMembership(
             account=account, group=group, role=GroupAccountMembership.MEMBER
         )
@@ -1034,7 +1038,7 @@ class GroupAccountMembershipTest(TestCase):
     def test_cannot_have_duplicated_account_and_group_with_different_role(self):
         """Cannot have the same account in the same group with different roles twice."""
         account = factories.AccountFactory()
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         instance_1 = GroupAccountMembership(
             account=account, group=group, role=GroupAccountMembership.MEMBER
         )
@@ -1049,7 +1053,7 @@ class GroupAccountMembershipTest(TestCase):
 class WorkspaceGroupAccessTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        group = factories.GroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         instance = WorkspaceGroupAccess(
             group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
@@ -1062,7 +1066,7 @@ class WorkspaceGroupAccessTest(TestCase):
         workspace_name = "test-workspace"
         group_name = "test-group"
         billing_project = factories.BillingProjectFactory(name=billing_project_name)
-        group = factories.GroupFactory(name=group_name)
+        group = factories.ManagedGroupFactory(name=group_name)
         workspace = factories.WorkspaceFactory(
             billing_project=billing_project, name=workspace_name
         )
@@ -1081,7 +1085,7 @@ class WorkspaceGroupAccessTest(TestCase):
 
     def test_same_group_in_two_workspaces(self):
         """The same group can have access to two workspaces."""
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         workspace_1 = factories.WorkspaceFactory(name="workspace-1")
         workspace_2 = factories.WorkspaceFactory(name="workspace-2")
         instance = WorkspaceGroupAccess(group=group, workspace=workspace_1)
@@ -1091,8 +1095,8 @@ class WorkspaceGroupAccessTest(TestCase):
 
     def test_two_groups_and_same_workspace(self):
         """Two accounts can be in the same group."""
-        group_1 = factories.GroupFactory(name="group-1")
-        group_2 = factories.GroupFactory(name="group-2")
+        group_1 = factories.ManagedGroupFactory(name="group-1")
+        group_2 = factories.ManagedGroupFactory(name="group-2")
         workspace = factories.WorkspaceFactory()
         instance = WorkspaceGroupAccess(group=group_1, workspace=workspace)
         instance.save()
@@ -1101,7 +1105,7 @@ class WorkspaceGroupAccessTest(TestCase):
 
     def test_cannot_have_duplicated_account_and_group_with_same_access(self):
         """Cannot have the same account in the same group with the same access levels twice."""
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(
             group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
@@ -1117,7 +1121,7 @@ class WorkspaceGroupAccessTest(TestCase):
         self,
     ):
         """Cannot have the same account in the same group with different access levels twice."""
-        group = factories.GroupFactory()
+        group = factories.ManagedGroupFactory()
         workspace = factories.WorkspaceFactory()
         instance_1 = WorkspaceGroupAccess(
             group=group, workspace=workspace, access=WorkspaceGroupAccess.READER

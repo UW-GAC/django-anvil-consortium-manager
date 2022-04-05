@@ -29,7 +29,7 @@ class AccountTable(tables.Table):
         fields = ("email", "is_service_account")
 
 
-class GroupTable(tables.Table):
+class ManagedGroupTable(tables.Table):
     """Class to display a Group table."""
 
     name = tables.Column(linkify=True)
@@ -47,7 +47,7 @@ class GroupTable(tables.Table):
     )
 
     class Meta:
-        model = models.Group
+        model = models.ManagedGroup
         fields = ("name", "is_managed_by_app")
 
 

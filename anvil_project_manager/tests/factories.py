@@ -26,13 +26,13 @@ class AccountFactory(DjangoModelFactory):
         django_get_or_create = ["email"]
 
 
-class GroupFactory(DjangoModelFactory):
-    """A factory for the Group model."""
+class ManagedGroupFactory(DjangoModelFactory):
+    """A factory for the ManagedGroup model."""
 
     name = Faker("slug")
 
     class Meta:
-        model = models.Group
+        model = models.ManagedGroup
         django_get_or_create = ["name"]
 
 
@@ -50,8 +50,8 @@ class WorkspaceFactory(DjangoModelFactory):
 class GroupGroupMembershipFactory(DjangoModelFactory):
     """A factory for the GroupGroupMembership model."""
 
-    parent_group = SubFactory(GroupFactory)
-    child_group = SubFactory(GroupFactory)
+    parent_group = SubFactory(ManagedGroupFactory)
+    child_group = SubFactory(ManagedGroupFactory)
     role = models.GroupAccountMembership.MEMBER
 
     class Meta:
@@ -63,7 +63,7 @@ class GroupAccountMembershipFactory(DjangoModelFactory):
     """A factory for the Group model."""
 
     account = SubFactory(AccountFactory)
-    group = SubFactory(GroupFactory)
+    group = SubFactory(ManagedGroupFactory)
     role = models.GroupAccountMembership.MEMBER
 
     class Meta:
@@ -75,7 +75,7 @@ class WorkspaceGroupAccessFactory(DjangoModelFactory):
     """A factory for the WorkspaceGroup model."""
 
     workspace = SubFactory(WorkspaceFactory)
-    group = SubFactory(GroupFactory)
+    group = SubFactory(ManagedGroupFactory)
     access = models.WorkspaceGroupAccess.READER
 
     class Meta:

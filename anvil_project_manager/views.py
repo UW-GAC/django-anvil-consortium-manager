@@ -148,8 +148,8 @@ class AccountDelete(DeleteView):
         return reverse("anvil_project_manager:accounts:list")
 
 
-class GroupDetail(DetailView):
-    model = models.Group
+class ManagedGroupDetail(DetailView):
+    model = models.ManagedGroup
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -168,8 +168,8 @@ class GroupDetail(DetailView):
         return context
 
 
-class GroupCreate(CreateView):
-    model = models.Group
+class ManagedGroupCreate(CreateView):
+    model = models.ManagedGroup
     fields = ("name",)
 
     def form_valid(self, form):
@@ -190,13 +190,13 @@ class GroupCreate(CreateView):
         return super().form_valid(form)
 
 
-class GroupList(SingleTableView):
-    model = models.Group
-    table_class = tables.GroupTable
+class ManagedGroupList(SingleTableView):
+    model = models.ManagedGroup
+    table_class = tables.ManagedGroupTable
 
 
-class GroupDelete(DeleteView):
-    model = models.Group
+class ManagedGroupDelete(DeleteView):
+    model = models.ManagedGroup
     message_not_managed_by_app = (
         "Cannot delete group because it is not managed by this app."
     )
@@ -205,7 +205,7 @@ class GroupDelete(DeleteView):
     )
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:groups:list")
+        return reverse("anvil_project_manager:managed_groups:list")
 
     def get(self, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -269,7 +269,7 @@ class WorkspaceDetail(DetailView):
         context["group_access_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="workspace"
         )
-        context["authorization_domain_table"] = tables.GroupTable(
+        context["authorization_domain_table"] = tables.ManagedGroupTable(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )

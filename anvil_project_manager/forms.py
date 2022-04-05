@@ -31,7 +31,7 @@ class GroupGroupMembershipForm(forms.ModelForm):
     """Form for the GroupGroupMembership model."""
 
     parent_group = forms.ModelChoiceField(
-        queryset=models.Group.objects.filter(is_managed_by_app=True)
+        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True)
     )
 
     class Meta:
@@ -52,7 +52,7 @@ class GroupAccountMembershipForm(forms.ModelForm):
     """Form for the GroupAccountMembership model."""
 
     group = forms.ModelChoiceField(
-        queryset=models.Group.objects.filter(is_managed_by_app=True)
+        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True)
     )
 
     class Meta:
