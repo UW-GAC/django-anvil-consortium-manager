@@ -74,19 +74,10 @@ class Account(models.Model):
         return True
 
 
-def validate_group_name(value):
-    """Custom validator for unique case-insensitive names. This primarily provides a nice message on a form."""
-    if ManagedGroup.objects.filter(name__iexact=value).exists():
-        raise ValidationError("Group with this Name already exists.")
-    return value
-
-
 class ManagedGroup(models.Model):
     """A model to store information about AnVIL Managed Groups."""
 
-    name = models.SlugField(
-        max_length=64, unique=True, validators=[validate_group_name]
-    )
+    name = models.SlugField(max_length=64, unique=True)
     is_managed_by_app = models.BooleanField(default=True)
 
     def __str__(self):

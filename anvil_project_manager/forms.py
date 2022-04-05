@@ -20,6 +20,20 @@ class AccountImportForm(forms.ModelForm):
         return value
 
 
+class ManagedGroupCreateForm(forms.ModelForm):
+    """Form to create a ManagedGroup on AnVIL."""
+
+    class Meta:
+        model = models.ManagedGroup
+        fields = ("name",)
+
+    def clean_name(self):
+        value = self.cleaned_data["name"]
+        if models.ManagedGroup.objects.filter(name__iexact=value).exists():
+            raise ValidationError("Managed Group with this Name already exists.")
+        return value
+
+
 class WorkspaceCreateForm(forms.ModelForm):
     """Form to create a new workspace on AnVIL."""
 

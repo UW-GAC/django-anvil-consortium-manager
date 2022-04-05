@@ -18,7 +18,6 @@ class AccountImportFormTest(TestCase):
             "is_service_account": True,
         }
         form = self.form_class(data=form_data)
-        print(form.errors)
         self.assertTrue(form.is_valid())
 
     def test_invalid_missing_email(self):
@@ -65,6 +64,66 @@ class AccountImportFormTest(TestCase):
         self.assertIn("email", form.errors)
         self.assertEqual(len(form.errors["email"]), 1)
         self.assertIn("already exists", form.errors["email"][0])
+
+
+class ManagedGroupCreateFormTest(TestCase):
+    """Tests for the ManagedGroupCreateForm class."""
+
+    form_class = forms.ManagedGroupCreateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {
+            "name": "test-group-name",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_missing_name(self):
+        """Form is invalid when missing name."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("required", form.errors["name"][0])
+
+    def test_invalid_with_invalid_name(self):
+        """Form is invalid when name is invalid."""
+        form_data = {"name": "test group"}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("slug", form.errors["name"][0])
+
+    def test_invalid_duplicate_name(self):
+        """Form is invalid with a duplicated name."""
+        group = factories.ManagedGroupFactory.create()
+        form_data = {
+            "name": group.name,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("already exists", form.errors["name"][0])
+
+    def test_invalid_duplicate_email_case_insensitive(self):
+        """Form is invalid with a duplicated name, regardless of case."""
+        factories.ManagedGroupFactory.create(name="test-group")
+        form_data = {
+            "name": "TEST-GROUP",
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("already exists", form.errors["name"][0])
 
 
 class WorkspaceCreateFormTest(TestCase):
