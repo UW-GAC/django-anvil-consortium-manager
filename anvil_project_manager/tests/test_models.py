@@ -187,6 +187,22 @@ class ManagedGroupTest(TestCase):
             group.delete()
         self.assertEqual(ManagedGroup.objects.count(), 1)
 
+    def test_cannot_delete_group_that_is_a_member_of_another_group(self):
+        """Group cannot be deleted if it is a member of another group.
+
+        This is a behavior enforced by AnVIL."""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        with self.assertRaises(ProtectedError):
+            child.delete()
+        # Both groups still exist.
+        self.assertEqual(ManagedGroup.objects.count(), 2)
+        # The membership still exists.
+        self.assertEqual(GroupGroupMembership.objects.count(), 1)
+
     def test_get_direct_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_direct_parents().count(), 0)

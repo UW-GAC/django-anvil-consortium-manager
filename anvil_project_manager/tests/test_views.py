@@ -1324,6 +1324,60 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
 
+    def test_get_redirect_group_is_a_member_of_another_group(self):
+        """Redirect get request when trying to delete a group that is a member of another group.
+
+        This is a behavior enforced by AnVIL."""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        # Need to use a client for messages.
+        response = self.client.get(self.get_url(child.pk), follow=True)
+        self.assertRedirects(response, child.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.ManagedGroupDelete.message_is_member_of_another_group,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 2)
+        models.ManagedGroup.objects.get(pk=child.pk)
+        # Make sure the relationships still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        models.GroupGroupMembership.objects.get(parent_group=parent, child_group=child)
+
+    def test_post_redirect_group_is_a_member_of_another_group(self):
+        """Redirect post request when trying to delete a group that is a member of another group.
+
+        This is a behavior enforced by AnVIL."""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        # Need to use a client for messages.
+        response = self.client.post(self.get_url(child.pk), follow=True)
+        self.assertRedirects(response, child.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.ManagedGroupDelete.message_is_member_of_another_group,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 2)
+        models.ManagedGroup.objects.get(pk=child.pk)
+        # Make sure the relationships still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        models.GroupGroupMembership.objects.get(parent_group=parent, child_group=child)
+
     def test_get_redirect_group_used_as_auth_domain(self):
         """Redirect when trying to delete a group used as an auth domain with a get request."""
         group = factories.ManagedGroupFactory.create()
@@ -1359,6 +1413,28 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Make sure that the object still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
+
+    def test_can_delete_group_that_has_child_groups(self):
+        """Can delete a group that has other groups as members."""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        url = self.entry_point + "/api/groups/" + parent.name
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        request = self.factory.post(self.get_url(parent.pk), {"submit": ""})
+        response = self.get_view()(request, pk=parent.pk)
+        self.assertEqual(response.status_code, 302)
+        # Parent was deleted.
+        with self.assertRaises(models.ManagedGroup.DoesNotExist):
+            models.ManagedGroup.objects.get(pk=parent.pk)
+        # Child was not deleted.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        models.ManagedGroup.objects.get(pk=child.pk)
+        # The group membership was deleted.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""

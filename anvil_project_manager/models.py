@@ -383,7 +383,7 @@ class GroupGroupMembership(models.Model):
         "ManagedGroup", on_delete=models.CASCADE, related_name="child_memberships"
     )
     child_group = models.ForeignKey(
-        "ManagedGroup", on_delete=models.CASCADE, related_name="parent_memberships"
+        "ManagedGroup", on_delete=models.PROTECT, related_name="parent_memberships"
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
