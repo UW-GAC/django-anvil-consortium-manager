@@ -1490,6 +1490,24 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
 
+    def test_can_delete_group_if_it_has_account_members(self):
+        """Can delete a group that has other groups as members."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        url = self.entry_point + "/api/groups/" + group.name
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        request = self.factory.post(self.get_url(group.pk), {"submit": ""})
+        response = self.get_view()(request, pk=group.pk)
+        self.assertEqual(response.status_code, 302)
+        # The group was deleted.
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
+        # Thee membership was deleted.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        # The account still exists.
+        models.Account.objects.get(pk=account.pk)
+        responses.assert_call_count(url, 1)
+
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.

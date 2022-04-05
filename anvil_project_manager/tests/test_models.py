@@ -219,6 +219,20 @@ class ManagedGroupTest(TestCase):
         # The membership was deleted.
         self.assertEqual(GroupGroupMembership.objects.count(), 0)
 
+    def test_can_delete_group_if_it_has_account_members(self):
+        """A group can be deleted if it has an account as a member."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        group.delete()
+        # No groups exist.
+        self.assertEqual(ManagedGroup.objects.count(), 0)
+        # The relationship was deleted.
+        self.assertEqual(GroupAccountMembership.objects.count(), 0)
+        # The account still exists.
+        self.assertEqual(Account.objects.count(), 1)
+        Account.objects.get(pk=account.pk)
+
     def test_cannot_delete_group_if_it_has_access_to_a_workspace(self):
         """Group cannot be deleted if it has access to a workspace.
 
