@@ -46,6 +46,13 @@ class BillingProjectTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_workspace_on_delete(self):
+        """Billing project cannot be deleted if a workspace in that BillingProject exists."""
+        workspace = factories.WorkspaceFactory.create()
+        with self.assertRaises(ProtectedError):
+            workspace.billing_project.delete()
+        self.assertEqual(BillingProject.objects.count(), 1)
+
     @skip("Add this constraint.")
     def test_name_save_case_insensitivity(self):
         """Cannot save two models with the same case-insensitive name."""
