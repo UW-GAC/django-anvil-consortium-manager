@@ -770,9 +770,10 @@ class AccountListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class AccountDeleteTest(TestCase):
+class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         """Set up test class."""
+        super().setUp()
         self.factory = RequestFactory()
 
     def get_url(self, *args):
@@ -782,6 +783,11 @@ class AccountDeleteTest(TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.AccountDelete.as_view()
+
+    def get_api_remove_from_group_url(self, group_name, account_email):
+        return (
+            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+        )
 
     def test_view_status_code(self):
         """Returns a successful status code for an existing object."""
@@ -832,6 +838,92 @@ class AccountDeleteTest(TestCase):
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("anvil_project_manager:accounts:list"))
+
+    def test_removes_account_from_one_group(self):
+        """Deleting an account from the app also removes it from one group."""
+        object = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(account=object)
+        group = membership.group
+        remove_from_group_url = self.get_api_remove_from_group_url(
+            group.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url, status=204)
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Account.objects.count(), 0)
+        # Also removes the user from groups.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        responses.assert_call_count(remove_from_group_url, 1)
+
+    def test_removes_account_from_all_groups(self):
+        """Deleting an account from the app also removes it from all groups that it is in."""
+        object = factories.AccountFactory.create()
+        memberships = factories.GroupAccountMembershipFactory.create_batch(
+            2, account=object
+        )
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        remove_from_group_url_1 = self.get_api_remove_from_group_url(
+            group_1.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url_1, status=204)
+        remove_from_group_url_2 = self.get_api_remove_from_group_url(
+            group_2.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url_2, status=204)
+        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Account.objects.count(), 0)
+        # Also removes the user from groups.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        responses.assert_call_count(remove_from_group_url_1, 1)
+        responses.assert_call_count(remove_from_group_url_2, 1)
+
+    def test_api_error_when_removing_account_from_groups(self):
+        """Message when an API error occurred when removing a user from a group."""
+        object = factories.AccountFactory.create()
+        memberships = factories.GroupAccountMembershipFactory.create_batch(
+            2, account=object
+        )
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        remove_from_group_url_1 = self.get_api_remove_from_group_url(
+            group_1.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url_1, status=204)
+        remove_from_group_url_2 = self.get_api_remove_from_group_url(
+            group_2.name, object.email
+        )
+        responses.add(
+            responses.DELETE,
+            remove_from_group_url_2,
+            status=409,
+            json={"message": "test error"},
+        )
+        # Need a client for messages.
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountDelete.message_error_removing_from_groups.format("test error"),
+            str(messages[0]),
+        )
+        # The Account is not deleted.
+        self.assertEqual(models.Account.objects.count(), 1)
+        models.Account.objects.get(pk=object.pk)
+        # Does not remove the user from any groups.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
+        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
+        # The API was called.
+        responses.assert_call_count(remove_from_group_url_1, 1)
+        responses.assert_call_count(remove_from_group_url_2, 1)
 
 
 class ManagedGroupDetailTest(TestCase):

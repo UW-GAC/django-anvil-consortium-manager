@@ -143,9 +143,26 @@ class AccountList(SingleTableView):
 
 class AccountDelete(DeleteView):
     model = models.Account
+    message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
 
     def get_success_url(self):
         return reverse("anvil_project_manager:accounts:list")
+        # exceptions.AnVILRemoveAccountFromGroupError
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Make an API call to AnVIL to remove the account from all groups and then delete it from the app.
+        """
+        self.object = self.get_object()
+        try:
+            self.object.anvil_remove_from_groups()
+        except AnVILAPIError as e:
+            msg = self.message_error_removing_from_groups.format(e)
+            messages.add_message(request, messages.ERROR, msg)
+            # Rerender the same page with an error message.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        else:
+            return super().delete(request, *args, **kwargs)
 
 
 class ManagedGroupDetail(DetailView):

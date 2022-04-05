@@ -73,6 +73,15 @@ class Account(models.Model):
             return False
         return True
 
+    def anvil_remove_from_groups(self):
+        """From user from all groups on AnVIL."""
+        group_memberships = self.groupaccountmembership_set.all()
+        for membership in group_memberships:
+            membership.anvil_delete()
+        # If all memberships were successfully deleted from AnVIL, then delete all memberships from django.
+        for membership in group_memberships:
+            membership.delete()
+
 
 class ManagedGroup(models.Model):
     """A model to store information about AnVIL Managed Groups."""
