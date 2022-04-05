@@ -6,6 +6,56 @@ from .. import forms, models
 from . import factories
 
 
+class BillingProjectImportFormTest(TestCase):
+    """Tests for the AccountImportForm class."""
+
+    form_class = forms.BillingProjectImportForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {
+            "name": "foo",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_missing_name(self):
+        """Form is invalid when missing name."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("required", form.errors["name"][0])
+
+    def test_invalid_duplicate_name(self):
+        """Form is invalid with a duplicated name."""
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "name": billing_project.name,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("already exists", form.errors["name"][0])
+
+    def test_invalid_duplicate_email_case_insensitive(self):
+        """Form is invalid with a duplicated email, regardless of case."""
+        factories.BillingProjectFactory.create(name="foo")
+        form_data = {
+            "name": "FOO",
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("already exists", form.errors["name"][0])
+
+
 class AccountImportFormTest(TestCase):
     """Tests for the AccountImportForm class."""
 

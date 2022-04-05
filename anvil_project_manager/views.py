@@ -56,7 +56,7 @@ class AnVILStatus(TemplateView):
 
 class BillingProjectImport(CreateView):
     model = models.BillingProject
-    fields = ("name",)
+    form_class = forms.BillingProjectImportForm
     template_name = "anvil_project_manager/billingproject_import.html"
     message_not_users_of_billing_project = (
         "Not a user of requested billing project or it doesn't exist on AnVIL."
@@ -170,7 +170,7 @@ class ManagedGroupDetail(DetailView):
 
 class ManagedGroupCreate(CreateView):
     model = models.ManagedGroup
-    fields = ("name",)
+    form_class = forms.ManagedGroupCreateForm
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
