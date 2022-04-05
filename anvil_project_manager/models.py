@@ -6,19 +6,10 @@ from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
-def validate_billing_project_name(value):
-    """Custom validator for unique case-insensitive emails. This primarily provides a nice message on a form."""
-    if BillingProject.objects.filter(name__iexact=value).exists():
-        raise ValidationError("Billing Project with this Name already exists.")
-    return value
-
-
 class BillingProject(models.Model):
     """A model to store information about AnVIL billing projects."""
 
-    name = models.SlugField(
-        max_length=64, unique=True, validators=[validate_billing_project_name]
-    )
+    name = models.SlugField(max_length=64, unique=True)
     has_app_as_user = models.BooleanField()
 
     def __str__(self):
@@ -57,18 +48,11 @@ class BillingProject(models.Model):
         return billing_project
 
 
-def validate_account_email(value):
-    """Custom validator for unique case-insensitive emails. This primarily provides a nice message on a form."""
-    if Account.objects.filter(email__iexact=value).exists():
-        raise ValidationError("Account with this Email already exists.")
-    return value
-
-
 class Account(models.Model):
     """A model to store information about AnVIL accounts."""
 
     # TODO: Consider using CIEmailField if using postgres.
-    email = models.EmailField(unique=True, validators=[validate_account_email])
+    email = models.EmailField(unique=True)
     is_service_account = models.BooleanField()
 
     def __str__(self):
@@ -90,19 +74,10 @@ class Account(models.Model):
         return True
 
 
-def validate_group_name(value):
-    """Custom validator for unique case-insensitive names. This primarily provides a nice message on a form."""
-    if ManagedGroup.objects.filter(name__iexact=value).exists():
-        raise ValidationError("Group with this Name already exists.")
-    return value
-
-
 class ManagedGroup(models.Model):
     """A model to store information about AnVIL Managed Groups."""
 
-    name = models.SlugField(
-        max_length=64, unique=True, validators=[validate_group_name]
-    )
+    name = models.SlugField(max_length=64, unique=True)
     is_managed_by_app = models.BooleanField(default=True)
 
     def __str__(self):

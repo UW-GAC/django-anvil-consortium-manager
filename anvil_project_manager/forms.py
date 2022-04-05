@@ -1,8 +1,37 @@
 """Forms classes for the anvil_project_manager app."""
 
 from django import forms
+from django.core.exceptions import ValidationError
 
 from . import models
+
+
+class AccountImportForm(forms.ModelForm):
+    """Form to import an Account from AnVIL."""
+
+    class Meta:
+        model = models.Account
+        fields = ("email", "is_service_account")
+
+    def clean_email(self):
+        value = self.cleaned_data["email"]
+        if models.Account.objects.filter(email__iexact=value).exists():
+            raise ValidationError("Account with this Email already exists.")
+        return value
+
+
+class ManagedGroupCreateForm(forms.ModelForm):
+    """Form to create a ManagedGroup on AnVIL."""
+
+    class Meta:
+        model = models.ManagedGroup
+        fields = ("name",)
+
+    def clean_name(self):
+        value = self.cleaned_data["name"]
+        if models.ManagedGroup.objects.filter(name__iexact=value).exists():
+            raise ValidationError("Managed Group with this Name already exists.")
+        return value
 
 
 class WorkspaceCreateForm(forms.ModelForm):

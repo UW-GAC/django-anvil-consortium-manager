@@ -111,8 +111,8 @@ class AccountDetail(SingleTableMixin, DetailView):
 
 class AccountImport(CreateView):
     model = models.Account
-    fields = ("email", "is_service_account")
     message_account_does_not_exist = "This account does not exist on AnVIL."
+    form_class = forms.AccountImportForm
 
     def form_valid(self, form):
         """If the form is valid, check that the account exists on AnVIL and save the associated model."""
