@@ -6,6 +6,67 @@ from .. import forms, models
 from . import factories
 
 
+class AccountImportFormTest(TestCase):
+    """Tests for the AccountImportForm class."""
+
+    form_class = forms.AccountImportForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {
+            "email": "test_email@example.com",
+            "is_service_account": True,
+        }
+        form = self.form_class(data=form_data)
+        print(form.errors)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_missing_email(self):
+        """Form is invalid when missing email."""
+        form_data = {"is_service_account": True}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("required", form.errors["email"][0])
+
+    def test_valid_missing_is_service_account(self):
+        """Form is invalid when missing is_service_account."""
+        form_data = {"email": "test_email@example.com"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["is_service_account"], False)
+
+    def test_invalid_duplicate_email(self):
+        """Form is invalid with a duplicated email."""
+        account = factories.AccountFactory.create()
+        form_data = {
+            "email": account.email,
+            "is_service_account": True,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("already exists", form.errors["email"][0])
+
+    def test_invalid_duplicate_email_case_insensitive(self):
+        """Form is invalid with a duplicated email, regardless of case."""
+        factories.AccountFactory.create(email="foo@example.com")
+        form_data = {
+            "email": "FOO@example.com",
+            "is_service_account": True,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("already exists", form.errors["email"][0])
+
+
 class WorkspaceCreateFormTest(TestCase):
     """Tests for the WorkspaceCreateForm class."""
 

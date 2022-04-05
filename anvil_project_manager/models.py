@@ -48,18 +48,11 @@ class BillingProject(models.Model):
         return billing_project
 
 
-def validate_account_email(value):
-    """Custom validator for unique case-insensitive emails. This primarily provides a nice message on a form."""
-    if Account.objects.filter(email__iexact=value).exists():
-        raise ValidationError("Account with this Email already exists.")
-    return value
-
-
 class Account(models.Model):
     """A model to store information about AnVIL accounts."""
 
     # TODO: Consider using CIEmailField if using postgres.
-    email = models.EmailField(unique=True, validators=[validate_account_email])
+    email = models.EmailField(unique=True)
     is_service_account = models.BooleanField()
 
     def __str__(self):
