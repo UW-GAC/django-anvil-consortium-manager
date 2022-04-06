@@ -272,8 +272,24 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(
             responses.DELETE, self.url, status=204, json={"message": "mock message"}
         )
+        responses.add(
+            responses.GET, self.url, status=404, json={"message": "mock message"}
+        )
         self.object.anvil_delete()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.url, 2)
+
+    def test_anvil_delete_existing_not_actually_deleted_on_anvil(self):
+        """anvil_delete raises exception with successful API response but group was not actually deleted.
+
+        The AnVIL group delete API is buggy and often returns a successful API response when it should return an error.
+        """
+        responses.add(
+            responses.DELETE, self.url, status=204, json={"message": "mock message"}
+        )
+        responses.add(responses.GET, self.url, status=200)
+        with self.assertRaises(exceptions.AnVILGroupDeletionError):
+            self.object.anvil_delete()
+        responses.assert_call_count(self.url, 2)
 
     def test_anvil_delete_forbidden(self):
         responses.add(
