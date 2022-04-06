@@ -226,6 +226,10 @@ class ManagedGroupDelete(DeleteView):
     message_has_access_to_workspace = (
         "Cannot delete group because it has access to at least one workspace."
     )
+    # In some cases the AnVIL API returns a successful code but the group is not deleted.
+    message_could_not_delete_group = (
+        "Cannot not delete group from AnVIL - unknown reason."
+    )
 
     def get_success_url(self):
         return reverse("anvil_project_manager:managed_groups:list")
@@ -298,6 +302,11 @@ class ManagedGroupDelete(DeleteView):
 
         try:
             self.object.anvil_delete()
+        except exceptions.AnVILGroupDeletionError:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_could_not_delete_group
+            )
+            return HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(

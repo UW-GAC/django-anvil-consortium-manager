@@ -1381,11 +1381,12 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.ManagedGroupFactory.create(name="test-group")
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url, 2)
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -1393,6 +1394,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         other_object = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         request = self.factory.post(self.get_url(object.pk), {"submit": ""})
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 302)
@@ -1401,20 +1403,49 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.ManagedGroup.objects.all(),
             models.ManagedGroup.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url, 2)
+
+    def test_delete_successful_not_actually_deleted_on_anvil(self):
+        """anvil_delete raises exception with successful API response but group was not actually deleted.
+
+        The AnVIL group delete API is buggy and often returns a successful API response when it should return an error.
+        """
+        object = factories.ManagedGroupFactory.create(name="test-group")
+        url = self.entry_point + "/api/groups/" + object.name
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        # Group was not actually deleted on AnVIL.
+        responses.add(responses.GET, url, status=200)
+        # Need to use a client for messages.
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        # Check for messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.ManagedGroupDelete.message_could_not_delete_group,
+            str(messages[0]),
+        )
+        # Make sure that the object still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        models.ManagedGroup.objects.get(pk=object.pk)
+        responses.assert_call_count(url, 2)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.ManagedGroupFactory.create()
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_project_manager:managed_groups:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url, 2)
 
     def test_get_redirect_group_is_a_member_of_another_group(self):
         """Redirect get request when trying to delete a group that is a member of another group.
@@ -1569,6 +1600,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         url = self.entry_point + "/api/groups/" + parent.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         request = self.factory.post(self.get_url(parent.pk), {"submit": ""})
         response = self.get_view()(request, pk=parent.pk)
         self.assertEqual(response.status_code, 302)
@@ -1580,7 +1612,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         models.ManagedGroup.objects.get(pk=child.pk)
         # The group membership was deleted.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url, 2)
 
     def test_can_delete_group_if_it_has_account_members(self):
         """Can delete a group that has other groups as members."""
@@ -1589,6 +1621,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
         url = self.entry_point + "/api/groups/" + group.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         request = self.factory.post(self.get_url(group.pk), {"submit": ""})
         response = self.get_view()(request, pk=group.pk)
         self.assertEqual(response.status_code, 302)
@@ -1598,7 +1631,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         # The account still exists.
         models.Account.objects.get(pk=account.pk)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(url, 2)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""

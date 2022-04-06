@@ -151,7 +151,17 @@ class ManagedGroup(models.Model):
 
     def anvil_delete(self):
         """Deletes the group on AnVIL."""
+        # Try to delete the group.
         AnVILAPIClient().delete_group(self.name)
+        # The API for deleting groups is buggy, so verify that it was actually deleted.
+        try:
+            AnVILAPIClient().get_group(self.name)
+        except AnVILAPIError404:
+            # The group was actually deleted, as requested.
+            pass
+        else:
+            # No exception was raised, so the group still exists. Raise a specific exception for this.
+            raise exceptions.AnVILGroupDeletionError(self.name)
 
     @classmethod
     def anvil_import(cls, group_name):
