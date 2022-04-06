@@ -17,7 +17,7 @@ class BillingProject(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:billing_projects:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:billing_projects:detail", kwargs={"pk": self.pk}
         )
 
     def anvil_exists(self):
@@ -63,7 +63,9 @@ class Account(models.Model):
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse("anvil_project_manager:accounts:detail", kwargs={"pk": self.pk})
+        return reverse(
+            "anvil_consortium_manager:accounts:detail", kwargs={"pk": self.pk}
+        )
 
     def anvil_exists(self):
         """Check if this account exists on AnVIL."""
@@ -94,7 +96,7 @@ class ManagedGroup(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:managed_groups:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:managed_groups:detail", kwargs={"pk": self.pk}
         )
 
     def get_email(self):
@@ -230,7 +232,7 @@ class Workspace(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:workspaces:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:workspaces:detail", kwargs={"pk": self.pk}
         )
 
     def get_full_name(self):
@@ -421,7 +423,7 @@ class GroupGroupMembership(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:group_group_membership:detail",
+            "anvil_consortium_manager:group_group_membership:detail",
             kwargs={"pk": self.pk},
         )
 
@@ -489,7 +491,7 @@ class GroupAccountMembership(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:group_account_membership:detail",
+            "anvil_consortium_manager:group_account_membership:detail",
             kwargs={"pk": self.pk},
         )
 
@@ -539,7 +541,7 @@ class WorkspaceGroupAccess(models.Model):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_project_manager:workspace_group_access:detail",
+            "anvil_consortium_manager:workspace_group_access:detail",
             kwargs={"pk": self.pk},
         )
 

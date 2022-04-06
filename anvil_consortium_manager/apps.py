@@ -3,4 +3,4 @@ from django.apps import AppConfig
 
 class AnvilTrackerConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "anvil_project_manager"
+    name = "anvil_consortium_manager"

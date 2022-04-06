@@ -1,4 +1,4 @@
-"""Admin classes for the anvil_project_manager app."""
+"""Admin classes for the anvil_consortium_manager app."""
 
 from django.contrib import admin
 

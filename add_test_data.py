@@ -1,7 +1,7 @@
 # Temporary script to create some test data.
 # Run with: python manage.py shell < add_test_data.py
 
-from anvil_project_manager.tests import factories
+from anvil_consortium_manager.tests import factories
 
 accounts = factories.AccountFactory.create_batch(5)
 groups = factories.ManagedGroupFactory.create_batch(5)
