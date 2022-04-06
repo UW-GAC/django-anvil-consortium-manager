@@ -23,3 +23,7 @@ class AnVILAlreadyImported(Exception):
     """Exception to be raised when an AnVIL resource has already been imported into Django."""
 
     pass
+
+
+class AnVILRemoveAccountFromGroupError(Exception):
+    """Exception to be raised when an account cannot be removed from a group on AnVIL."""

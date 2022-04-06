@@ -143,9 +143,26 @@ class AccountList(SingleTableView):
 
 class AccountDelete(DeleteView):
     model = models.Account
+    message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
 
     def get_success_url(self):
         return reverse("anvil_project_manager:accounts:list")
+        # exceptions.AnVILRemoveAccountFromGroupError
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Make an API call to AnVIL to remove the account from all groups and then delete it from the app.
+        """
+        self.object = self.get_object()
+        try:
+            self.object.anvil_remove_from_groups()
+        except AnVILAPIError as e:
+            msg = self.message_error_removing_from_groups.format(e)
+            messages.add_message(request, messages.ERROR, msg)
+            # Rerender the same page with an error message.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        else:
+            return super().delete(request, *args, **kwargs)
 
 
 class ManagedGroupDetail(DetailView):
@@ -203,6 +220,12 @@ class ManagedGroupDelete(DeleteView):
     message_is_auth_domain = (
         "Cannot delete group since it is an authorization domain for a workspace."
     )
+    message_is_member_of_another_group = (
+        "Cannot delete group since it is a member of another group."
+    )
+    message_has_access_to_workspace = (
+        "Cannot delete group because it has access to at least one workspace."
+    )
 
     def get_success_url(self):
         return reverse("anvil_project_manager:managed_groups:list")
@@ -223,6 +246,18 @@ class ManagedGroupDelete(DeleteView):
                 self.request, messages.ERROR, self.message_is_auth_domain
             )
             # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Check that it is not a member of other groups.
+        # This is enforced by AnVIL.
+        if self.object.parent_memberships.count() > 0:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_is_member_of_another_group
+            )
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        if self.object.workspacegroupaccess_set.count() > 0:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_has_access_to_workspace
+            )
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Otherwise, return the response.
         return response
@@ -247,6 +282,18 @@ class ManagedGroupDelete(DeleteView):
                 self.request, messages.ERROR, self.message_is_auth_domain
             )
             # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Check that it is not a member of other groups.
+        # This is enforced by AnVIL.
+        if self.object.parent_memberships.count() > 0:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_is_member_of_another_group
+            )
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        if self.object.workspacegroupaccess_set.count() > 0:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_has_access_to_workspace
+            )
             return HttpResponseRedirect(self.object.get_absolute_url())
 
         try:

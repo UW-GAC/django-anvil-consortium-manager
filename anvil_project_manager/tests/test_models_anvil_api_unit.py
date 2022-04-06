@@ -122,19 +122,82 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.object = factories.AccountFactory.create()
-        self.url = self.entry_point + "/api/proxyGroup/" + self.object.email
+        self.api_url = self.entry_point + "/api/proxyGroup/" + self.object.email
+
+    def get_api_remove_from_group_url(self, group_name):
+        return (
+            self.entry_point
+            + "/api/groups/"
+            + group_name
+            + "/MEMBER/"
+            + self.object.email
+        )
 
     def test_anvil_exists_does_exist(self):
-        responses.add(responses.GET, self.url, status=200)
+        responses.add(responses.GET, self.api_url, status=200)
         self.assertIs(self.object.anvil_exists(), True)
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_anvil_exists_does_not_exist(self):
         responses.add(
-            responses.GET, self.url, status=404, json={"message": "mock message"}
+            responses.GET, self.api_url, status=404, json={"message": "mock message"}
         )
         self.assertIs(self.object.anvil_exists(), False)
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_anvil_remove_from_groups_in_no_groups(self):
+        """anvil_remove_from_groups succeeds if the account is not in any groups."""
+        # Make sure it doesn't fail and that there are no API calls.
+        self.object.anvil_remove_from_groups()
+
+    def test_anvil_remove_from_groups_in_one_group(self):
+        """anvil_remove_from_groups succeeds if the account is in one group."""
+        membership = factories.GroupAccountMembershipFactory.create(account=self.object)
+        group = membership.group
+        remove_from_group_url = self.get_api_remove_from_group_url(group.name)
+        responses.add(responses.DELETE, remove_from_group_url, status=204)
+        self.object.anvil_remove_from_groups()
+        # The membership was removed.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        responses.assert_call_count(remove_from_group_url, 1)
+
+    def test_anvil_remove_from_groups_in_two_groups(self):
+        """anvil_remove_from_groups succeeds if the account is in two groups."""
+        memberships = factories.GroupAccountMembershipFactory.create_batch(
+            2, account=self.object
+        )
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        remove_from_group_url_1 = self.get_api_remove_from_group_url(group_1.name)
+        remove_from_group_url_2 = self.get_api_remove_from_group_url(group_2.name)
+        responses.add(responses.DELETE, remove_from_group_url_1, status=204)
+        responses.add(responses.DELETE, remove_from_group_url_2, status=204)
+        self.object.anvil_remove_from_groups()
+        # The membership was removed.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        responses.assert_call_count(remove_from_group_url_1, 1)
+        responses.assert_call_count(remove_from_group_url_2, 1)
+
+    def test_anvil_remove_from_groups_api_failure(self):
+        """anvil_remove_from_groups does not remove group memberships if any API call failed."""
+        factories.GroupAccountMembershipFactory.create_batch(2, account=self.object)
+        group_1 = self.object.groupaccountmembership_set.all()[0].group
+        group_2 = self.object.groupaccountmembership_set.all()[1].group
+        remove_from_group_url_1 = self.get_api_remove_from_group_url(group_1.name)
+        remove_from_group_url_2 = self.get_api_remove_from_group_url(group_2.name)
+        responses.add(responses.DELETE, remove_from_group_url_1, status=204)
+        responses.add(
+            responses.DELETE,
+            remove_from_group_url_2,
+            status=409,
+            json={"message": "api error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.anvil_remove_from_groups()
+        # No memberships were removed.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        responses.assert_call_count(remove_from_group_url_1, 1)
+        responses.assert_call_count(remove_from_group_url_2, 1)
 
 
 class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):

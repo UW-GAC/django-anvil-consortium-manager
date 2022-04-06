@@ -46,6 +46,13 @@ class BillingProjectTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_workspace_on_delete(self):
+        """Billing project cannot be deleted if a workspace in that BillingProject exists."""
+        workspace = factories.WorkspaceFactory.create()
+        with self.assertRaises(ProtectedError):
+            workspace.billing_project.delete()
+        self.assertEqual(BillingProject.objects.count(), 1)
+
     @skip("Add this constraint.")
     def test_name_save_case_insensitivity(self):
         """Cannot save two models with the same case-insensitive name."""
@@ -170,6 +177,75 @@ class ManagedGroupTest(TestCase):
         instance_2 = ManagedGroup(name="my-group-2", is_managed_by_app=False)
         instance_2.full_clean()
         instance_2.save()
+
+    def test_workspace_on_delete(self):
+        """Group cannot be deleted if it is used as an auth domain for a workspace."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        with self.assertRaises(ProtectedError):
+            group.delete()
+        self.assertEqual(ManagedGroup.objects.count(), 1)
+
+    def test_cannot_delete_group_that_is_a_member_of_another_group(self):
+        """Group cannot be deleted if it is a member of another group.
+
+        This is a behavior enforced by AnVIL."""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        with self.assertRaises(ProtectedError):
+            child.delete()
+        # Both groups still exist.
+        self.assertEqual(ManagedGroup.objects.count(), 2)
+        # The membership still exists.
+        self.assertEqual(GroupGroupMembership.objects.count(), 1)
+
+    def test_can_delete_group_if_it_has_child_groups(self):
+        """A group can be deleted if it has other groups as members."""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        parent.delete()
+        # Only the child group still exists.
+        self.assertEqual(ManagedGroup.objects.count(), 1)
+        with self.assertRaises(ManagedGroup.DoesNotExist):
+            ManagedGroup.objects.get(pk=parent.pk)
+        ManagedGroup.objects.get(pk=child.pk)
+        # The membership was deleted.
+        self.assertEqual(GroupGroupMembership.objects.count(), 0)
+
+    def test_can_delete_group_if_it_has_account_members(self):
+        """A group can be deleted if it has an account as a member."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        group.delete()
+        # No groups exist.
+        self.assertEqual(ManagedGroup.objects.count(), 0)
+        # The relationship was deleted.
+        self.assertEqual(GroupAccountMembership.objects.count(), 0)
+        # The account still exists.
+        self.assertEqual(Account.objects.count(), 1)
+        Account.objects.get(pk=account.pk)
+
+    def test_cannot_delete_group_if_it_has_access_to_a_workspace(self):
+        """Group cannot be deleted if it has access to a workspace.
+
+        This is a behavior enforced by AnVIL."""
+        access = factories.WorkspaceGroupAccessFactory.create()
+        with self.assertRaises(ProtectedError):
+            access.group.delete()
+        # The group still exists.
+        self.assertEqual(ManagedGroup.objects.count(), 1)
+        ManagedGroup.objects.get(pk=access.group.pk)
+        # The access still exists.
+        self.assertEqual(WorkspaceGroupAccess.objects.count(), 1)
+        WorkspaceGroupAccess.objects.get(pk=access.pk)
 
     def test_get_direct_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
@@ -658,6 +734,26 @@ class WorkspaceTest(TestCase):
         """The get_absolute_url() method works."""
         instance = factories.WorkspaceFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
+
+    def test_workspace_on_delete_auth_domain(self):
+        """Workspace can be deleted if it has an authorization domain."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        workspace.delete()
+        self.assertEqual(Workspace.objects.count(), 0)
+        # Also deletes the relationship.
+        self.assertEqual(WorkspaceAuthorizationDomain.objects.count(), 0)
+
+    def test_workspace_on_delete_access(self):
+        """Workspace can be deleted if a group has access to it."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory(group=group, workspace=workspace)
+        workspace.delete()
+        self.assertEqual(Workspace.objects.count(), 0)
+        # Also deletes the relationship.
+        self.assertEqual(WorkspaceGroupAccess.objects.count(), 0)
 
     def test_name_validation_case_insensitivity(self):
         """Cannot validate two models with the same case-insensitive name in the same billing project."""

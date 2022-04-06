@@ -73,6 +73,15 @@ class Account(models.Model):
             return False
         return True
 
+    def anvil_remove_from_groups(self):
+        """From user from all groups on AnVIL."""
+        group_memberships = self.groupaccountmembership_set.all()
+        for membership in group_memberships:
+            membership.anvil_delete()
+        # If all memberships were successfully deleted from AnVIL, then delete all memberships from django.
+        for membership in group_memberships:
+            membership.delete()
+
 
 class ManagedGroup(models.Model):
     """A model to store information about AnVIL Managed Groups."""
@@ -383,7 +392,7 @@ class GroupGroupMembership(models.Model):
         "ManagedGroup", on_delete=models.CASCADE, related_name="child_memberships"
     )
     child_group = models.ForeignKey(
-        "ManagedGroup", on_delete=models.CASCADE, related_name="parent_memberships"
+        "ManagedGroup", on_delete=models.PROTECT, related_name="parent_memberships"
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
 
@@ -500,7 +509,7 @@ class WorkspaceGroupAccess(models.Model):
         (READER, "Reader"),
     ]
 
-    group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
+    group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
 
