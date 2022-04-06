@@ -17,11 +17,11 @@ from .anvil_api import AnVILAPIClient, AnVILAPIError
 
 
 class Index(TemplateView):
-    template_name = "anvil_project_manager/index.html"
+    template_name = "anvil_consortium_manager/index.html"
 
 
 class AnVILStatus(TemplateView):
-    template_name = "anvil_project_manager/status.html"
+    template_name = "anvil_consortium_manager/status.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -57,7 +57,7 @@ class AnVILStatus(TemplateView):
 class BillingProjectImport(CreateView):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
-    template_name = "anvil_project_manager/billingproject_import.html"
+    template_name = "anvil_consortium_manager/billingproject_import.html"
     message_not_users_of_billing_project = (
         "Not a user of requested billing project or it doesn't exist on AnVIL."
     )
@@ -146,7 +146,7 @@ class AccountDelete(DeleteView):
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:accounts:list")
+        return reverse("anvil_consortium_manager:accounts:list")
         # exceptions.AnVILRemoveAccountFromGroupError
 
     def delete(self, request, *args, **kwargs):
@@ -232,7 +232,7 @@ class ManagedGroupDelete(DeleteView):
     )
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:managed_groups:list")
+        return reverse("anvil_consortium_manager:managed_groups:list")
 
     def get(self, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -355,7 +355,7 @@ class WorkspaceCreate(CreateView):
 
 
 class WorkspaceImport(FormView):
-    template_name = "anvil_project_manager/workspace_import.html"
+    template_name = "anvil_consortium_manager/workspace_import.html"
     form_class = forms.WorkspaceImportForm
     message_anvil_no_access_to_workspace = (
         "Requested workspace doesn't exist or you don't have permission to see it."
@@ -411,7 +411,7 @@ class WorkspaceDelete(DeleteView):
     model = models.Workspace
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:workspaces:list")
+        return reverse("anvil_consortium_manager:workspaces:list")
 
     def delete(self, request, *args, **kwargs):
         """
@@ -439,7 +439,7 @@ class GroupGroupMembershipCreate(CreateView):
     form_class = forms.GroupGroupMembershipForm
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:group_group_membership:list")
+        return reverse("anvil_consortium_manager:group_group_membership:list")
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -472,7 +472,7 @@ class GroupGroupMembershipDelete(DeleteView):
     )
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:group_group_membership:list")
+        return reverse("anvil_consortium_manager:group_group_membership:list")
 
     def get(self, request, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -524,7 +524,7 @@ class GroupAccountMembershipCreate(CreateView):
     form_class = forms.GroupAccountMembershipForm
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:group_account_membership:list")
+        return reverse("anvil_consortium_manager:group_account_membership:list")
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -557,7 +557,7 @@ class GroupAccountMembershipDelete(DeleteView):
     )
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:group_account_membership:list")
+        return reverse("anvil_consortium_manager:group_account_membership:list")
 
     def get(self, request, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -605,7 +605,7 @@ class WorkspaceGroupAccessCreate(CreateView):
     fields = ("workspace", "group", "access")
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:workspace_group_access:list")
+        return reverse("anvil_consortium_manager:workspace_group_access:list")
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -628,7 +628,7 @@ class WorkspaceGroupAccessCreate(CreateView):
 class WorkspaceGroupAccessUpdate(UpdateView):
     model = models.WorkspaceGroupAccess
     fields = ("access",)
-    template_name = "anvil_project_manager/workspacegroupaccess_update.html"
+    template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -657,7 +657,7 @@ class WorkspaceGroupAccessDelete(DeleteView):
     model = models.WorkspaceGroupAccess
 
     def get_success_url(self):
-        return reverse("anvil_project_manager:workspace_group_access:list")
+        return reverse("anvil_consortium_manager:workspace_group_access:list")
 
     def delete(self, request, *args, **kwargs):
         """

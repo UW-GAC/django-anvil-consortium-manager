@@ -1,7 +1,7 @@
 from factory import Faker, SubFactory
 from factory.django import DjangoModelFactory
 
-from anvil_project_manager import models
+from anvil_consortium_manager import models
 
 
 class BillingProjectFactory(DjangoModelFactory):

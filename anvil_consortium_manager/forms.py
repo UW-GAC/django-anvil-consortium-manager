@@ -1,4 +1,4 @@
-"""Forms classes for the anvil_project_manager app."""
+"""Forms classes for the anvil_consortium_manager app."""
 
 from django import forms
 from django.core.exceptions import ValidationError

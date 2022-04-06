@@ -1,4 +1,4 @@
-"""Test forms for the anvil_project_manager app."""
+"""Test forms for the anvil_consortium_manager app."""
 
 from django.test import TestCase
 

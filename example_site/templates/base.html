@@ -6,7 +6,7 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <title>{% block title %}example_site{% endblock title %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Django app to manage AnVIL workspace permissions">
+    <meta name="description" content="Django app to manage consortium resources on AnVIL">
     <meta name="author" content="Adrienne Stilp">
 
     <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}">
@@ -51,7 +51,7 @@
             <ul class="navbar-nav mr-auto">
 
               <li class="nav-item">
-                  <a class="nav-link" href="{% url 'anvil_project_manager:status' %}">AnVIL status</a>
+                  <a class="nav-link" href="{% url 'anvil_consortium_manager:status' %}">AnVIL status</a>
               </li>
 
               <li class="nav-item dropdown">
@@ -60,10 +60,10 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:billing_projects:list' %}">List billing projects</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:billing_projects:list' %}">List billing projects</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:billing_projects:import' %}">Import a billing project</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:billing_projects:import' %}">Import a billing project</a>
                   </li>
                 </ul>
               </li>
@@ -74,10 +74,10 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:accounts:list' %}">List accounts</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:accounts:list' %}">List accounts</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:accounts:import' %}">Import an account</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:accounts:import' %}">Import an account</a>
                   </li>
                 </ul>
               </li>
@@ -88,22 +88,22 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:managed_groups:list' %}">List groups</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:list' %}">List groups</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:managed_groups:new' %}">Add a group</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:new' %}">Add a group</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:group_account_membership:list' %}">Group-account membership</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_account_membership:list' %}">Group-account membership</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:group_group_membership:list' %}">Group-group membership</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_group_membership:list' %}">Group-group membership</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:group_account_membership:new' %}">Add an account to a group</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_account_membership:new' %}">Add an account to a group</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:group_group_membership:new' %}">Add a group to a group</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_group_membership:new' %}">Add a group to a group</a>
                   </li>
 
                 </ul>
@@ -115,16 +115,16 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:list' %}">List workspaces</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:list' %}">List workspaces</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:new' %}">Add a workspace</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:new' %}">Add a workspace</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspaces:import' %}">Import a workspace from AnVIL</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:import' %}">Import a workspace from AnVIL</a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'anvil_project_manager:workspace_group_access:list' %}">Workspace access</a>
+                    <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_access:list' %}">Workspace access</a>
                   </li>
                 </ul>
               </li>
@@ -152,8 +152,8 @@
       <section class="py-5 text-center container">
         <div class="row py-lg-5">
           <div class="col-lg-6 col-md-8 mx-auto">
-            <h1 class="fw-light">AnVIL Project Manager</h1>
-            <p class="lead text-muted">With this app, you can manage workspaces, groups, and data access on <a href="https://anvilproject.org/">the AnVIL</a>.</p>
+            <h1 class="fw-light">AnVIL Consortium Manager</h1>
+            <p class="lead text-muted">With this app, you can manage <a href="https://anvilproject.org/">AnVIL</a> workspaces, groups, and data access associated with a Consortium.</p>
           </div>
         </div>
       </section>

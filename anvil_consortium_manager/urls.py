@@ -2,7 +2,7 @@ from django.urls import include, path
 
 from . import views
 
-app_name = "anvil_project_manager"
+app_name = "anvil_consortium_manager"
 
 billing_project_patterns = (
     [

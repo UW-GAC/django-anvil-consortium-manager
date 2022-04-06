@@ -17,7 +17,7 @@ class IndexTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:index", args=args)
+        return reverse("anvil_consortium_manager:index", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -58,7 +58,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:status", args=args)
+        return reverse("anvil_consortium_manager:status", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -186,7 +186,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:billing_projects:import", args=args)
+        return reverse("anvil_consortium_manager:billing_projects:import", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -339,7 +339,7 @@ class BillingProjectDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:billing_projects:detail", args=args)
+        return reverse("anvil_consortium_manager:billing_projects:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -420,7 +420,7 @@ class BillingProjectListTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:billing_projects:list", args=args)
+        return reverse("anvil_consortium_manager:billing_projects:list", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -470,7 +470,7 @@ class AccountDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:accounts:detail", args=args)
+        return reverse("anvil_consortium_manager:accounts:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -556,7 +556,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:accounts:import", args=args)
+        return reverse("anvil_consortium_manager:accounts:import", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -720,7 +720,7 @@ class AccountListTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:accounts:list", args=args)
+        return reverse("anvil_consortium_manager:accounts:list", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -778,7 +778,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:accounts:delete", args=args)
+        return reverse("anvil_consortium_manager:accounts:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -837,7 +837,9 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need to use the client instead of RequestFactory to check redirection url.
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse("anvil_project_manager:accounts:list"))
+        self.assertRedirects(
+            response, reverse("anvil_consortium_manager:accounts:list")
+        )
 
     def test_removes_account_from_one_group(self):
         """Deleting an account from the app also removes it from one group."""
@@ -933,7 +935,7 @@ class ManagedGroupDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:managed_groups:detail", args=args)
+        return reverse("anvil_consortium_manager:managed_groups:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1173,7 +1175,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:managed_groups:new", args=args)
+        return reverse("anvil_consortium_manager:managed_groups:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1304,7 +1306,7 @@ class ManagedGroupListTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:managed_groups:list", args=args)
+        return reverse("anvil_consortium_manager:managed_groups:list", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1357,7 +1359,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:managed_groups:delete", args=args)
+        return reverse("anvil_consortium_manager:managed_groups:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1443,7 +1445,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
-            response, reverse("anvil_project_manager:managed_groups:list")
+            response, reverse("anvil_consortium_manager:managed_groups:list")
         )
         responses.assert_call_count(url, 2)
 
@@ -1706,7 +1708,7 @@ class WorkspaceDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspaces:detail", args=args)
+        return reverse("anvil_consortium_manager:workspaces:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1847,7 +1849,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspaces:new", args=args)
+        return reverse("anvil_consortium_manager:workspaces:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -2335,7 +2337,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspaces:import", args=args)
+        return reverse("anvil_consortium_manager:workspaces:import", args=args)
 
     def get_api_url(self, billing_project_name, workspace_name):
         return (
@@ -2724,7 +2726,7 @@ class WorkspaceListTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspaces:list", args=args)
+        return reverse("anvil_consortium_manager:workspaces:list", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -2782,7 +2784,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspaces:delete", args=args)
+        return reverse("anvil_consortium_manager:workspaces:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -2897,7 +2899,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse("anvil_project_manager:workspaces:list"))
+        self.assertRedirects(
+            response, reverse("anvil_consortium_manager:workspaces:list")
+        )
         responses.assert_call_count(url, 1)
 
     def test_api_error(self):
@@ -2935,7 +2939,9 @@ class GroupGroupMembershipDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_group_membership:detail", args=args)
+        return reverse(
+            "anvil_consortium_manager:group_group_membership:detail", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -2968,7 +2974,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_group_membership:new", args=args)
+        return reverse("anvil_consortium_manager:group_group_membership:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -3065,7 +3071,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertRedirects(
-            response, reverse("anvil_project_manager:group_group_membership:list")
+            response, reverse("anvil_consortium_manager:group_group_membership:list")
         )
         responses.assert_call_count(url, 1)
 
@@ -3449,7 +3455,9 @@ class GroupGroupMembershipListTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_group_membership:list", args=args)
+        return reverse(
+            "anvil_consortium_manager:group_group_membership:list", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -3503,7 +3511,9 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_group_membership:delete", args=args)
+        return reverse(
+            "anvil_consortium_manager:group_group_membership:delete", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -3584,7 +3594,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
-            response, reverse("anvil_project_manager:group_group_membership:list")
+            response, reverse("anvil_consortium_manager:group_group_membership:list")
         )
         responses.assert_call_count(url, 1)
 
@@ -3695,7 +3705,7 @@ class GroupAccountMembershipDetailTest(TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse(
-            "anvil_project_manager:group_account_membership:detail", args=args
+            "anvil_consortium_manager:group_account_membership:detail", args=args
         )
 
     def get_view(self):
@@ -3729,7 +3739,9 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_account_membership:new", args=args)
+        return reverse(
+            "anvil_consortium_manager:group_account_membership:new", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -3810,7 +3822,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertRedirects(
-            response, reverse("anvil_project_manager:group_account_membership:list")
+            response, reverse("anvil_consortium_manager:group_account_membership:list")
         )
         responses.assert_call_count(url, 1)
 
@@ -4117,7 +4129,9 @@ class GroupAccountMembershipListTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:group_account_membership:list", args=args)
+        return reverse(
+            "anvil_consortium_manager:group_account_membership:list", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -4173,7 +4187,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse(
-            "anvil_project_manager:group_account_membership:delete", args=args
+            "anvil_consortium_manager:group_account_membership:delete", args=args
         )
 
     def get_view(self):
@@ -4253,7 +4267,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
-            response, reverse("anvil_project_manager:group_account_membership:list")
+            response, reverse("anvil_consortium_manager:group_account_membership:list")
         )
         responses.assert_call_count(url, 1)
 
@@ -4363,7 +4377,9 @@ class WorkspaceGroupAccessDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspace_group_access:detail", args=args)
+        return reverse(
+            "anvil_consortium_manager:workspace_group_access:detail", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -4396,7 +4412,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspace_group_access:new", args=args)
+        return reverse("anvil_consortium_manager:workspace_group_access:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -4574,7 +4590,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertRedirects(
-            response, reverse("anvil_project_manager:workspace_group_access:list")
+            response, reverse("anvil_consortium_manager:workspace_group_access:list")
         )
         responses.assert_call_count(url, 1)
 
@@ -4893,7 +4909,9 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspace_group_access:update", args=args)
+        return reverse(
+            "anvil_consortium_manager:workspace_group_access:update", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -5167,7 +5185,9 @@ class WorkspaceGroupAccessListTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspace_group_access:list", args=args)
+        return reverse(
+            "anvil_consortium_manager:workspace_group_access:list", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -5222,7 +5242,9 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_project_manager:workspace_group_access:delete", args=args)
+        return reverse(
+            "anvil_consortium_manager:workspace_group_access:delete", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -5342,7 +5364,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
-            response, reverse("anvil_project_manager:workspace_group_access:list")
+            response, reverse("anvil_consortium_manager:workspace_group_access:list")
         )
         responses.assert_call_count(url, 1)
 
