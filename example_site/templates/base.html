@@ -135,7 +135,7 @@
               {% if request.user.is_authenticated %}
                 {# show logout #}
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'logout' %}"><span class="fa-solid fa-right-from-bracket"></span> Logout<a>
+                  <a class="nav-link" href="{% url 'logout' %}"><span class="fa-solid fa-right-from-bracket"></span> Logout {{ user.username }}<a>
                 </li>
               {% else %}
                 {# show login #}
