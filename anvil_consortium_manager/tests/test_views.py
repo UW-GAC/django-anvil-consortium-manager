@@ -212,13 +212,26 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
-        request = self.factory.post(self.get_url(), {"name": billing_project_name})
-        response = self.get_view()(request)
+        # Need a client for messages.
+        response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 302)
         new_object = models.BillingProject.objects.latest("pk")
         self.assertIsInstance(new_object, models.BillingProject)
         self.assertEqual(new_object.name, billing_project_name)
         self.assertEqual(new_object.has_app_as_user, True)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        billing_project_name = "test-billing"
+        url = self.get_api_url(billing_project_name)
+        responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        response = self.client.post(
+            self.get_url(), {"name": billing_project_name}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.BillingProjectImport.success_msg, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -579,12 +592,22 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         email = "test@example.com"
         responses.add(responses.GET, self.get_api_url(email), status=200)
-        request = self.factory.post(self.get_url(), {"email": email})
-        response = self.get_view()(request)
+        # Need a client because messages are added.
+        response = self.client.post(self.get_url(), {"email": email})
         self.assertEqual(response.status_code, 302)
         new_object = models.Account.objects.latest("pk")
         self.assertIsInstance(new_object, models.Account)
         self.assertFalse(new_object.is_service_account)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        email = "test@example.com"
+        responses.add(responses.GET, self.get_api_url(email), status=200)
+        response = self.client.post(self.get_url(), {"email": email}, follow=True)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.AccountImport.success_msg, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -655,10 +678,10 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Can create a service account."""
         email = "test@example.com"
         responses.add(responses.GET, self.get_api_url(email), status=200)
-        request = self.factory.post(
+        # Need a client because messages are added.
+        response = self.client.post(
             self.get_url(), {"email": email, "is_service_account": True}
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Account.objects.latest("pk")
         self.assertIsInstance(new_object, models.Account)
@@ -805,16 +828,25 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.AccountFactory.create()
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        object = factories.AccountFactory.create()
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.AccountDelete.success_msg, str(messages[0]))
 
     def test_view_deletes_object_service_account(self):
         """Posting submit to the form successfully deletes the service account object."""
         object = factories.AccountFactory.create(is_service_account=True)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
 
@@ -822,8 +854,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.AccountFactory.create()
         other_object = factories.AccountFactory.create()
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -850,8 +881,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
             group.name, object.email
         )
         responses.add(responses.DELETE, remove_from_group_url, status=204)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
         # Also removes the user from groups.
@@ -874,8 +904,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
             group_2.name, object.email
         )
         responses.add(responses.DELETE, remove_from_group_url_2, status=204)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
         # Also removes the user from groups.
@@ -1200,13 +1229,22 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         url = self.entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(), {"name": "test-group"})
-        response = self.get_view()(request)
+        response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.name, "test-group")
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        url = self.entry_point + "/api/groups/" + "test-group"
+        responses.add(responses.POST, url, status=self.api_success_code)
+        response = self.client.post(self.get_url(), {"name": "test-group"}, follow=True)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.ManagedGroupCreate.success_msg, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -1384,11 +1422,24 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
         responses.assert_call_count(url, 2)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        object = factories.ManagedGroupFactory.create(name="test-group")
+        url = self.entry_point + "/api/groups/" + object.name
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.ManagedGroupDelete.success_msg, str(messages[0]))
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -1397,8 +1448,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -1603,8 +1653,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + parent.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
-        request = self.factory.post(self.get_url(parent.pk), {"submit": ""})
-        response = self.get_view()(request, pk=parent.pk)
+        response = self.client.post(self.get_url(parent.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Parent was deleted.
         with self.assertRaises(models.ManagedGroup.DoesNotExist):
@@ -1624,8 +1673,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + group.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
-        request = self.factory.post(self.get_url(group.pk), {"submit": ""})
-        response = self.get_view()(request, pk=group.pk)
+        response = self.client.post(self.get_url(group.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # The group was deleted.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
@@ -1885,15 +1933,39 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        billing_project = factories.BillingProjectFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        response = self.client.post(
+            self.get_url(),
+            {"billing_project": billing_project.pk, "name": "test-workspace"},
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceCreate.success_msg, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -1954,11 +2026,10 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-name-2"},
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 2)
         # Make sure you can get the new object.
@@ -1987,11 +2058,10 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project_2.pk, "name": workspace_name},
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 2)
         # Make sure you can get the new object.
@@ -2108,7 +2178,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "billing_project": billing_project.pk,
@@ -2116,7 +2186,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "authorization_domains": [auth_domain.pk],
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
@@ -2147,7 +2216,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "billing_project": billing_project.pk,
@@ -2155,7 +2224,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "authorization_domains": [auth_domain_1.pk, auth_domain_2.pk],
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
@@ -2395,14 +2463,13 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "billing_project_name": billing_project_name,
                 "workspace_name": workspace_name,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         # Created a billing project.
         self.assertEqual(models.BillingProject.objects.count(), 1)
@@ -2415,6 +2482,35 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace.name, workspace_name)
         responses.assert_call_count(billing_project_url, 1)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        # Billing project API call.
+        billing_project_url = (
+            self.entry_point + "/api/billing/v2/" + billing_project_name
+        )
+        responses.add(responses.GET, billing_project_url, status=200)
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project_name": billing_project_name,
+                "workspace_name": workspace_name,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceImport.success_msg, str(messages[0]))
 
     def test_can_import_workspace_and_billing_project_as_not_user(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are not users."""
@@ -2434,14 +2530,13 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "billing_project_name": billing_project_name,
                 "workspace_name": workspace_name,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         # Created a billing project.
         self.assertEqual(models.BillingProject.objects.count(), 1)
@@ -2466,14 +2561,13 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project.name, workspace_name),
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "billing_project_name": billing_project.name,
                 "workspace_name": workspace_name,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         # Created a workspace.
         self.assertEqual(models.Workspace.objects.count(), 1)
@@ -2813,11 +2907,28 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        object = factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-workspace"
+        )
+        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceDelete.success_msg, str(messages[0]))
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -2831,8 +2942,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.name
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -2853,8 +2963,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object.authorization_domains.add(auth_domain)
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.WorkspaceAuthorizationDomain.objects.count(), 0)
@@ -2875,8 +2984,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceGroupAccessFactory.create(workspace=object, group=group)
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
@@ -3007,7 +3115,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child_group.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "parent_group": parent_group.pk,
@@ -3015,12 +3123,37 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        parent_group = factories.ManagedGroupFactory.create(name="group-1")
+        child_group = factories.ManagedGroupFactory.create(name="group-2")
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + parent_group.name
+            + "/MEMBER/"
+            + child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.GroupGroupMembershipCreate.success_msg, str(messages[0]))
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
@@ -3034,7 +3167,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child_group.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "parent_group": parent_group.pk,
@@ -3042,7 +3175,6 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.ADMIN,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
@@ -3140,7 +3272,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + group_2.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "parent_group": parent.pk,
@@ -3148,7 +3280,6 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
@@ -3168,7 +3299,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "parent_group": group_2.pk,
@@ -3176,7 +3307,6 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
@@ -3547,11 +3677,33 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        object = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.parent_group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.child_group.get_email()
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.GroupGroupMembershipDelete.success_msg, str(messages[0]))
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -3567,8 +3719,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -3770,7 +3921,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
@@ -3778,12 +3929,35 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.MEMBER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        account = factories.AccountFactory.create(email="email@example.com")
+        url = (
+            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupAccountMembershipCreate.success_msg, str(messages[0])
+        )
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
@@ -3791,7 +3965,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         account = factories.AccountFactory.create(email="email@example.com")
         url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
@@ -3799,7 +3973,6 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.ADMIN,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
@@ -3889,7 +4062,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + account.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group_2.pk,
@@ -3897,7 +4070,6 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.MEMBER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
@@ -3915,7 +4087,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + account_2.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
@@ -3923,7 +4095,6 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.MEMBER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
         responses.assert_call_count(url, 1)
@@ -4220,11 +4391,33 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.account.email
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        object = factories.GroupAccountMembershipFactory.create()
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + object.group.name
+            + "/"
+            + object.role
+            + "/"
+            + object.account.email
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupAccountMembershipDelete.success_msg, str(messages[0])
+        )
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -4240,8 +4433,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.account.email
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -4457,7 +4649,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
@@ -4465,12 +4657,52 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.READER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
         self.assertEqual(new_object.access, models.WorkspaceGroupAccess.READER)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupAccess.READER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupAccessCreate.success_msg, str(messages[0]))
 
     def test_can_create_an_object_writer(self):
         """Posting valid data to the form creates an object."""
@@ -4498,7 +4730,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
@@ -4506,7 +4738,6 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.WRITER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
@@ -4539,7 +4770,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
@@ -4547,7 +4778,6 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.OWNER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
@@ -4675,7 +4905,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group_2.pk,
@@ -4683,7 +4913,6 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.READER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 2)
         responses.assert_call_count(url, 1)
@@ -4715,7 +4944,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
@@ -4723,7 +4952,6 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.READER,
             },
         )
-        response = self.get_view()(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 2)
         responses.assert_call_count(url, 1)
@@ -4961,16 +5189,57 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(obj.pk),
             {
                 "access": models.WorkspaceGroupAccess.WRITER,
             },
         )
-        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        obj = factories.WorkspaceGroupAccessFactory.create(
+            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.READER
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        response = self.client.post(
+            self.get_url(obj.pk),
+            {
+                "access": models.WorkspaceGroupAccess.WRITER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupAccessUpdate.success_msg, str(messages[0]))
 
     def test_redirects_to_detail(self):
         """After successfully updating an object, view redirects to the model's get_absolute_url."""
@@ -5074,14 +5343,13 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(obj.pk),
             {
                 "group": new_group.pk,
                 "access": models.WorkspaceGroupAccess.WRITER,
             },
         )
-        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.group, original_group)
@@ -5116,14 +5384,13 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(
+        response = self.client.post(
             self.get_url(obj.pk),
             {
                 "workspace": new_workspace.pk,
                 "access": models.WorkspaceGroupAccess.WRITER,
             },
         )
-        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.workspace, original_workspace)
@@ -5293,11 +5560,48 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
         responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        object = factories.WorkspaceGroupAccessFactory.create(
+            group=group, workspace=workspace
+        )
+        json_data = [
+            {
+                "email": object.group.get_email(),
+                "accessLevel": "NO ACCESS",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupAccessDelete.success_msg, str(messages[0]))
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -5325,8 +5629,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
-        request = self.factory.post(self.get_url(object.pk), {"submit": ""})
-        response = self.get_view()(request, pk=object.pk)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
         self.assertQuerysetEqual(
