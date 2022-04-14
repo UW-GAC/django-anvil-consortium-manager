@@ -1,6 +1,7 @@
 from unittest import skip
 
 import responses
+from django.contrib.auth.models import User
 from django.http.response import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
@@ -23,11 +24,18 @@ class IndexTest(TestCase):
         """Return the view being tested."""
         return views.Index.as_view()
 
-    def test_view_success_code(self):
-        """Returns a successful status code."""
-        request = self.factory.get(self.get_url())
-        # request.user = AnonymousUser()
-        response = self.get_view()(request)
+    def test_view_success_code_logged_out(self):
+        """Returns a successful status code when no one is logged in."""
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_success_code_logged_in(self):
+        """Returns a successful status code when a user is logged in."""
+        User.objects.create_user(
+            username="testuser", email="test@test.com", password="testpass"
+        )
+        self.client.login(username="testuser", password="testpass")
+        response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
 
