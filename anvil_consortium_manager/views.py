@@ -61,6 +61,7 @@ class BillingProjectImport(CreateView):
     message_not_users_of_billing_project = (
         "Not a user of requested billing project or it doesn't exist on AnVIL."
     )
+    message_success = "Successfully import Billing Project."
 
     def form_valid(self, form):
         """If the form is valid, check that we can access the BillingProject on AnVIL and save the associated model."""
@@ -80,6 +81,7 @@ class BillingProjectImport(CreateView):
             )
             return self.render_to_response(self.get_context_data(form=form))
 
+        messages.add_message(self.request, messages.SUCCESS, self.message_success)
         return HttpResponseRedirect(self.get_success_url())
 
 
