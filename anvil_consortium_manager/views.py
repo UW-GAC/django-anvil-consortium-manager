@@ -28,6 +28,12 @@ class SuccessMessageMixin:
         messages.success(self.request, self.success_msg)
         return super().form_valid(form)
 
+    def delete(self, request, *args, **kwargs):
+        """Add a success message to the request."""
+        # Should this be self.request or request?
+        messages.success(self.request, self.success_msg)
+        return super().delete(request, *args, **kwargs)
+
 
 class Index(TemplateView):
     template_name = "anvil_consortium_manager/index.html"
@@ -155,9 +161,10 @@ class AccountList(SingleTableView):
     table_class = tables.AccountTable
 
 
-class AccountDelete(DeleteView):
+class AccountDelete(SuccessMessageMixin, DeleteView):
     model = models.Account
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    success_msg = "Successfully deleted Account from app."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:accounts:list")
@@ -227,7 +234,7 @@ class ManagedGroupList(SingleTableView):
     table_class = tables.ManagedGroupTable
 
 
-class ManagedGroupDelete(DeleteView):
+class ManagedGroupDelete(SuccessMessageMixin, DeleteView):
     model = models.ManagedGroup
     message_not_managed_by_app = (
         "Cannot delete group because it is not managed by this app."
@@ -245,6 +252,7 @@ class ManagedGroupDelete(DeleteView):
     message_could_not_delete_group = (
         "Cannot not delete group from AnVIL - unknown reason."
     )
+    success_msg = "Successfully deleted Group on AnVIL."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:managed_groups:list")
@@ -424,8 +432,9 @@ class WorkspaceList(SingleTableView):
     table_class = tables.WorkspaceTable
 
 
-class WorkspaceDelete(DeleteView):
+class WorkspaceDelete(SuccessMessageMixin, DeleteView):
     model = models.Workspace
+    success_msg = "Successfully deleted Workspace on AnVIL."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspaces:list")
@@ -482,8 +491,9 @@ class GroupGroupMembershipList(SingleTableView):
     table_class = tables.GroupGroupMembershipTable
 
 
-class GroupGroupMembershipDelete(DeleteView):
+class GroupGroupMembershipDelete(SuccessMessageMixin, DeleteView):
     model = models.GroupGroupMembership
+    success_msg = "Successfully deleted group membership on AnVIL."
 
     message_parent_group_not_managed_by_app = (
         "Cannot remove members from parent group because it is not managed by this app."
@@ -568,8 +578,9 @@ class GroupAccountMembershipList(SingleTableView):
     table_class = tables.GroupAccountMembershipTable
 
 
-class GroupAccountMembershipDelete(DeleteView):
+class GroupAccountMembershipDelete(SuccessMessageMixin, DeleteView):
     model = models.GroupAccountMembership
+    success_msg = "Successfully deleted account membership on AnVIL."
 
     message_group_not_managed_by_app = (
         "Cannot remove members from group because it is not managed by this app."
@@ -674,8 +685,9 @@ class WorkspaceGroupAccessList(SingleTableView):
     table_class = tables.WorkspaceGroupAccessTable
 
 
-class WorkspaceGroupAccessDelete(DeleteView):
+class WorkspaceGroupAccessDelete(SuccessMessageMixin, DeleteView):
     model = models.WorkspaceGroupAccess
+    success_msg = "Successfully removed workspace sharing on AnVIL."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_access:list")
