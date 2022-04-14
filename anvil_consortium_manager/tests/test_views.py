@@ -1,8 +1,6 @@
 from unittest import skip
 
 import responses
-from django.contrib.messages.middleware import MessageMiddleware
-from django.contrib.sessions.middleware import SessionMiddleware
 from django.http.response import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
@@ -10,15 +8,6 @@ from django.urls import reverse
 from .. import forms, models, tables, views
 from . import factories
 from .utils import AnVILAPIMockTestMixin
-
-
-# From Two Scoops of Django
-# Note that this causes warnings about deprecation due to new Middleware in Django 4.0.
-def add_message_middleware_to_request(request):
-    """Add middleware to a request from RequestFactory."""
-    SessionMiddleware().process_request(request)
-    MessageMiddleware().process_request(request)
-    return request
 
 
 class IndexTest(TestCase):
@@ -218,26 +207,13 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
             response.context_data["form"], forms.BillingProjectImportForm
         )
 
-    def test_can_create_an_object_2(self):
-        """Posting valid data to the form creates an object."""
-        billing_project_name = "test-billing"
-        url = self.get_api_url(billing_project_name)
-        responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
-        response = self.client.post(self.get_url(), {"name": billing_project_name})
-        self.assertEqual(response.status_code, 302)
-        new_object = models.BillingProject.objects.latest("pk")
-        self.assertIsInstance(new_object, models.BillingProject)
-        self.assertEqual(new_object.name, billing_project_name)
-        self.assertEqual(new_object.has_app_as_user, True)
-
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
-        request = self.factory.post(self.get_url(), {"name": billing_project_name})
-        add_message_middleware_to_request(request)
-        response = self.get_view()(request)
+        # Need a client for messages.
+        response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 302)
         new_object = models.BillingProject.objects.latest("pk")
         self.assertIsInstance(new_object, models.BillingProject)
