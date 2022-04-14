@@ -16,6 +16,19 @@ from . import anvil_api, exceptions, forms, models, tables
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 
 
+class SuccessMessageMixin:
+    """Mixin to add a success message to views."""
+
+    @property
+    def success_msg(self):
+        return NotImplemented
+
+    def form_valid(self, form):
+        """Add a success message to the request."""
+        messages.success(self.request, self.success_msg)
+        return super().form_valid(form)
+
+
 class Index(TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
@@ -54,20 +67,19 @@ class AnVILStatus(TemplateView):
         return context
 
 
-class BillingProjectImport(CreateView):
+class BillingProjectImport(SuccessMessageMixin, CreateView):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
     template_name = "anvil_consortium_manager/billingproject_import.html"
     message_not_users_of_billing_project = (
         "Not a user of requested billing project or it doesn't exist on AnVIL."
     )
-    message_success = "Successfully imported Billing Project."
+    success_msg = "Successfully imported Billing Project from AnVIL."
 
     def form_valid(self, form):
         """If the form is valid, check that we can access the BillingProject on AnVIL and save the associated model."""
         try:
             self.object = models.BillingProject.anvil_import(form.cleaned_data["name"])
-            self.object.save()
         except anvil_api.AnVILAPIError404:
             # Either the workspace doesn't exist or we don't have permission for it.
             messages.add_message(
@@ -81,7 +93,7 @@ class BillingProjectImport(CreateView):
             )
             return self.render_to_response(self.get_context_data(form=form))
 
-        messages.add_message(self.request, messages.SUCCESS, self.message_success)
+        messages.add_message(self.request, messages.SUCCESS, self.success_msg)
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -111,10 +123,11 @@ class AccountDetail(SingleTableMixin, DetailView):
         )
 
 
-class AccountImport(CreateView):
+class AccountImport(SuccessMessageMixin, CreateView):
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
     form_class = forms.AccountImportForm
+    success_msg = "Successfully imported Account from AnVIL."
 
     def form_valid(self, form):
         """If the form is valid, check that the account exists on AnVIL and save the associated model."""
@@ -134,7 +147,6 @@ class AccountImport(CreateView):
             # Re-render the page with a message.
             return self.render_to_response(self.get_context_data(form=form))
 
-        # Otherwise, proceed as if
         return super().form_valid(form)
 
 
@@ -187,9 +199,10 @@ class ManagedGroupDetail(DetailView):
         return context
 
 
-class ManagedGroupCreate(CreateView):
+class ManagedGroupCreate(SuccessMessageMixin, CreateView):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
+    success_msg = "Successfully created Managed Group on AnVIL."
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -334,9 +347,10 @@ class WorkspaceDetail(DetailView):
         return context
 
 
-class WorkspaceCreate(CreateView):
+class WorkspaceCreate(SuccessMessageMixin, CreateView):
     model = models.Workspace
     form_class = forms.WorkspaceCreateForm
+    success_msg = "Successfully created Workspace on AnVIL."
 
     @transaction.atomic
     def form_valid(self, form):
@@ -356,7 +370,7 @@ class WorkspaceCreate(CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceImport(FormView):
+class WorkspaceImport(SuccessMessageMixin, FormView):
     template_name = "anvil_consortium_manager/workspace_import.html"
     form_class = forms.WorkspaceImportForm
     message_anvil_no_access_to_workspace = (
@@ -364,6 +378,7 @@ class WorkspaceImport(FormView):
     )
     message_anvil_not_owner = "Not an owner of this workspace."
     message_workspace_exists = "This workspace already exists in the web app."
+    success_msg = "Successfully imported Workspace from AnVIL."
 
     def get_success_url(self):
         return self.workspace.get_absolute_url()
@@ -436,9 +451,10 @@ class GroupGroupMembershipDetail(DetailView):
     model = models.GroupGroupMembership
 
 
-class GroupGroupMembershipCreate(CreateView):
+class GroupGroupMembershipCreate(SuccessMessageMixin, CreateView):
     model = models.GroupGroupMembership
     form_class = forms.GroupGroupMembershipForm
+    success_msg = "Successfully created group membership."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:group_group_membership:list")
@@ -521,9 +537,10 @@ class GroupAccountMembershipDetail(DetailView):
     model = models.GroupAccountMembership
 
 
-class GroupAccountMembershipCreate(CreateView):
+class GroupAccountMembershipCreate(SuccessMessageMixin, CreateView):
     model = models.GroupAccountMembership
     form_class = forms.GroupAccountMembershipForm
+    success_msg = "Successfully added account membership."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:group_account_membership:list")
@@ -602,9 +619,10 @@ class WorkspaceGroupAccessDetail(DetailView):
     model = models.WorkspaceGroupAccess
 
 
-class WorkspaceGroupAccessCreate(CreateView):
+class WorkspaceGroupAccessCreate(SuccessMessageMixin, CreateView):
     model = models.WorkspaceGroupAccess
     fields = ("workspace", "group", "access")
+    success_msg = "Successfully shared Workspace with Group."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_access:list")
@@ -627,10 +645,11 @@ class WorkspaceGroupAccessCreate(CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessUpdate(UpdateView):
+class WorkspaceGroupAccessUpdate(SuccessMessageMixin, UpdateView):
     model = models.WorkspaceGroupAccess
     fields = ("access",)
     template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
+    success_msg = "Successfully updated Workspace sharing."
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
