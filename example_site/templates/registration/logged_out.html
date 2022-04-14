@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+<div>
+  Logged out!
+</div>
+
+<div>
+  <a href="{% url 'login' %}" class="btn btn-primary" tabindex="-1" role="button">Log in again</a>
+</div>
+
+{% endblock %}

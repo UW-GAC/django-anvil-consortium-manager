@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -20,7 +21,7 @@ class Index(TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
 
-class AnVILStatus(TemplateView):
+class AnVILStatus(LoginRequiredMixin, TemplateView):
     template_name = "anvil_consortium_manager/status.html"
 
     def get_context_data(self, **kwargs):
@@ -54,7 +55,7 @@ class AnVILStatus(TemplateView):
         return context
 
 
-class BillingProjectImport(CreateView):
+class BillingProjectImport(LoginRequiredMixin, CreateView):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
     template_name = "anvil_consortium_manager/billingproject_import.html"
@@ -83,7 +84,7 @@ class BillingProjectImport(CreateView):
         return HttpResponseRedirect(self.get_success_url())
 
 
-class BillingProjectDetail(SingleTableMixin, DetailView):
+class BillingProjectDetail(LoginRequiredMixin, SingleTableMixin, DetailView):
     model = models.BillingProject
     context_table_name = "workspace_table"
 
@@ -93,12 +94,12 @@ class BillingProjectDetail(SingleTableMixin, DetailView):
         )
 
 
-class BillingProjectList(SingleTableView):
+class BillingProjectList(LoginRequiredMixin, SingleTableView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
 
 
-class AccountDetail(SingleTableMixin, DetailView):
+class AccountDetail(LoginRequiredMixin, SingleTableMixin, DetailView):
     model = models.Account
     context_table_name = "group_table"
 
@@ -109,7 +110,7 @@ class AccountDetail(SingleTableMixin, DetailView):
         )
 
 
-class AccountImport(CreateView):
+class AccountImport(LoginRequiredMixin, CreateView):
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
     form_class = forms.AccountImportForm
@@ -136,12 +137,12 @@ class AccountImport(CreateView):
         return super().form_valid(form)
 
 
-class AccountList(SingleTableView):
+class AccountList(LoginRequiredMixin, SingleTableView):
     model = models.Account
     table_class = tables.AccountTable
 
 
-class AccountDelete(DeleteView):
+class AccountDelete(LoginRequiredMixin, DeleteView):
     model = models.Account
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
 
@@ -165,7 +166,7 @@ class AccountDelete(DeleteView):
             return super().delete(request, *args, **kwargs)
 
 
-class ManagedGroupDetail(DetailView):
+class ManagedGroupDetail(LoginRequiredMixin, DetailView):
     model = models.ManagedGroup
 
     def get_context_data(self, **kwargs):
@@ -185,7 +186,7 @@ class ManagedGroupDetail(DetailView):
         return context
 
 
-class ManagedGroupCreate(CreateView):
+class ManagedGroupCreate(LoginRequiredMixin, CreateView):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
 
@@ -207,12 +208,12 @@ class ManagedGroupCreate(CreateView):
         return super().form_valid(form)
 
 
-class ManagedGroupList(SingleTableView):
+class ManagedGroupList(LoginRequiredMixin, SingleTableView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
 
 
-class ManagedGroupDelete(DeleteView):
+class ManagedGroupDelete(LoginRequiredMixin, DeleteView):
     model = models.ManagedGroup
     message_not_managed_by_app = (
         "Cannot delete group because it is not managed by this app."
@@ -317,7 +318,7 @@ class ManagedGroupDelete(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceDetail(DetailView):
+class WorkspaceDetail(LoginRequiredMixin, DetailView):
     model = models.Workspace
 
     def get_context_data(self, **kwargs):
@@ -332,7 +333,7 @@ class WorkspaceDetail(DetailView):
         return context
 
 
-class WorkspaceCreate(CreateView):
+class WorkspaceCreate(LoginRequiredMixin, CreateView):
     model = models.Workspace
     form_class = forms.WorkspaceCreateForm
 
@@ -354,7 +355,7 @@ class WorkspaceCreate(CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceImport(FormView):
+class WorkspaceImport(LoginRequiredMixin, FormView):
     template_name = "anvil_consortium_manager/workspace_import.html"
     form_class = forms.WorkspaceImportForm
     message_anvil_no_access_to_workspace = (
@@ -402,12 +403,12 @@ class WorkspaceImport(FormView):
         return super().form_valid(form)
 
 
-class WorkspaceList(SingleTableView):
+class WorkspaceList(LoginRequiredMixin, SingleTableView):
     model = models.Workspace
     table_class = tables.WorkspaceTable
 
 
-class WorkspaceDelete(DeleteView):
+class WorkspaceDelete(LoginRequiredMixin, DeleteView):
     model = models.Workspace
 
     def get_success_url(self):
@@ -430,11 +431,11 @@ class WorkspaceDelete(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class GroupGroupMembershipDetail(DetailView):
+class GroupGroupMembershipDetail(LoginRequiredMixin, DetailView):
     model = models.GroupGroupMembership
 
 
-class GroupGroupMembershipCreate(CreateView):
+class GroupGroupMembershipCreate(LoginRequiredMixin, CreateView):
     model = models.GroupGroupMembership
     form_class = forms.GroupGroupMembershipForm
 
@@ -459,12 +460,12 @@ class GroupGroupMembershipCreate(CreateView):
         return super().form_valid(form)
 
 
-class GroupGroupMembershipList(SingleTableView):
+class GroupGroupMembershipList(LoginRequiredMixin, SingleTableView):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
 
 
-class GroupGroupMembershipDelete(DeleteView):
+class GroupGroupMembershipDelete(LoginRequiredMixin, DeleteView):
     model = models.GroupGroupMembership
 
     message_parent_group_not_managed_by_app = (
@@ -515,11 +516,11 @@ class GroupGroupMembershipDelete(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class GroupAccountMembershipDetail(DetailView):
+class GroupAccountMembershipDetail(LoginRequiredMixin, DetailView):
     model = models.GroupAccountMembership
 
 
-class GroupAccountMembershipCreate(CreateView):
+class GroupAccountMembershipCreate(LoginRequiredMixin, CreateView):
     model = models.GroupAccountMembership
     form_class = forms.GroupAccountMembershipForm
 
@@ -544,12 +545,12 @@ class GroupAccountMembershipCreate(CreateView):
         return super().form_valid(form)
 
 
-class GroupAccountMembershipList(SingleTableView):
+class GroupAccountMembershipList(LoginRequiredMixin, SingleTableView):
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
 
 
-class GroupAccountMembershipDelete(DeleteView):
+class GroupAccountMembershipDelete(LoginRequiredMixin, DeleteView):
     model = models.GroupAccountMembership
 
     message_group_not_managed_by_app = (
@@ -596,11 +597,11 @@ class GroupAccountMembershipDelete(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceGroupAccessDetail(DetailView):
+class WorkspaceGroupAccessDetail(LoginRequiredMixin, DetailView):
     model = models.WorkspaceGroupAccess
 
 
-class WorkspaceGroupAccessCreate(CreateView):
+class WorkspaceGroupAccessCreate(LoginRequiredMixin, CreateView):
     model = models.WorkspaceGroupAccess
     fields = ("workspace", "group", "access")
 
@@ -625,7 +626,7 @@ class WorkspaceGroupAccessCreate(CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessUpdate(UpdateView):
+class WorkspaceGroupAccessUpdate(LoginRequiredMixin, UpdateView):
     model = models.WorkspaceGroupAccess
     fields = ("access",)
     template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
@@ -648,12 +649,12 @@ class WorkspaceGroupAccessUpdate(UpdateView):
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessList(SingleTableView):
+class WorkspaceGroupAccessList(LoginRequiredMixin, SingleTableView):
     model = models.WorkspaceGroupAccess
     table_class = tables.WorkspaceGroupAccessTable
 
 
-class WorkspaceGroupAccessDelete(DeleteView):
+class WorkspaceGroupAccessDelete(LoginRequiredMixin, DeleteView):
     model = models.WorkspaceGroupAccess
 
     def get_success_url(self):

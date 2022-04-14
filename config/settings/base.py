@@ -220,6 +220,8 @@ LOGGING = {
     "root": {"level": "INFO", "handlers": ["console"]},
 }
 
+# Redirect URL after login
+LOGIN_REDIRECT_URL = "home"
 
 # Your stuff...
 # ------------------------------------------------------------------------------
