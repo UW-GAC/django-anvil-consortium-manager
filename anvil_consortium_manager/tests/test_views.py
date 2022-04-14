@@ -45,6 +45,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@test.com", password="testpass"
+        )
 
     def get_json_me_data(self):
         json_data = {
@@ -72,6 +75,12 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.AnVILStatus.as_view()
 
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, reverse("login") + "?next=" + self.get_url())
+
     def test_view_success_code(self):
         """Returns a successful status code."""
         url_me = self.entry_point + "/me?userDetailsOnly=true"
@@ -81,6 +90,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         responses.assert_call_count(url_me, 1)
@@ -95,6 +105,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("anvil_status", response.context_data)
@@ -115,6 +126,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_json_status_data(status_ok=False),
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("anvil_status", response.context_data)
@@ -130,6 +142,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         # Error in status API
         url_status = self.entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
+        # Details of how login works aren't important.
+        # Note: allows inactive users to log in, but that's ok for now.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -150,6 +165,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_json_status_data(status_ok=False),
         )
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -166,6 +182,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         # Error in status API
         url_status = self.entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
