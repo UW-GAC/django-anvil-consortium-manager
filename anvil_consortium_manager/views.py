@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -39,7 +40,7 @@ class Index(TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
 
-class AnVILStatus(TemplateView):
+class AnVILStatus(LoginRequiredMixin, TemplateView):
     template_name = "anvil_consortium_manager/status.html"
 
     def get_context_data(self, **kwargs):
