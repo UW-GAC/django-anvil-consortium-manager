@@ -128,8 +128,23 @@
                   </li>
                 </ul>
               </li>
-
             </ul>
+
+            <!-- Login links -->
+            <ul class="navbar-nav flex-row flex-wrap ms-md-auto">
+              {% if request.user.is_authenticated %}
+                {# show logout #}
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'logout' %}"><span class="fa-solid fa-right-from-bracket"></span> Logout {{ user.username }}<a>
+                </li>
+              {% else %}
+                {# show login #}
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'login' %}"><span class="fa-solid fa-right-to-bracket"></span> Login<a>
+                </li>
+              {% endif %}
+            </ul>
+
           </div>
         </div>
       </nav>

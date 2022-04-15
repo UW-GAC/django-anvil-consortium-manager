@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -39,7 +40,7 @@ class Index(TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
 
-class AnVILStatus(TemplateView):
+class AnVILStatus(LoginRequiredMixin, TemplateView):
     template_name = "anvil_consortium_manager/status.html"
 
     def get_context_data(self, **kwargs):
@@ -73,7 +74,7 @@ class AnVILStatus(TemplateView):
         return context
 
 
-class BillingProjectImport(SuccessMessageMixin, CreateView):
+class BillingProjectImport(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
     template_name = "anvil_consortium_manager/billingproject_import.html"
@@ -103,7 +104,7 @@ class BillingProjectImport(SuccessMessageMixin, CreateView):
         return HttpResponseRedirect(self.get_success_url())
 
 
-class BillingProjectDetail(SingleTableMixin, DetailView):
+class BillingProjectDetail(LoginRequiredMixin, SingleTableMixin, DetailView):
     model = models.BillingProject
     context_table_name = "workspace_table"
 
@@ -113,12 +114,12 @@ class BillingProjectDetail(SingleTableMixin, DetailView):
         )
 
 
-class BillingProjectList(SingleTableView):
+class BillingProjectList(LoginRequiredMixin, SingleTableView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
 
 
-class AccountDetail(SingleTableMixin, DetailView):
+class AccountDetail(LoginRequiredMixin, SingleTableMixin, DetailView):
     model = models.Account
     context_table_name = "group_table"
 
@@ -129,7 +130,7 @@ class AccountDetail(SingleTableMixin, DetailView):
         )
 
 
-class AccountImport(SuccessMessageMixin, CreateView):
+class AccountImport(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
     form_class = forms.AccountImportForm
@@ -156,12 +157,12 @@ class AccountImport(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class AccountList(SingleTableView):
+class AccountList(LoginRequiredMixin, SingleTableView):
     model = models.Account
     table_class = tables.AccountTable
 
 
-class AccountDelete(SuccessMessageMixin, DeleteView):
+class AccountDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = models.Account
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
     success_msg = "Successfully deleted Account from app."
@@ -186,7 +187,7 @@ class AccountDelete(SuccessMessageMixin, DeleteView):
             return super().delete(request, *args, **kwargs)
 
 
-class ManagedGroupDetail(DetailView):
+class ManagedGroupDetail(LoginRequiredMixin, DetailView):
     model = models.ManagedGroup
 
     def get_context_data(self, **kwargs):
@@ -206,7 +207,7 @@ class ManagedGroupDetail(DetailView):
         return context
 
 
-class ManagedGroupCreate(SuccessMessageMixin, CreateView):
+class ManagedGroupCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     success_msg = "Successfully created Managed Group on AnVIL."
@@ -229,12 +230,12 @@ class ManagedGroupCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class ManagedGroupList(SingleTableView):
+class ManagedGroupList(LoginRequiredMixin, SingleTableView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
 
 
-class ManagedGroupDelete(SuccessMessageMixin, DeleteView):
+class ManagedGroupDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = models.ManagedGroup
     message_not_managed_by_app = (
         "Cannot delete group because it is not managed by this app."
@@ -340,7 +341,7 @@ class ManagedGroupDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceDetail(DetailView):
+class WorkspaceDetail(LoginRequiredMixin, DetailView):
     model = models.Workspace
 
     def get_context_data(self, **kwargs):
@@ -355,7 +356,7 @@ class WorkspaceDetail(DetailView):
         return context
 
 
-class WorkspaceCreate(SuccessMessageMixin, CreateView):
+class WorkspaceCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = models.Workspace
     form_class = forms.WorkspaceCreateForm
     success_msg = "Successfully created Workspace on AnVIL."
@@ -378,7 +379,7 @@ class WorkspaceCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceImport(SuccessMessageMixin, FormView):
+class WorkspaceImport(LoginRequiredMixin, SuccessMessageMixin, FormView):
     template_name = "anvil_consortium_manager/workspace_import.html"
     form_class = forms.WorkspaceImportForm
     message_anvil_no_access_to_workspace = (
@@ -427,12 +428,12 @@ class WorkspaceImport(SuccessMessageMixin, FormView):
         return super().form_valid(form)
 
 
-class WorkspaceList(SingleTableView):
+class WorkspaceList(LoginRequiredMixin, SingleTableView):
     model = models.Workspace
     table_class = tables.WorkspaceTable
 
 
-class WorkspaceDelete(SuccessMessageMixin, DeleteView):
+class WorkspaceDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = models.Workspace
     success_msg = "Successfully deleted Workspace on AnVIL."
 
@@ -456,11 +457,11 @@ class WorkspaceDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class GroupGroupMembershipDetail(DetailView):
+class GroupGroupMembershipDetail(LoginRequiredMixin, DetailView):
     model = models.GroupGroupMembership
 
 
-class GroupGroupMembershipCreate(SuccessMessageMixin, CreateView):
+class GroupGroupMembershipCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = models.GroupGroupMembership
     form_class = forms.GroupGroupMembershipForm
     success_msg = "Successfully created group membership."
@@ -486,12 +487,12 @@ class GroupGroupMembershipCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class GroupGroupMembershipList(SingleTableView):
+class GroupGroupMembershipList(LoginRequiredMixin, SingleTableView):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
 
 
-class GroupGroupMembershipDelete(SuccessMessageMixin, DeleteView):
+class GroupGroupMembershipDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = models.GroupGroupMembership
     success_msg = "Successfully deleted group membership on AnVIL."
 
@@ -543,11 +544,11 @@ class GroupGroupMembershipDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class GroupAccountMembershipDetail(DetailView):
+class GroupAccountMembershipDetail(LoginRequiredMixin, DetailView):
     model = models.GroupAccountMembership
 
 
-class GroupAccountMembershipCreate(SuccessMessageMixin, CreateView):
+class GroupAccountMembershipCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = models.GroupAccountMembership
     form_class = forms.GroupAccountMembershipForm
     success_msg = "Successfully added account membership."
@@ -573,12 +574,12 @@ class GroupAccountMembershipCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class GroupAccountMembershipList(SingleTableView):
+class GroupAccountMembershipList(LoginRequiredMixin, SingleTableView):
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
 
 
-class GroupAccountMembershipDelete(SuccessMessageMixin, DeleteView):
+class GroupAccountMembershipDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = models.GroupAccountMembership
     success_msg = "Successfully deleted account membership on AnVIL."
 
@@ -626,11 +627,11 @@ class GroupAccountMembershipDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceGroupAccessDetail(DetailView):
+class WorkspaceGroupAccessDetail(LoginRequiredMixin, DetailView):
     model = models.WorkspaceGroupAccess
 
 
-class WorkspaceGroupAccessCreate(SuccessMessageMixin, CreateView):
+class WorkspaceGroupAccessCreate(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = models.WorkspaceGroupAccess
     fields = ("workspace", "group", "access")
     success_msg = "Successfully shared Workspace with Group."
@@ -656,7 +657,7 @@ class WorkspaceGroupAccessCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessUpdate(SuccessMessageMixin, UpdateView):
+class WorkspaceGroupAccessUpdate(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     model = models.WorkspaceGroupAccess
     fields = ("access",)
     template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
@@ -680,12 +681,12 @@ class WorkspaceGroupAccessUpdate(SuccessMessageMixin, UpdateView):
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessList(SingleTableView):
+class WorkspaceGroupAccessList(LoginRequiredMixin, SingleTableView):
     model = models.WorkspaceGroupAccess
     table_class = tables.WorkspaceGroupAccessTable
 
 
-class WorkspaceGroupAccessDelete(SuccessMessageMixin, DeleteView):
+class WorkspaceGroupAccessDelete(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = models.WorkspaceGroupAccess
     success_msg = "Successfully removed workspace sharing on AnVIL."
 
