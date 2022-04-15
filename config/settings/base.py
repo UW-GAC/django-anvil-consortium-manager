@@ -76,6 +76,7 @@ THIRD_PARTY_APPS = [
     "crispy_bootstrap5",
     "django_tables2",
     "fontawesomefree",  # icons
+    "simple_history",  # model history
 ]
 
 LOCAL_APPS = [
@@ -103,6 +104,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.common.BrokenLinkEmailsMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",  # track user who made a change in django-simple-history
 ]
 
 # STATIC
