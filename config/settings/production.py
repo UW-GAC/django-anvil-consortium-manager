@@ -16,18 +16,26 @@ DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)  # no
 
 # CACHES
 # ------------------------------------------------------------------------------
+
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": env("REDIS_URL"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            # Mimicing memcache behavior.
-            # https://github.com/jazzband/django-redis#memcached-exceptions-behavior
-            "IGNORE_EXCEPTIONS": True,
-        },
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "base_cache_table",
     }
 }
+
+# CACHES = {
+#    "default": {
+#        "BACKEND": "django_redis.cache.RedisCache",
+#        "LOCATION": env("REDIS_URL"),
+#        "OPTIONS": {
+#            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#            # Mimicing memcache behavior.
+#            # https://github.com/jazzband/django-redis#memcached-exceptions-behavior
+#            "IGNORE_EXCEPTIONS": True,
+#        },
+#    }
+# }
 
 # SECURITY
 # ------------------------------------------------------------------------------
@@ -57,18 +65,20 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool(
 # STORAGES
 # ------------------------------------------------------------------------------
 # https://django-storages.readthedocs.io/en/latest/#installation
-INSTALLED_APPS += ["storages"]  # noqa F405
-GS_BUCKET_NAME = env("DJANGO_GCP_STORAGE_BUCKET_NAME")
-GS_DEFAULT_ACL = "publicRead"
+# INSTALLED_APPS += ["storages"]  # noqa F405
+# GS_BUCKET_NAME = env("DJANGO_GCP_STORAGE_BUCKET_NAME")
+# GS_DEFAULT_ACL = "publicRead"
 # STATIC
 # ------------------------
-STATICFILES_STORAGE = "example_site.utils.storages.StaticRootGoogleCloudStorage"
-COLLECTFAST_STRATEGY = "collectfast.strategies.gcloud.GoogleCloudStrategy"
-STATIC_URL = f"https://storage.googleapis.com/{GS_BUCKET_NAME}/static/"
+# STATICFILES_STORAGE = "example_site.utils.storages.StaticRootGoogleCloudStorage"
+# COLLECTFAST_STRATEGY = "collectfast.strategies.gcloud.GoogleCloudStrategy"
+# STATIC_URL = f"https://storage.googleapis.com/{GS_BUCKET_NAME}/static/"
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # MEDIA
 # ------------------------------------------------------------------------------
-DEFAULT_FILE_STORAGE = "example_site.utils.storages.MediaRootGoogleCloudStorage"
-MEDIA_URL = f"https://storage.googleapis.com/{GS_BUCKET_NAME}/media/"
+# DEFAULT_FILE_STORAGE = "example_site.utils.storages.MediaRootGoogleCloudStorage"
+# MEDIA_URL = f"https://storage.googleapis.com/{GS_BUCKET_NAME}/media/"
 
 # EMAIL
 # ------------------------------------------------------------------------------
@@ -93,21 +103,21 @@ ADMIN_URL = env("DJANGO_ADMIN_URL")
 # Anymail
 # ------------------------------------------------------------------------------
 # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-INSTALLED_APPS += ["anymail"]  # noqa F405
+# INSTALLED_APPS += ["anymail"]  # noqa F405
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # https://anymail.readthedocs.io/en/stable/esps/mailgun/
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-ANYMAIL = {
-    "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
-    "MAILGUN_SENDER_DOMAIN": env("MAILGUN_DOMAIN"),
-    "MAILGUN_API_URL": env("MAILGUN_API_URL", default="https://api.mailgun.net/v3"),
-}
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# ANYMAIL = {
+#        "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
+#        "MAILGUN_SENDER_DOMAIN": env("MAILGUN_DOMAIN"),
+#        "MAILGUN_API_URL": env("MAILGUN_API_URL", default="https://api.mailgun.net/v3"),
+# }
 
 # Collectfast
 # ------------------------------------------------------------------------------
 # https://github.com/antonagestam/collectfast#installation
-INSTALLED_APPS = ["collectfast"] + INSTALLED_APPS  # noqa F405
+# INSTALLED_APPS = ["collectfast"] + INSTALLED_APPS  # noqa F405
 
 # LOGGING
 # ------------------------------------------------------------------------------
@@ -117,6 +127,7 @@ INSTALLED_APPS = ["collectfast"] + INSTALLED_APPS  # noqa F405
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -156,3 +167,4 @@ LOGGING = {
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+ANVIL_API_SERVICE_ACCOUNT_FILE = env("ANVIL_API_SERVICE_ACCOUNT_FILE", default="")

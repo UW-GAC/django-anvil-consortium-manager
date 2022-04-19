@@ -10,7 +10,7 @@ ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 APPS_DIR = ROOT_DIR / "example_site"
 env = environ.Env()
 
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
+READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=True)
 if READ_DOT_ENV_FILE:
     # OS environment variables take precedence over variables from .env
     env.read_env(str(ROOT_DIR / ".env"))
@@ -73,6 +73,7 @@ DJANGO_APPS = [
 ]
 THIRD_PARTY_APPS = [
     "crispy_forms",
+    "django_extensions",
     "crispy_bootstrap5",
     "django_tables2",
     "fontawesomefree",  # icons
@@ -95,6 +96,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
