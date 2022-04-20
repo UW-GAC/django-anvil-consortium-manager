@@ -787,6 +787,19 @@ class WorkspaceTest(TestCase):
         obj.delete()
         self.assertEqual(Workspace.history.count(), 3)
 
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_billing_project(self):
+        """History is retained when a billing_project foreign key object is deleted."""
+        obj = factories.WorkspaceFactory.create()
+        obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
+        # History was created.
+        self.assertEqual(Workspace.history.count(), 2)
+        # Entries are retained when a foreign key is deleted.
+        obj.billing_project.delete()
+        self.assertEqual(Workspace.history.count(), 2)
+        # Make sure you can access it.
+        print(Workspace.history.all())
+
     def test_workspace_on_delete_auth_domain(self):
         """Workspace can be deleted if it has an authorization domain."""
         group = factories.ManagedGroupFactory.create()
@@ -956,6 +969,34 @@ class WorkspaceAuthorizationDomainTestCase(TestCase):
         obj.delete()
         self.assertEqual(WorkspaceAuthorizationDomain.history.count(), 2)
 
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_workspace(self):
+        """History is retained when a group foreign key object is deleted."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        obj = WorkspaceAuthorizationDomain(workspace=workspace, group=group)
+        obj.save()
+        obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
+        # Entries are retained when the foreign key is deleted.
+        workspace.delete()
+        self.assertEqual(WorkspaceAuthorizationDomain.history.count(), 2)
+        # Make sure you can access it.
+        print(WorkspaceAuthorizationDomain.history.all())
+
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_group(self):
+        """History is retained when a workspace foreign key object is deleted."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        obj = WorkspaceAuthorizationDomain(workspace=workspace, group=group)
+        obj.save()
+        # Entries are retained when the foreign key is deleted.
+        obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
+        group.delete()
+        self.assertEqual(WorkspaceAuthorizationDomain.history.count(), 2)
+        # Make sure you can still access the history.
+        print(WorkspaceAuthorizationDomain.history.all())
+
 
 class GroupGroupMembershipTest(TestCase):
     def test_model_saving(self):
@@ -997,6 +1038,27 @@ class GroupGroupMembershipTest(TestCase):
         # An entry is created upon deletion.
         obj.delete()
         self.assertEqual(GroupGroupMembership.history.count(), 3)
+
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_parent_group(self):
+        """History is retained when a parent group foreign key object is deleted."""
+        obj = factories.GroupGroupMembershipFactory.create()
+        # Entries are retained when the parent group foreign key is deleted.
+        obj.parent_group.delete()
+        self.assertEqual(GroupGroupMembership.history.count(), 2)
+        # Make sure you can access it.
+        print(GroupGroupMembership.history.all())
+
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_child_group(self):
+        """History is retained when a child group foreign key object is deleted."""
+        obj = factories.GroupGroupMembershipFactory.create()
+        # Entries are retained when the parent group foreign key is deleted.
+        obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
+        obj.child_group.delete()
+        self.assertEqual(GroupGroupMembership.history.count(), 2)
+        # Make sure you can access it.
+        print(GroupGroupMembership.history.all())
 
     def test_same_group_with_two_parent_groups(self):
         """The same group can be a child in two groups."""
@@ -1169,6 +1231,30 @@ class GroupAccountMembershipTest(TestCase):
         obj.delete()
         self.assertEqual(GroupAccountMembership.history.count(), 3)
 
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_group(self):
+        """History is retained when a group foreign key object is deleted."""
+        obj = factories.GroupAccountMembershipFactory.create()
+        # History was created.
+        self.assertEqual(GroupAccountMembership.history.count(), 1)
+        # Entries are retained when the foreign key is deleted.
+        obj.group.delete()
+        self.assertEqual(GroupAccountMembership.history.count(), 2)
+        # Make sure you can access it.
+        print(GroupAccountMembership.history.all())
+
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_account(self):
+        """History is retained when an account foreign key object is deleted."""
+        obj = factories.GroupAccountMembershipFactory.create()
+        # History was created.
+        self.assertEqual(GroupAccountMembership.history.count(), 1)
+        # Entries are retained when the foreign key is deleted.
+        obj.account.delete()
+        self.assertEqual(GroupAccountMembership.history.count(), 2)
+        # Make sure you can access it.
+        print(GroupAccountMembership.history.all())
+
     def test_same_account_in_two_groups(self):
         """The same account can be in two groups."""
         account = factories.AccountFactory()
@@ -1265,6 +1351,29 @@ class WorkspaceGroupAccessTest(TestCase):
         # An entry is created upon deletion.
         obj.delete()
         self.assertEqual(WorkspaceGroupAccess.history.count(), 3)
+
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_workspace(self):
+        """History is retained when a workspace foreign key object is deleted."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        # History was created.
+        self.assertEqual(WorkspaceGroupAccess.history.count(), 1)
+        # Entries are retained when the foreign key is deleted.
+        obj.workspace.delete()
+        self.assertEqual(WorkspaceGroupAccess.history.count(), 2)
+        # Make sure you can access it.
+        print(WorkspaceGroupAccess.history.all())
+
+    @skip("django-simple-history unsupported")
+    def test_history_foreign_key_group(self):
+        """History is retained when a group foreign key object is deleted."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        # Entries are retained when the foreign key is deleted.
+        obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
+        obj.group.delete()
+        self.assertEqual(WorkspaceGroupAccess.history.count(), 2)
+        # Make sure you can access it.
+        print(WorkspaceGroupAccess.history.all())
 
     def test_same_group_in_two_workspaces(self):
         """The same group can have access to two workspaces."""
