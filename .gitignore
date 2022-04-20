@@ -68,6 +68,7 @@ target/
 .venv
 venv/
 ENV/
+.env
 
 # Rope project settings
 .ropeproject
@@ -161,6 +162,8 @@ typings/
 # Local History for Visual Studio Code
 .history/
 
+# Service accounts
+primed-dcc-service-accounts-7a9e4fcb0ba2.json
 
 
 
