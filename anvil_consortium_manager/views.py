@@ -433,27 +433,9 @@ class WorkspaceImport(SuccessMessageMixin, FormView):
             self.workspace = models.Workspace.anvil_import(
                 billing_project_name, workspace_name
             )
-        except exceptions.AnVILAlreadyImported:
-            # The workspace already exists in the database.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_workspace_exists
-            )
-            return self.render_to_response(self.get_context_data(form=form))
-        except anvil_api.AnVILAPIError404:
-            # Either the workspace doesn't exist or we don't have permission for it.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_anvil_no_access_to_workspace
-            )
-            return self.render_to_response(self.get_context_data(form=form))
         except anvil_api.AnVILAPIError as e:
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
-            return self.render_to_response(self.get_context_data(form=form))
-        except exceptions.AnVILNotWorkspaceOwnerError:
-            # We are not an owner of the workspace.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_anvil_not_owner
             )
             return self.render_to_response(self.get_context_data(form=form))
 
