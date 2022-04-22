@@ -2964,6 +2964,67 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 0)
         responses.assert_call_count(url, 1)
 
+    def test_anvil_api_error_workspace_list_get(self):
+        # Available workspaces API call.
+        responses.add(
+            responses.GET,
+            self.entry_point + "/api/workspaces",
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=500,
+            json={"message": "an error"},
+        )
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_error_fetching_workspaces, str(messages[0])
+        )
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+
+    def test_anvil_api_error_workspace_list_post(self):
+        # Available workspaces API call.
+        responses.add(
+            responses.GET,
+            self.entry_point + "/api/workspaces",
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=500,
+            json={"message": "an error"},
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "workspace": "billing-project/workspace",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is not valid because workspaces couldn't be fetched.
+        self.assertFalse(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_error_fetching_workspaces, str(messages[0])
+        )
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+
 
 class WorkspaceListTest(TestCase):
     def setUp(self):

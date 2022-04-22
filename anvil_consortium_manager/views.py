@@ -385,30 +385,38 @@ class WorkspaceImport(SuccessMessageMixin, FormView):
     )
     message_anvil_not_owner = "Not an owner of this workspace."
     message_workspace_exists = "This workspace already exists in the web app."
+    message_error_fetching_workspaces = "Unable to fetch workspaces from AnVIL."
     success_msg = "Successfully imported Workspace from AnVIL."
     # Set in a method.
     workspace_choices = None
 
     def get_form(self):
         """Return the form instance with the list of available workspaces to import."""
-        all_workspaces = (
-            AnVILAPIClient()
-            .list_workspaces(fields="workspace.namespace,workspace.name,accessLevel")
-            .json()
-        )
-        # Filter workspaces to only owners and not imported.
-        workspaces = [
-            w["workspace"]["namespace"] + "/" + w["workspace"]["name"]
-            for w in all_workspaces
-            if (w["accessLevel"] == "OWNER")
-            and not models.Workspace.objects.filter(
-                billing_project__name=w["workspace"]["namespace"],
-                name=w["workspace"]["name"],
-            ).exists()
-        ]
-        workspace_choices = [(x, x) for x in workspaces]
-        print("WORKSPACE CHOICES")
-        print(workspace_choices)
+        try:
+            all_workspaces = (
+                AnVILAPIClient()
+                .list_workspaces(
+                    fields="workspace.namespace,workspace.name,accessLevel"
+                )
+                .json()
+            )
+            # Filter workspaces to only owners and not imported.
+            workspaces = [
+                w["workspace"]["namespace"] + "/" + w["workspace"]["name"]
+                for w in all_workspaces
+                if (w["accessLevel"] == "OWNER")
+                and not models.Workspace.objects.filter(
+                    billing_project__name=w["workspace"]["namespace"],
+                    name=w["workspace"]["name"],
+                ).exists()
+            ]
+            workspace_choices = [(x, x) for x in workspaces]
+        except AnVILAPIError:
+            workspace_choices = []
+            messages.add_message(
+                self.request, messages.ERROR, self.message_error_fetching_workspaces
+            )
+
         return forms.WorkspaceImportForm(
             workspace_choices=workspace_choices, **self.get_form_kwargs()
         )
