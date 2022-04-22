@@ -250,26 +250,48 @@ class WorkspaceImportFormTest(TestCase):
     def test_valid(self):
         """Form is valid with necessary input."""
         form_data = {
-            "billing_project_name": "test-billing-project",
-            "workspace_name": "test-workspace",
+            "workspace": "test-billing-project/test-workspace",
         }
-        form = self.form_class(data=form_data)
+        workspace_choices = [
+            ("test-billing-project/test-workspace", 1),
+        ]
+        form = self.form_class(workspace_choices=workspace_choices, data=form_data)
         self.assertTrue(form.is_valid())
 
-    def test_invalid_missing_billing_project(self):
-        """Form is invalid when missing billing_project_name."""
-        form_data = {"workspace_name": "test-workspace"}
-        form = self.form_class(data=form_data)
+    def test_invalid_not_in_choices(self):
+        """Form is not valid when the selected workspace isn't one of the available choices."""
+        form_data = {
+            "workspace": "foo",
+        }
+        workspace_choices = [
+            ("test-billing-project/test-workspace", 1),
+        ]
+        form = self.form_class(workspace_choices=workspace_choices, data=form_data)
         self.assertFalse(form.is_valid())
-        self.assertIn("billing_project_name", form.errors)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors), 1)
+
+    def test_invalid_empty_string(self):
+        """Form is not valid when an empty string is passed."""
+        form_data = {
+            "workspace": "",
+        }
+        workspace_choices = [
+            ("test-billing-project/test-workspace", 1),
+        ]
+        form = self.form_class(workspace_choices=workspace_choices, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("workspace", form.errors)
         self.assertEqual(len(form.errors), 1)
 
     def test_invalid_missing_workspace(self):
         """Form is invalid when missing billing_project_name."""
-        form_data = {"billing_project_name": "test-billing-project"}
-        form = self.form_class(data=form_data)
+        workspace_choices = [
+            ("test-billing-project/test-workspace", 1),
+        ]
+        form = self.form_class(workspace_choices=workspace_choices, data={})
         self.assertFalse(form.is_valid())
-        self.assertIn("workspace_name", form.errors)
+        self.assertIn("workspace", form.errors)
         self.assertEqual(len(form.errors), 1)
 
 

@@ -73,10 +73,13 @@ class AnVILAPIClient:
         method = "api/groups/" + group_name + "/" + role + "/" + user_email
         return self.auth_session.delete(method, 204)
 
-    def list_workspaces(self):
+    def list_workspaces(self, fields=None):
         """Fetch a list of workspaces from AnVIL."""
         method = "api/workspaces"
-        return self.auth_session.get(method, 200)
+        if fields:
+            return self.auth_session.get(method, 200, params={"fields": fields})
+        else:
+            return self.auth_session.get(method, 200)
 
     def get_workspace(self, workspace_namespace, workspace_name):
         method = "api/workspaces/" + workspace_namespace + "/" + workspace_name

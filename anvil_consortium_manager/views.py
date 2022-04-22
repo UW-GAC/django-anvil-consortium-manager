@@ -380,21 +380,46 @@ class WorkspaceCreate(SuccessMessageMixin, CreateView):
 
 class WorkspaceImport(SuccessMessageMixin, FormView):
     template_name = "anvil_consortium_manager/workspace_import.html"
-    form_class = forms.WorkspaceImportForm
     message_anvil_no_access_to_workspace = (
         "Requested workspace doesn't exist or you don't have permission to see it."
     )
     message_anvil_not_owner = "Not an owner of this workspace."
     message_workspace_exists = "This workspace already exists in the web app."
     success_msg = "Successfully imported Workspace from AnVIL."
+    # Set in a method.
+    workspace_choices = None
+
+    def get_form(self):
+        """Return the form instance with the list of available workspaces to import."""
+        all_workspaces = (
+            AnVILAPIClient()
+            .list_workspaces(fields="workspace.namespace,workspace.name,accessLevel")
+            .json()
+        )
+        # Filter workspaces to only owners and not imported.
+        workspaces = [
+            w["workspace"]["namespace"] + "/" + w["workspace"]["name"]
+            for w in all_workspaces
+            if (w["accessLevel"] == "OWNER")
+            and not models.Workspace.objects.filter(
+                billing_project__name=w["workspace"]["namespace"],
+                name=w["workspace"]["name"],
+            ).exists()
+        ]
+        workspace_choices = [(x, x) for x in workspaces]
+        print("WORKSPACE CHOICES")
+        print(workspace_choices)
+        return forms.WorkspaceImportForm(
+            workspace_choices=workspace_choices, **self.get_form_kwargs()
+        )
 
     def get_success_url(self):
         return self.workspace.get_absolute_url()
 
     def form_valid(self, form):
         """If the form is valid, check that the workspace exists on AnVIL and save the associated model."""
-        billing_project_name = form.cleaned_data["billing_project_name"]
-        workspace_name = form.cleaned_data["workspace_name"]
+        # Separate the billing project and workspace name.
+        billing_project_name, workspace_name = form.cleaned_data["workspace"].split("/")
 
         try:
             self.workspace = models.Workspace.anvil_import(
