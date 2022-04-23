@@ -386,6 +386,7 @@ class WorkspaceImport(SuccessMessageMixin, FormView):
     message_anvil_not_owner = "Not an owner of this workspace."
     message_workspace_exists = "This workspace already exists in the web app."
     message_error_fetching_workspaces = "Unable to fetch workspaces from AnVIL."
+    message_no_available_workspaces = "No workspaces available for import from AnVIL."
     success_msg = "Successfully imported Workspace from AnVIL."
     # Set in a method.
     workspace_choices = None
@@ -411,6 +412,12 @@ class WorkspaceImport(SuccessMessageMixin, FormView):
                 ).exists()
             ]
             workspace_choices = [(x, x) for x in workspaces]
+
+            if not len(workspace_choices):
+                messages.add_message(
+                    self.request, messages.INFO, self.message_no_available_workspaces
+                )
+
         except AnVILAPIError:
             workspace_choices = []
             messages.add_message(

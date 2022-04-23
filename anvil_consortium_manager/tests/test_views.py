@@ -2446,7 +2446,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
             status=200,
-            json=[],
+            json=[self.get_api_json_response("foo", "bar")],
         )
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
@@ -2487,13 +2487,19 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        request = self.factory.get(self.get_url())
-        response = self.get_view()(request)
+        response = self.client.get(self.get_url())
         # Choices are populated correctly.
         workspace_choices = response.context_data["form"].fields["workspace"].choices
         self.assertEqual(len(workspace_choices), 1)
         # The first choice is the empty string.
         self.assertEqual("", workspace_choices[0][0])
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_no_available_workspaces, str(messages[0])
+        )
 
     def test_form_choices_one_available_workspace(self):
         """Choices are populated correctly with one available workspace."""
@@ -2567,14 +2573,20 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 self.get_api_json_response("bp", "ws-imported", access="OWNER"),
             ],
         )
-        request = self.factory.get(self.get_url())
-        response = self.get_view()(request)
+        response = self.client.get(self.get_url())
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
         form_choices = response.context_data["form"].fields["workspace"].choices
         # Choices are populated.
         self.assertEqual(len(form_choices), 1)
         self.assertFalse(("bp/ws-imported", "bp/ws-imported") in form_choices)
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_no_available_workspaces, str(messages[0])
+        )
 
     def test_form_does_not_show_workspaces_not_owner(self):
         """The form does not show workspaces where we aren't owners in the choices."""
@@ -2865,7 +2877,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
             status=200,
-            json=[],
+            json=[self.get_api_json_response("foo", "bar")],
         )
         # No API call.
         request = self.factory.post(
@@ -2896,7 +2908,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
             status=200,
-            json=[],
+            json=[self.get_api_json_response("foo", "bar")],
         )
         request = self.factory.post(self.get_url(), {})
         response = self.get_view()(request)
