@@ -2435,22 +2435,203 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code(self):
         """Returns successful response code."""
+        # List of available workspaces.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response("foo", "bar")],
+        )
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
         request = self.factory.get(self.get_url())
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
-        print(type(response.context_data["form"]))
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+
+    def test_form_choices_no_available_workspaces(self):
+        """Choices are populated correctly with one available workspace."""
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[],
+        )
+        response = self.client.get(self.get_url())
+        # Choices are populated correctly.
+        workspace_choices = response.context_data["form"].fields["workspace"].choices
+        self.assertEqual(len(workspace_choices), 1)
+        # The first choice is the empty string.
+        self.assertEqual("", workspace_choices[0][0])
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_no_available_workspaces, str(messages[0])
+        )
+
+    def test_form_choices_one_available_workspace(self):
+        """Choices are populated correctly with one available workspace."""
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response("bp-1", "ws-1")],
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        # Choices are populated correctly.
+        workspace_choices = response.context_data["form"].fields["workspace"].choices
+        self.assertEqual(len(workspace_choices), 2)
+        # The first choice is the empty string.
+        self.assertEqual("", workspace_choices[0][0])
+        # Second choice is the workspace.
+        self.assertTrue(("bp-1/ws-1", "bp-1/ws-1") in workspace_choices)
+
+    def test_form_choices_two_available_workspaces(self):
+        """Choices are populated correctly with two available workspaces."""
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("bp-1", "ws-1"),
+                self.get_api_json_response("bp-2", "ws-2"),
+            ],
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        # Choices are populated correctly.
+        workspace_choices = response.context_data["form"].fields["workspace"].choices
+        self.assertEqual(len(workspace_choices), 3)
+        # The first choice is the empty string.
+        self.assertEqual("", workspace_choices[0][0])
+        # The next choices are the workspaces.
+        self.assertTrue(("bp-1/ws-1", "bp-1/ws-1") in workspace_choices)
+        self.assertTrue(("bp-2/ws-2", "bp-2/ws-2") in workspace_choices)
+
+    def test_form_does_not_show_already_imported_workspaces(self):
+        """The form does not show workspaces that have already been imported in the choices."""
+        billing_project = factories.BillingProjectFactory.create(name="bp")
+        factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="ws-imported"
+        )
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("bp", "ws-imported", access="OWNER"),
+            ],
+        )
+        response = self.client.get(self.get_url())
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+        form_choices = response.context_data["form"].fields["workspace"].choices
+        # Choices are populated.
+        self.assertEqual(len(form_choices), 1)
+        self.assertFalse(("bp/ws-imported", "bp/ws-imported") in form_choices)
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_no_available_workspaces, str(messages[0])
+        )
+
+    def test_form_does_not_show_workspaces_not_owner(self):
+        """The form does not show workspaces where we aren't owners in the choices."""
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("bp", "ws-owner", access="OWNER"),
+                self.get_api_json_response("bp", "ws-reader", access="READER"),
+            ],
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+        form_choices = response.context_data["form"].fields["workspace"].choices
+        # Choices are populated.
+        self.assertEqual(len(form_choices), 2)
+        self.assertTrue(("bp/ws-owner", "bp/ws-owner") in form_choices)
+        self.assertFalse(("bp/ws-reader", "bp/ws-reader") in form_choices)
 
     def test_can_import_workspace_and_billing_project_as_user(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
         billing_project_name = "billing-project"
         workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
         # Billing project API call.
         billing_project_url = (
             self.entry_point + "/api/billing/v2/" + billing_project_name
@@ -2466,8 +2647,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
+                "workspace": billing_project_name + "/" + workspace_name,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -2487,6 +2667,19 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
         billing_project_name = "billing-project"
         workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
         # Billing project API call.
         billing_project_url = (
             self.entry_point + "/api/billing/v2/" + billing_project_name
@@ -2502,8 +2695,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
+                "workspace": billing_project_name + "/" + workspace_name,
             },
             follow=True,
         )
@@ -2516,6 +2708,19 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are not users."""
         billing_project_name = "billing-project"
         workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
         # Billing project API call.
         billing_project_url = (
             self.entry_point + "/api/billing/v2/" + billing_project_name
@@ -2533,8 +2738,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
+                "workspace": billing_project_name + "/" + workspace_name,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -2554,6 +2758,19 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Can import a workspace from AnVIL when the billing project exists in Django."""
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
         url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
@@ -2564,8 +2781,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": billing_project.name,
-                "workspace_name": workspace_name,
+                "workspace": billing_project.name + "/" + workspace_name,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -2580,6 +2796,19 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
         url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
@@ -2590,8 +2819,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": billing_project.name,
-                "workspace_name": workspace_name,
+                "workspace": billing_project.name + "/" + workspace_name,
             },
         )
         new_object = models.Workspace.objects.latest("pk")
@@ -2601,189 +2829,126 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_workspace_already_imported(self):
         """Does not import a workspace that already exists in Django."""
         workspace = factories.WorkspaceFactory.create()
-        # No API calls.
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response(
+                    workspace.billing_project.name, workspace.name
+                )
+            ],
+        )
         # Messages need the client.
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": workspace.billing_project.name,
-                "workspace_name": workspace.name,
+                "workspace": workspace.billing_project.name + "/" + workspace.name,
             },
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         # The form is valid but there was a different error. Is this really what we want?
-        self.assertTrue(form.is_valid())
-        # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertIn(views.WorkspaceImport.message_workspace_exists, str(messages[0]))
+        self.assertFalse(form.is_valid())
+        self.assertIn("workspace", form.errors.keys())
+        self.assertIn("valid", form.errors["workspace"][0])
         # Did not create any new BillingProjects.
         self.assertEqual(models.BillingProject.objects.count(), 1)
         # Did not create eany new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 1)
 
-    def test_invalid_billing_project(self):
-        """Does not create an object if billing project name is invalid."""
-        billing_project_name = "billing project"
-        workspace_name = "workspace"
-        # No API call.
-        request = self.factory.post(
-            self.get_url(),
-            {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
-            },
-        )
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("form", response.context_data)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("billing_project_name", form.errors.keys())
-        self.assertIn("slug", form.errors["billing_project_name"][0])
-        # Did not create any objects.
-        self.assertEqual(models.BillingProject.objects.count(), 0)
-        self.assertEqual(models.Workspace.objects.count(), 0)
-
     def test_invalid_workspace_name(self):
         """Does not create an object if workspace name is invalid."""
-        billing_project_name = "billing-project"
-        workspace_name = "workspace name"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response("foo", "bar")],
+        )
         # No API call.
         request = self.factory.post(
             self.get_url(),
-            {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
-            },
+            {"workspace": "billing-project/workspace name"},
         )
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("workspace_name", form.errors.keys())
-        self.assertIn("slug", form.errors["workspace_name"][0])
+        self.assertIn("workspace", form.errors.keys())
+        self.assertIn("valid", form.errors["workspace"][0])
         # Did not create any objects.
         self.assertEqual(models.BillingProject.objects.count(), 0)
         self.assertEqual(models.Workspace.objects.count(), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
-        request = self.factory.post(self.get_url(), {})
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("billing_project_name", form.errors.keys())
-        self.assertIn("required", form.errors["billing_project_name"][0])
-        self.assertIn("workspace_name", form.errors.keys())
-        self.assertIn("required", form.errors["workspace_name"][0])
-        self.assertEqual(models.Workspace.objects.count(), 0)
-        self.assertEqual(len(responses.calls), 0)
-
-    def test_post_blank_data_billing_project(self):
-        """Posting blank data in the billing project name field does not create an object."""
-        request = self.factory.post(
-            self.get_url(), {"workspace_name": "test-workspace"}
-        )
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("billing_project_name", form.errors.keys())
-        self.assertIn("required", form.errors["billing_project_name"][0])
-        self.assertEqual(models.Workspace.objects.count(), 0)
-        self.assertEqual(len(responses.calls), 0)
-
-    def test_post_blank_data_workspace_name(self):
-        """Posting blank data in the workspace_name field does not create an object."""
-        request = self.factory.post(
-            self.get_url(), {"billing_project_name": "test-billing-project"}
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response("foo", "bar")],
         )
         request = self.factory.post(self.get_url(), {})
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn("workspace_name", form.errors.keys())
-        self.assertIn("required", form.errors["workspace_name"][0])
+        self.assertIn("workspace", form.errors.keys())
+        self.assertIn("required", form.errors["workspace"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
-        self.assertEqual(len(responses.calls), 0)
-
-    def test_no_access_to_workspace(self):
-        """Does not import a workspace if we don't have access to it."""
-        billing_project_name = "billing-project"
-        workspace_name = "workspace"
-        url = self.get_api_url(billing_project_name, workspace_name)
-        responses.add(
-            responses.GET,
-            self.get_api_url(billing_project_name, workspace_name),
-            status=404,
-            json={"message": "api error"},
-        )
-        response = self.client.post(
-            self.get_url(),
-            {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        form = response.context_data["form"]
-        # The form is valid but there was a different error. Is this really what we want?
-        self.assertTrue(form.is_valid())
-        # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertIn(
-            views.WorkspaceImport.message_anvil_no_access_to_workspace, str(messages[0])
-        )
-        # Did not create any objects.
-        self.assertEqual(models.BillingProject.objects.count(), 0)
-        self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
-
-    def test_not_owner_of_workspace(self):
-        """Does not import a workspace if we are not an owner."""
-        billing_project_name = "billing-project"
-        workspace_name = "workspace"
-        url = self.get_api_url(billing_project_name, workspace_name)
-        responses.add(
-            responses.GET,
-            self.get_api_url(billing_project_name, workspace_name),
-            status=self.api_success_code,
-            json=self.get_api_json_response(
-                billing_project_name, workspace_name, access="READER"
-            ),
-        )
-        response = self.client.post(
-            self.get_url(),
-            {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        form = response.context_data["form"]
-        # The form is valid but there was a different error. Is this really what we want?
-        self.assertTrue(form.is_valid())
-        # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertIn(views.WorkspaceImport.message_anvil_not_owner, str(messages[0]))
-        # Did not create any objects.
-        self.assertEqual(models.BillingProject.objects.count(), 0)
-        self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        self.assertEqual(len(responses.calls), 1)  # just the workspace list.
 
     def test_other_anvil_api_error(self):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
         url = self.get_api_url(billing_project_name, workspace_name)
         responses.add(
             responses.GET,
@@ -2794,8 +2959,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(),
             {
-                "billing_project_name": billing_project_name,
-                "workspace_name": workspace_name,
+                "workspace": billing_project_name + "/" + workspace_name,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -2811,6 +2975,67 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.BillingProject.objects.count(), 0)
         self.assertEqual(models.Workspace.objects.count(), 0)
         responses.assert_call_count(url, 1)
+
+    def test_anvil_api_error_workspace_list_get(self):
+        # Available workspaces API call.
+        responses.add(
+            responses.GET,
+            self.entry_point + "/api/workspaces",
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=500,
+            json={"message": "an error"},
+        )
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_error_fetching_workspaces, str(messages[0])
+        )
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
+
+    def test_anvil_api_error_workspace_list_post(self):
+        # Available workspaces API call.
+        responses.add(
+            responses.GET,
+            self.entry_point + "/api/workspaces",
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=500,
+            json={"message": "an error"},
+        )
+        response = self.client.post(
+            self.get_url(),
+            {
+                "workspace": "billing-project/workspace",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is not valid because workspaces couldn't be fetched.
+        self.assertFalse(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceImport.message_error_fetching_workspaces, str(messages[0])
+        )
+        # Did not create any objects.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        self.assertEqual(models.Workspace.objects.count(), 0)
 
 
 class WorkspaceListTest(TestCase):

@@ -62,12 +62,16 @@ class WorkspaceCreateForm(forms.ModelForm):
 
 
 class WorkspaceImportForm(forms.Form):
-    """Form to import a workspace from AnVIL."""
+    """Form to import a workspace from AnVIL -- new version."""
 
     title = "Import a workspace"
-    billing_project_name = forms.SlugField()
-    workspace_name = forms.SlugField()
-    # Consider adding validation to check if the workspace already exists in Django.
+
+    def __init__(self, workspace_choices=[], *args, **kwargs):
+        """Initialize form with a set of possible workspace choices."""
+        super().__init__(*args, **kwargs)
+        self.fields["workspace"] = forms.ChoiceField(
+            choices=[("", "---------")] + workspace_choices
+        )
 
 
 class GroupGroupMembershipForm(forms.ModelForm):

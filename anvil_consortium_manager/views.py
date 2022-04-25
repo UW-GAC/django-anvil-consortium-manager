@@ -380,47 +380,69 @@ class WorkspaceCreate(SuccessMessageMixin, CreateView):
 
 class WorkspaceImport(SuccessMessageMixin, FormView):
     template_name = "anvil_consortium_manager/workspace_import.html"
-    form_class = forms.WorkspaceImportForm
     message_anvil_no_access_to_workspace = (
         "Requested workspace doesn't exist or you don't have permission to see it."
     )
     message_anvil_not_owner = "Not an owner of this workspace."
     message_workspace_exists = "This workspace already exists in the web app."
+    message_error_fetching_workspaces = "Unable to fetch workspaces from AnVIL."
+    message_no_available_workspaces = "No workspaces available for import from AnVIL."
     success_msg = "Successfully imported Workspace from AnVIL."
+    # Set in a method.
+    workspace_choices = None
+
+    def get_form(self):
+        """Return the form instance with the list of available workspaces to import."""
+        try:
+            all_workspaces = (
+                AnVILAPIClient()
+                .list_workspaces(
+                    fields="workspace.namespace,workspace.name,accessLevel"
+                )
+                .json()
+            )
+            # Filter workspaces to only owners and not imported.
+            workspaces = [
+                w["workspace"]["namespace"] + "/" + w["workspace"]["name"]
+                for w in all_workspaces
+                if (w["accessLevel"] == "OWNER")
+                and not models.Workspace.objects.filter(
+                    billing_project__name=w["workspace"]["namespace"],
+                    name=w["workspace"]["name"],
+                ).exists()
+            ]
+            workspace_choices = [(x, x) for x in workspaces]
+
+            if not len(workspace_choices):
+                messages.add_message(
+                    self.request, messages.INFO, self.message_no_available_workspaces
+                )
+
+        except AnVILAPIError:
+            workspace_choices = []
+            messages.add_message(
+                self.request, messages.ERROR, self.message_error_fetching_workspaces
+            )
+
+        return forms.WorkspaceImportForm(
+            workspace_choices=workspace_choices, **self.get_form_kwargs()
+        )
 
     def get_success_url(self):
         return self.workspace.get_absolute_url()
 
     def form_valid(self, form):
         """If the form is valid, check that the workspace exists on AnVIL and save the associated model."""
-        billing_project_name = form.cleaned_data["billing_project_name"]
-        workspace_name = form.cleaned_data["workspace_name"]
+        # Separate the billing project and workspace name.
+        billing_project_name, workspace_name = form.cleaned_data["workspace"].split("/")
 
         try:
             self.workspace = models.Workspace.anvil_import(
                 billing_project_name, workspace_name
             )
-        except exceptions.AnVILAlreadyImported:
-            # The workspace already exists in the database.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_workspace_exists
-            )
-            return self.render_to_response(self.get_context_data(form=form))
-        except anvil_api.AnVILAPIError404:
-            # Either the workspace doesn't exist or we don't have permission for it.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_anvil_no_access_to_workspace
-            )
-            return self.render_to_response(self.get_context_data(form=form))
         except anvil_api.AnVILAPIError as e:
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
-            return self.render_to_response(self.get_context_data(form=form))
-        except exceptions.AnVILNotWorkspaceOwnerError:
-            # We are not an owner of the workspace.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_anvil_not_owner
             )
             return self.render_to_response(self.get_context_data(form=form))
 
