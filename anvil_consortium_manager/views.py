@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.db import transaction
+from django.forms.forms import Form
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
@@ -11,6 +12,7 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import anvil_api, exceptions, forms, models, tables
@@ -213,6 +215,57 @@ class AccountDeactivate(SuccessMessageMixin, DeleteView):
             self.object.save()
             messages.success(self.request, self.success_msg)
             return HttpResponseRedirect(self.get_success_url())
+
+
+class AccountReactivate(SuccessMessageMixin, SingleObjectMixin, FormView):
+    """Reactivate an account and re-add it to all groups on AnVIL."""
+
+    model = models.Account
+    form_class = Form
+    template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
+    message_error_adding_to_groups = "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    message_already_active = "This Account is already active."
+    success_msg = "Successfully reactivated Account in app."
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+        # exceptions.AnVILRemoveAccountFromGroupError
+
+    def get(self, *args, **kwargs):
+        self.object = self.get_object()
+        # Check if account is inactive.
+        if self.object.status == self.object.ACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_active
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().get(self, *args, **kwargs)
+
+    def form_valid(self, form):
+        """Set the object status to active and add it to all groups on AnVIL."""
+        # Set the status to active.
+        self.object = self.get_object()
+        if self.object.status == self.object.ACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_active
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+
+        self.object.status = self.object.ACTIVE_STATUS
+        self.object.save()
+        # Re-add to all groups
+        group_memberships = self.object.groupaccountmembership_set.all()
+        try:
+            for membership in group_memberships:
+                membership.anvil_create()
+        except AnVILAPIError as e:
+            msg = self.message_error_adding_to_groups.format(e)
+            messages.add_message(self.request, messages.ERROR, msg)
+            # Rerender the same page with an error message.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().form_valid(form)
 
 
 class AccountDelete(SuccessMessageMixin, DeleteView):
