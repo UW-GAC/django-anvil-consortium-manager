@@ -9,6 +9,7 @@
 
 <h2>Account Details</h2>
 
+
 {% if object.is_service_account %}
   <span class="badge bg-info">Service account</span>
 {% else %}
@@ -18,6 +19,7 @@
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Email: {{ object.email }}</li>
+    <li>Status: {{ object.status }}</li>
   </ul>
 </div>
 
@@ -40,6 +42,7 @@
     </div>
   </div>
 </div>
+
 
 <p>
   <a href="{% url 'anvil_consortium_manager:accounts:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete from app</a>

@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
+from django_extensions.db.models import ActivatorModel
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
@@ -48,7 +49,7 @@ class BillingProject(models.Model):
         return billing_project
 
 
-class Account(models.Model):
+class Account(ActivatorModel):
     """A model to store information about AnVIL accounts."""
 
     # TODO: Consider using CIEmailField if using postgres.
@@ -80,9 +81,6 @@ class Account(models.Model):
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
-        # If all memberships were successfully deleted from AnVIL, then delete all memberships from django.
-        for membership in group_memberships:
-            membership.delete()
 
 
 class ManagedGroup(models.Model):
