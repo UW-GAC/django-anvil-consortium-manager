@@ -316,8 +316,17 @@ class ManagedGroupDetail(DetailView):
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="group"
         )
-        context["account_table"] = tables.GroupAccountMembershipTable(
-            self.object.groupaccountmembership_set.all(), exclude="group"
+        context["active_account_table"] = tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.filter(
+                account__status=models.Account.ACTIVE_STATUS
+            ),
+            exclude="group",
+        )
+        context["inactive_account_table"] = tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.filter(
+                account__status=models.Account.INACTIVE_STATUS
+            ),
+            exclude="group",
         )
         context["group_table"] = tables.GroupGroupMembershipTable(
             self.object.child_memberships.all(), exclude="parent_group"
