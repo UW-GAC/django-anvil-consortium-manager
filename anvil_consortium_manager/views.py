@@ -163,6 +163,22 @@ class AccountList(SingleTableView):
     table_class = tables.AccountTable
 
 
+class AccountActiveList(SingleTableView):
+    model = models.Account
+    table_class = tables.AccountTable
+
+    def get_queryset(self):
+        return self.model.objects.active()
+
+
+class AccountInactiveList(SingleTableView):
+    model = models.Account
+    table_class = tables.AccountTable
+
+    def get_queryset(self):
+        return self.model.objects.inactive()
+
+
 class AccountDeactivate(SuccessMessageMixin, DeleteView):
     """Deactivate an account and remove it from all groups on AnVIL."""
 

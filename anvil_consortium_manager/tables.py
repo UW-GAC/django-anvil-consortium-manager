@@ -26,7 +26,7 @@ class AccountTable(tables.Table):
 
     class Meta:
         model = models.Account
-        fields = ("email", "is_service_account")
+        fields = ("email", "is_service_account", "status")
 
 
 class ManagedGroupTable(tables.Table):
