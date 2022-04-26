@@ -1,7 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
-from simple_history.models import HistoricalRecords
+from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
@@ -200,7 +200,7 @@ class Workspace(models.Model):
     # NB: In the APIs some documentation, this is also referred to as "namespace".
     # In other places, it is "billing project".
     # For internal consistency, call it "billing project" here.
-    billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
+    billing_project = HistoricForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
     authorization_domains = models.ManyToManyField(
         "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True

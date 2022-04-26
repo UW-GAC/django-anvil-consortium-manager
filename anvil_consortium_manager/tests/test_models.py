@@ -787,18 +787,35 @@ class WorkspaceTest(TestCase):
         obj.delete()
         self.assertEqual(Workspace.history.count(), 3)
 
-    @skip("django-simple-history unsupported")
     def test_history_foreign_key_billing_project(self):
         """History is retained when a billing_project foreign key object is deleted."""
-        obj = factories.WorkspaceFactory.create()
+        bp = factories.BillingProjectFactory.create(name="bp")
+        obj = factories.WorkspaceFactory.create(billing_project=bp, name="ws")
+        from django.utils import timezone
+
+        t_created = timezone.now()
+        # Update the billing project.
+        bp.name = "bp-updated"
+        bp.save()
+        t_billing_updated = timezone.now()
         obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
+        t_workspace_deleted = timezone.now()
         # History was created.
         self.assertEqual(Workspace.history.count(), 2)
         # Entries are retained when a foreign key is deleted.
-        obj.billing_project.delete()
+        t_billing_deleted = timezone.now()
+        bp.delete()
         self.assertEqual(Workspace.history.count(), 2)
         # Make sure you can access it.
-        print(Workspace.history.all())
+        self.assertEqual(
+            Workspace.history.as_of(t_created)[0].billing_project.name, "bp"
+        )
+        self.assertEqual(
+            Workspace.history.as_of(t_billing_updated)[0].billing_project.name,
+            "bp-updated",
+        )
+        self.assertEqual(len(Workspace.history.as_of(t_workspace_deleted)), 0)
+        self.assertEqual(len(Workspace.history.as_of(t_billing_deleted)), 0)
 
     def test_workspace_on_delete_auth_domain(self):
         """Workspace can be deleted if it has an authorization domain."""
