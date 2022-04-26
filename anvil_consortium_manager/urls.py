@@ -19,6 +19,9 @@ account_patterns = (
         path("import/", views.AccountImport.as_view(), name="import"),
         path("", views.AccountList.as_view(), name="list"),
         path("<int:pk>/delete", views.AccountDelete.as_view(), name="delete"),
+        path(
+            "<int:pk>/deactivate", views.AccountDeactivate.as_view(), name="deactivate"
+        ),
     ],
     "accounts",
 )

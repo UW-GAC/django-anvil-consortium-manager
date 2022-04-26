@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.utils import timezone
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -159,6 +160,59 @@ class AccountImport(SuccessMessageMixin, CreateView):
 class AccountList(SingleTableView):
     model = models.Account
     table_class = tables.AccountTable
+
+
+class AccountDeactivate(SuccessMessageMixin, DeleteView):
+    """Deactivate an account and remove it from all groups on AnVIL."""
+
+    model = models.Account
+    template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
+    message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    message_already_inactive = "This Account is already inactive."
+    success_msg = "Successfully deactivated Account in app."
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+        # exceptions.AnVILRemoveAccountFromGroupError
+
+    def get(self, *args, **kwargs):
+        response = super().get(self, *args, **kwargs)
+        # Check if account is inactive.
+        if self.object.status == self.object.INACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_inactive
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return response
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Make an API call to AnVIL to remove the account from all groups and then set status to inactive.
+        """
+        self.object = self.get_object()
+
+        if self.object.status == self.object.INACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_inactive
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+
+        try:
+            self.object.anvil_remove_from_groups()
+        except AnVILAPIError as e:
+            msg = self.message_error_removing_from_groups.format(e)
+            messages.add_message(request, messages.ERROR, msg)
+            # Rerender the same page with an error message.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        else:
+            # Set the status to deactivated.
+            self.object.deactivate_date = timezone.now()
+            self.object.status = self.object.INACTIVE_STATUS
+            self.object.save()
+            messages.success(self.request, self.success_msg)
+            return HttpResponseRedirect(self.get_success_url())
 
 
 class AccountDelete(SuccessMessageMixin, DeleteView):

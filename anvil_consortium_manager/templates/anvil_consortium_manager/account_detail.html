@@ -45,6 +45,7 @@
 
 
 <p>
+  <a href="{% url 'anvil_consortium_manager:accounts:deactivate' pk=object.pk %}" class="btn btn-secondary" role="button">Deactivate account</a>
   <a href="{% url 'anvil_consortium_manager:accounts:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete from app</a>
 </p>
 
