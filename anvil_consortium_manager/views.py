@@ -3,7 +3,6 @@ from django.db import transaction
 from django.forms.forms import Form
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.utils import timezone
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -202,17 +201,14 @@ class AccountDeactivate(SuccessMessageMixin, DeleteView):
             return HttpResponseRedirect(self.object.get_absolute_url())
 
         try:
-            self.object.anvil_remove_from_groups()
+            self.object.deactivate()
         except AnVILAPIError as e:
             msg = self.message_error_removing_from_groups.format(e)
             messages.add_message(request, messages.ERROR, msg)
             # Rerender the same page with an error message.
             return HttpResponseRedirect(self.object.get_absolute_url())
         else:
-            # Set the status to deactivated.
-            self.object.deactivate_date = timezone.now()
-            self.object.status = self.object.INACTIVE_STATUS
-            self.object.save()
+            # Need to add the message because we're not calling the super method.
             messages.success(self.request, self.success_msg)
             return HttpResponseRedirect(self.get_success_url())
 
