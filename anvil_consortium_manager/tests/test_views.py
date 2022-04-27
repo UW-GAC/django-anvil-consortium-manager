@@ -5251,6 +5251,136 @@ class GroupAccountMembershipListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
+class GroupAccountMembershipActiveListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:group_account_membership:list_active", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupAccountMembershipActiveList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], tables.GroupAccountMembershipTable
+        )
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.GroupAccountMembershipFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.GroupAccountMembershipFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_does_not_show_inactive_accounts(self):
+        """Inactive accounts are not shown."""
+        factories.GroupAccountMembershipFactory.create_batch(
+            2, account__status=models.Account.INACTIVE_STATUS
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+
+class GroupAccountMembershipInactiveListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:group_account_membership:list_inactive", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupAccountMembershipInactiveList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], tables.GroupAccountMembershipTable
+        )
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        membership = factories.GroupAccountMembershipFactory()
+        membership.account.status = models.Account.INACTIVE_STATUS
+        membership.account.save()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        memberships = factories.GroupAccountMembershipFactory.create_batch(2)
+        memberships[0].account.status = models.Account.INACTIVE_STATUS
+        memberships[0].account.save()
+        memberships[1].account.status = models.Account.INACTIVE_STATUS
+        memberships[1].account.save()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_does_not_show_active_accounts(self):
+        """Active accounts are not shown."""
+        factories.GroupAccountMembershipFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+
 class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 204

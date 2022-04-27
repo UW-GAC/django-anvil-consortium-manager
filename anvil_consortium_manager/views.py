@@ -748,8 +748,30 @@ class GroupAccountMembershipCreate(SuccessMessageMixin, CreateView):
 
 
 class GroupAccountMembershipList(SingleTableView):
+    """Show a list of all group memberships regardless of account active/inactive status."""
+
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+
+
+class GroupAccountMembershipActiveList(SingleTableView):
+    """Show a list of all group memberships for active accounts."""
+
+    model = models.GroupAccountMembership
+    table_class = tables.GroupAccountMembershipTable
+
+    def get_queryset(self):
+        return self.model.objects.filter(account__status=models.Account.ACTIVE_STATUS)
+
+
+class GroupAccountMembershipInactiveList(SingleTableView):
+    """Show a list of all group memberships for inactive accounts."""
+
+    model = models.GroupAccountMembership
+    table_class = tables.GroupAccountMembershipTable
+
+    def get_queryset(self):
+        return self.model.objects.filter(account__status=models.Account.INACTIVE_STATUS)
 
 
 class GroupAccountMembershipDelete(SuccessMessageMixin, DeleteView):
