@@ -496,6 +496,34 @@ class AccountDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
+    def test_context_active_account(self):
+        """An is_inactive flag is included in the context."""
+        active_account = factories.AccountFactory.create()
+        request = self.factory.get(self.get_url(active_account.pk))
+        response = self.get_view()(request, pk=active_account.pk)
+        context = response.context_data
+        self.assertIn("is_inactive", context)
+        self.assertFalse(context["is_inactive"])
+        self.assertIn("show_deactivate_button", context)
+        self.assertTrue(context["show_deactivate_button"])
+        self.assertIn("show_reactivate_button", context)
+        self.assertFalse(context["show_reactivate_button"])
+
+    def test_context_inactive_account(self):
+        """An is_inactive flag is included in the context."""
+        active_account = factories.AccountFactory.create(
+            status=models.Account.INACTIVE_STATUS
+        )
+        request = self.factory.get(self.get_url(active_account.pk))
+        response = self.get_view()(request, pk=active_account.pk)
+        context = response.context_data
+        self.assertIn("is_inactive", context)
+        self.assertTrue(context["is_inactive"])
+        self.assertIn("show_deactivate_button", context)
+        self.assertFalse(context["show_deactivate_button"])
+        self.assertIn("show_reactivate_button", context)
+        self.assertTrue(context["show_reactivate_button"])
+
     def test_view_status_code_with_existing_object_service_account(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.AccountFactory.create(is_service_account=True)

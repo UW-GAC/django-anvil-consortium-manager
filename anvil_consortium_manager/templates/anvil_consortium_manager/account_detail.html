@@ -16,13 +16,18 @@
   <span class="badge bg-primary">User account</span>
 {% endif %}
 
+{% if is_inactive %}
+  <div class="my-3 alert alert-dark" role="alert">
+  This account is inactive. It has been removed from all groups on AnVIL, but a record of previous group membership is still stored in this app.
+  </div>
+{% endif %}
+
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Email: {{ object.email }}</li>
     <li>Status: {{ object.status }}</li>
   </ul>
 </div>
-
 
 <div class="my-3">
   <div class="accordion" id="accordionGroups">
@@ -45,8 +50,14 @@
 
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:accounts:deactivate' pk=object.pk %}" class="btn btn-secondary" role="button">Deactivate account</a>
-  <a href="{% url 'anvil_consortium_manager:accounts:reactivate' pk=object.pk %}" class="btn btn-secondary" role="button">Reactivate account</a>
+  {% if show_deactivate_button %}
+    <a href="{% url 'anvil_consortium_manager:accounts:deactivate' pk=object.pk %}" class="btn btn-secondary" role="button">Deactivate account</a>
+  {% endif %}
+
+  {% if show_reactivate_button %}
+    <a href="{% url 'anvil_consortium_manager:accounts:reactivate' pk=object.pk %}" class="btn btn-secondary" role="button">Reactivate account</a>
+  {% endif %}
+
   <a href="{% url 'anvil_consortium_manager:accounts:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete from app</a>
 </p>
 

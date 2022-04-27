@@ -130,6 +130,14 @@ class AccountDetail(SingleTableMixin, DetailView):
             exclude=["account", "is_service_account"],
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add an indicator of whether the account is inactive.
+        context["is_inactive"] = self.object.status == models.Account.INACTIVE_STATUS
+        context["show_deactivate_button"] = not context["is_inactive"]
+        context["show_reactivate_button"] = context["is_inactive"]
+        return context
+
 
 class AccountImport(SuccessMessageMixin, CreateView):
     model = models.Account
