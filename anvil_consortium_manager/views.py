@@ -187,14 +187,21 @@ class AccountInactiveList(SingleTableView):
         return self.model.objects.inactive()
 
 
-class AccountDeactivate(SuccessMessageMixin, DeleteView):
+class AccountDeactivate(SuccessMessageMixin, SingleTableMixin, DeleteView):
     """Deactivate an account and remove it from all groups on AnVIL."""
 
     model = models.Account
     template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
+    context_table_name = "group_table"
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
     message_already_inactive = "This Account is already inactive."
     success_msg = "Successfully deactivated Account in app."
+
+    def get_table(self):
+        return tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(),
+            exclude=["account", "is_service_account"],
+        )
 
     def get_success_url(self):
         return self.object.get_absolute_url()
@@ -237,10 +244,13 @@ class AccountDeactivate(SuccessMessageMixin, DeleteView):
             return HttpResponseRedirect(self.get_success_url())
 
 
-class AccountReactivate(SuccessMessageMixin, SingleObjectMixin, FormView):
+class AccountReactivate(
+    SuccessMessageMixin, SingleTableMixin, SingleObjectMixin, FormView
+):
     """Reactivate an account and re-add it to all groups on AnVIL."""
 
     model = models.Account
+    context_table_name = "group_table"
     form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
     message_error_adding_to_groups = "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
@@ -250,6 +260,12 @@ class AccountReactivate(SuccessMessageMixin, SingleObjectMixin, FormView):
     def get_success_url(self):
         return self.object.get_absolute_url()
         # exceptions.AnVILRemoveAccountFromGroupError
+
+    def get_table(self):
+        return tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(),
+            exclude=["account", "is_service_account"],
+        )
 
     def get(self, *args, **kwargs):
         self.object = self.get_object()

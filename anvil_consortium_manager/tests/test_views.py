@@ -1168,6 +1168,17 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
 
+    def test_get_context_data(self):
+        """Context data is correct."""
+        object = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(account=object)
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertIn("group_table", response.context_data)
+        table = response.context_data["group_table"]
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(membership, table.data)
+
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
@@ -1385,6 +1396,19 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url(object.pk))
         response = self.get_view()(request, pk=object.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_get_context_data(self):
+        """Context data is correct."""
+        object = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(account=object)
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertIn("group_table", response.context_data)
+        table = response.context_data["group_table"]
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(membership, table.data)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
