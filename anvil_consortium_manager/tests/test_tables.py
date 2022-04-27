@@ -170,6 +170,13 @@ class GroupAccountMembershipTableTest(TestCase):
         table = self.table_class(self.model.objects.all())
         self.assertEqual(len(table.rows), 2)
 
+    def test_row_count_with_inactive_account(self):
+        membership = self.model_factory.create()
+        membership.account.status = models.Account.INACTIVE_STATUS
+        membership.account.save()
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(len(table.rows), 1)
+
 
 class WorkspaceGroupAccessTable(TestCase):
     model = models.WorkspaceGroupAccess

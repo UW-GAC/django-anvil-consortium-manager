@@ -97,12 +97,13 @@ class GroupAccountMembershipTable(tables.Table):
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
     account = tables.Column(linkify=True)
     is_service_account = tables.BooleanColumn(accessor="account__is_service_account")
+    status = tables.Column(accessor="account__status")
     group = tables.Column(linkify=True)
     role = tables.Column()
 
     class Meta:
         models = models.GroupAccountMembership
-        fields = ("pk", "account", "is_service_account", "group", "role")
+        fields = ("pk", "group", "account", "status", "is_service_account", "role")
 
     def render_pk(self, record):
         return "See details"
