@@ -5087,6 +5087,41 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
+    def test_cannot_add_inactive_account_to_group(self):
+        """Cannot add an inactive account to a group."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create(status=models.Account.INACTIVE_STATUS)
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("valid choice", form.errors["account"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_queryset_shows_active_users_only(self):
+        """Form queryset only shows active accounts."""
+        active_account = factories.AccountFactory.create()
+        inactive_account = factories.AccountFactory.create(
+            status=models.Account.INACTIVE_STATUS
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertTrue("form" in response.context_data)
+        form = response.context_data["form"]
+        self.assertIn(active_account, form.fields["account"].queryset)
+        self.assertNotIn(inactive_account, form.fields["account"].queryset)
+
     @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):
         self.fail(

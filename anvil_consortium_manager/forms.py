@@ -98,10 +98,19 @@ class GroupGroupMembershipForm(forms.ModelForm):
 class GroupAccountMembershipForm(forms.ModelForm):
     """Form for the GroupAccountMembership model."""
 
+    account = forms.ModelChoiceField(
+        queryset=models.Account.objects.active(),
+        help_text="Only active accounts can be added.",
+    )
     group = forms.ModelChoiceField(
-        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True)
+        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
+        help_text="Only groups managed by this app can be selected.",
     )
 
     class Meta:
         model = models.GroupAccountMembership
         fields = ("group", "account", "role")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["account"].queryset = models.Account.objects.active()
