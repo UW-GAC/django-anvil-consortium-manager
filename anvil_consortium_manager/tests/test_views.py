@@ -496,6 +496,34 @@ class AccountDetailTest(TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
+    def test_context_active_account(self):
+        """An is_inactive flag is included in the context."""
+        active_account = factories.AccountFactory.create()
+        request = self.factory.get(self.get_url(active_account.pk))
+        response = self.get_view()(request, pk=active_account.pk)
+        context = response.context_data
+        self.assertIn("is_inactive", context)
+        self.assertFalse(context["is_inactive"])
+        self.assertIn("show_deactivate_button", context)
+        self.assertTrue(context["show_deactivate_button"])
+        self.assertIn("show_reactivate_button", context)
+        self.assertFalse(context["show_reactivate_button"])
+
+    def test_context_inactive_account(self):
+        """An is_inactive flag is included in the context."""
+        active_account = factories.AccountFactory.create(
+            status=models.Account.INACTIVE_STATUS
+        )
+        request = self.factory.get(self.get_url(active_account.pk))
+        response = self.get_view()(request, pk=active_account.pk)
+        context = response.context_data
+        self.assertIn("is_inactive", context)
+        self.assertTrue(context["is_inactive"])
+        self.assertIn("show_deactivate_button", context)
+        self.assertFalse(context["show_deactivate_button"])
+        self.assertIn("show_reactivate_button", context)
+        self.assertTrue(context["show_reactivate_button"])
+
     def test_view_status_code_with_existing_object_service_account(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.AccountFactory.create(is_service_account=True)
@@ -792,6 +820,163 @@ class AccountListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_active_and_inactive_accounts(self):
+        """Includes both active and inactive accounts."""
+        active_object = factories.AccountFactory.create()
+        inactive_object = factories.AccountFactory.create()
+        inactive_object.deactivate()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertIn(active_object, response.context_data["table"].data)
+        self.assertIn(inactive_object, response.context_data["table"].data)
+
+
+class AccountActiveListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:accounts:list", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AccountActiveList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.AccountFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.AccountFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_service_account(self):
+        factories.AccountFactory.create(is_service_account=True)
+        factories.AccountFactory.create(is_service_account=False)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_active_and_inactive_accounts(self):
+        """Includes both active and inactive accounts."""
+        active_object = factories.AccountFactory.create()
+        inactive_object = factories.AccountFactory.create()
+        inactive_object.deactivate()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(active_object, response.context_data["table"].data)
+        self.assertNotIn(inactive_object, response.context_data["table"].data)
+
+
+class AccountInactiveListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:accounts:list", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AccountInactiveList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.AccountFactory(status=models.Account.INACTIVE_STATUS)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.AccountFactory.create_batch(2, status=models.Account.INACTIVE_STATUS)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_service_account(self):
+        factories.AccountFactory.create(
+            status=models.Account.INACTIVE_STATUS, is_service_account=True
+        )
+        factories.AccountFactory.create(
+            status=models.Account.INACTIVE_STATUS, is_service_account=False
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_active_and_inactive_accounts(self):
+        """Includes both active and inactive accounts."""
+        active_object = factories.AccountFactory.create()
+        inactive_object = factories.AccountFactory.create()
+        inactive_object.deactivate()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertNotIn(active_object, response.context_data["table"].data)
+        self.assertIn(inactive_object, response.context_data["table"].data)
+
 
 class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
@@ -957,6 +1142,466 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(remove_from_group_url_2, 1)
 
 
+class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:accounts:deactivate", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AccountDeactivate.as_view()
+
+    def get_api_remove_from_group_url(self, group_name, account_email):
+        return (
+            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+        )
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.AccountFactory.create()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_context_data(self):
+        """Context data is correct."""
+        object = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(account=object)
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertIn("group_table", response.context_data)
+        table = response.context_data["group_table"]
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(membership, table.data)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_deactivates_object(self):
+        """Posting submit to the form successfully deactivates the object."""
+        object = factories.AccountFactory.create()
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.INACTIVE_STATUS)
+        self.assertTrue(object.deactivate_date)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        object = factories.AccountFactory.create()
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.AccountDeactivate.success_msg, str(messages[0]))
+
+    def test_view_deactivates_object_service_account(self):
+        """Posting submit to the form successfully deactivates a service account object."""
+        object = factories.AccountFactory.create(is_service_account=True)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.INACTIVE_STATUS)
+        self.assertTrue(object.deactivate_date)
+
+    def test_only_deactivates_specified_pk(self):
+        """View only deletes the specified pk."""
+        object = factories.AccountFactory.create()
+        other_object = factories.AccountFactory.create()
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Account.objects.count(), 2)
+        other_object.refresh_from_db()
+        self.assertEqual(other_object.status, other_object.ACTIVE_STATUS)
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.AccountFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response,
+            reverse("anvil_consortium_manager:accounts:detail", args=[object.pk]),
+        )
+
+    def test_removes_account_from_one_group(self):
+        """Deactivating an account from the app also removes it from one group on AnVIL."""
+        object = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(account=object)
+        group = membership.group
+        remove_from_group_url = self.get_api_remove_from_group_url(
+            group.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url, status=204)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        # Memberships are *not* deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        responses.assert_call_count(remove_from_group_url, 1)
+
+    def test_removes_account_from_all_groups(self):
+        """Deactivating an account from the app also removes it from all groups that it is in."""
+        object = factories.AccountFactory.create()
+        memberships = factories.GroupAccountMembershipFactory.create_batch(
+            2, account=object
+        )
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        remove_from_group_url_1 = self.get_api_remove_from_group_url(
+            group_1.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url_1, status=204)
+        remove_from_group_url_2 = self.get_api_remove_from_group_url(
+            group_2.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url_2, status=204)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        # Status was updated.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.INACTIVE_STATUS)
+        # Memberships are *not* deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        responses.assert_call_count(remove_from_group_url_1, 1)
+        responses.assert_call_count(remove_from_group_url_2, 1)
+
+    def test_api_error_when_removing_account_from_groups(self):
+        """Message when an API error occurred when removing a user from a group."""
+        object = factories.AccountFactory.create()
+        memberships = factories.GroupAccountMembershipFactory.create_batch(
+            2, account=object
+        )
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        remove_from_group_url_1 = self.get_api_remove_from_group_url(
+            group_1.name, object.email
+        )
+        responses.add(responses.DELETE, remove_from_group_url_1, status=204)
+        remove_from_group_url_2 = self.get_api_remove_from_group_url(
+            group_2.name, object.email
+        )
+        responses.add(
+            responses.DELETE,
+            remove_from_group_url_2,
+            status=409,
+            json={"message": "test error"},
+        )
+        # Need a client for messages.
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountDeactivate.message_error_removing_from_groups.format(
+                "test error"
+            ),
+            str(messages[0]),
+        )
+        # The Account is not marked as inactive.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.ACTIVE_STATUS)
+        # Does not remove the user from any groups.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
+        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
+        # The API was called.
+        responses.assert_call_count(remove_from_group_url_1, 1)
+        responses.assert_call_count(remove_from_group_url_2, 1)
+
+    def test_account_already_inactive_get(self):
+        """Redirects with a message if account is already deactivated."""
+        object = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create_batch(2, account=object)
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        # No API calls are made.
+        response = self.client.get(self.get_url(object.pk), follow=True)
+        self.assertRedirects(response, object.get_absolute_url())
+        # The object is unchanged.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.INACTIVE_STATUS)
+        # Memberships are *not* deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountDeactivate.message_already_inactive, str(messages[0])
+        )
+
+    def test_account_already_inactive_post(self):
+        """Redirects with a message if account is already deactivated."""
+        object = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create_batch(2, account=object)
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        # No API calls are made.
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        # The object is unchanged.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.INACTIVE_STATUS)
+        # Memberships are *not* deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountDeactivate.message_already_inactive, str(messages[0])
+        )
+
+
+class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:accounts:reactivate", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AccountReactivate.as_view()
+
+    def get_api_remove_from_group_url(self, group_name, account_email):
+        return (
+            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+        )
+
+    def test_view_status_code(self):
+        """Returns a successful status code for an existing object."""
+        object = factories.AccountFactory.create()
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_context_data(self):
+        """Context data is correct."""
+        object = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(account=object)
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        request = self.factory.get(self.get_url(object.pk))
+        response = self.get_view()(request, pk=object.pk)
+        self.assertIn("group_table", response.context_data)
+        table = response.context_data["group_table"]
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(membership, table.data)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
+
+    def test_view_reactivates_object(self):
+        """Posting submit to the form successfully deactivates the object."""
+        object = factories.AccountFactory.create()
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.ACTIVE_STATUS)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        object = factories.AccountFactory.create()
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.AccountReactivate.success_msg, str(messages[0]))
+
+    def test_view_reactivates_object_service_account(self):
+        """Posting submit to the form successfully reactivates a service account object."""
+        object = factories.AccountFactory.create(is_service_account=True)
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.ACTIVE_STATUS)
+
+    def test_only_reactivates_specified_pk(self):
+        """View only reactivates the specified pk."""
+        object = factories.AccountFactory.create()
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        other_object = factories.AccountFactory.create()
+        other_object.status = other_object.INACTIVE_STATUS
+        other_object.save()
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Account.objects.count(), 2)
+        other_object.refresh_from_db()
+        self.assertEqual(other_object.status, other_object.INACTIVE_STATUS)
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        object = factories.AccountFactory.create()
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response,
+            reverse("anvil_consortium_manager:accounts:detail", args=[object.pk]),
+        )
+
+    def test_removes_account_from_one_group(self):
+        """Reactivating an account from the app also adds it from one group on AnVIL."""
+        object = factories.AccountFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(account=object)
+        group = membership.group
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        add_to_group_url = self.get_api_remove_from_group_url(group.name, object.email)
+        responses.add(responses.PUT, add_to_group_url, status=204)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        responses.assert_call_count(add_to_group_url, 1)
+
+    def test_adds_account_to_all_groups(self):
+        """Reactivating an account from the app also adds it from all groups that it is in."""
+        object = factories.AccountFactory.create()
+        memberships = factories.GroupAccountMembershipFactory.create_batch(
+            2, account=object
+        )
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        add_to_group_url_1 = self.get_api_remove_from_group_url(
+            group_1.name, object.email
+        )
+        responses.add(responses.PUT, add_to_group_url_1, status=204)
+        add_to_group_url_2 = self.get_api_remove_from_group_url(
+            group_2.name, object.email
+        )
+        responses.add(responses.PUT, add_to_group_url_2, status=204)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        # Status was updated.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.ACTIVE_STATUS)
+        responses.assert_call_count(add_to_group_url_1, 1)
+        responses.assert_call_count(add_to_group_url_2, 1)
+
+    def test_api_error_when_adding_account_to_groups(self):
+        """Message when an API error occurred when adding a user to a group."""
+        object = factories.AccountFactory.create()
+        memberships = factories.GroupAccountMembershipFactory.create_batch(
+            2, account=object
+        )
+        object.status = object.INACTIVE_STATUS
+        object.save()
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        add_to_group_url_1 = self.get_api_remove_from_group_url(
+            group_1.name, object.email
+        )
+        responses.add(responses.PUT, add_to_group_url_1, status=204)
+        add_to_group_url_2 = self.get_api_remove_from_group_url(
+            group_2.name, object.email
+        )
+        responses.add(
+            responses.PUT,
+            add_to_group_url_2,
+            status=409,
+            json={"message": "test error"},
+        )
+        # Need a client for messages.
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountReactivate.message_error_adding_to_groups.format("test error"),
+            str(messages[0]),
+        )
+        # The Account is not marked as inactive.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.ACTIVE_STATUS)
+        # Does not remove the user from any groups.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
+        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
+        # The API was called.
+        responses.assert_call_count(add_to_group_url_1, 1)
+        responses.assert_call_count(add_to_group_url_2, 1)
+
+    def test_account_already_active_get(self):
+        """Redirects with a message if account is already active."""
+        object = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create_batch(2, account=object)
+        # No API calls are made.
+        response = self.client.get(self.get_url(object.pk), follow=True)
+        self.assertRedirects(response, object.get_absolute_url())
+        # The object is unchanged.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.ACTIVE_STATUS)
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountReactivate.message_already_active, str(messages[0])
+        )
+
+    def test_account_already_active_post(self):
+        """Redirects with a message if account is already deactivated."""
+        object = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create_batch(2, account=object)
+        # No API calls are made.
+        response = self.client.post(
+            self.get_url(object.pk), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        # The object is unchanged.
+        object.refresh_from_db()
+        self.assertEqual(object.status, object.ACTIVE_STATUS)
+        # Memberships are *not* deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        # A message is shown.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountReactivate.message_already_active, str(messages[0])
+        )
+
+
 class ManagedGroupDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -1037,51 +1682,52 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 
-    def test_account_table(self):
-        """The account table exists."""
+    def test_active_account_table(self):
+        """The active account table exists."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
         response = self.get_view()(request, pk=obj.pk)
-        self.assertIn("account_table", response.context_data)
+        self.assertIn("active_account_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["account_table"], tables.GroupAccountMembershipTable
+            response.context_data["active_account_table"],
+            tables.GroupAccountMembershipTable,
         )
 
-    def test_account_table_none(self):
-        """No accounts are shown if the group has no accounts."""
+    def test_active_account_table_none(self):
+        """No accounts are shown if the group has no active accounts."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("account_table", response.context_data)
-        self.assertEqual(len(response.context_data["account_table"].rows), 0)
+        self.assertIn("active_account_table", response.context_data)
+        self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
 
-    def test_account_table_one(self):
-        """One accounts is shown if the group has only that account."""
+    def test_active_account_table_one(self):
+        """One accounts is shown if the group has only that active account."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("account_table", response.context_data)
-        self.assertEqual(len(response.context_data["account_table"].rows), 1)
+        self.assertIn("active_account_table", response.context_data)
+        self.assertEqual(len(response.context_data["active_account_table"].rows), 1)
 
-    def test_account_table_two(self):
-        """Two accounts are shown if the group has only those accounts."""
+    def test_active_account_table_two(self):
+        """Two accounts are shown if the group has only those active accounts."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("account_table", response.context_data)
-        self.assertEqual(len(response.context_data["account_table"].rows), 2)
+        self.assertIn("active_account_table", response.context_data)
+        self.assertEqual(len(response.context_data["active_account_table"].rows), 2)
 
-    def test_shows_account_for_only_this_group(self):
+    def test_shows_active_account_for_only_this_group(self):
         """Only shows accounts that are in this group."""
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupAccountMembershipFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
         response = self.get_view()(request, pk=group.pk)
-        self.assertIn("account_table", response.context_data)
-        self.assertEqual(len(response.context_data["account_table"].rows), 0)
+        self.assertIn("active_account_table", response.context_data)
+        self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
 
     def test_group_table(self):
         """The group table exists."""
@@ -4493,6 +5139,41 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
+    def test_cannot_add_inactive_account_to_group(self):
+        """Cannot add an inactive account to a group."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create(status=models.Account.INACTIVE_STATUS)
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("valid choice", form.errors["account"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_queryset_shows_active_users_only(self):
+        """Form queryset only shows active accounts."""
+        active_account = factories.AccountFactory.create()
+        inactive_account = factories.AccountFactory.create(
+            status=models.Account.INACTIVE_STATUS
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertTrue("form" in response.context_data)
+        form = response.context_data["form"]
+        self.assertIn(active_account, form.fields["account"].queryset)
+        self.assertNotIn(inactive_account, form.fields["account"].queryset)
+
     @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):
         self.fail(
@@ -4568,6 +5249,136 @@ class GroupAccountMembershipListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+
+class GroupAccountMembershipActiveListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:group_account_membership:list_active", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupAccountMembershipActiveList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], tables.GroupAccountMembershipTable
+        )
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.GroupAccountMembershipFactory()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.GroupAccountMembershipFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_does_not_show_inactive_accounts(self):
+        """Inactive accounts are not shown."""
+        factories.GroupAccountMembershipFactory.create_batch(
+            2, account__status=models.Account.INACTIVE_STATUS
+        )
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+
+class GroupAccountMembershipInactiveListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:group_account_membership:list_inactive", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupAccountMembershipInactiveList.as_view()
+
+    def test_view_status_code(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], tables.GroupAccountMembershipTable
+        )
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        membership = factories.GroupAccountMembershipFactory()
+        membership.account.status = models.Account.INACTIVE_STATUS
+        membership.account.save()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        memberships = factories.GroupAccountMembershipFactory.create_batch(2)
+        memberships[0].account.status = models.Account.INACTIVE_STATUS
+        memberships[0].account.save()
+        memberships[1].account.status = models.Account.INACTIVE_STATUS
+        memberships[1].account.save()
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_does_not_show_active_accounts(self):
+        """Active accounts are not shown."""
+        factories.GroupAccountMembershipFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
 
 
 class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):

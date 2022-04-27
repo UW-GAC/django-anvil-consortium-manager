@@ -17,8 +17,15 @@ class BillingProjectAdmin(admin.ModelAdmin):
 class AccountAdmin(admin.ModelAdmin):
     """Admin class for the Account model."""
 
-    list_display = ("email", "is_service_account")
-    list_filter = ("is_service_account",)
+    list_display = (
+        "email",
+        "is_service_account",
+        "status",
+    )
+    list_filter = (
+        "is_service_account",
+        "status",
+    )
     search_fields = ("email",)
 
 
@@ -87,13 +94,20 @@ class GroupAccountMembershipAdmin(admin.ModelAdmin):
         "pk",
         "group",
         "account",
+        "account_status",
         "role",
     )
-    list_filter = ("role",)
+    list_filter = (
+        "role",
+        "account__status",
+    )
     search_fields = (
         "group",
         "account",
     )
+
+    def account_status(self, obj):
+        return obj.account.get_status_display()
 
 
 @admin.register(models.WorkspaceGroupAccess)

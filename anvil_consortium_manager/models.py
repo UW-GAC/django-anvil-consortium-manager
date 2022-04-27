@@ -1,6 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
+from django.utils import timezone
+from django_extensions.db.models import ActivatorModel
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
@@ -48,7 +50,7 @@ class BillingProject(models.Model):
         return billing_project
 
 
-class Account(models.Model):
+class Account(ActivatorModel):
     """A model to store information about AnVIL accounts."""
 
     # TODO: Consider using CIEmailField if using postgres.
@@ -67,6 +69,21 @@ class Account(models.Model):
             "anvil_consortium_manager:accounts:detail", kwargs={"pk": self.pk}
         )
 
+    def deactivate(self):
+        """Set status to deactivated and remove from any AnVIL groups."""
+        self.anvil_remove_from_groups()
+        self.deactivate_date = timezone.now()
+        self.status = self.INACTIVE_STATUS
+        self.save()
+
+    def reactivate(self):
+        """Set status to reactivated and add to any AnVIL groups."""
+        self.status = self.ACTIVE_STATUS
+        self.save()
+        group_memberships = self.groupaccountmembership_set.all()
+        for membership in group_memberships:
+            membership.anvil_create()
+
     def anvil_exists(self):
         """Check if this account exists on AnVIL."""
         try:
@@ -80,9 +97,6 @@ class Account(models.Model):
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
-        # If all memberships were successfully deleted from AnVIL, then delete all memberships from django.
-        for membership in group_memberships:
-            membership.delete()
 
 
 class ManagedGroup(models.Model):

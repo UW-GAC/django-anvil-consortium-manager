@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.db import transaction
+from django.forms.forms import Form
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import (
@@ -10,6 +11,7 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import anvil_api, exceptions, forms, models, tables
@@ -128,6 +130,14 @@ class AccountDetail(SingleTableMixin, DetailView):
             exclude=["account", "is_service_account"],
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add an indicator of whether the account is inactive.
+        context["is_inactive"] = self.object.status == models.Account.INACTIVE_STATUS
+        context["show_deactivate_button"] = not context["is_inactive"]
+        context["show_reactivate_button"] = context["is_inactive"]
+        return context
+
 
 class AccountImport(SuccessMessageMixin, CreateView):
     model = models.Account
@@ -159,6 +169,139 @@ class AccountImport(SuccessMessageMixin, CreateView):
 class AccountList(SingleTableView):
     model = models.Account
     table_class = tables.AccountTable
+
+
+class AccountActiveList(SingleTableView):
+    model = models.Account
+    table_class = tables.AccountTable
+
+    def get_queryset(self):
+        return self.model.objects.active()
+
+
+class AccountInactiveList(SingleTableView):
+    model = models.Account
+    table_class = tables.AccountTable
+
+    def get_queryset(self):
+        return self.model.objects.inactive()
+
+
+class AccountDeactivate(SuccessMessageMixin, SingleTableMixin, DeleteView):
+    """Deactivate an account and remove it from all groups on AnVIL."""
+
+    model = models.Account
+    template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
+    context_table_name = "group_table"
+    message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    message_already_inactive = "This Account is already inactive."
+    success_msg = "Successfully deactivated Account in app."
+
+    def get_table(self):
+        return tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(),
+            exclude=["account", "is_service_account"],
+        )
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+        # exceptions.AnVILRemoveAccountFromGroupError
+
+    def get(self, *args, **kwargs):
+        response = super().get(self, *args, **kwargs)
+        # Check if account is inactive.
+        if self.object.status == self.object.INACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_inactive
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return response
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Make an API call to AnVIL to remove the account from all groups and then set status to inactive.
+        """
+        self.object = self.get_object()
+
+        if self.object.status == self.object.INACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_inactive
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+
+        try:
+            self.object.deactivate()
+        except AnVILAPIError as e:
+            msg = self.message_error_removing_from_groups.format(e)
+            messages.add_message(request, messages.ERROR, msg)
+            # Rerender the same page with an error message.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        else:
+            # Need to add the message because we're not calling the super method.
+            messages.success(self.request, self.success_msg)
+            return HttpResponseRedirect(self.get_success_url())
+
+
+class AccountReactivate(
+    SuccessMessageMixin, SingleTableMixin, SingleObjectMixin, FormView
+):
+    """Reactivate an account and re-add it to all groups on AnVIL."""
+
+    model = models.Account
+    context_table_name = "group_table"
+    form_class = Form
+    template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
+    message_error_adding_to_groups = "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    message_already_active = "This Account is already active."
+    success_msg = "Successfully reactivated Account in app."
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+        # exceptions.AnVILRemoveAccountFromGroupError
+
+    def get_table(self):
+        return tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(),
+            exclude=["account", "is_service_account"],
+        )
+
+    def get(self, *args, **kwargs):
+        self.object = self.get_object()
+        # Check if account is inactive.
+        if self.object.status == self.object.ACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_active
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().get(self, *args, **kwargs)
+
+    def form_valid(self, form):
+        """Set the object status to active and add it to all groups on AnVIL."""
+        # Set the status to active.
+        self.object = self.get_object()
+        if self.object.status == self.object.ACTIVE_STATUS:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_active
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+
+        self.object.status = self.object.ACTIVE_STATUS
+        self.object.save()
+        # Re-add to all groups
+        group_memberships = self.object.groupaccountmembership_set.all()
+        try:
+            for membership in group_memberships:
+                membership.anvil_create()
+        except AnVILAPIError as e:
+            msg = self.message_error_adding_to_groups.format(e)
+            messages.add_message(self.request, messages.ERROR, msg)
+            # Rerender the same page with an error message.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().form_valid(form)
 
 
 class AccountDelete(SuccessMessageMixin, DeleteView):
@@ -197,8 +340,17 @@ class ManagedGroupDetail(DetailView):
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="group"
         )
-        context["account_table"] = tables.GroupAccountMembershipTable(
-            self.object.groupaccountmembership_set.all(), exclude="group"
+        context["active_account_table"] = tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.filter(
+                account__status=models.Account.ACTIVE_STATUS
+            ),
+            exclude="group",
+        )
+        context["inactive_account_table"] = tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.filter(
+                account__status=models.Account.INACTIVE_STATUS
+            ),
+            exclude="group",
         )
         context["group_table"] = tables.GroupGroupMembershipTable(
             self.object.child_memberships.all(), exclude="parent_group"
@@ -596,8 +748,30 @@ class GroupAccountMembershipCreate(SuccessMessageMixin, CreateView):
 
 
 class GroupAccountMembershipList(SingleTableView):
+    """Show a list of all group memberships regardless of account active/inactive status."""
+
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+
+
+class GroupAccountMembershipActiveList(SingleTableView):
+    """Show a list of all group memberships for active accounts."""
+
+    model = models.GroupAccountMembership
+    table_class = tables.GroupAccountMembershipTable
+
+    def get_queryset(self):
+        return self.model.objects.filter(account__status=models.Account.ACTIVE_STATUS)
+
+
+class GroupAccountMembershipInactiveList(SingleTableView):
+    """Show a list of all group memberships for inactive accounts."""
+
+    model = models.GroupAccountMembership
+    table_class = tables.GroupAccountMembershipTable
+
+    def get_queryset(self):
+        return self.model.objects.filter(account__status=models.Account.INACTIVE_STATUS)
 
 
 class GroupAccountMembershipDelete(SuccessMessageMixin, DeleteView):

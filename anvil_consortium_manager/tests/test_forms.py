@@ -430,3 +430,29 @@ class GroupAccountMembershipFormTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors)
         self.assertEqual(len(form.errors), 1)
+
+    def test_invalid_inactive_account(self):
+        """Form is invalid when the account is inactive."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create(status=models.Account.INACTIVE_STATUS)
+        form_data = {
+            "group": group,
+            "account": account,
+            "role": models.GroupAccountMembership.MEMBER,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("account", form.errors)
+        self.assertEqual(len(form.errors["account"]), 1)
+        self.assertIn("valid choice", form.errors["account"][0])
+        self.assertEqual(len(form.errors), 1)
+
+    def test_account_includes_only_active_accounts(self):
+        """Form only displays active accounts."""
+        inactive_account = factories.AccountFactory.create(
+            status=models.Account.INACTIVE_STATUS
+        )
+        active_account = factories.AccountFactory.create()
+        form = self.form_class()
+        self.assertIn(active_account, form.fields["account"].queryset)
+        self.assertNotIn(inactive_account, form.fields["account"].queryset)
