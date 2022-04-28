@@ -17,7 +17,7 @@ class AnvilProjectManagerAccess(models.Model):
     class Meta:
         """Not a concrete model."""
 
-        abstract = True
+        managed = False
 
         """Disable add, change, view and delete default model permissions"""
         default_permissions = ()
