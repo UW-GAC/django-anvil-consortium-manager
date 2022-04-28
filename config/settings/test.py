@@ -34,3 +34,7 @@ TEMPLATES[0]["OPTIONS"]["debug"] = True  # noqa
 # Path to the service account to use for managing access.
 # Because the calls are mocked, we don't need to set this.
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
+
+# In test set the admin login url so we can
+# successfully test redirect to login for non-logged in users
+LOGIN_URL = "admin:login"

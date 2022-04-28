@@ -1,7 +1,11 @@
 from unittest import skip
 
 import responses
+from django.conf import settings
+from django.contrib.auth.models import Permission, User
+from django.core.exceptions import PermissionDenied
 from django.http.response import Http404
+from django.shortcuts import resolve_url
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
@@ -174,6 +178,15 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
+        self.user_with_perm = User.objects.create_user(username="test", password="test")
+        self.user_with_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnvilProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.user_no_perms = User.objects.create_user(
+            username="test2", password="test2"
+        )
 
     def get_api_url(self, billing_project_name):
         """Get the AnVIL API url that is called by the anvil_exists method."""
@@ -192,15 +205,32 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.BillingProjectImport.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user_with_perm
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied"""
+        request = self.factory.get(self.get_url())
+        request.user = self.user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user_with_perm
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(
@@ -213,6 +243,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
         # Need a client for messages.
+        self.client.force_login(self.user_with_perm)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 302)
         new_object = models.BillingProject.objects.latest("pk")
@@ -225,6 +256,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.client.force_login(self.user_with_perm)
         response = self.client.post(
             self.get_url(), {"name": billing_project_name}, follow=True
         )
@@ -239,6 +271,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.client.force_login(self.user_with_perm)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         new_object = models.BillingProject.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
@@ -247,6 +280,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two billing projects with the same name."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
+        request.user = self.user_with_perm
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -263,6 +297,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.BillingProjectFactory.create(name="project")
         # No API calls should be made.
         request = self.factory.post(self.get_url(), {"name": "PROJECT"})
+        request.user = self.user_with_perm
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -277,6 +312,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
         request = self.factory.post(self.get_url(), {"name": ""})
+        request.user = self.user_with_perm
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -288,6 +324,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user_with_perm
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -302,6 +339,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=404, json={"message": "other"})
         # Need a client to check messages.
+        self.client.force_login(self.user_with_perm)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 200)
         # the form is valid...
@@ -331,6 +369,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         # Need the client for messages.
+        self.client.force_login(self.user_with_perm)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)

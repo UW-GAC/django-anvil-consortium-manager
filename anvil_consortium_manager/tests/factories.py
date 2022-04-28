@@ -1,7 +1,24 @@
-from factory import Faker, SubFactory
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from factory import Faker, SubFactory, post_generation
 from factory.django import DjangoModelFactory
 
 from anvil_consortium_manager import models
+
+
+class PermissionedUserFactory(DjangoModelFactory):
+    class Meta:
+        model = get_user_model()
+
+    username = Faker("email")
+    email = username
+    first_name = Faker("first_name")
+    last_name = Faker("last_name")
+
+    def add_permissions(obj, create, extracted, **kwargs):
+
+        permission = Permission.objects.get(name=obj.perm_name)
+        obj.user_permissions.add(permission)
 
 
 class BillingProjectFactory(DjangoModelFactory):

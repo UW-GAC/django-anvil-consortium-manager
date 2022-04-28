@@ -54,4 +54,6 @@ INSTALLED_APPS += ["django_extensions"]  # noqa F405
 # ------------------------------------------------------------------------------
 
 # Path to the service account to use for managing access.
-ANVIL_API_SERVICE_ACCOUNT_FILE = env("ANVIL_API_SERVICE_ACCOUNT_FILE")
+ANVIL_API_SERVICE_ACCOUNT_FILE = env(
+    "ANVIL_API_SERVICE_ACCOUNT_FILE", default="foo.txt"
+)

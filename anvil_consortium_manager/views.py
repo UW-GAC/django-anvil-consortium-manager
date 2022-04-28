@@ -14,7 +14,7 @@ from django.views.generic import (
 from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
-from . import anvil_api, exceptions, forms, models, tables
+from . import anvil_api, auth, exceptions, forms, models, tables
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 
 
@@ -75,7 +75,9 @@ class AnVILStatus(TemplateView):
         return context
 
 
-class BillingProjectImport(SuccessMessageMixin, CreateView):
+class BillingProjectImport(
+    auth.AnvilConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
     template_name = "anvil_consortium_manager/billingproject_import.html"
