@@ -25,7 +25,9 @@
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Email: {{ object.email }}</li>
-    <li>Status: {{ object.status }}</li>
+    <li>Status: {{ object.get_status_display }}</li>
+    <li>Date added: {{ object.created }}</li>
+    <li>Date modified: {{ object.modified }}</li>
   </ul>
 </div>
 
