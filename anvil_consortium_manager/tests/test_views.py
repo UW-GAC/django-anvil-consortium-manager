@@ -178,27 +178,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Edit permission.
-        self.user_with_edit_perm = User.objects.create_user(
-            username="test-edit", password="test-edit"
-        )
-        self.user_with_edit_perm.user_permissions.add(
+        # Create a user with edit permission.
+        self.user = User.objects.create_user(username="test-edit", password="test-edit")
+        self.user.user_permissions.add(
             Permission.objects.get(
                 codename=models.AnvilProjectManagerAccess.EDIT_PERMISSION_CODENAME
             )
-        )
-        # View permission only.
-        self.user_with_view_perm = User.objects.create_user(
-            username="test-view", password="test-view"
-        )
-        self.user_with_view_perm.user_permissions.add(
-            Permission.objects.get(
-                codename=models.AnvilProjectManagerAccess.VIEW_PERMISSION_CODENAME
-            )
-        )
-        # No permission.
-        self.user_no_perms = User.objects.create_user(
-            username="test-none", password="test-none"
         )
 
     def get_api_url(self, billing_project_name):
@@ -229,28 +214,39 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
-        request.user = self.user_with_edit_perm
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
-    def test_access_without_edit_with_view_permission(self):
+    def test_access_with_view_permission(self):
         """Raises permission denied."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-view", password="test-view"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnvilProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
         request = self.factory.get(self.get_url())
-        request.user = self.user_with_view_perm
+        request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied"""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
         request = self.factory.get(self.get_url())
-        request.user = self.user_no_perms
+        request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
-        request.user = self.user_with_edit_perm
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(
@@ -263,7 +259,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
         # Need a client for messages.
-        self.client.force_login(self.user_with_edit_perm)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 302)
         new_object = models.BillingProject.objects.latest("pk")
@@ -276,7 +272,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
-        self.client.force_login(self.user_with_edit_perm)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(), {"name": billing_project_name}, follow=True
         )
@@ -291,7 +287,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
-        self.client.force_login(self.user_with_edit_perm)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         new_object = models.BillingProject.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
@@ -300,7 +296,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two billing projects with the same name."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
-        request.user = self.user_with_edit_perm
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -317,7 +313,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.BillingProjectFactory.create(name="project")
         # No API calls should be made.
         request = self.factory.post(self.get_url(), {"name": "PROJECT"})
-        request.user = self.user_with_edit_perm
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -332,7 +328,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
         request = self.factory.post(self.get_url(), {"name": ""})
-        request.user = self.user_with_edit_perm
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -344,7 +340,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
-        request.user = self.user_with_edit_perm
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -359,7 +355,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=404, json={"message": "other"})
         # Need a client to check messages.
-        self.client.force_login(self.user_with_edit_perm)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 200)
         # the form is valid...
@@ -389,7 +385,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         # Need the client for messages.
-        self.client.force_login(self.user_with_edit_perm)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
