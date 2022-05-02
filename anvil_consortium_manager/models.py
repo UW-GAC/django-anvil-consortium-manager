@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
-from django_extensions.db.models import ActivatorModel
+from django_extensions.db.models import ActivatorModel, TimeStampedModel
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
@@ -28,7 +28,7 @@ class AnvilProjectManagerAccess(models.Model):
         ]
 
 
-class BillingProject(models.Model):
+class BillingProject(TimeStampedModel):
     """A model to store information about AnVIL billing projects."""
 
     name = models.SlugField(max_length=64, unique=True)
@@ -70,7 +70,7 @@ class BillingProject(models.Model):
         return billing_project
 
 
-class Account(ActivatorModel):
+class Account(TimeStampedModel, ActivatorModel):
     """A model to store information about AnVIL accounts."""
 
     # TODO: Consider using CIEmailField if using postgres.
@@ -119,7 +119,7 @@ class Account(ActivatorModel):
             membership.anvil_delete()
 
 
-class ManagedGroup(models.Model):
+class ManagedGroup(TimeStampedModel):
     """A model to store information about AnVIL Managed Groups."""
 
     name = models.SlugField(max_length=64, unique=True)
@@ -224,7 +224,7 @@ class ManagedGroup(models.Model):
         return group
 
 
-class Workspace(models.Model):
+class Workspace(TimeStampedModel):
     """A model to store information about AnVIL workspaces."""
 
     # NB: In the APIs some documentation, this is also referred to as "namespace".
@@ -403,7 +403,7 @@ class Workspace(models.Model):
         return workspace
 
 
-class WorkspaceAuthorizationDomain(models.Model):
+class WorkspaceAuthorizationDomain(TimeStampedModel):
     """Through table for the Workspace authorization_domains field."""
 
     group = models.ForeignKey(ManagedGroup, on_delete=models.PROTECT)
@@ -423,7 +423,7 @@ class WorkspaceAuthorizationDomain(models.Model):
         )
 
 
-class GroupGroupMembership(models.Model):
+class GroupGroupMembership(TimeStampedModel):
     """A model to store which groups are in a group."""
 
     MEMBER = "MEMBER"
@@ -494,7 +494,7 @@ class GroupGroupMembership(models.Model):
         )
 
 
-class GroupAccountMembership(models.Model):
+class GroupAccountMembership(TimeStampedModel):
     """A model to store which accounts are in a group."""
 
     MEMBER = "MEMBER"
@@ -542,7 +542,7 @@ class GroupAccountMembership(models.Model):
         )
 
 
-class WorkspaceGroupAccess(models.Model):
+class WorkspaceGroupAccess(TimeStampedModel):
     """A model to store which groups have access to a workspace."""
 
     OWNER = "OWNER"
