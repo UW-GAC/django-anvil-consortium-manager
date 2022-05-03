@@ -41,7 +41,7 @@ class Index(TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
 
-class AnVILStatus(TemplateView):
+class AnVILStatus(auth.AnVILConsortiumManagerViewRequired, TemplateView):
     template_name = "anvil_consortium_manager/status.html"
 
     def get_context_data(self, **kwargs):
@@ -107,7 +107,9 @@ class BillingProjectImport(
         return HttpResponseRedirect(self.get_success_url())
 
 
-class BillingProjectDetail(SingleTableMixin, DetailView):
+class BillingProjectDetail(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
+):
     model = models.BillingProject
     context_table_name = "workspace_table"
 
@@ -117,12 +119,14 @@ class BillingProjectDetail(SingleTableMixin, DetailView):
         )
 
 
-class BillingProjectList(SingleTableView):
+class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
 
 
-class AccountDetail(SingleTableMixin, DetailView):
+class AccountDetail(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
+):
     model = models.Account
     context_table_name = "group_table"
 
@@ -141,7 +145,9 @@ class AccountDetail(SingleTableMixin, DetailView):
         return context
 
 
-class AccountImport(SuccessMessageMixin, CreateView):
+class AccountImport(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+):
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
     form_class = forms.AccountImportForm
@@ -168,12 +174,12 @@ class AccountImport(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class AccountList(SingleTableView):
+class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
     table_class = tables.AccountTable
 
 
-class AccountActiveList(SingleTableView):
+class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
     table_class = tables.AccountTable
 
@@ -181,7 +187,7 @@ class AccountActiveList(SingleTableView):
         return self.model.objects.active()
 
 
-class AccountInactiveList(SingleTableView):
+class AccountInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
     table_class = tables.AccountTable
 
@@ -189,7 +195,12 @@ class AccountInactiveList(SingleTableView):
         return self.model.objects.inactive()
 
 
-class AccountDeactivate(SuccessMessageMixin, SingleTableMixin, DeleteView):
+class AccountDeactivate(
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    SingleTableMixin,
+    DeleteView,
+):
     """Deactivate an account and remove it from all groups on AnVIL."""
 
     model = models.Account
@@ -247,7 +258,11 @@ class AccountDeactivate(SuccessMessageMixin, SingleTableMixin, DeleteView):
 
 
 class AccountReactivate(
-    SuccessMessageMixin, SingleTableMixin, SingleObjectMixin, FormView
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    SingleTableMixin,
+    SingleObjectMixin,
+    FormView,
 ):
     """Reactivate an account and re-add it to all groups on AnVIL."""
 
@@ -306,7 +321,9 @@ class AccountReactivate(
         return super().form_valid(form)
 
 
-class AccountDelete(SuccessMessageMixin, DeleteView):
+class AccountDelete(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+):
     model = models.Account
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
     success_msg = "Successfully deleted Account from app."
@@ -331,7 +348,7 @@ class AccountDelete(SuccessMessageMixin, DeleteView):
             return super().delete(request, *args, **kwargs)
 
 
-class ManagedGroupDetail(DetailView):
+class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup
 
     def get_context_data(self, **kwargs):
@@ -360,7 +377,9 @@ class ManagedGroupDetail(DetailView):
         return context
 
 
-class ManagedGroupCreate(SuccessMessageMixin, CreateView):
+class ManagedGroupCreate(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     success_msg = "Successfully created Managed Group on AnVIL."
@@ -383,12 +402,14 @@ class ManagedGroupCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class ManagedGroupList(SingleTableView):
+class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
 
 
-class ManagedGroupDelete(SuccessMessageMixin, DeleteView):
+class ManagedGroupDelete(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+):
     model = models.ManagedGroup
     message_not_managed_by_app = (
         "Cannot delete group because it is not managed by this app."
@@ -494,7 +515,7 @@ class ManagedGroupDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceDetail(DetailView):
+class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.Workspace
 
     def get_context_data(self, **kwargs):
@@ -509,7 +530,9 @@ class WorkspaceDetail(DetailView):
         return context
 
 
-class WorkspaceCreate(SuccessMessageMixin, CreateView):
+class WorkspaceCreate(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+):
     model = models.Workspace
     form_class = forms.WorkspaceCreateForm
     success_msg = "Successfully created Workspace on AnVIL."
@@ -532,7 +555,9 @@ class WorkspaceCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceImport(SuccessMessageMixin, FormView):
+class WorkspaceImport(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, FormView
+):
     template_name = "anvil_consortium_manager/workspace_import.html"
     message_anvil_no_access_to_workspace = (
         "Requested workspace doesn't exist or you don't have permission to see it."
@@ -603,12 +628,14 @@ class WorkspaceImport(SuccessMessageMixin, FormView):
         return super().form_valid(form)
 
 
-class WorkspaceList(SingleTableView):
+class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Workspace
     table_class = tables.WorkspaceTable
 
 
-class WorkspaceDelete(SuccessMessageMixin, DeleteView):
+class WorkspaceDelete(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+):
     model = models.Workspace
     success_msg = "Successfully deleted Workspace on AnVIL."
 
@@ -632,11 +659,13 @@ class WorkspaceDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class GroupGroupMembershipDetail(DetailView):
+class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupGroupMembership
 
 
-class GroupGroupMembershipCreate(SuccessMessageMixin, CreateView):
+class GroupGroupMembershipCreate(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+):
     model = models.GroupGroupMembership
     form_class = forms.GroupGroupMembershipForm
     success_msg = "Successfully created group membership."
@@ -662,12 +691,16 @@ class GroupGroupMembershipCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class GroupGroupMembershipList(SingleTableView):
+class GroupGroupMembershipList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableView
+):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
 
 
-class GroupGroupMembershipDelete(SuccessMessageMixin, DeleteView):
+class GroupGroupMembershipDelete(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+):
     model = models.GroupGroupMembership
     success_msg = "Successfully deleted group membership on AnVIL."
 
@@ -719,11 +752,13 @@ class GroupGroupMembershipDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class GroupAccountMembershipDetail(DetailView):
+class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupAccountMembership
 
 
-class GroupAccountMembershipCreate(SuccessMessageMixin, CreateView):
+class GroupAccountMembershipCreate(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+):
     model = models.GroupAccountMembership
     form_class = forms.GroupAccountMembershipForm
     success_msg = "Successfully added account membership."
@@ -749,14 +784,18 @@ class GroupAccountMembershipCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class GroupAccountMembershipList(SingleTableView):
+class GroupAccountMembershipList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableView
+):
     """Show a list of all group memberships regardless of account active/inactive status."""
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
 
 
-class GroupAccountMembershipActiveList(SingleTableView):
+class GroupAccountMembershipActiveList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableView
+):
     """Show a list of all group memberships for active accounts."""
 
     model = models.GroupAccountMembership
@@ -766,7 +805,9 @@ class GroupAccountMembershipActiveList(SingleTableView):
         return self.model.objects.filter(account__status=models.Account.ACTIVE_STATUS)
 
 
-class GroupAccountMembershipInactiveList(SingleTableView):
+class GroupAccountMembershipInactiveList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableView
+):
     """Show a list of all group memberships for inactive accounts."""
 
     model = models.GroupAccountMembership
@@ -776,7 +817,9 @@ class GroupAccountMembershipInactiveList(SingleTableView):
         return self.model.objects.filter(account__status=models.Account.INACTIVE_STATUS)
 
 
-class GroupAccountMembershipDelete(SuccessMessageMixin, DeleteView):
+class GroupAccountMembershipDelete(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+):
     model = models.GroupAccountMembership
     success_msg = "Successfully deleted account membership on AnVIL."
 
@@ -824,11 +867,13 @@ class GroupAccountMembershipDelete(SuccessMessageMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceGroupAccessDetail(DetailView):
+class WorkspaceGroupAccessDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.WorkspaceGroupAccess
 
 
-class WorkspaceGroupAccessCreate(SuccessMessageMixin, CreateView):
+class WorkspaceGroupAccessCreate(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+):
     model = models.WorkspaceGroupAccess
     fields = ("workspace", "group", "access")
     success_msg = "Successfully shared Workspace with Group."
@@ -854,7 +899,9 @@ class WorkspaceGroupAccessCreate(SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessUpdate(SuccessMessageMixin, UpdateView):
+class WorkspaceGroupAccessUpdate(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView
+):
     model = models.WorkspaceGroupAccess
     fields = ("access",)
     template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
@@ -878,12 +925,16 @@ class WorkspaceGroupAccessUpdate(SuccessMessageMixin, UpdateView):
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessList(SingleTableView):
+class WorkspaceGroupAccessList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableView
+):
     model = models.WorkspaceGroupAccess
     table_class = tables.WorkspaceGroupAccessTable
 
 
-class WorkspaceGroupAccessDelete(SuccessMessageMixin, DeleteView):
+class WorkspaceGroupAccessDelete(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+):
     model = models.WorkspaceGroupAccess
     success_msg = "Successfully removed workspace sharing on AnVIL."
 
