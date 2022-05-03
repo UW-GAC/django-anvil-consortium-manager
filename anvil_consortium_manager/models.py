@@ -8,7 +8,7 @@ from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
-class AnvilProjectManagerAccess(models.Model):
+class AnVILProjectManagerAccess(models.Model):
     """A meta model used to define app level permissions"""
 
     EDIT_PERMISSION_CODENAME = "anvil_project_manager_edit"
@@ -23,8 +23,8 @@ class AnvilProjectManagerAccess(models.Model):
         default_permissions = ()
 
         permissions = [
-            ("anvil_project_manager_edit", "Anvil Project Manager View Permission"),
-            ("anvil_project_manager_view", "Anvil Project Manager Edit Permission"),
+            ("anvil_project_manager_edit", "AnVIL Project Manager View Permission"),
+            ("anvil_project_manager_view", "AnVIL Project Manager Edit Permission"),
         ]
 
 

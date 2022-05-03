@@ -182,7 +182,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.user = User.objects.create_user(username="test-edit", password="test-edit")
         self.user.user_permissions.add(
             Permission.objects.get(
-                codename=models.AnvilProjectManagerAccess.EDIT_PERMISSION_CODENAME
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
             )
         )
 
@@ -218,14 +218,14 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_view_permission(self):
+    def test_access_with_other_permission(self):
         """Raises permission denied."""
         user_with_view_perm = User.objects.create_user(
             username="test-view", password="test-view"
         )
         user_with_view_perm.user_permissions.add(
             Permission.objects.get(
-                codename=models.AnvilProjectManagerAccess.VIEW_PERMISSION_CODENAME
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
         request = self.factory.get(self.get_url())

@@ -76,7 +76,7 @@ class AnVILStatus(TemplateView):
 
 
 class BillingProjectImport(
-    auth.AnvilConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
 ):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
