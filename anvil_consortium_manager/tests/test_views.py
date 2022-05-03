@@ -178,8 +178,13 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with edit permission.
-        self.user = User.objects.create_user(username="test-edit", password="test-edit")
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
         self.user.user_permissions.add(
             Permission.objects.get(
                 codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
@@ -219,9 +224,9 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_other_permission(self):
-        """Raises permission denied."""
+        """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(
-            username="test-view", password="test-view"
+            username="test-other", password="test-other"
         )
         user_with_view_perm.user_permissions.add(
             Permission.objects.get(
@@ -234,7 +239,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
             self.get_view()(request)
 
     def test_access_without_user_permission(self):
-        """Raises permission denied"""
+        """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
