@@ -228,3 +228,5 @@ LOGGING = {
 # I thinkt his project is using bootstrap5, but django-tables2 only provides a
 # bootstrap4 template. We'll try it!
 DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
+
+LOGIN_REDIRECT_URL = "home"
