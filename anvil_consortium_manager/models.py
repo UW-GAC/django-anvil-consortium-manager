@@ -23,8 +23,8 @@ class AnVILProjectManagerAccess(models.Model):
         default_permissions = ()
 
         permissions = [
-            ("anvil_project_manager_edit", "AnVIL Project Manager View Permission"),
-            ("anvil_project_manager_view", "AnVIL Project Manager Edit Permission"),
+            ("anvil_project_manager_edit", "AnVIL Project Manager Edit Permission"),
+            ("anvil_project_manager_view", "AnVIL Project Manager View Permission"),
         ]
 
 
