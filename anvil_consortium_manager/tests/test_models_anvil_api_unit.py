@@ -691,8 +691,8 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_create_two_auth_domains_success(self):
         """Returns documented response code when trying to create a workspace with two valid auth domains."""
-        auth_domain_1 = factories.ManagedGroupFactory.create()
-        auth_domain_2 = factories.ManagedGroupFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create(name="auth1")
+        auth_domain_2 = factories.ManagedGroupFactory.create(name="auth2")
         self.object.authorization_domains.add(auth_domain_1)
         self.object.authorization_domains.add(auth_domain_2)
         json = {

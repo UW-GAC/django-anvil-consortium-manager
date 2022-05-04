@@ -44,3 +44,53 @@ Moved to [Live reloading and SASS compilation](http://cookiecutter-django.readth
 ## Deployment
 
 The following details how to deploy this application.
+
+## Set up
+
+### Maria DB
+
+Install MariaDB. Here are some notes:
+* [Django docs](https://docs.djangoproject.com/en/4.0/ref/databases/#mysql-notes)
+* [Install MariaDB server on Mac with Macports](https://www.sindastra.de/p/1966/how-to-install-mariadb-server-on-mac-with-macports)
+* [How to use MySQL or MariaDB with your django application on Ubuntu](https://www.digitalocean.com/community/tutorials/how-to-use-mysql-or-mariadb-with-your-django-application-on-ubuntu-14-04)
+
+One time setup via Macports (note that previous versions are broken on Apple ARM chips):
+```
+# Install ports.
+sudo port install mariadb-10.5
+sudo port install mariadb-10.5-server
+sudo port select --set mysql mariadb-10.5
+
+# Set up db.
+sudo -u _mysql /opt/local/lib/mariadb-10.5/bin/mysql_install_db
+sudo chown -R _mysql:_mysql /opt/local/var/db/mariadb-10.5
+
+# Start the server.
+sudo -u _mysql /opt/local/lib/mariadb-10.5/bin/mysqld_safe --datadir='/opt/local/var/db/mariadb-10.5' &
+
+# Run secure installation script.
+sudo /opt/local/lib/mariadb-10.5/bin/mysql_secure_installation
+```
+One time database setup. Start mariadb with `sudo mysql -u root -p`, then run these commands:
+```
+# Create the django database.
+CREATE DATABASE anvil_consortium_manager CHARACTER SET utf8;
+
+# Create the django user.
+CREATE USER django@localhost IDENTIFIED BY 'password';
+
+# Grant permissions to the django database for the django user.
+GRANT ALL PRIVILEGES ON anvil_consortium_manager.* TO django@localhost;
+
+# Same for test database.
+CREATE DATABASE test_anvil_consortium_manager CHARACTER SET utf8;
+GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@localhost;
+
+# Apply changes.
+> FLUSH PRIVILEGES;
+```
+
+To run tests using MariaDB as the backend, run:
+```
+pytest --ds=config.settings.local_mariadb
+```
