@@ -81,4 +81,4 @@ jobs:
       - name: Test with pytest
         env:
             ANVIL_API_SERVICE_ACCOUNT_FILE: foo
-        run:  pytest --ds=config.settings.local_mariadb
+        run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
