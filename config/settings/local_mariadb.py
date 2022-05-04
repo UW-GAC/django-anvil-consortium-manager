@@ -9,6 +9,6 @@ DATABASES = {
         "USER": env("DJANGO_DB_USER", default="django"),
         "PASSWORD": env("DJANGO_DB_PASSWORD", default="password"),
         "HOST": env("DJANGO_DB_HOST", default="localhost"),
-        "PORT": "",
+        "PORT": env("DJANGO_DB_HOST", default="3306"),
     }
 }
