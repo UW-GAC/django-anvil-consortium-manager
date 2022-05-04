@@ -45,9 +45,9 @@ jobs:
         ports:
           - 3306
         env:
-          MARIADB_USER: ${{ secrets.DJANGO_DB_USER }}
-          MARIADB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-          MARIADB_DATABASE: ${{ secrets.DJANGO_DB_NAME }}
+          MARIADB_USER: django
+          MARIADB_PASSWORD: ps
+          MARIADB_DATABASE: test_anvil_consortium_manager
           MARIADB_ROOT_PASSWORD: password
           MARIADB_HOST: 127.0.0.1
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
@@ -65,8 +65,7 @@ jobs:
           cache-dependency-path: |
             requirements/base.txt
             requirements/local.txt
-          networks:
-            - python-network
+
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
@@ -83,8 +82,8 @@ jobs:
       - name: Test with pytest
         env:
             ANVIL_API_SERVICE_ACCOUNT_FILE: foo
-            DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
-            DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-            DJANGO_DB_DATABASE: ${{ secrets.DJANGO_DB_NAME }}
+            DJANGO_DB_PASSWORD: pw
+            DJANGO_DB_DATABASE: test_anvil_consortium_manager
             DJANGO_DB_HOST: 127.0.0.1
+            DATABASE_URL: mysql://django:pw@localhost:3306/test_anvil_consortium_manager
         run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
