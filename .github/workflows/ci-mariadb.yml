@@ -40,16 +40,20 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mariadb:
-        image: mariadb:latest
-        ports:
-          - 3306
+      database:
+        image: mariadb:10.5
         env:
-          MARIADB_USER: django
-          MARIADB_PASSWORD: ps
-          MARIADB_DATABASE: test_anvil_consortium_manager
-          MARIADB_ROOT_PASSWORD: password
-        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+          MYSQL_ROOT_PASSWORD: rootpw
+        ports:
+          - 3306:3306
+        options: --tmpfs /var/lib/mysql
+    env:
+        ANVIL_API_SERVICE_ACCOUNT_FILE: foo
+        DJANGO_DB_USER: root
+        DJANGO_DB_PASSWORD: rootpw
+        DJANGO_DB_DATABASE: anvil_consortium_manager
+        DJANGO_DB_HOST: 127.0.0.1
+        DJANGO_DB_PORT: 3306
 
     steps:
 
@@ -70,19 +74,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/local.txt
 
-      - name: Verify MariaDB connection
-        env:
-          PORT: ${{ job.services.mariadb.ports[3306] }}
-        run: |
-          while ! mysqladmin ping -h"127.0.0.1" -P"$PORT" --silent; do
-            sleep 1
-          done
-
       - name: Test with pytest
-        env:
-            ANVIL_API_SERVICE_ACCOUNT_FILE: foo
-            DJANGO_DB_PASSWORD: pw
-            DJANGO_DB_DATABASE: anvil_consortium_manager
-            DJANGO_DB_HOST: 127.0.0.1
-            DJANGO_DB_PORT: ${{ job.services.mariadb.ports[3306] }}
         run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
