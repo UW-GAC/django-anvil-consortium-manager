@@ -83,7 +83,7 @@ jobs:
         env:
             ANVIL_API_SERVICE_ACCOUNT_FILE: foo
             DJANGO_DB_PASSWORD: pw
-            DJANGO_DB_DATABASE: test_anvil_consortium_manager
+            DJANGO_DB_DATABASE: anvil_consortium_manager
             DJANGO_DB_HOST: 127.0.0.1
-            DATABASE_URL: mysql://django:pw@localhost:3306/test_anvil_consortium_manager
+            DJANGO_DB_PORT: ${{ job.services.mariadb.ports[3306] }}
         run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
