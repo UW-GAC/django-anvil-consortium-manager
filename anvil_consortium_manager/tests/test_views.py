@@ -2856,7 +2856,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
                 {"membersGroupName": auth_domain_2.name},
             ],
         }
-        print(json_data)
         responses.add(
             responses.POST,
             url,
