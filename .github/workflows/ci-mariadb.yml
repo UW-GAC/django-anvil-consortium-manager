@@ -1,4 +1,4 @@
-name: CI
+name: CI-mariadb
 
 # Enable Buildkit and let compose use it to speed up image building
 env:
@@ -75,4 +75,4 @@ jobs:
           pip install -r requirements/local.txt
 
       - name: Test with pytest
-        run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
+        run:  pytest --ds=config.settings.local_mariadb
