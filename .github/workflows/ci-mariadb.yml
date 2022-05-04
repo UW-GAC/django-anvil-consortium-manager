@@ -25,6 +25,7 @@ jobs:
       matrix:
         database:
         - mariadb:10.3
+        - mariadb:10.4
         - mariadb:10.5
         - mariadb:latest
 
