@@ -65,7 +65,8 @@ jobs:
           cache-dependency-path: |
             requirements/base.txt
             requirements/local.txt
-
+          networks:
+            - python-network
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
