@@ -2844,8 +2844,8 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        auth_domain_1 = factories.ManagedGroupFactory.create()
-        auth_domain_2 = factories.ManagedGroupFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create(name="auth1")
+        auth_domain_2 = factories.ManagedGroupFactory.create(name="auth2")
         url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
@@ -2856,6 +2856,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
                 {"membersGroupName": auth_domain_2.name},
             ],
         }
+        print(json_data)
         responses.add(
             responses.POST,
             url,
