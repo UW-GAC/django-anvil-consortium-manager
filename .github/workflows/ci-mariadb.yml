@@ -65,6 +65,11 @@ jobs:
             requirements/base.txt
             requirements/local.txt
 
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/local.txt
+
       - name: Verify MariaDB connection
         env:
           PORT: ${{ job.services.mariadb.ports[3306] }}
@@ -73,16 +78,11 @@ jobs:
             sleep 1
           done
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements/local.txt
-
       - name: Test with pytest
         env:
             ANVIL_API_SERVICE_ACCOUNT_FILE: foo
             DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
             DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
             DJANGO_DB_DATABASE: ${{ secrets.DJANGO_DB_NAME }}
-            DJANGO_DB_HOST: localhost
+            DJANGO_DB_HOST: 127.0.0.1
         run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
