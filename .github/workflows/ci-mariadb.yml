@@ -20,9 +20,22 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+        - 3.7
+        - 3.8
+        - 3.9
+        - '3.10'
+        database:
+        - mariadb:10.3
+        - mariadb:10.5
+        - mariadb:latest
+
     services:
       database:
-        image: mariadb:10.5
+        image: ${{ matrix.database }}
         env:
           MYSQL_ROOT_PASSWORD: rootpw
         ports:
@@ -44,7 +57,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.9"
+          python-version: ${{ matrix.python-vesrion }}
           cache: pip
           cache-dependency-path: |
             requirements/base.txt
