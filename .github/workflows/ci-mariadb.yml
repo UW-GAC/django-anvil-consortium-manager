@@ -49,8 +49,6 @@ jobs:
           MARIADB_PASSWORD: ps
           MARIADB_DATABASE: test_anvil_consortium_manager
           MARIADB_ROOT_PASSWORD: password
-          MARIADB_HOST: 127.0.0.1
-          MARIADB_PORT: ${{ job.services.mariadb.ports[3306] }}
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
