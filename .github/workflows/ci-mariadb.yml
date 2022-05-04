@@ -71,4 +71,6 @@ jobs:
           pip install -r requirements/local.txt
 
       - name: Test with pytest
+        env:
+            ANVIL_API_SERVICE_ACCOUNT_FILE: foo
         run:  pytest --ds=config.settings.local_mariadb
