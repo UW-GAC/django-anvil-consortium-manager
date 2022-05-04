@@ -81,8 +81,8 @@ jobs:
       - name: Test with pytest
         env:
             ANVIL_API_SERVICE_ACCOUNT_FILE: foo
-            DJANGO_DB_HOST: 127.0.0.1
             DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
             DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
             DJANGO_DB_DATABASE: ${{ secrets.DJANGO_DB_NAME }}
+            DJANGO_DB_HOST: localhost
         run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
