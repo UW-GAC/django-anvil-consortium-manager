@@ -45,10 +45,10 @@ jobs:
         ports:
           - 3306
         env:
-          MYSQL_USER: ${{ secrets.DJANGO_DB_USER }}
-          MYSQL_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.DJANGO_DB_NAME }}
-          MYSQL_ROOT_PASSWORD: password
+          MARIADB_USER: ${{ secrets.DJANGO_DB_USER }}
+          MARIADB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+          MARIADB_DATABASE: ${{ secrets.DJANGO_DB_NAME }}
+          MARIADB_ROOT_PASSWORD: password
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
@@ -82,4 +82,7 @@ jobs:
         env:
             ANVIL_API_SERVICE_ACCOUNT_FILE: foo
             DJANGO_DB_HOST: 127.0.0.1
+            DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+            DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+            DJANGO_DB_DATABASE: ${{ secrets.DJANGO_DB_NAME }}
         run:  pytest --ds=config.settings.local_mariadb -k 'BillingProjectTest and test_model_saving'
