@@ -89,3 +89,8 @@ GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@localhost;
 # Apply changes.
 > FLUSH PRIVILEGES;
 ```
+
+To run tests using MariaDB as the backend, run:
+```
+pytest --ds=config.settings.local_mariadb
+```
