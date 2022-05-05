@@ -130,12 +130,12 @@ class ManagedGroup(TimeStampedModel):
 
         Not optimized.
         """
-        these_parents = self.get_direct_parents()
+        these_parents = self.get_direct_parents().distinct()
         parents = these_parents
         for parent in these_parents:
             # Chained unions don't work in MariaDB 10.3.
             # parents = parents.union(parent.get_all_parents())
-            parents = parents.distinct() | parent.get_all_parents()
+            parents = parents | parent.get_all_parents()
         return parents.distinct()
 
     def get_all_children(self):
@@ -143,13 +143,13 @@ class ManagedGroup(TimeStampedModel):
 
         Not optimized.
         """
-        these_children = self.get_direct_children()
+        these_children = self.get_direct_children().distinct()
         print(these_children)
         children = these_children
         for child in these_children:
             # Chained unions don't work in MariaDB 10.3.
             # children = children.union(child.get_all_children())
-            children = children.distinct() | child.get_all_children().distinct()
+            children = children | child.get_all_children().distinct()
         return children.distinct()
 
     def get_anvil_url(self):
