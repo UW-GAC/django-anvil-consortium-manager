@@ -1,4 +1,4 @@
-name: CI
+name: tests
 
 # Enable Buildkit and let compose use it to speed up image building
 env:
@@ -11,7 +11,7 @@ on:
     paths-ignore: [ "docs/**" ]
 
   push:
-    branches: [ "master", "main" ]
+    branches: [ "master", "main", "reusable-app" ]
     paths-ignore: [ "docs/**" ]
 
 
@@ -70,15 +70,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/local.txt
 
-      - name: Test with pytest
-        run:  pytest
+      - name: Test with custom test suite
+        run:  python ./runtests.py
 
-      # - name: Run code coverage
-      #   run:  |
-      #     coverage run -m pytest
-      #     coverage xml
-      #
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v2
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run code coverage
+        run:  |
+          coverage run -m python ./runtests.py
+          coverage xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
