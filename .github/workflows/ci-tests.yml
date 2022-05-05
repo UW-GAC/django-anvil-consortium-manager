@@ -75,7 +75,7 @@ jobs:
 
       - name: Run code coverage
         run:  |
-          coverage run -m python ./runtests.py
+          coverage run runtests.py
           coverage xml
 
       - name: Upload coverage to Codecov
