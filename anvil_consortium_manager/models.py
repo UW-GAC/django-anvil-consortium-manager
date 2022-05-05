@@ -133,8 +133,10 @@ class ManagedGroup(TimeStampedModel):
         these_parents = self.get_direct_parents()
         parents = these_parents
         for parent in these_parents:
-            parents = parents.union(parent.get_all_parents())
-        return parents
+            # Chained unions don't work in MariaDB 10.3.
+            # parents = parents.union(parent.get_all_parents())
+            parents = parents.distinct() | parent.get_all_parents()
+        return parents.distinct()
 
     def get_all_children(self):
         """Return a queryset of all direct and indirect children of this group. Includes all childrenparents.
@@ -145,8 +147,10 @@ class ManagedGroup(TimeStampedModel):
         print(these_children)
         children = these_children
         for child in these_children:
-            children = children.union(child.get_all_children())
-        return children
+            # Chained unions don't work in MariaDB 10.3.
+            # children = children.union(child.get_all_children())
+            children = children.distinct() | child.get_all_children().distinct()
+        return children.distinct()
 
     def get_anvil_url(self):
         """Return the URL of the group on AnVIL."""
