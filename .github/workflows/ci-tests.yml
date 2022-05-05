@@ -36,8 +36,11 @@ jobs:
         uses: pre-commit/action@v2.0.3
 
   # With no caching at all the entire ci process takes 4m 30s to complete!
-  tests:
+  test-sqlite:
     runs-on: ubuntu-latest
+
+    env:
+      DJANGO_SETTINGS_MODULE: anvil_consortium_manager.tests.settings.test
 
     steps:
 
@@ -58,7 +61,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/local.txt
 
-      - name: Test with custom test suite
+      - name: Test with SQLite backend
         run:  python ./runtests.py
 
       - name: Run code coverage
@@ -70,3 +73,48 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # With no caching at all the entire ci process takes 4m 30s to complete!
+  test-mariadb:
+    runs-on: ubuntu-latest
+
+    env:
+      DJANGO_SETTINGS_MODULE: anvil_consortium_manager.tests.settings.test_mariadb
+      MYSQL_ROOT_PASSWORD: rootpw
+      ANVIL_API_SERVICE_ACCOUNT_FILE: foo
+      DJANGO_DB_USER: root
+      DJANGO_DB_PASSWORD: rootpw
+      DJANGO_DB_DATABASE: anvil_consortium_manager
+      DJANGO_DB_HOST: 127.0.0.1
+      DJANGO_DB_PORT: 3306
+
+    services:
+      database:
+        image: mariadb:10.5
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+        ports:
+          - 3306:3306
+        options: --tmpfs /var/lib/mysql
+
+    steps:
+
+      - name: Checkout Code Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+          cache: pip
+          cache-dependency-path: |
+            requirements/base.txt
+            requirements/local.txt
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/local.txt
+
+      - name: Test with MariaDB backend
+        run:  python ./runtests.py
