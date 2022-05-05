@@ -1,4 +1,4 @@
-name: tests
+name: ci-tests
 
 # Enable Buildkit and let compose use it to speed up image building
 env:
@@ -36,7 +36,7 @@ jobs:
         uses: pre-commit/action@v2.0.3
 
   # With no caching at all the entire ci process takes 4m 30s to complete!
-  pytest:
+  tests:
     runs-on: ubuntu-latest
 
     services:
