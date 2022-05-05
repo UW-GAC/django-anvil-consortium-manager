@@ -144,7 +144,6 @@ class ManagedGroup(TimeStampedModel):
         Not optimized.
         """
         these_children = self.get_direct_children().distinct()
-        print(these_children)
         children = these_children
         for child in these_children:
             # Chained unions don't work in MariaDB 10.3.
