@@ -80,13 +80,7 @@ jobs:
 
     env:
       DJANGO_SETTINGS_MODULE: anvil_consortium_manager.tests.settings.test_mariadb
-      MYSQL_ROOT_PASSWORD: rootpw
       ANVIL_API_SERVICE_ACCOUNT_FILE: foo
-      DJANGO_DB_USER: root
-      DJANGO_DB_PASSWORD: rootpw
-      DJANGO_DB_DATABASE: anvil_consortium_manager
-      DJANGO_DB_HOST: 127.0.0.1
-      DJANGO_DB_PORT: 3306
 
     services:
       database:
