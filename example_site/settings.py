@@ -1,20 +1,18 @@
 """
 Base settings to build other settings files upon.
 """
+import os
 from pathlib import Path
-
-import environ
 
 ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent
 
 # example_site/
 APPS_DIR = ROOT_DIR / "example_site"
-env = environ.Env()
 
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = env.bool("DJANGO_DEBUG", False)
+DEBUG = True
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # though not all of them may be available with every OS.
@@ -155,10 +153,8 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 # EMAIL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-EMAIL_BACKEND = env(
-    "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.smtp.EmailBackend",
-)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
 
@@ -212,10 +208,8 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
-SECRET_KEY = env(
-    "DJANGO_SECRET_KEY",
-    default="9VCSwBhicTgg4AUMMbDvAC6ihzMb1h05URed7OwwyIb5jHQXAKzrJcMCNu3thS2l",
-)
+SECRET_KEY = "9VCSwBhicTgg4AUMMbDvAC6ihzMb1h05URed7OwwyIb5jHQXAKzrJcMCNu3thS2l"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
 
@@ -223,9 +217,7 @@ ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
 # EMAIL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-EMAIL_BACKEND = env(
-    "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
-)
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # django-debug-toolbar
 # ------------------------------------------------------------------------------
@@ -251,4 +243,4 @@ INSTALLED_APPS += ["django_extensions"]  # noqa F405
 # ------------------------------------------------------------------------------
 
 # Path to the service account to use for managing access.
-ANVIL_API_SERVICE_ACCOUNT_FILE = env("ANVIL_API_SERVICE_ACCOUNT_FILE")
+ANVIL_API_SERVICE_ACCOUNT_FILE = os.getenv("ANVIL_API_SERVICE_ACCOUNT_FILE")
