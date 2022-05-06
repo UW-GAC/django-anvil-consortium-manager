@@ -6,6 +6,7 @@ from pathlib import Path
 import environ
 
 ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent
+
 # example_site/
 APPS_DIR = ROOT_DIR / "example_site"
 env = environ.Env()
@@ -187,10 +188,10 @@ EMAIL_TIMEOUT = 5
 
 # ADMIN
 # ------------------------------------------------------------------------------
-# Django Admin URL.
-ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = [("""Adrienne Stilp""", "amstilp@uw.edu")]
+ADMINS = [
+    # ("Your name", "your_email@example.com")
+]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 

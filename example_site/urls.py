@@ -11,7 +11,7 @@ urlpatterns = [
         "about/", TemplateView.as_view(template_name="pages/about.html"), name="about"
     ),
     # Django Admin, use {% url 'admin:index' %}
-    path(settings.ADMIN_URL, admin.site.urls),
+    path("admin/", admin.site.urls),
     # Your stuff: custom urls includes go here
     path("anvil/", include("anvil_consortium_manager.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
