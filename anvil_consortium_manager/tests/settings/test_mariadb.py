@@ -1,4 +1,4 @@
-from .tests import *  # noqa
+from .test import *  # noqa
 
 # Change database settings
 DATABASES = {
