@@ -1,29 +1,36 @@
-# example_site
+# django-anvil-consortium-manager
 
-Django app to manage Consortium AnVIL groups, workspaces, and access.
+A Django app to manage Consortium AnVIL groups, workspaces, and access.
 
 [![Built with Cookiecutter Django](https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter-django/)
 [![Black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 License: MIT
 
-## Settings
 
-Moved to [settings](http://cookiecutter-django.readthedocs.io/en/latest/settings.html).
+## Deployment
 
-## Basic Commands
+The following details how to deploy this application.
 
-### Setting Up Your Users
+## Developer set up
 
--   To create an **superuser account**, use this command:
+### Initial setup
 
-        $ python manage.py createsuperuser
+Clone the repository:
 
-### Type checks
+    $ git clone git@github.com:UW-GAC/django-anvil-consortium-manager.git
 
-Running type checks with mypy:
+Set up the environment:
 
-    $ mypy example_site
+    $ python -m venv venv
+    $ source venv/bin/activate
+    $ pip install -r requirements/dev.txt
+
+Run the example site:
+
+    $ python manage.py migrate
+    $ python manage.py createsuperuser
+    $ python manage.py runserver
 
 ### Test coverage
 
@@ -37,17 +44,10 @@ To run the tests, check your test coverage, and generate an HTML coverage report
 
     $ pytest
 
-### Live reloading and Sass CSS compilation
+### Maria DB setup
 
-Moved to [Live reloading and SASS compilation](http://cookiecutter-django.readthedocs.io/en/latest/live-reloading-and-sass-compilation.html).
-
-## Deployment
-
-The following details how to deploy this application.
-
-## Set up
-
-### Maria DB
+By default, the Django settings file uses a SQLite backend for development.
+You can optionally use MariaDB instead for tests by following these steps.
 
 Install MariaDB. Here are some notes:
 * [Django docs](https://docs.djangoproject.com/en/4.0/ref/databases/#mysql-notes)
@@ -71,6 +71,7 @@ sudo -u _mysql /opt/local/lib/mariadb-10.5/bin/mysqld_safe --datadir='/opt/local
 # Run secure installation script.
 sudo /opt/local/lib/mariadb-10.5/bin/mysql_secure_installation
 ```
+
 One time database setup. Start mariadb with `sudo mysql -u root -p`, then run these commands:
 ```
 # Create the django database.
