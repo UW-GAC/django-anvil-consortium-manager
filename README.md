@@ -32,17 +32,24 @@ Run the example site:
     $ python manage.py createsuperuser
     $ python manage.py runserver
 
-### Test coverage
+### Tests
+
+#### Using the test script
+
+    $ ./runtests.py
+
+#### Using pytest
+
+    $ pytest
+
+#### Test coverage
 
 To run the tests, check your test coverage, and generate an HTML coverage report:
 
-    $ coverage run -m pytest
+    $ coverage run ./runtests.py
     $ coverage html
     $ open htmlcov/index.html
 
-#### Running tests with pytest
-
-    $ pytest
 
 ### Maria DB setup
 
@@ -92,6 +99,11 @@ GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@localhost;
 ```
 
 To run tests using MariaDB as the backend, run:
+
 ```
-pytest --ds=anvil_consortium_manager.tests.settings.test_mariadb
+(export DJANGO_SETTINGS_FILE=anvil_consortium_manager.tests.settings.local_mariadb ; ./runtests.py)
+```
+
+```
+pytest --ds=anvil_consortium_manager.tests.settings.local_mariadb
 ```
