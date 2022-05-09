@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     "django_tables2",
     "fontawesomefree",  # icons
     # Your stuff: custom apps go here
-    "anvil_consortium_manager.apps.AnvilTrackerConfig",
+    "anvil_consortium_manager",
 ]
 
 
