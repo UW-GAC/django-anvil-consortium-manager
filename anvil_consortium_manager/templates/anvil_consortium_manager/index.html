@@ -1,10 +1,127 @@
 {% extends "anvil_consortium_manager/base.html" %}
 {% load static %}
 
-{% block title %}AnVIL Index{% endblock %}
+{% block title %}AnVIL Consortium Manager{% endblock %}
 
 {% block content %}
 
-Welcome to the AnVIL tracker!
+
+<h1 class="pb-2 border-bottom">AnVIL Consortium Manager</h1>
+
+
+<div class="album py-5 bg-light">
+  <div class="container">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-heart-pulse mx-2"></span>AnVIL status</h5>
+          <div class="card-body">
+            <p>Check the status of AnVIL.</p>
+          </div>
+          <ul class="list-group list-group-flush">
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:status' %}" class="icon-link">Check status</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-dollar-sign mx-2"></span>Billing projects</h5>
+          <div class="card-body">
+            <p>Interact with billing projects on AnVIL.</p>
+          </div>
+          <ul class="list-group list-group-flush">
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:billing_projects:list' %}" class="icon-link">List billing projects</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:billing_projects:import' %}" class="icon-link">Import a billing project</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-user mx-2"></span>Accounts</h5>
+          <div class="card-body">
+            <p>View or import accounts from AnVIL.</p>
+          </div>
+          <ul class="list-group list-group-flush">
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:accounts:list' %}" class="icon-link">List accounts</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:accounts:import' %}" class="icon-link">Import an account</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-user-group mx-2"></span>Managed groups</h5>
+          <div class="card-body">
+            <p>Interact with Managed Groups on AnVIL. You can add accounts to a group so a the access for set of related accounts can be managed together.</p>
+          </div>
+          <ul class="list-group list-group-flush">
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:managed_groups:list' %}" class="icon-link">List groups</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:managed_groups:new' %}" class="icon-link">Add a group</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:group_account_membership:new' %}" class="icon-link">Add an account to a group</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:group_group_membership:new' %}" class="icon-link">Add a group to a group</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-computer mx-2"></span>Workspaces</h5>
+          <div class="card-body">
+            <p>Interact with workspaces on AnVIL. You can create or import workspaces and then share them with a group.</p>
+          </div>
+          <ul class="list-group list-group-flush">
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:list' %}" class="icon-link">List workspaces</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:new' %}" class="icon-link">Add a workspace</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:import' %}" class="icon-link">Import a workspace from AnVIL</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspace_group_access:new' %}" class="icon-link">Give a group access to a workspace</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 {% endblock content %}
