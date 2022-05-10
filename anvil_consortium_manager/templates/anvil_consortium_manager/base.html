@@ -39,6 +39,10 @@
 
   <body>
 
+    {% block navbar %}
+      {% include 'anvil_consortium_manager/navbar.html' %}
+    {% endblock navbar %}
+
     <div class="container">
 
       {% if messages %}
@@ -56,16 +60,5 @@
 
     </div> <!-- /container -->
 
-    {% block modal %}{% endblock modal %}
-
-    {% block inline_javascript %}
-    {% comment %}
-    Script tags with only code, no src (defer by default). To run
-    with a "defer" so that you run inline code:
-    <script>
-      window.addEventListener('DOMContentLoaded', () => {/* Run whatever you want */});
-    </script>
-    {% endcomment %}
-    {% endblock inline_javascript %}
   </body>
 </html>
