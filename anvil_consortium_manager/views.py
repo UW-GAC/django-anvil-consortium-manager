@@ -455,7 +455,6 @@ class ManagedGroupDelete(SuccessMessageMixin, DeleteView):
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Check if it's an auth domain for any workspaces.
         if self.object.workspaceauthorizationdomain_set.count() > 0:
-            print("HERE")
             # Add a message and redirect.
             messages.add_message(
                 self.request, messages.ERROR, self.message_is_auth_domain
@@ -525,7 +524,6 @@ class WorkspaceCreate(SuccessMessageMixin, CreateView):
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
-            print(str(e))
             return self.render_to_response(self.get_context_data(form=form))
         return super().form_valid(form)
 

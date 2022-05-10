@@ -197,7 +197,6 @@ class WorkspaceCreateFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
         self.assertIn("billing_project", form.errors)
-        print(form.errors)
         self.assertEqual(len(form.errors), 1)
 
     def test_invalid_missing_workspace(self):
@@ -240,7 +239,6 @@ class WorkspaceCreateFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
         self.assertIn("billing_project", form.errors)
-        print(form.errors)
         self.assertEqual(len(form.errors), 1)
 
 

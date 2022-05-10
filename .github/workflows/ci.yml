@@ -1,4 +1,4 @@
-name: CI
+name: ci-tests
 
 # Enable Buildkit and let compose use it to speed up image building
 env:
@@ -11,7 +11,7 @@ on:
     paths-ignore: [ "docs/**" ]
 
   push:
-    branches: [ "master", "main" ]
+    branches: [ "master", "main", "reusable-app" ]
     paths-ignore: [ "docs/**" ]
 
 
@@ -30,26 +30,17 @@ jobs:
           cache: pip
           cache-dependency-path: |
             requirements/base.txt
-            requirements/local.txt
+            requirements/dev.txt
 
       - name: Run pre-commit
         uses: pre-commit/action@v2.0.3
 
   # With no caching at all the entire ci process takes 4m 30s to complete!
-  pytest:
+  test-sqlite:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:12
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_PASSWORD: postgres
-
     env:
-      # postgres://user:password@host:port/database
-      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      DJANGO_SETTINGS_MODULE: anvil_consortium_manager.tests.settings.test
 
     steps:
 
@@ -63,22 +54,74 @@ jobs:
           cache: pip
           cache-dependency-path: |
             requirements/base.txt
-            requirements/local.txt
+            requirements/dev.txt
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements/local.txt
+          pip install -r requirements/dev.txt
 
-      - name: Test with pytest
-        run:  pytest
+      - name: Test with SQLite backend
+        run:  python ./runtests.py
 
       - name: Run code coverage
         run:  |
-          coverage run -m pytest
+          coverage run runtests.py
           coverage xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # With no caching at all the entire ci process takes 4m 30s to complete!
+  test-mariadb:
+    runs-on: ubuntu-latest
+
+    env:
+      DJANGO_SETTINGS_MODULE: anvil_consortium_manager.tests.settings.test_mariadb
+      ANVIL_API_SERVICE_ACCOUNT_FILE: foo
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+        - 3.8
+        - 3.9
+        - '3.10'
+        database:
+        - mariadb:10.3
+        - mariadb:10.4
+        - mariadb:10.5
+        - mariadb:latest
+
+    services:
+      database:
+        image: ${{ matrix.database }}
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+        ports:
+          - 3306:3306
+        options: --tmpfs /var/lib/mysql
+
+    steps:
+
+      - name: Checkout Code Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements/base.txt
+            requirements/dev.txt
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/dev.txt
+
+      - name: Test with MariaDB backend
+        run:  python ./runtests.py

@@ -851,7 +851,6 @@ class WorkspaceTest(TestCase):
         instance.authorization_domains.add(auth_domain)
         self.assertEqual(len(instance.authorization_domains.all()), 1)
         self.assertIn(auth_domain, instance.authorization_domains.all())
-        print(instance.authorization_domains.all())
 
     def test_can_delete_workspace_with_auth_domain(self):
         auth_domain = factories.ManagedGroupFactory.create()
