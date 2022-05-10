@@ -26,7 +26,7 @@ $ pip install /<path>/<to>/<repo>/dist/django-anvil-consortium-manager-0.0.999.t
 
 2. In the settings file, add `django_tables2` and `anvil_consortium_manager` to `INSTALLED_PACKAGES`.
 
-3. In the settings file, set the variable `ANVIL_API_SERVICE_ACCOUNT_FILE` to the path the json file with Google service account credentials. You will need to have already created this service account and registered it with Terra/AnVIL.
+3. In the settings file, set the variable `ANVIL_API_SERVICE_ACCOUNT_FILE` to the path the json file with Google service account credentials. You will need to have already created this service account and registered it with Terra/AnVIL. If you want to browse the app without making any API calls, just set this to a random string (e.g., `"foo"`).
 
 ```
 $ ANVIL_API_SERVICE_ACCOUNT_FILE = "/<path>/<to>/<service_account>.json"
@@ -37,6 +37,8 @@ $ ANVIL_API_SERVICE_ACCOUNT_FILE = "/<path>/<to>/<service_account>.json"
 ```
 $ path("anvil/", include("anvil_consortium_manager.urls"))
 ```
+
+The app comes with default templates styled with bootstrap5. After installation, you can open the index (`anvil/`) to see what you can do with the app.
 
 ## Developer set up
 
