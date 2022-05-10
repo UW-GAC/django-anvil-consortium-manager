@@ -8,9 +8,29 @@ A Django app to manage Consortium AnVIL groups, workspaces, and access.
 License: MIT
 
 
-## Deployment
+## Using the app
 
-The following details how to deploy this application.
+The package is not on PyPI and there are no GitHub releases yet.
+
+Build the app (from this repository):
+
+    $ python -m build
+
+### In your django project:
+
+1. Install the app into your Django project (note: not on PyPI so this doesn't work):
+
+    $ pip install /<path>/<to>/<repo>/dist/django-anvil-consortium-manager-0.0.999.tar.gz
+
+2. In the settings file, add `django_tables2` and `anvil_consortium_manager` to `INSTALLED_PACKAGES`.
+
+3. In the settings file, set the variable `ANVIL_API_SERVICE_ACCOUNT_FILE` to the path the json file with Google service account credentials. You will need to have already created this service account and registered it with Terra/AnVIL.
+
+    $ ANVIL_API_SERVICE_ACCOUNT_FILE = "/<path>/<to>/<service_account>.json"
+
+4. Include the app URLs to the project urls.
+
+    $ path("anvil/", include("anvil_consortium_manager.urls"))
 
 ## Developer set up
 
