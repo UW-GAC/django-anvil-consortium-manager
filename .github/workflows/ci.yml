@@ -11,7 +11,7 @@ on:
     paths-ignore: [ "docs/**" ]
 
   push:
-    branches: [ "master", "main", "reusable-app" ]
+    branches: [ "master", "main", "misc-app-updates" ]
     paths-ignore: [ "docs/**" ]
 
 
