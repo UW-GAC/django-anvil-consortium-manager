@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "django_tables2",
     "fontawesomefree",  # icons
     "debug_toolbar",
+    "django_extensions",  # useful extensions
     # This app.
     "anvil_consortium_manager",
 ]

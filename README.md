@@ -21,7 +21,7 @@ Build the app (from this repository):
 1. Install the app into your Django project (note: not on PyPI so this doesn't work):
 
 ```
-$ pip install /<path>/<to>/<repo>/dist/django-anvil-consortium-manager-0.0.999.tar.gz
+$ pip install /<path>/<to>/<repo>/dist/django-anvil-consortium-manager-0.1.dev1.tar.gz
 ```
 
 2. In the settings file, add `django_tables2` and `anvil_consortium_manager` to `INSTALLED_PACKAGES`.
@@ -81,6 +81,10 @@ Run the example site:
 #### Using pytest
 
     $ pytest
+
+#### Using manage.py
+
+    $ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
 
 #### Test coverage
 
