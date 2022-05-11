@@ -82,6 +82,10 @@ Run the example site:
 
     $ pytest
 
+#### Using manage.py
+
+    $ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
+
 #### Test coverage
 
 To run the tests, check your test coverage, and generate an HTML coverage report:
