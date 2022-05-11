@@ -34,7 +34,7 @@ DATABASES = {
 # URLS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
-ROOT_URLCONF = "anvil_consortium_manager.tests.urls"
+ROOT_URLCONF = "anvil_consortium_manager.tests.settings.urls"
 
 # APPS
 # ------------------------------------------------------------------------------
@@ -100,6 +100,9 @@ TEMPLATES = [
 # ------------------------------------------------------------------------------
 # Django Admin URL.
 ADMIN_URL = "admin/"
+
+# Since there are no templates for redirects in this app, specify the open URL.
+LOGIN_URL = "test_login"
 
 # Your stuff...
 # ------------------------------------------------------------------------------

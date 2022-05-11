@@ -185,6 +185,9 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 # https://django-tables2.readthedocs.io/en/latest/pages/custom-rendering.html?highlight=django_tables2_template#available-templates
 DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
 
+# Auth
+# ------------------------------------------------------------------------------
+LOGIN_REDIRECT_URL = "home"
 
 # django-debug-toolbar
 # ------------------------------------------------------------------------------

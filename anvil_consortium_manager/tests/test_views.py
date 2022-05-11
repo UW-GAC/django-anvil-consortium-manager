@@ -1,7 +1,11 @@
 from unittest import skip
 
 import responses
+from django.conf import settings
+from django.contrib.auth.models import Permission, User
+from django.core.exceptions import PermissionDenied
 from django.http.response import Http404
+from django.shortcuts import resolve_url
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
@@ -14,6 +18,13 @@ class IndexTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -23,12 +34,30 @@ class IndexTest(TestCase):
         """Return the view being tested."""
         return views.Index.as_view()
 
-    def test_view_success_code(self):
-        """Returns a successful status code."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
-        # request.user = AnonymousUser()
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
 
 class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
@@ -37,6 +66,13 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_json_me_data(self):
         json_data = {
@@ -64,8 +100,16 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.AnVILStatus.as_view()
 
-    def test_view_success_code(self):
-        """Returns a successful status code."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         url_me = self.entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
         url_status = self.entry_point + "/status"
@@ -73,10 +117,19 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
-        responses.assert_call_count(url_me, 1)
-        responses.assert_call_count(url_status, 1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_context_data_anvil_status_ok(self):
         """Context data contains anvil_status."""
@@ -87,6 +140,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("anvil_status", response.context_data)
@@ -107,6 +161,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_json_status_data(status_ok=False),
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("anvil_status", response.context_data)
@@ -122,6 +177,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         # Error in status API
         url_status = self.entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -142,6 +198,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_json_status_data(status_ok=False),
         )
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -158,6 +215,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         # Error in status API
         url_status = self.entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -174,6 +232,18 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_api_url(self, billing_project_name):
         """Get the AnVIL API url that is called by the anvil_exists method."""
@@ -192,15 +262,50 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.BillingProjectImport.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(
@@ -213,6 +318,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
         # Need a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 302)
         new_object = models.BillingProject.objects.latest("pk")
@@ -225,6 +331,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(), {"name": billing_project_name}, follow=True
         )
@@ -239,6 +346,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         new_object = models.BillingProject.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
@@ -247,6 +355,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two billing projects with the same name."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -263,6 +372,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.BillingProjectFactory.create(name="project")
         # No API calls should be made.
         request = self.factory.post(self.get_url(), {"name": "PROJECT"})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -277,6 +387,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
         request = self.factory.post(self.get_url(), {"name": ""})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -288,6 +399,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -302,6 +414,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         url = self.get_api_url(billing_project_name)
         responses.add(responses.GET, url, status=404, json={"message": "other"})
         # Need a client to check messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 200)
         # the form is valid...
@@ -331,6 +444,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         # Need the client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
@@ -349,6 +463,13 @@ class BillingProjectDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -358,17 +479,37 @@ class BillingProjectDetailTest(TestCase):
         """Return the view being tested."""
         return views.BillingProjectDetail.as_view()
 
-    def test_view_status_code_with_existing_object(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_view_status_code_with_existing_object_not_user(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.BillingProjectFactory.create(has_app_as_user=False)
         # Only clients load the template.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
@@ -376,6 +517,7 @@ class BillingProjectDetailTest(TestCase):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
@@ -383,6 +525,7 @@ class BillingProjectDetailTest(TestCase):
         """The workspace table exists."""
         obj = factories.BillingProjectFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertIsInstance(
@@ -393,6 +536,7 @@ class BillingProjectDetailTest(TestCase):
         """No workspaces are shown if the billing project does not have any workspaces."""
         billing_project = factories.BillingProjectFactory.create()
         request = self.factory.get(self.get_url(billing_project.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=billing_project.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
@@ -402,6 +546,7 @@ class BillingProjectDetailTest(TestCase):
         billing_project = factories.BillingProjectFactory.create()
         factories.WorkspaceFactory.create(billing_project=billing_project)
         request = self.factory.get(self.get_url(billing_project.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=billing_project.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
@@ -411,6 +556,7 @@ class BillingProjectDetailTest(TestCase):
         billing_project = factories.BillingProjectFactory.create()
         factories.WorkspaceFactory.create_batch(2, billing_project=billing_project)
         request = self.factory.get(self.get_url(billing_project.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=billing_project.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
@@ -421,6 +567,7 @@ class BillingProjectDetailTest(TestCase):
         other_billing_project = factories.BillingProjectFactory.create()
         factories.WorkspaceFactory.create(billing_project=other_billing_project)
         request = self.factory.get(self.get_url(billing_project.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=billing_project.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
@@ -430,6 +577,13 @@ class BillingProjectListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -439,13 +593,34 @@ class BillingProjectListTest(TestCase):
         """Return the view being tested."""
         return views.BillingProjectList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
@@ -454,6 +629,7 @@ class BillingProjectListTest(TestCase):
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -462,6 +638,7 @@ class BillingProjectListTest(TestCase):
     def test_view_with_one_object(self):
         factories.BillingProjectFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -470,6 +647,7 @@ class BillingProjectListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.BillingProjectFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -480,6 +658,13 @@ class AccountDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -489,17 +674,37 @@ class AccountDetailTest(TestCase):
         """Return the view being tested."""
         return views.AccountDetail.as_view()
 
-    def test_view_status_code_with_existing_object(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_context_active_account(self):
         """An is_inactive flag is included in the context."""
         active_account = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(active_account.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=active_account.pk)
         context = response.context_data
         self.assertIn("is_inactive", context)
@@ -515,6 +720,7 @@ class AccountDetailTest(TestCase):
             status=models.Account.INACTIVE_STATUS
         )
         request = self.factory.get(self.get_url(active_account.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=active_account.pk)
         context = response.context_data
         self.assertIn("is_inactive", context)
@@ -528,6 +734,7 @@ class AccountDetailTest(TestCase):
         """Returns a successful status code for an existing object pk."""
         obj = factories.AccountFactory.create(is_service_account=True)
         # Only clients load the template.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
@@ -535,6 +742,7 @@ class AccountDetailTest(TestCase):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
@@ -542,6 +750,7 @@ class AccountDetailTest(TestCase):
         """The group membership table exists."""
         obj = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
         self.assertIsInstance(
@@ -552,6 +761,7 @@ class AccountDetailTest(TestCase):
         """No groups are shown if the account is not part of any groups."""
         account = factories.AccountFactory.create()
         request = self.factory.get(self.get_url(account.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
@@ -561,6 +771,7 @@ class AccountDetailTest(TestCase):
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account)
         request = self.factory.get(self.get_url(account.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 1)
@@ -570,6 +781,7 @@ class AccountDetailTest(TestCase):
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, account=account)
         request = self.factory.get(self.get_url(account.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 2)
@@ -580,6 +792,7 @@ class AccountDetailTest(TestCase):
         other_account = factories.AccountFactory.create(email="email_2@example.com")
         factories.GroupAccountMembershipFactory.create(account=other_account)
         request = self.factory.get(self.get_url(account.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=account.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
@@ -590,6 +803,18 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
@@ -603,15 +828,50 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.AccountImport.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.AccountImportForm)
@@ -621,6 +881,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         email = "test@example.com"
         responses.add(responses.GET, self.get_api_url(email), status=200)
         # Need a client because messages are added.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         self.assertEqual(response.status_code, 302)
         new_object = models.Account.objects.latest("pk")
@@ -631,6 +892,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         email = "test@example.com"
         responses.add(responses.GET, self.get_api_url(email), status=200)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -642,6 +904,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         email = "test@example.com"
         responses.add(responses.GET, self.get_api_url(email), status=200)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         new_object = models.Account.objects.latest("pk")
         self.assertRedirects(
@@ -653,6 +916,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two accounts with the same email."""
         obj = factories.AccountFactory.create()
         request = self.factory.post(self.get_url(), {"email": obj.email})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -669,6 +933,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.AccountFactory.create(email="foo@example.com")
         # No API calls should be made.
         request = self.factory.post(self.get_url(), {"email": "FOO@example.com"})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -683,6 +948,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
         request = self.factory.post(self.get_url(), {"email": "1"})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -694,6 +960,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -707,6 +974,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         email = "test@example.com"
         responses.add(responses.GET, self.get_api_url(email), status=200)
         # Need a client because messages are added.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(), {"email": email, "is_service_account": True}
         )
@@ -725,6 +993,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         # Need the client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
@@ -750,6 +1019,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         # Need the client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
@@ -768,6 +1038,13 @@ class AccountListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -777,19 +1054,41 @@ class AccountListTest(TestCase):
         """Return the view being tested."""
         return views.AccountList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.AccountTable)
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -798,6 +1097,7 @@ class AccountListTest(TestCase):
     def test_view_with_one_object(self):
         factories.AccountFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -806,6 +1106,7 @@ class AccountListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.AccountFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -815,6 +1116,7 @@ class AccountListTest(TestCase):
         factories.AccountFactory.create(is_service_account=True)
         factories.AccountFactory.create(is_service_account=False)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -826,6 +1128,7 @@ class AccountListTest(TestCase):
         inactive_object = factories.AccountFactory.create()
         inactive_object.deactivate()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -838,6 +1141,13 @@ class AccountActiveListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -847,19 +1157,41 @@ class AccountActiveListTest(TestCase):
         """Return the view being tested."""
         return views.AccountActiveList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.AccountTable)
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -868,6 +1200,7 @@ class AccountActiveListTest(TestCase):
     def test_view_with_one_object(self):
         factories.AccountFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -876,6 +1209,7 @@ class AccountActiveListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.AccountFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -885,6 +1219,7 @@ class AccountActiveListTest(TestCase):
         factories.AccountFactory.create(is_service_account=True)
         factories.AccountFactory.create(is_service_account=False)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -896,6 +1231,7 @@ class AccountActiveListTest(TestCase):
         inactive_object = factories.AccountFactory.create()
         inactive_object.deactivate()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -908,6 +1244,13 @@ class AccountInactiveListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -917,19 +1260,41 @@ class AccountInactiveListTest(TestCase):
         """Return the view being tested."""
         return views.AccountInactiveList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.AccountTable)
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -938,6 +1303,7 @@ class AccountInactiveListTest(TestCase):
     def test_view_with_one_object(self):
         factories.AccountFactory(status=models.Account.INACTIVE_STATUS)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -946,6 +1312,7 @@ class AccountInactiveListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.AccountFactory.create_batch(2, status=models.Account.INACTIVE_STATUS)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -959,6 +1326,7 @@ class AccountInactiveListTest(TestCase):
             status=models.Account.INACTIVE_STATUS, is_service_account=False
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -970,6 +1338,7 @@ class AccountInactiveListTest(TestCase):
         inactive_object = factories.AccountFactory.create()
         inactive_object.deactivate()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -983,6 +1352,18 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -997,22 +1378,58 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
         )
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.AccountFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.AccountFactory.create()
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1020,6 +1437,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         object = factories.AccountFactory.create()
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1031,6 +1449,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deletes_object_service_account(self):
         """Posting submit to the form successfully deletes the service account object."""
         object = factories.AccountFactory.create(is_service_account=True)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1039,6 +1458,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.AccountFactory.create()
         other_object = factories.AccountFactory.create()
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 1)
@@ -1051,6 +1471,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Redirects to the expected page."""
         object = factories.AccountFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -1066,6 +1487,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
             group.name, object.email
         )
         responses.add(responses.DELETE, remove_from_group_url, status=204)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1089,6 +1511,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
             group_2.name, object.email
         )
         responses.add(responses.DELETE, remove_from_group_url_2, status=204)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1119,6 +1542,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "test error"},
         )
         # Need a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1147,6 +1571,18 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1161,18 +1597,53 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
             self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
         )
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.AccountFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
 
     def test_get_context_data(self):
         """Context data is correct."""
         object = factories.AccountFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(account=object)
         request = self.factory.get(self.get_url(object.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=object.pk)
         self.assertIn("group_table", response.context_data)
         table = response.context_data["group_table"]
@@ -1182,12 +1653,14 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
 
     def test_view_deactivates_object(self):
         """Posting submit to the form successfully deactivates the object."""
         object = factories.AccountFactory.create()
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
@@ -1197,6 +1670,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         object = factories.AccountFactory.create()
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1208,6 +1682,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deactivates_object_service_account(self):
         """Posting submit to the form successfully deactivates a service account object."""
         object = factories.AccountFactory.create(is_service_account=True)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
@@ -1218,6 +1693,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.AccountFactory.create()
         other_object = factories.AccountFactory.create()
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 2)
@@ -1228,6 +1704,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Redirects to the expected page."""
         object = factories.AccountFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -1244,6 +1721,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
             group.name, object.email
         )
         responses.add(responses.DELETE, remove_from_group_url, status=204)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Memberships are *not* deleted from the app.
@@ -1266,6 +1744,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
             group_2.name, object.email
         )
         responses.add(responses.DELETE, remove_from_group_url_2, status=204)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Status was updated.
@@ -1298,6 +1777,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "test error"},
         )
         # Need a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1329,6 +1809,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.status = object.INACTIVE_STATUS
         object.save()
         # No API calls are made.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(object.pk), follow=True)
         self.assertRedirects(response, object.get_absolute_url())
         # The object is unchanged.
@@ -1351,6 +1832,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.status = object.INACTIVE_STATUS
         object.save()
         # No API calls are made.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1374,6 +1856,18 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1388,14 +1882,55 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
             self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
         )
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.AccountFactory.create()
-        object.status = object.INACTIVE_STATUS
-        object.save()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.AccountFactory.create()
+        obj.status = obj.INACTIVE_STATUS
+        obj.save()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, pk=1)
 
     def test_get_context_data(self):
         """Context data is correct."""
@@ -1404,23 +1939,19 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.status = object.INACTIVE_STATUS
         object.save()
         request = self.factory.get(self.get_url(object.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=object.pk)
         self.assertIn("group_table", response.context_data)
         table = response.context_data["group_table"]
         self.assertEqual(len(table.rows), 1)
         self.assertIn(membership, table.data)
 
-    def test_view_with_invalid_pk(self):
-        """Returns a 404 when the object doesn't exist."""
-        request = self.factory.get(self.get_url(1))
-        with self.assertRaises(Http404):
-            self.get_view()(request, pk=1)
-
     def test_view_reactivates_object(self):
         """Posting submit to the form successfully deactivates the object."""
         object = factories.AccountFactory.create()
         object.status = object.INACTIVE_STATUS
         object.save()
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
@@ -1431,6 +1962,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         object.status = object.INACTIVE_STATUS
         object.save()
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1444,6 +1976,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create(is_service_account=True)
         object.status = object.INACTIVE_STATUS
         object.save()
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
@@ -1457,6 +1990,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         other_object = factories.AccountFactory.create()
         other_object.status = other_object.INACTIVE_STATUS
         other_object.save()
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 2)
@@ -1469,6 +2003,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.status = object.INACTIVE_STATUS
         object.save()
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -1485,6 +2020,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         add_to_group_url = self.get_api_remove_from_group_url(group.name, object.email)
         responses.add(responses.PUT, add_to_group_url, status=204)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         responses.assert_call_count(add_to_group_url, 1)
@@ -1507,6 +2043,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
             group_2.name, object.email
         )
         responses.add(responses.PUT, add_to_group_url_2, status=204)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Status was updated.
@@ -1539,6 +2076,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "test error"},
         )
         # Need a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1566,6 +2104,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, account=object)
         # No API calls are made.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(object.pk), follow=True)
         self.assertRedirects(response, object.get_absolute_url())
         # The object is unchanged.
@@ -1584,6 +2123,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, account=object)
         # No API calls are made.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -1606,6 +2146,13 @@ class ManagedGroupDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1615,17 +2162,37 @@ class ManagedGroupDetailTest(TestCase):
         """Return the view being tested."""
         return views.ManagedGroupDetail.as_view()
 
-    def test_view_status_code_with_existing_object(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_view_status_code_with_existing_object_not_managed(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Only clients load the template.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
@@ -1633,6 +2200,7 @@ class ManagedGroupDetailTest(TestCase):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
@@ -1640,6 +2208,7 @@ class ManagedGroupDetailTest(TestCase):
         """The workspace table exists."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertIsInstance(
@@ -1650,6 +2219,7 @@ class ManagedGroupDetailTest(TestCase):
         """No workspaces are shown if the group does not have access to any workspaces."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
@@ -1659,6 +2229,7 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         factories.WorkspaceGroupAccessFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
@@ -1668,6 +2239,7 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         factories.WorkspaceGroupAccessFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
@@ -1678,6 +2250,7 @@ class ManagedGroupDetailTest(TestCase):
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.WorkspaceGroupAccessFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
@@ -1686,6 +2259,7 @@ class ManagedGroupDetailTest(TestCase):
         """The active account table exists."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("active_account_table", response.context_data)
         self.assertIsInstance(
@@ -1697,6 +2271,7 @@ class ManagedGroupDetailTest(TestCase):
         """No accounts are shown if the group has no active accounts."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
@@ -1706,6 +2281,7 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 1)
@@ -1715,6 +2291,7 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 2)
@@ -1725,6 +2302,7 @@ class ManagedGroupDetailTest(TestCase):
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupAccountMembershipFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
@@ -1733,6 +2311,7 @@ class ManagedGroupDetailTest(TestCase):
         """The group table exists."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_table", response.context_data)
         self.assertIsInstance(
@@ -1743,6 +2322,7 @@ class ManagedGroupDetailTest(TestCase):
         """No groups are shown if the group has no member groups."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
@@ -1752,6 +2332,7 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         factories.GroupGroupMembershipFactory.create(parent_group=group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 1)
@@ -1761,6 +2342,7 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         factories.GroupGroupMembershipFactory.create_batch(2, parent_group=group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 2)
@@ -1771,6 +2353,7 @@ class ManagedGroupDetailTest(TestCase):
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupGroupMembershipFactory.create(parent_group=other_group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
@@ -1779,6 +2362,7 @@ class ManagedGroupDetailTest(TestCase):
         """The auth_domain table exists."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertIsInstance(
@@ -1790,6 +2374,7 @@ class ManagedGroupDetailTest(TestCase):
         """No workspaces are shown if the group is not the auth domain for any workspace."""
         group = factories.ManagedGroupFactory.create()
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertEqual(
@@ -1802,6 +2387,7 @@ class ManagedGroupDetailTest(TestCase):
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         table = response.context_data["workspace_authorization_domain_table"]
@@ -1816,6 +2402,7 @@ class ManagedGroupDetailTest(TestCase):
         workspace_2 = factories.WorkspaceFactory.create()
         workspace_2.authorization_domains.add(group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         table = response.context_data["workspace_authorization_domain_table"]
@@ -1831,6 +2418,7 @@ class ManagedGroupDetailTest(TestCase):
         other_workspace.authorization_domains.add(other_group)
         factories.GroupGroupMembershipFactory.create(parent_group=other_group)
         request = self.factory.get(self.get_url(group.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=group.pk)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertEqual(
@@ -1847,6 +2435,18 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1856,15 +2456,50 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.ManagedGroupCreate.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(
@@ -1875,6 +2510,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         url = self.entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         new_object = models.ManagedGroup.objects.latest("pk")
@@ -1886,6 +2522,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         url = self.entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"}, follow=True)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1897,6 +2534,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         url = self.entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
@@ -1906,6 +2544,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two groups with the same name."""
         obj = factories.ManagedGroupFactory.create()
         request = self.factory.post(self.get_url(), {"name": obj.name})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -1922,6 +2561,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create two groups with the same name, regardless of case."""
         obj = factories.ManagedGroupFactory.create(name="group")
         request = self.factory.post(self.get_url(), {"name": "GROUP"})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -1937,6 +2577,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
         request = self.factory.post(self.get_url(), {"name": ""})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -1949,6 +2590,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -1965,6 +2607,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
             responses.POST, url, status=500, json={"message": "group create test error"}
         )
         # Need a client to check messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
@@ -1987,6 +2630,13 @@ class ManagedGroupListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1996,19 +2646,41 @@ class ManagedGroupListTest(TestCase):
         """Return the view being tested."""
         return views.ManagedGroupList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.ManagedGroupTable)
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -2017,6 +2689,7 @@ class ManagedGroupListTest(TestCase):
     def test_view_with_one_object(self):
         factories.ManagedGroupFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -2025,6 +2698,7 @@ class ManagedGroupListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.ManagedGroupFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -2040,6 +2714,18 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2049,16 +2735,51 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.ManagedGroupDelete.as_view()
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.ManagedGroupFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
 
@@ -2068,6 +2789,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
@@ -2079,6 +2801,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -2094,6 +2817,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
@@ -2114,6 +2838,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Group was not actually deleted on AnVIL.
         responses.add(responses.GET, url, status=200)
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -2138,6 +2863,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -2155,6 +2881,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             parent_group=parent, child_group=child
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(child.pk), follow=True)
         self.assertRedirects(response, child.get_absolute_url())
         # Check for messages.
@@ -2182,6 +2909,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             parent_group=parent, child_group=child
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(child.pk), follow=True)
         self.assertRedirects(response, child.get_absolute_url())
         # Check for messages.
@@ -2205,6 +2933,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
@@ -2223,6 +2952,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
@@ -2245,6 +2975,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             workspace=workspace, group=group
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
@@ -2272,6 +3003,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             workspace=workspace, group=group
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
@@ -2299,6 +3031,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + parent.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(parent.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Parent was deleted.
@@ -2319,6 +3052,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/groups/" + group.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(group.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # The group was deleted.
@@ -2340,6 +3074,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "group delete test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -2354,6 +3089,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Redirect when trying to delete a group that the app doesn't manage."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
@@ -2370,6 +3106,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Redirect when trying to delete a group that the app doesn't manage with a post request."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(group.pk), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
@@ -2399,6 +3136,13 @@ class WorkspaceDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2408,17 +3152,37 @@ class WorkspaceDetailTest(TestCase):
         """Return the view being tested."""
         return views.WorkspaceDetail.as_view()
 
-    def test_view_status_code_with_existing_object(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
@@ -2426,6 +3190,7 @@ class WorkspaceDetailTest(TestCase):
         """The workspace group access table exists."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("group_access_table", response.context_data)
         self.assertIsInstance(
@@ -2437,6 +3202,7 @@ class WorkspaceDetailTest(TestCase):
         """No groups are shown if the workspace has not been shared with any groups."""
         workspace = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
@@ -2446,6 +3212,7 @@ class WorkspaceDetailTest(TestCase):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 1)
@@ -2455,6 +3222,7 @@ class WorkspaceDetailTest(TestCase):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create_batch(2, workspace=workspace)
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 2)
@@ -2465,6 +3233,7 @@ class WorkspaceDetailTest(TestCase):
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
         factories.WorkspaceGroupAccessFactory.create(workspace=other_workspace)
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
@@ -2473,6 +3242,7 @@ class WorkspaceDetailTest(TestCase):
         """The workspace auth domain table exists."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertIsInstance(
@@ -2484,6 +3254,7 @@ class WorkspaceDetailTest(TestCase):
         """No groups are shown if the workspace has no auth domains."""
         workspace = factories.WorkspaceFactory.create()
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertEqual(
@@ -2496,6 +3267,7 @@ class WorkspaceDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         workspace.authorization_domains.add(group)
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("authorization_domain_table", response.context_data)
         table = response.context_data["authorization_domain_table"]
@@ -2510,6 +3282,7 @@ class WorkspaceDetailTest(TestCase):
         group_2 = factories.ManagedGroupFactory.create()
         workspace.authorization_domains.add(group_2)
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("authorization_domain_table", response.context_data)
         table = response.context_data["authorization_domain_table"]
@@ -2524,6 +3297,7 @@ class WorkspaceDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         other_workspace.authorization_domains.add(group)
         request = self.factory.get(self.get_url(workspace.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=workspace.pk)
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertEqual(
@@ -2540,6 +3314,18 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2549,15 +3335,50 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceCreate.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceCreateForm)
@@ -2579,6 +3400,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
@@ -2603,6 +3425,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
@@ -2629,6 +3452,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
@@ -2644,6 +3468,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"billing_project": obj.billing_project.pk, "name": obj.name},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -2672,6 +3497,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-name-2"},
@@ -2704,6 +3530,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project_2.pk, "name": workspace_name},
@@ -2723,6 +3550,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "invalid name"},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -2737,6 +3565,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.post(
             self.get_url(), {"billing_project": 1, "name": "test-name"}
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -2749,6 +3578,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_invalid_name_billing_project(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -2763,6 +3593,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -2791,6 +3622,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "workspace create test error"},
         )
         # Need a client to check messages.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
@@ -2824,6 +3656,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -2862,6 +3695,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -2892,6 +3726,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "authorization_domains": [1],
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -2918,6 +3753,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "authorization_domains": [auth_domain.pk, auth_domain.pk + 1],
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -2953,6 +3789,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         # Need a client to check messages.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -2997,6 +3834,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         # Need a client to check messages.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3027,6 +3865,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"billing_project": billing_project.pk, "name": "test-workspace"},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -3048,6 +3887,18 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -3079,9 +3930,16 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceImport.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        # List of available workspaces.
         workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
@@ -3092,11 +3950,36 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
             status=200,
-            json=[self.get_api_json_response("foo", "bar")],
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
         )
         request = self.factory.get(self.get_url())
-        response = self.get_view()(request)
-        self.assertEqual(response.status_code, 200)
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
@@ -3115,6 +3998,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_json_response(billing_project_name, workspace_name)],
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
@@ -3133,6 +4017,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         # Choices are populated correctly.
         workspace_choices = response.context_data["form"].fields["workspace"].choices
@@ -3162,6 +4047,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_json_response("bp-1", "ws-1")],
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         # Choices are populated correctly.
         workspace_choices = response.context_data["form"].fields["workspace"].choices
@@ -3189,6 +4075,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         # Choices are populated correctly.
         workspace_choices = response.context_data["form"].fields["workspace"].choices
@@ -3219,6 +4106,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 self.get_api_json_response("bp", "ws-imported", access="OWNER"),
             ],
         )
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
@@ -3252,6 +4140,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
@@ -3290,6 +4179,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3338,6 +4228,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3381,6 +4272,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3424,6 +4316,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project.name, workspace_name),
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3462,6 +4355,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project.name, workspace_name),
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3493,6 +4387,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Messages need the client.
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3530,6 +4425,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"workspace": "billing-project/workspace name"},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -3557,6 +4453,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_json_response("foo", "bar")],
         )
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -3602,6 +4499,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "an error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3635,6 +4533,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "an error"},
         )
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -3662,6 +4561,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "an error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -3688,6 +4588,13 @@ class WorkspaceListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -3697,24 +4604,47 @@ class WorkspaceListTest(TestCase):
         """Return the view being tested."""
         return views.WorkspaceList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_status_code_client(self):
         factories.WorkspaceFactory()
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -3723,6 +4653,7 @@ class WorkspaceListTest(TestCase):
     def test_view_with_one_object(self):
         factories.WorkspaceFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -3731,6 +4662,7 @@ class WorkspaceListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.WorkspaceFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -3746,6 +4678,18 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -3755,16 +4699,51 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceDelete.as_view()
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.WorkspaceFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
 
@@ -3778,6 +4757,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -3793,6 +4773,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -3813,6 +4794,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.name
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 1)
@@ -3834,6 +4816,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object.authorization_domains.add(auth_domain)
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -3855,6 +4838,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceGroupAccessFactory.create(workspace=object, group=group)
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -3876,6 +4860,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.name
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -3900,6 +4885,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "workspace delete test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -3915,6 +4901,13 @@ class GroupGroupMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -3926,17 +4919,37 @@ class GroupGroupMembershipDetailTest(TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipDetail.as_view()
 
-    def test_view_status_code_with_existing_object(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.GroupGroupMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.GroupGroupMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
@@ -3950,6 +4963,18 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -3959,15 +4984,50 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreate.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(
@@ -3986,6 +5046,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child_group.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4012,6 +5073,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child_group.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4038,6 +5100,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child_group.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4065,6 +5128,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child_group.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4091,6 +5155,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4114,6 +5179,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.ADMIN,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4143,6 +5209,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + group_2.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4170,6 +5237,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + child.get_email()
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4193,6 +5261,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4212,6 +5281,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4232,6 +5302,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": "foo",
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4243,6 +5314,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4262,6 +5334,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"child_group": child_group.pk, "role": "foo"},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4277,6 +5350,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"parent_group": parent_group.pk, "role": "foo"},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4293,6 +5367,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"parent_group": parent_group.pk, "child_group": child_group.pk},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4312,6 +5387,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4330,6 +5406,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.ADMIN,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4356,6 +5433,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.ADMIN,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4377,6 +5455,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -4404,6 +5483,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "group group membership create test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4453,6 +5533,13 @@ class GroupGroupMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -4464,13 +5551,34 @@ class GroupGroupMembershipListTest(TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
@@ -4479,6 +5587,7 @@ class GroupGroupMembershipListTest(TestCase):
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -4487,6 +5596,7 @@ class GroupGroupMembershipListTest(TestCase):
     def test_view_with_one_object(self):
         factories.GroupGroupMembershipFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -4495,6 +5605,7 @@ class GroupGroupMembershipListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.GroupGroupMembershipFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -4509,6 +5620,18 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -4520,16 +5643,51 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipDelete.as_view()
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.GroupGroupMembershipFactory.create()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.GroupGroupMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
 
@@ -4548,6 +5706,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
@@ -4568,6 +5727,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -4590,6 +5750,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
@@ -4613,6 +5774,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -4639,6 +5801,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "group group membership delete test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -4660,6 +5823,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             parent_group=parent_group, child_group=child_group
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(membership.pk), follow=True)
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
@@ -4681,6 +5845,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             parent_group=parent_group, child_group=child_group
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(membership.pk), follow=True)
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
@@ -4723,6 +5888,13 @@ class GroupAccountMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -4734,17 +5906,37 @@ class GroupAccountMembershipDetailTest(TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipDetail.as_view()
 
-    def test_view_status_code_with_existing_object(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.GroupAccountMembershipFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
@@ -4758,6 +5950,18 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -4769,15 +5973,50 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipCreate.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(
@@ -4792,6 +6031,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4814,6 +6054,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4836,6 +6077,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         account = factories.AccountFactory.create(email="email@example.com")
         url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4857,6 +6099,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         account = factories.AccountFactory.create()
         url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4885,6 +6128,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4910,6 +6154,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.ADMIN,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -4933,6 +6178,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + account.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4958,6 +6204,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             + account_2.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -4981,6 +6228,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5000,6 +6248,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5016,6 +6265,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"group": group.pk, "account": account.pk, "role": "foo"},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5027,6 +6277,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5046,6 +6297,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"account": account.pk, "role": models.GroupAccountMembership.MEMBER},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5061,6 +6313,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"group": group.pk, "role": models.GroupAccountMembership.MEMBER},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5076,6 +6329,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.post(
             self.get_url(), {"group": group.pk, "account": account.pk}
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5096,6 +6350,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupAccountMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -5119,6 +6374,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "group account membership create test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -5151,6 +6407,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "role": models.GroupGroupMembership.MEMBER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -5168,6 +6425,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=models.Account.INACTIVE_STATUS
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         form = response.context_data["form"]
@@ -5203,6 +6461,13 @@ class GroupAccountMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5214,13 +6479,34 @@ class GroupAccountMembershipListTest(TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
@@ -5229,6 +6515,7 @@ class GroupAccountMembershipListTest(TestCase):
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5237,6 +6524,7 @@ class GroupAccountMembershipListTest(TestCase):
     def test_view_with_one_object(self):
         factories.GroupAccountMembershipFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5245,6 +6533,7 @@ class GroupAccountMembershipListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.GroupAccountMembershipFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5255,6 +6544,13 @@ class GroupAccountMembershipActiveListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5266,13 +6562,34 @@ class GroupAccountMembershipActiveListTest(TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipActiveList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
@@ -5281,6 +6598,7 @@ class GroupAccountMembershipActiveListTest(TestCase):
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5289,6 +6607,7 @@ class GroupAccountMembershipActiveListTest(TestCase):
     def test_view_with_one_object(self):
         factories.GroupAccountMembershipFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5297,6 +6616,7 @@ class GroupAccountMembershipActiveListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.GroupAccountMembershipFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5308,6 +6628,7 @@ class GroupAccountMembershipActiveListTest(TestCase):
             2, account__status=models.Account.INACTIVE_STATUS
         )
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5318,6 +6639,13 @@ class GroupAccountMembershipInactiveListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5329,13 +6657,34 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipInactiveList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
@@ -5344,6 +6693,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5354,6 +6704,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         membership.account.status = models.Account.INACTIVE_STATUS
         membership.account.save()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5366,6 +6717,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         memberships[1].account.status = models.Account.INACTIVE_STATUS
         memberships[1].account.save()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5375,6 +6727,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         """Active accounts are not shown."""
         factories.GroupAccountMembershipFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -5390,6 +6743,18 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5401,16 +6766,51 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipDelete.as_view()
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.GroupAccountMembershipFactory.create()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.GroupAccountMembershipFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
 
@@ -5427,6 +6827,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.account.email
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
@@ -5445,6 +6846,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.account.email
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -5469,6 +6871,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.account.email
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
@@ -5492,6 +6895,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             + object.account.email
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -5507,6 +6911,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             group=group, account=account
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url(membership.pk), follow=True)
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
@@ -5528,6 +6933,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             group=group, account=account
         )
         # Need to use a client for messages.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(membership.pk), follow=True)
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
@@ -5560,6 +6966,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "group account membership delete test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
@@ -5602,6 +7009,13 @@ class WorkspaceGroupAccessDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5613,17 +7027,37 @@ class WorkspaceGroupAccessDetailTest(TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupAccessDetail.as_view()
 
-    def test_view_status_code_with_existing_object(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.WorkspaceGroupAccessFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.WorkspaceGroupAccessFactory.create()
         request = self.factory.get(self.get_url(obj.pk + 1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
 
@@ -5637,6 +7071,18 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5646,15 +7092,50 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupAccessCreate.as_view()
 
-    def test_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
 
@@ -5685,6 +7166,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -5726,6 +7208,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -5766,6 +7249,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -5806,6 +7290,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -5847,6 +7332,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -5877,6 +7363,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.READER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5904,6 +7391,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.OWNER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -5941,6 +7429,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -5980,6 +7469,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -6003,6 +7493,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.READER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6022,6 +7513,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.READER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6042,6 +7534,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": "foo",
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6053,6 +7546,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         request = self.factory.post(self.get_url(), {})
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6075,6 +7569,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "access": models.WorkspaceGroupAccess.READER,
             },
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6090,6 +7585,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"group": group.pk, "access": models.WorkspaceGroupAccess.READER},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6106,6 +7602,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {"group": group.pk, "workspace": workspace.pk},
         )
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6133,6 +7630,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "workspace group access create test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
@@ -6170,6 +7668,18 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -6181,19 +7691,53 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupAccessUpdate.as_view()
 
-    def test_status_code(self):
-        """Returns a successful status code for an existing object pk."""
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         obj = factories.WorkspaceGroupAccessFactory.create()
         request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
-    def test_view_status_code_with_invalid_pk(self):
-        """Raises a 404 error with an invalid object pk."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
-        request = self.factory.get(self.get_url(obj.pk + 1))
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=obj.pk + 1)
+            self.get_view()(request, pk=1)
 
     def test_can_update_role(self):
         """Can update the role through the view."""
@@ -6225,6 +7769,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -6265,6 +7810,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -6305,6 +7851,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -6323,6 +7870,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.pk),
             {"access": ""},
         )
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6341,6 +7889,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.pk),
             {"access": "foo"},
         )
+        request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -6379,6 +7928,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -6420,6 +7970,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -6452,6 +8003,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "workspace group access update test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.pk),
             {
@@ -6485,6 +8037,13 @@ class WorkspaceGroupAccessListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -6496,13 +8055,34 @@ class WorkspaceGroupAccessListTest(TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupAccessList.as_view()
 
-    def test_view_status_code(self):
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
@@ -6511,6 +8091,7 @@ class WorkspaceGroupAccessListTest(TestCase):
 
     def test_view_with_no_objects(self):
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -6519,6 +8100,7 @@ class WorkspaceGroupAccessListTest(TestCase):
     def test_view_with_one_object(self):
         factories.WorkspaceGroupAccessFactory()
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -6527,6 +8109,7 @@ class WorkspaceGroupAccessListTest(TestCase):
     def test_view_with_two_objects(self):
         factories.WorkspaceGroupAccessFactory.create_batch(2)
         request = self.factory.get(self.get_url())
+        request.user = self.user
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -6542,6 +8125,18 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The superclass uses the responses package to mock API responses.
         super().setUp()
         self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -6553,16 +8148,51 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupAccessDelete.as_view()
 
-    def test_view_status_code(self):
-        """Returns a successful status code for an existing object."""
-        object = factories.WorkspaceGroupAccessFactory.create()
-        request = self.factory.get(self.get_url(object.pk))
-        response = self.get_view()(request, pk=object.pk)
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(1))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(1))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, pk=1)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
         request = self.factory.get(self.get_url(1))
+        request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
 
@@ -6596,6 +8226,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
@@ -6631,6 +8262,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.pk), {"submit": ""}, follow=True
         )
@@ -6665,6 +8297,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
@@ -6700,6 +8333,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
@@ -6725,6 +8359,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             status=500,
             json={"message": "workspace group access delete test error"},
         )
+        self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)

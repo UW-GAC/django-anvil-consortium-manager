@@ -8,6 +8,26 @@ from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
+class AnVILProjectManagerAccess(models.Model):
+    """A meta model used to define app level permissions"""
+
+    EDIT_PERMISSION_CODENAME = "anvil_project_manager_edit"
+    VIEW_PERMISSION_CODENAME = "anvil_project_manager_view"
+
+    class Meta:
+        """Not a concrete model."""
+
+        managed = False
+
+        """Disable add, change, view and delete default model permissions"""
+        default_permissions = ()
+
+        permissions = [
+            ("anvil_project_manager_edit", "AnVIL Project Manager Edit Permission"),
+            ("anvil_project_manager_view", "AnVIL Project Manager View Permission"),
+        ]
+
+
 class BillingProject(TimeStampedModel):
     """A model to store information about AnVIL billing projects."""
 
