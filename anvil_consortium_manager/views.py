@@ -37,7 +37,7 @@ class SuccessMessageMixin:
         return super().delete(request, *args, **kwargs)
 
 
-class Index(TemplateView):
+class Index(auth.AnVILConsortiumManagerViewRequired, TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
 
