@@ -40,6 +40,18 @@ $ path("anvil/", include("anvil_consortium_manager.urls"))
 
 The app comes with default templates styled with bootstrap5. After installation, you can open the index (`anvil/`) to see what you can do with the app.
 
+### Permissions set up
+
+The app provides two different permissions settings.
+
+1. `anvil_project_manager_view` - users with this permission can view information, for example lists of users or workspace details.
+
+2. `anvil_project_manager_edit` - users with this permission can add, delete, or edit models, for example import an account from AnVIL or create a workspace.
+
+We suggest creating two groups, `viewers` (with `anvil_project_manager_view` permission) and `editors` (with both `anvil_project_manager_view` and `anvil_project_manager_edit` permission).
+Users can then be added to the appropriate group.
+Note that users with `edit` permission but not `view` permission will not be able to see lists or detail pages, so both permissions should be granted together.
+
 ## Developer set up
 
 ### Initial setup
