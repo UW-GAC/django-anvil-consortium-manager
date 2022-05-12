@@ -3,6 +3,7 @@ from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
+from simple_history.models import HistoricalRecords
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
@@ -33,6 +34,7 @@ class BillingProject(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     has_app_as_user = models.BooleanField()
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -76,6 +78,7 @@ class Account(TimeStampedModel, ActivatorModel):
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
     is_service_account = models.BooleanField()
+    history = HistoricalRecords()
 
     def __str__(self):
         return "{email}".format(email=self.email)
@@ -124,6 +127,7 @@ class ManagedGroup(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     is_managed_by_app = models.BooleanField(default=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return "{name}".format(name=self.name)
@@ -238,6 +242,7 @@ class Workspace(TimeStampedModel):
     authorization_domains = models.ManyToManyField(
         "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
     )
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -411,6 +416,7 @@ class WorkspaceAuthorizationDomain(TimeStampedModel):
 
     group = models.ForeignKey(ManagedGroup, on_delete=models.PROTECT)
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -444,6 +450,7 @@ class GroupGroupMembership(TimeStampedModel):
         "ManagedGroup", on_delete=models.PROTECT, related_name="parent_memberships"
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -511,6 +518,7 @@ class GroupAccountMembership(TimeStampedModel):
     account = models.ForeignKey("Account", on_delete=models.CASCADE)
     group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -561,6 +569,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
     group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
