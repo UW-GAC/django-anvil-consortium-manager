@@ -239,6 +239,8 @@ class Workspace(TimeStampedModel):
     # For internal consistency, call it "billing project" here.
     billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
+    # This makes it possible to easily select the authorization domains in the WorkspaceCreateForm.
+    # However, it does not create a record in django-simple-history for creating the many-to-many field.
     authorization_domains = models.ManyToManyField(
         "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
     )
@@ -403,7 +405,10 @@ class Workspace(TimeStampedModel):
                         group = ManagedGroup.objects.get(name=auth_domain)
                     except ManagedGroup.DoesNotExist:
                         group = ManagedGroup.anvil_import(auth_domain)
-                    workspace.authorization_domains.add(group)
+                    # Add it as an authorization domain for this workspace.
+                    WorkspaceAuthorizationDomain.objects.create(
+                        workspace=workspace, group=group
+                    )
         except Exception:
             # If it fails for any reason we haven't already handled, we don't want the transaction to happen.
             raise

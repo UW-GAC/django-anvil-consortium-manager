@@ -25,15 +25,19 @@ class SuccessMessageMixin:
     def success_msg(self):
         return NotImplemented
 
-    def form_valid(self, form):
+    def add_success_message(self):
         """Add a success message to the request."""
         messages.success(self.request, self.success_msg)
+
+    def form_valid(self, form):
+        """Automatically add a success message when the form is valid."""
+        self.add_success_message()
         return super().form_valid(form)
 
     def delete(self, request, *args, **kwargs):
-        """Add a success message to the request."""
+        """Add a success message to the request when deleting an object."""
         # Should this be self.request or request?
-        messages.success(self.request, self.success_msg)
+        self.add_success_message()
         return super().delete(request, *args, **kwargs)
 
 
@@ -397,8 +401,7 @@ class ManagedGroupCreate(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             return self.render_to_response(self.get_context_data(form=form))
-        # Save the group.
-        self.object.save()
+        # The object is saved by the super's form_valid method.
         return super().form_valid(form)
 
 
@@ -542,7 +545,15 @@ class WorkspaceCreate(
         # Need to use a transaction because the object needs to be saved to access the many-to-many field.
         try:
             with transaction.atomic():
-                self.object = form.save()
+                # Calling form.save() does not create the history for the authorization domain many to many field.
+                # Instead, save the workspace first and then create the auth domain relationships one by one.
+                self.object = form.save(commit=False)
+                self.object.save()
+                self.object.refresh_from_db()
+                for auth_domain in form.cleaned_data["authorization_domains"]:
+                    models.WorkspaceAuthorizationDomain.objects.create(
+                        workspace=self.object, group=auth_domain
+                    )
                 self.object.anvil_create()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
@@ -550,7 +561,9 @@ class WorkspaceCreate(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             return self.render_to_response(self.get_context_data(form=form))
-        return super().form_valid(form)
+        # Add the success message here because we're not calling a super method.
+        self.add_success_message()
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class WorkspaceImport(
@@ -684,8 +697,7 @@ class GroupGroupMembershipCreate(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             return self.render_to_response(self.get_context_data(form=form))
-        # Save the group.
-        self.object.save()
+        # The object is saved by the super's form_valid method.
         return super().form_valid(form)
 
 
@@ -777,8 +789,7 @@ class GroupAccountMembershipCreate(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             return self.render_to_response(self.get_context_data(form=form))
-        # Save the group.
-        self.object.save()
+        # The object is saved by the super's form_valid method.
         return super().form_valid(form)
 
 
@@ -892,8 +903,7 @@ class WorkspaceGroupAccessCreate(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             return self.render_to_response(self.get_context_data(form=form))
-        # Save the group.
-        self.object.save()
+        # The object is saved by the super's form_valid method.
         return super().form_valid(form)
 
 
@@ -918,8 +928,7 @@ class WorkspaceGroupAccessUpdate(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             return self.render_to_response(self.get_context_data(form=form))
-        # Save the group.
-        self.object.save()
+        # The object is saved by the super's form_valid method.
         return super().form_valid(form)
 
 
