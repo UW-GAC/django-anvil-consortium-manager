@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "fontawesomefree",  # icons
     "debug_toolbar",
     "django_extensions",  # useful extensions
+    "simple_history",  # model history tracking - required for viewing in admin.
     # This app.
     "anvil_consortium_manager",
 ]
@@ -94,6 +95,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # Middleware for automatically populating user in django-simple-history.
+    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 # STATIC
