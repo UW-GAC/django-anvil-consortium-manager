@@ -3,7 +3,7 @@ from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
-from simple_history.models import HistoricalRecords
+from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
@@ -520,7 +520,10 @@ class GroupAccountMembership(TimeStampedModel):
         (ADMIN, "Admin"),
     ]
 
-    account = models.ForeignKey("Account", on_delete=models.CASCADE)
+    # When querying with as_of, HistoricForeignKey follows relationships at the same timepoint.
+    # There is a (minor?) bug in the released v3.1.1 version:
+    # https://github.com/jazzband/django-simple-history/issues/983
+    account = HistoricForeignKey("Account", on_delete=models.CASCADE)
     group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
     history = HistoricalRecords()

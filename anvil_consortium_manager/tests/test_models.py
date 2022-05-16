@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
+from django.utils import timezone
 
 from ..models import (
     Account,
@@ -1265,6 +1266,29 @@ class GroupAccountMembershipTest(TestCase):
         self.assertEqual(
             GroupAccountMembership.history.earliest().account_id, account_pk
         )
+
+    def test_history_inactive_user(self):
+        """Account active/inactive status is correct at time of history check."""
+        # Create an account.
+        account = factories.AccountFactory.create()
+        # Create a group.
+        group = factories.ManagedGroupFactory.create()
+        # Add the account to the group.
+        obj = factories.GroupAccountMembershipFactory.create(
+            account=account, group=group, role=GroupAccountMembership.MEMBER
+        )
+        # Timestamp
+        time = timezone.now()
+        # Mark the account as inactive.
+        account.status = account.INACTIVE_STATUS
+        account.save()
+        # Check the history at timestamp to make sure the account shows active.
+        record = obj.history.as_of(time)
+        # import ipdb; ipdb.set_trace()
+        self.assertEqual(
+            account.history.as_of(time).status, record.account.ACTIVE_STATUS
+        )
+        self.assertEqual(record.account.status, record.account.ACTIVE_STATUS)
 
     def test_same_account_in_two_groups(self):
         """The same account can be in two groups."""
