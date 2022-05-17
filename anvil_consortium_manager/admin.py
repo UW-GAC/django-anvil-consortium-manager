@@ -1,12 +1,13 @@
 """Admin classes for the anvil_consortium_manager app."""
 
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 
 from . import models
 
 
 @admin.register(models.BillingProject)
-class BillingProjectAdmin(admin.ModelAdmin):
+class BillingProjectAdmin(SimpleHistoryAdmin):
     """Admin class for the BillingProject model."""
 
     list_display = ("name",)
@@ -14,7 +15,7 @@ class BillingProjectAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.Account)
-class AccountAdmin(admin.ModelAdmin):
+class AccountAdmin(SimpleHistoryAdmin):
     """Admin class for the Account model."""
 
     list_display = (
@@ -30,7 +31,7 @@ class AccountAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.ManagedGroup)
-class ManagedGroupAdmin(admin.ModelAdmin):
+class ManagedGroupAdmin(SimpleHistoryAdmin):
     """Admin class for the ManagedGroup model."""
 
     list_display = ("name", "is_managed_by_app")
@@ -39,7 +40,7 @@ class ManagedGroupAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.Workspace)
-class WorkspaceAdmin(admin.ModelAdmin):
+class WorkspaceAdmin(SimpleHistoryAdmin):
     """Admin class for the Workspace model."""
 
     list_display = (
@@ -51,7 +52,7 @@ class WorkspaceAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.WorkspaceAuthorizationDomain)
-class WorkspaceAuthorizationDomainAccess(admin.ModelAdmin):
+class WorkspaceAuthorizationDomainAccess(SimpleHistoryAdmin):
     """Admin class for the WorkspaceAuthorizationDomain model."""
 
     list_display = (
@@ -70,7 +71,7 @@ class WorkspaceAuthorizationDomainAccess(admin.ModelAdmin):
 
 
 @admin.register(models.GroupGroupMembership)
-class GroupGroupMembershipAdmin(admin.ModelAdmin):
+class GroupGroupMembershipAdmin(SimpleHistoryAdmin):
     """Admin class for the GroupGroupMembership model."""
 
     list_display = (
@@ -87,7 +88,7 @@ class GroupGroupMembershipAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.GroupAccountMembership)
-class GroupAccountMembershipAdmin(admin.ModelAdmin):
+class GroupAccountMembershipAdmin(SimpleHistoryAdmin):
     """Admin class for the GroupAccountMembership model."""
 
     list_display = (
@@ -111,7 +112,7 @@ class GroupAccountMembershipAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.WorkspaceGroupAccess)
-class WorkspaceGroupAccessAdmin(admin.ModelAdmin):
+class WorkspaceGroupAccessAdmin(SimpleHistoryAdmin):
     """Admin class for the WorkspaceGroupAccess model."""
 
     list_display = (

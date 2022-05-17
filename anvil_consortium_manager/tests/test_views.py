@@ -325,6 +325,9 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.BillingProject)
         self.assertEqual(new_object.name, billing_project_name)
         self.assertEqual(new_object.has_app_as_user, True)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -887,6 +890,9 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.Account.objects.latest("pk")
         self.assertIsInstance(new_object, models.Account)
         self.assertFalse(new_object.is_service_account)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -982,6 +988,9 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.Account.objects.latest("pk")
         self.assertIsInstance(new_object, models.Account)
         self.assertTrue(new_object.is_service_account)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_does_not_exist_on_anvil(self):
         """Does not create a new Account when it doesn't exist on AnVIL."""
@@ -1433,6 +1442,9 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -1666,6 +1678,9 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.refresh_from_db()
         self.assertEqual(object.status, object.INACTIVE_STATUS)
         self.assertTrue(object.deactivate_date)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "~")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -1727,6 +1742,8 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Memberships are *not* deleted from the app.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
         responses.assert_call_count(remove_from_group_url, 1)
+        # History for group-account membership is *not* added.
+        self.assertEqual(models.GroupAccountMembership.history.count(), 1)
 
     def test_removes_account_from_all_groups(self):
         """Deactivating an account from the app also removes it from all groups that it is in."""
@@ -1956,6 +1973,9 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
         self.assertEqual(object.status, object.ACTIVE_STATUS)
+        # History is added.
+        self.assertEqual(object.history.count(), 3)
+        self.assertEqual(object.history.latest().history_type, "~")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -2011,7 +2031,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
             reverse("anvil_consortium_manager:accounts:detail", args=[object.pk]),
         )
 
-    def test_removes_account_from_one_group(self):
+    def test_adds_account_from_one_group(self):
         """Reactivating an account from the app also adds it from one group on AnVIL."""
         object = factories.AccountFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(account=object)
@@ -2024,6 +2044,8 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.pk), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         responses.assert_call_count(add_to_group_url, 1)
+        # History is not added for the GroupAccountMembership.
+        self.assertEqual(models.GroupAccountMembership.history.count(), 1)
 
     def test_adds_account_to_all_groups(self):
         """Reactivating an account from the app also adds it from all groups that it is in."""
@@ -2517,6 +2539,9 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.name, "test-group")
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -2794,6 +2819,9 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
         responses.assert_call_count(url, 2)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -3043,6 +3071,9 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The group membership was deleted.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
         responses.assert_call_count(url, 2)
+        # History is added for the GroupGroupMembership.
+        self.assertEqual(models.GroupGroupMembership.history.count(), 2)
+        self.assertEqual(models.GroupGroupMembership.history.latest().history_type, "-")
 
     def test_can_delete_group_if_it_has_account_members(self):
         """Can delete a group that has other groups as members."""
@@ -3062,6 +3093,11 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The account still exists.
         models.Account.objects.get(pk=account.pk)
         responses.assert_call_count(url, 2)
+        # History is added for GroupAccountMemberships.
+        self.assertEqual(models.GroupAccountMembership.history.count(), 2)
+        self.assertEqual(
+            models.GroupAccountMembership.history.latest().history_type, "-"
+        )
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -3409,6 +3445,9 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -3671,6 +3710,14 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(new_object.authorization_domains.all()), 1)
         self.assertIn(auth_domain, new_object.authorization_domains.all())
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+        # History is added for the authorization domain.
+        self.assertEqual(models.WorkspaceAuthorizationDomain.history.count(), 1)
+        self.assertEqual(
+            models.WorkspaceAuthorizationDomain.history.latest().history_type, "+"
+        )
 
     def test_create_workspace_with_two_auth_domains(self):
         """Can create a workspace with two authorization domains."""
@@ -3913,13 +3960,17 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             + workspace_name
         )
 
-    def get_api_json_response(self, billing_project, workspace, access="OWNER"):
+    def get_api_json_response(
+        self, billing_project, workspace, authorization_domains=[], access="OWNER"
+    ):
         """Return a pared down version of the json response from the AnVIL API with only fields we need."""
         json_data = {
             "accessLevel": access,
             "owners": [],
             "workspace": {
-                "authorizationDomain": [],
+                "authorizationDomain": [
+                    {"membersGroupName": x} for x in authorization_domains
+                ],
                 "name": workspace,
                 "namespace": billing_project,
             },
@@ -4198,6 +4249,12 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace.name, workspace_name)
         responses.assert_call_count(billing_project_url, 1)
         responses.assert_call_count(url, 1)
+        # History is added for the workspace.
+        self.assertEqual(new_workspace.history.count(), 1)
+        self.assertEqual(new_workspace.history.latest().history_type, "+")
+        # History is added for the BillingProject.
+        self.assertEqual(new_billing_project.history.count(), 1)
+        self.assertEqual(new_billing_project.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
@@ -4291,6 +4348,12 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace.name, workspace_name)
         responses.assert_call_count(billing_project_url, 1)
         responses.assert_call_count(url, 1)
+        # History is added for the workspace.
+        self.assertEqual(new_workspace.history.count(), 1)
+        self.assertEqual(new_workspace.history.latest().history_type, "+")
+        # History is added for the BillingProject.
+        self.assertEqual(new_billing_project.history.count(), 1)
+        self.assertEqual(new_billing_project.history.latest().history_type, "+")
 
     def test_can_import_workspace_with_existing_billing_project(self):
         """Can import a workspace from AnVIL when the billing project exists in Django."""
@@ -4329,6 +4392,147 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, workspace_name)
         responses.assert_call_count(url, 1)
+        # History is added for the workspace.
+        self.assertEqual(new_workspace.history.count(), 1)
+        self.assertEqual(new_workspace.history.latest().history_type, "+")
+        # BillingProject is *not* updated.
+        self.assertEqual(billing_project.history.count(), 1)
+        self.assertEqual(billing_project.history.latest().history_type, "+")
+
+    def test_can_import_workspace_with_auth_domain_in_app(self):
+        """Can import a workspace with an auth domain that is already in the app."""
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        auth_domain = factories.ManagedGroupFactory.create(name="auth-domain")
+        # Available workspaces API call.
+        workspace_json = self.get_api_json_response(
+            billing_project.name,
+            workspace_name,
+            authorization_domains=[auth_domain.name],
+        )
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            # Assume that this is the only workspace we can see on AnVIL.
+            json=[workspace_json],
+        )
+        url = self.get_api_url(billing_project.name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=workspace_json,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        responses.assert_call_count(url, 1)
+        # History is added for the workspace.
+        self.assertEqual(new_workspace.history.count(), 1)
+        self.assertEqual(new_workspace.history.latest().history_type, "+")
+        # History is added for the authorization domain.
+        self.assertEqual(models.WorkspaceAuthorizationDomain.history.count(), 1)
+        self.assertEqual(
+            models.WorkspaceAuthorizationDomain.history.latest().history_type, "+"
+        )
+
+    def test_can_import_workspace_with_auth_domain_not_in_app(self):
+        """Can import a workspace with an auth domain that is not already in the app."""
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        auth_domain_name = "auth-group"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response(
+                    billing_project.name,
+                    workspace_name,
+                    authorization_domains=[auth_domain_name],
+                )
+            ],
+        )
+        url = self.get_api_url(billing_project.name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(
+                billing_project.name,
+                workspace_name,
+                authorization_domains=[auth_domain_name],
+            ),
+        )
+        # Add Response for the auth domain group.
+        group_url = self.entry_point + "/api/groups"
+        responses.add(
+            responses.GET,
+            group_url,
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json=[
+                {
+                    "groupEmail": auth_domain_name + "@firecloud.org",
+                    "groupName": auth_domain_name,
+                    "role": "Member",
+                }
+            ],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        responses.assert_call_count(url, 1)
+        # History is added for the workspace.
+        self.assertEqual(new_workspace.history.count(), 1)
+        self.assertEqual(new_workspace.history.latest().history_type, "+")
+        # An authorization domain group was created.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        group = models.ManagedGroup.objects.latest()
+        self.assertEqual(group.name, auth_domain_name)
+        # The workspace authorization domain relationship was created.
+        auth_domain = models.WorkspaceAuthorizationDomain.objects.latest("pk")
+        self.assertEqual(auth_domain.workspace, new_workspace)
+        self.assertEqual(auth_domain.group, group)
+        self.assertEqual(auth_domain.history.count(), 1)
+        self.assertEqual(auth_domain.history.latest().history_type, "+")
+        # History is added for the authorization domain.
+        self.assertEqual(models.WorkspaceAuthorizationDomain.history.count(), 1)
+        self.assertEqual(
+            models.WorkspaceAuthorizationDomain.history.latest().history_type, "+"
+        )
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -4762,6 +4966,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -4813,7 +5020,10 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             billing_project=billing_project, name="test-workspace"
         )
         auth_domain = factories.ManagedGroupFactory.create(name="test-group")
-        object.authorization_domains.add(auth_domain)
+        wad = models.WorkspaceAuthorizationDomain.objects.create(
+            workspace=object, group=auth_domain
+        )
+        # object.authorization_domains.add(auth_domain)
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
@@ -4825,6 +5035,12 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=auth_domain.pk)
         responses.assert_call_count(url, 1)
+        # History is added for workspace.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
+        # History is added for auth domain.
+        self.assertEqual(wad.history.count(), 2)
+        self.assertEqual(wad.history.latest().history_type, "-")
 
     def test_can_delete_workspace_that_has_been_shared_with_group(self):
         """A workspace can be deleted if it has been shared with a group, and the group is not deleted."""
@@ -4847,6 +5063,12 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=group.pk)
         responses.assert_call_count(url, 1)
+        # History is added for workspace.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
+        # History is added for WorkspaceGroupAccess.
+        self.assertEqual(models.WorkspaceGroupAccess.history.count(), 2)
+        self.assertEqual(models.WorkspaceGroupAccess.history.latest().history_type, "-")
 
     def test_success_url(self):
         """Redirects to the expected page."""
@@ -5060,6 +5282,9 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -5711,6 +5936,9 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -6045,6 +6273,9 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -6832,6 +7063,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -7180,6 +7414,9 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
         self.assertEqual(new_object.access, models.WorkspaceGroupAccess.READER)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -7779,6 +8016,9 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+        # History is added.
+        self.assertEqual(obj.history.count(), 2)
+        self.assertEqual(obj.history.latest().history_type, "~")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -8231,6 +8471,9 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
         responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
 
     def test_success_message(self):
         """Response includes a success message if successful."""

@@ -3,6 +3,7 @@ from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
+from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
@@ -33,6 +34,7 @@ class BillingProject(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     has_app_as_user = models.BooleanField()
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -76,6 +78,7 @@ class Account(TimeStampedModel, ActivatorModel):
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
     is_service_account = models.BooleanField()
+    history = HistoricalRecords()
 
     def __str__(self):
         return "{email}".format(email=self.email)
@@ -124,6 +127,7 @@ class ManagedGroup(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     is_managed_by_app = models.BooleanField(default=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return "{name}".format(name=self.name)
@@ -235,9 +239,12 @@ class Workspace(TimeStampedModel):
     # For internal consistency, call it "billing project" here.
     billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
     name = models.SlugField(max_length=64)
+    # This makes it possible to easily select the authorization domains in the WorkspaceCreateForm.
+    # However, it does not create a record in django-simple-history for creating the many-to-many field.
     authorization_domains = models.ManyToManyField(
         "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
     )
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -398,7 +405,10 @@ class Workspace(TimeStampedModel):
                         group = ManagedGroup.objects.get(name=auth_domain)
                     except ManagedGroup.DoesNotExist:
                         group = ManagedGroup.anvil_import(auth_domain)
-                    workspace.authorization_domains.add(group)
+                    # Add it as an authorization domain for this workspace.
+                    WorkspaceAuthorizationDomain.objects.create(
+                        workspace=workspace, group=group
+                    )
         except Exception:
             # If it fails for any reason we haven't already handled, we don't want the transaction to happen.
             raise
@@ -411,6 +421,7 @@ class WorkspaceAuthorizationDomain(TimeStampedModel):
 
     group = models.ForeignKey(ManagedGroup, on_delete=models.PROTECT)
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -444,6 +455,7 @@ class GroupGroupMembership(TimeStampedModel):
         "ManagedGroup", on_delete=models.PROTECT, related_name="parent_memberships"
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -508,9 +520,13 @@ class GroupAccountMembership(TimeStampedModel):
         (ADMIN, "Admin"),
     ]
 
-    account = models.ForeignKey("Account", on_delete=models.CASCADE)
+    # When querying with as_of, HistoricForeignKey follows relationships at the same timepoint.
+    # There is a (minor?) bug in the released v3.1.1 version:
+    # https://github.com/jazzband/django-simple-history/issues/983
+    account = HistoricForeignKey("Account", on_delete=models.CASCADE)
     group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -561,6 +577,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
     group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
+    history = HistoricalRecords()
 
     class Meta:
         constraints = [
