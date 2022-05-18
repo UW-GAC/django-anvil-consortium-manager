@@ -7,7 +7,7 @@ DATABASES = {
         "NAME": "anvil_consortium_manager",
         "USER": "django",
         "PASSWORD": "password",
-        "HOST": "localhost",
+        "HOST": "127.0.0.1",
         "PORT": "3306",
     }
 }
