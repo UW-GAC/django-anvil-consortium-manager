@@ -38,7 +38,6 @@ jobs:
           MYSQL_ROOT_PASSWORD: rootpw
           MYSQL_USER: django
           MYSQL_PASSWORD: password
-          MYSQL_DATABASE: test_anvil_consortium_manager
         ports:
           - 3306:3306
         options: --tmpfs /var/lib/mysql
