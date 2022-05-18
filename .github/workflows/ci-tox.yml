@@ -17,7 +17,7 @@ on:
 
 jobs:
   tests:
-    name: "Python ${{ matrix.python-version }} - ${{ matrix.backend }}"
+    name: "Python ${{ matrix.python-version }} - ${{ matrix.backend }} - ${{ matrix.database-version }}"
     runs-on: "ubuntu-latest"
 
     strategy:
@@ -26,10 +26,13 @@ jobs:
         backend:
         - mariadb
         - sqlite
-
+        include:
+          - database-version: "mariadb:10.5"
+          - database-version: "mariadb:10.3"
+            backend: mariadb
     services:
       database:
-        image: mariadb:10.5
+        image: ${{ database-version }}
         env:
           MYSQL_ROOT_PASSWORD: rootpw
         ports:
