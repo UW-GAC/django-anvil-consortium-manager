@@ -17,7 +17,7 @@ on:
 
 jobs:
   tests:
-    name: "Python ${{ matrix.python-version }} - ${{ matrix.backend }} - ${{ matrix.database-version }}"
+    name: "Python ${{ matrix.python-version }} - ${{ matrix.backend }} - ${{ matrix.mariadb-version }}"
     runs-on: "ubuntu-latest"
 
     strategy:
@@ -27,15 +27,18 @@ jobs:
         - mariadb
         - sqlite
         include:
-          - database-version: "mariadb:10.5"
-          - database-version: "mariadb:10.3"
+          - mariadb-version: "10.5"
+          - mariadb-version: "10.3"
             backend: mariadb
 
     services:
       database:
-        image: ${{ matrix.database-version }}
+        image: mariadb:${{ matrix.mariadb-version }}
         env:
           MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_USER: django
+          MYSQL_PASSWORD: password
+          MYSQL_DATABASE: test_anvil_consortium_manager
         ports:
           - 3306:3306
         options: --tmpfs /var/lib/mysql
@@ -52,7 +55,8 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade coverage[toml] virtualenv tox tox-gh-actions
 
-      - name: "Run tox targets for ${{ matrix.python-version }} and ${{ matrix.backend }}"
+      - name: "Run tox targets for ${{ matrix.python-version }} and ${{ matrix.backend }}-${{mariadb-version}}"
+
         run: "python -m tox"
         env:
             BACKEND: ${{ matrix.backend }}
