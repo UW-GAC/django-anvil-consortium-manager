@@ -17,7 +17,7 @@ on:
 
 jobs:
   tests:
-    name: "Python ${{ matrix.python-version }}"
+    name: "Python ${{ matrix.python-version }} - ${{ matrix.backend }}"
     runs-on: "ubuntu-latest"
 
     strategy:
