@@ -55,7 +55,7 @@ jobs:
           python -m pip install --upgrade coverage[toml] virtualenv tox tox-gh-actions
 
       - name: setup mariadb user
-        script:
+        run:
           echo "GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@127.0.0.1;" | mysql -u root -p rootpw -h "${MYSQL_HOST}"
 
       - name: "Run tox targets for ${{ matrix.python-version }} and ${{ matrix.backend }}-${{ matrix.mariadb-version }}"
