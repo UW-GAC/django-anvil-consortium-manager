@@ -36,10 +36,9 @@ jobs:
         image: mariadb:${{ matrix.mariadb-version }}
         env:
           MYSQL_ROOT_PASSWORD: rootpw
-          MYSQL_USER: django
-          MYSQL_PASSWORD: password
+          MYSQL_DATABASE: test
         ports:
-          - 3306
+          - 3306:3306
         options: --tmpfs /var/lib/mysql
 
     steps:
@@ -54,12 +53,13 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade coverage[toml] virtualenv tox tox-gh-actions
 
-      - name: setup mariadb user
-        run:
-          echo "GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@127.0.0.1;" | mysql -u root -p rootpw
-
       - name: "Run tox targets for ${{ matrix.python-version }} and ${{ matrix.backend }}-${{ matrix.mariadb-version }}"
 
         run: "python -m tox"
         env:
+            DBNAME: test
+            DBUSER: root
+            DBPASSWORD: rootpw
+            DBHOST: 127.0.0.1
+            DBPORT: $
             BACKEND: ${{ matrix.backend }}
