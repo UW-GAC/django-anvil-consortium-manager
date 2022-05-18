@@ -30,9 +30,10 @@ jobs:
           - database-version: "mariadb:10.5"
           - database-version: "mariadb:10.3"
             backend: mariadb
+
     services:
       database:
-        image: ${{ database-version }}
+        image: ${{ matrix.database-version }}
         env:
           MYSQL_ROOT_PASSWORD: rootpw
         ports:
