@@ -121,6 +121,13 @@ sudo -u _mysql /opt/local/lib/mariadb-10.5/bin/mysqld_safe --datadir='/opt/local
 
 # Run secure installation script.
 sudo /opt/local/lib/mariadb-10.5/bin/mysql_secure_installation
+
+# Shut down and restart
+sudo mysqladmin shutdown
+
+# Properly starting and stopping the server
+sudo port load mariadb-10.5-server
+sudo port unload mariadb-10.5-server
 ```
 
 One time database setup. Start mariadb with `sudo mysql -u root -p`, then run these commands:
@@ -130,13 +137,16 @@ CREATE DATABASE anvil_consortium_manager CHARACTER SET utf8;
 
 # Create the django user.
 CREATE USER django@localhost IDENTIFIED BY 'password';
+CREATE USER django@127.0.0.1 IDENTIFIED BY 'password';
 
 # Grant permissions to the django database for the django user.
 GRANT ALL PRIVILEGES ON anvil_consortium_manager.* TO django@localhost;
+GRANT ALL PRIVILEGES ON anvil_consortium_manager.* TO django@127.0.0.1;
 
 # Same for test database.
 CREATE DATABASE test_anvil_consortium_manager CHARACTER SET utf8;
 GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@localhost;
+GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@127.0.0.1;
 
 # Apply changes.
 > FLUSH PRIVILEGES;
