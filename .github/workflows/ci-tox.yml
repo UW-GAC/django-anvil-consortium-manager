@@ -23,12 +23,13 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"]
-        database:
-          - mariadb:10.5
+        backend:
+        - mariadb
+        - sqlite
 
     services:
       database:
-        image: ${{ matrix.database }}
+        image: mariadb:10.5
         env:
           MYSQL_ROOT_PASSWORD: rootpw
         ports:
@@ -49,3 +50,5 @@ jobs:
 
       - name: "Run tox targets for ${{ matrix.python-version }}"
         run: "python -m tox"
+        env:
+            BACKEND: ${{ matrix.backend }}
