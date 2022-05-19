@@ -46,11 +46,11 @@ jobs:
     name: "Python ${{ matrix.python-version }} - mariadb - ${{ matrix.mariadb-version }}"
     runs-on: "ubuntu-latest"
     env:
-        DBNAME: test
-        DBUSER: root
-        DBPASSWORD: rootpw
-        DBHOST: 127.0.0.1
-        BACKEND: mariadb
+      DBNAME: test
+      DBUSER: root
+      DBPASSWORD: rootpw
+      DBHOST: 127.0.0.1
+      BACKEND: mariadb
 
     strategy:
       matrix:
