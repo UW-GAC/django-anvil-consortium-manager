@@ -13,3 +13,6 @@ DATABASES = {
         "PORT": os.environ.get("DBPORT", "3306"),
     }
 }
+
+for key in DATABASES["default"].keys():
+    print("{} - {}".format(key, DATABASES["default"][key]))

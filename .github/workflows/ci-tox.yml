@@ -39,18 +39,17 @@ jobs:
       - name: "Run tox targets for ${{ matrix.python-version }} and ${{ matrix.backend }}-${{ matrix.mariadb-version }}"
 
         run: "python -m tox"
-        env:
-            DBNAME: test
-            DBUSER: root
-            DBPASSWORD: rootpw
-            DBHOST: 127.0.0.1
-            DBPORT: $
-            BACKEND: sqlite
-
 
   test-mariadb:
     name: "Python ${{ matrix.python-version }} - mariadb - ${{ matrix.mariadb-version }}"
     runs-on: "ubuntu-latest"
+    env:
+        DBNAME: test
+        DBUSER: root
+        DBPASSWORD: rootpw
+        DBHOST: 127.0.0.1
+        DBPORT: $
+        BACKEND: mariadb
 
     strategy:
       matrix:
@@ -80,12 +79,4 @@ jobs:
           python -m pip install --upgrade coverage[toml] virtualenv tox tox-gh-actions
 
       - name: "Run tox targets for ${{ matrix.python-version }} and ${{ matrix.backend }}-${{ matrix.mariadb-version }}"
-
         run: "python -m tox"
-        env:
-            DBNAME: test
-            DBUSER: root
-            DBPASSWORD: rootpw
-            DBHOST: 127.0.0.1
-            DBPORT: $
-            BACKEND: mariadb
