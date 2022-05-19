@@ -16,6 +16,25 @@ on:
 
 
 jobs:
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Code Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+          cache: pip
+          cache-dependency-path: |
+            requirements/base.txt
+            requirements/dev.txt
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v2.0.3
+
   test-sqlite:
     name: "Python ${{ matrix.python-version }} - sqlite"
     runs-on: "ubuntu-latest"
