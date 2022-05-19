@@ -92,7 +92,7 @@ Running tox will test the code using both the sqlite and the MariaDB backend.
 
 To run the tests, check your test coverage, and generate an HTML coverage report:
 
-    $ coverage run ./manage.py test --settings=anvil_consortium_manager.tests.settings.test
+    $ coverage run ./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.test
     $ coverage html
     $ open htmlcov/index.html
 
