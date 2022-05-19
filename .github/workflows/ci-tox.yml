@@ -48,7 +48,6 @@ jobs:
         DBUSER: root
         DBPASSWORD: rootpw
         DBHOST: 127.0.0.1
-        DBPORT: $
         BACKEND: mariadb
 
     strategy:
