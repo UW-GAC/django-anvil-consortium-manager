@@ -19,6 +19,8 @@ jobs:
   test-sqlite:
     name: "Python ${{ matrix.python-version }} - sqlite"
     runs-on: "ubuntu-latest"
+    env:
+        BACKEND: sqlite
 
     strategy:
       matrix:
