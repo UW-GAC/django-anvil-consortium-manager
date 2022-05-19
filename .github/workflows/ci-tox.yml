@@ -16,20 +16,46 @@ on:
 
 
 jobs:
-  tests:
-    name: "Python ${{ matrix.python-version }} - ${{ matrix.backend }} - ${{ matrix.mariadb-version }}"
+  test-sqlite:
+    name: "Python ${{ matrix.python-version }} - sqlite"
     runs-on: "ubuntu-latest"
 
     strategy:
       matrix:
         python-version: ["3.8"]
-        backend:
-        - mariadb
-        - sqlite
-        include:
-          - mariadb-version: "10.5"
-          - mariadb-version: "10.3"
-            backend: mariadb
+
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m site
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade coverage[toml] virtualenv tox tox-gh-actions
+
+      - name: "Run tox targets for ${{ matrix.python-version }} and ${{ matrix.backend }}-${{ matrix.mariadb-version }}"
+
+        run: "python -m tox"
+        env:
+            DBNAME: test
+            DBUSER: root
+            DBPASSWORD: rootpw
+            DBHOST: 127.0.0.1
+            DBPORT: $
+            BACKEND: sqlite
+
+
+  test-mariadb:
+    name: "Python ${{ matrix.python-version }} - mariadb - ${{ matrix.mariadb-version }}"
+    runs-on: "ubuntu-latest"
+
+    strategy:
+      matrix:
+        python-version: ["3.8"]
+        mariadb-version: ["10.5"]
 
     services:
       database:
@@ -62,4 +88,4 @@ jobs:
             DBPASSWORD: rootpw
             DBHOST: 127.0.0.1
             DBPORT: $
-            BACKEND: ${{ matrix.backend }}
+            BACKEND: mariadb
