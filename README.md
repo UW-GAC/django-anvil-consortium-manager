@@ -157,9 +157,9 @@ GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@127.0.0.1;
 To run tests using MariaDB as the backend, run:
 
 ```
-./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.local_mariadb
+./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.test_mariadb
 ```
 
 ```
-pytest --ds=anvil_consortium_manager.tests.settings.local_mariadb
+pytest --ds=anvil_consortium_manager.tests.settings.test_mariadb
 ```
