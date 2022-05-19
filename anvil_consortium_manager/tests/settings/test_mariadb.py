@@ -1,13 +1,15 @@
+import os
+
 from .test import *  # noqa
 
 # Change database settings
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "anvil_consortium_manager",
-        "USER": "root",
-        "PASSWORD": "rootpw",
-        "HOST": "127.0.0.1",
-        "PORT": "3306",
+        "NAME": os.getenv("DBNAME", default="anvil_consortium_manager"),
+        "USER": os.getenv("DBUSER", default="django"),
+        "PASSWORD": os.getenv("DBPASSWORD", default="password"),
+        "HOST": os.getenv("DBHOST", default="127.0.0.1"),
+        "PORT": os.getenv("DBPORT", default="3306"),
     }
 }

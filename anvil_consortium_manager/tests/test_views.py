@@ -611,6 +611,12 @@ class BillingProjectListTest(TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
+    def test_template_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -1403,6 +1409,13 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.get_view()(request, pk=obj.pk)
         self.assertEqual(response.status_code, 200)
 
+    def test_template_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.pk))
+        self.assertEqual(response.status_code, 200)
+
     def test_access_with_view_permission(self):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(
@@ -1623,6 +1636,13 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_template_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -1915,6 +1935,15 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url(obj.pk))
         request.user = self.user
         response = self.get_view()(request, pk=obj.pk)
+        self.assertEqual(response.status_code, 200)
+
+    def test_template_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.AccountFactory.create()
+        obj.status = obj.INACTIVE_STATUS
+        obj.save()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.pk))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):

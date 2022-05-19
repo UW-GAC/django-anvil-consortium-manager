@@ -74,10 +74,6 @@ Run the example site:
 
 ### Tests
 
-#### Using the test script
-
-    $ ./runtests.py
-
 #### Using pytest
 
     $ pytest
@@ -86,11 +82,17 @@ Run the example site:
 
     $ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
 
+#### Using tox
+
+Running tox will test the code using both the sqlite and the MariaDB backend.
+
+    $ tox
+
 #### Test coverage
 
 To run the tests, check your test coverage, and generate an HTML coverage report:
 
-    $ coverage run ./runtests.py
+    $ coverage run ./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.test
     $ coverage html
     $ open htmlcov/index.html
 
@@ -121,6 +123,13 @@ sudo -u _mysql /opt/local/lib/mariadb-10.5/bin/mysqld_safe --datadir='/opt/local
 
 # Run secure installation script.
 sudo /opt/local/lib/mariadb-10.5/bin/mysql_secure_installation
+
+# Shut down and restart
+sudo mysqladmin shutdown
+
+# Properly starting and stopping the server
+sudo port load mariadb-10.5-server
+sudo port unload mariadb-10.5-server
 ```
 
 One time database setup. Start mariadb with `sudo mysql -u root -p`, then run these commands:
@@ -130,13 +139,16 @@ CREATE DATABASE anvil_consortium_manager CHARACTER SET utf8;
 
 # Create the django user.
 CREATE USER django@localhost IDENTIFIED BY 'password';
+CREATE USER django@127.0.0.1 IDENTIFIED BY 'password';
 
 # Grant permissions to the django database for the django user.
 GRANT ALL PRIVILEGES ON anvil_consortium_manager.* TO django@localhost;
+GRANT ALL PRIVILEGES ON anvil_consortium_manager.* TO django@127.0.0.1;
 
 # Same for test database.
 CREATE DATABASE test_anvil_consortium_manager CHARACTER SET utf8;
 GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@localhost;
+GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@127.0.0.1;
 
 # Apply changes.
 > FLUSH PRIVILEGES;
@@ -145,9 +157,9 @@ GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@localhost;
 To run tests using MariaDB as the backend, run:
 
 ```
-(export DJANGO_SETTINGS_FILE=anvil_consortium_manager.tests.settings.local_mariadb ; ./runtests.py)
+./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.test_mariadb
 ```
 
 ```
-pytest --ds=anvil_consortium_manager.tests.settings.local_mariadb
+pytest --ds=anvil_consortium_manager.tests.settings.test_mariadb
 ```
