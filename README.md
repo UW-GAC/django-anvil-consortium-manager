@@ -74,10 +74,6 @@ Run the example site:
 
 ### Tests
 
-#### Using the test script
-
-    $ ./runtests.py
-
 #### Using pytest
 
     $ pytest
@@ -86,11 +82,17 @@ Run the example site:
 
     $ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
 
+#### Using tox
+
+Running tox will test the code using both the sqlite and the MariaDB backend.
+
+    $ tox
+
 #### Test coverage
 
 To run the tests, check your test coverage, and generate an HTML coverage report:
 
-    $ coverage run ./runtests.py
+    $ coverage run ./manage.py test --settings=anvil_consortium_manager.tests.settings.test
     $ coverage html
     $ open htmlcov/index.html
 
@@ -155,7 +157,7 @@ GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@127.0.0.1;
 To run tests using MariaDB as the backend, run:
 
 ```
-(export DJANGO_SETTINGS_FILE=anvil_consortium_manager.tests.settings.local_mariadb ; ./runtests.py)
+./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.local_mariadb
 ```
 
 ```
