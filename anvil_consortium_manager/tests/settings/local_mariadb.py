@@ -6,11 +6,11 @@ from .test import *  # noqa
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("DBNAME", "anvil_consortium_manager"),
-        "USER": os.environ.get("DBUSER", "django"),
-        "PASSWORD": os.environ.get("DBPASSWORD", "password"),
-        "HOST": os.environ.get("DBHOST", "127.0.0.1"),
-        "PORT": os.environ.get("DBPORT", "3306"),
+        "NAME": os.getenv("DBNAME", default="anvil_consortium_manager"),
+        "USER": os.getenv("DBUSER", default="django"),
+        "PASSWORD": os.getenv("DBPASSWORD", default="password"),
+        "HOST": os.getenv("DBHOST", default="127.0.0.1"),
+        "PORT": os.getenv("DBPORT", default="3306"),
     }
 }
 
