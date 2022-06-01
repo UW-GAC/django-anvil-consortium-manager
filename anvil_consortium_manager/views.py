@@ -1,5 +1,3 @@
-import math
-
 import networkx as nx
 import plotly
 import plotly.graph_objects as go
@@ -461,34 +459,26 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
             marker=dict(color=[], size=point_size, line_width=2),
         )
 
-        arrows = []
+        edge_x = []
+        edge_y = []
         for edge in G.edges():
+            # Ignore direction.
             x1, y1 = pos[edge[1]]
             x0, y0 = pos[edge[0]]
-            # Adjust for size of point.
-            line_length = math.sqrt(math.pow(x1 - x0, 2) + math.pow(y1 - y0, 2))
-            x_offset = (point_size / 2) * (x1 - x0) / line_length
-            y_offset = (point_size / 2) * (y1 - y0) / line_length
-            arrows.append(
-                go.layout.Annotation(
-                    dict(
-                        x=x1 - x_offset,
-                        y=y1 - y_offset,
-                        xref="x",
-                        yref="y",
-                        text="",
-                        showarrow=True,
-                        axref="x",
-                        ayref="y",
-                        ax=x0 + x_offset,
-                        ay=y0 + y_offset,
-                        arrowhead=1,
-                        arrowwidth=2,
-                        arrowcolor="#888",
-                        opacity=0.5,
-                    )
-                )
-            )
+            edge_x.append(x0)
+            edge_x.append(x1)
+            edge_x.append(None)
+            edge_y.append(y0)
+            edge_y.append(y1)
+            edge_y.append(None)
+
+        edge_trace = go.Scatter(
+            x=edge_x,
+            y=edge_y,
+            line=dict(width=0.5, color="#888"),
+            hoverinfo="none",
+            mode="lines",
+        )
 
         layout = go.Layout(
             showlegend=False,
@@ -498,12 +488,11 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
 
         # Create the figure.
         fig = go.Figure(layout=layout)
+        fig.add_trace(edge_trace)
         fig.add_trace(node_trace)
-        fig.update_layout({"annotations": arrows})
-        graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
 
-        # Add labels?
-        fig.update_traces(textposition="top center")
+        # fig.update_layout({"annotations": arrows})
+        graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
 
         context["graph"] = graph_div
         return context
