@@ -1,3 +1,5 @@
+import math
+
 import networkx as nx
 import plotly
 import plotly.graph_objects as go
@@ -438,6 +440,8 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
         # This gets the arrows in the right direction.
         G = nx.DiGraph.reverse(G)
 
+        point_size = 10
+
         node_x = []
         node_y = []
         for node in G.nodes():
@@ -450,24 +454,30 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
             y=node_y,
             mode="markers",
             hoverinfo="text",
-            marker=dict(color=[], size=50, line_width=2),
+            marker=dict(color=[], size=point_size, line_width=2),
         )
 
         arrows = []
         for edge in G.edges():
+            x1, y1 = pos[edge[1]]
+            x0, y0 = pos[edge[0]]
+            # Adjust for size of point.
+            line_length = math.sqrt(math.pow(x1 - x0, 2) + math.pow(y1 - y0, 2))
+            x_offset = (point_size / 2) * (x1 - x0) / line_length
+            y_offset = (point_size / 2) * (y1 - y0) / line_length
             arrows.append(
                 go.layout.Annotation(
                     dict(
-                        x=pos[edge[1]][0],
-                        y=pos[edge[1]][1],
+                        x=x1 - x_offset,
+                        y=y1 - y_offset,
                         xref="x",
                         yref="y",
                         text="",
                         showarrow=True,
                         axref="x",
                         ayref="y",
-                        ax=pos[edge[0]][0],
-                        ay=pos[edge[0]][1],
+                        ax=x0 + x_offset,
+                        ay=y0 + y_offset,
                         arrowhead=1,
                         arrowwidth=2,
                         arrowcolor="#888",
