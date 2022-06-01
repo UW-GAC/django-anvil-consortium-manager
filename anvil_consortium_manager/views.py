@@ -491,6 +491,29 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
         fig.add_trace(edge_trace)
         fig.add_trace(node_trace)
 
+        # Add info about membership direction.
+        # make space for explanation / annotation
+        fig.update_layout(
+            margin=dict(l=20, r=60, t=20, b=60)
+        )  # ,paper_bgcolor="LightSteelBlue")
+        # Add info about descending
+        fig.add_annotation(
+            dict(
+                font=dict(color="black", size=15),
+                x=1.02,
+                ax=0,
+                y=0.75,
+                ay=100,
+                showarrow=True,
+                arrowhead=1,
+                text="Membership",
+                textangle=90,
+                xanchor="left",
+                xref="paper",
+                yref="paper",
+            )
+        )
+
         # fig.update_layout({"annotations": arrows})
         graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
 
