@@ -475,19 +475,20 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
                 )
             )
 
-        fig = go.Figure(
-            data=[node_trace],
-            layout=go.Layout(
-                titlefont_size=16,
-                showlegend=False,
-                hovermode="closest",
-                margin=dict(b=20, l=5, r=5, t=40),
-                annotations=arrows,
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            ),
+        layout = go.Layout(
+            showlegend=False,
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         )
+
+        # Create the figure.
+        fig = go.Figure(layout=layout)
+        fig.add_trace(node_trace)
+        fig.update_layout({"annotations": arrows})
         graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
+
+        # Add labels?
+        fig.update_traces(textposition="top center")
 
         context["graph"] = graph_div
         return context
