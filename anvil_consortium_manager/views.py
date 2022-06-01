@@ -454,8 +454,8 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
         node_trace = go.Scatter(
             x=node_x,
             y=node_y,
-            mode="markers+text",
-            # hoverinfo="text",
+            mode="markers",
+            hoverinfo="text",
             text=node_labels,
             textposition="top center",
             marker=dict(color=[], size=point_size, line_width=2),
