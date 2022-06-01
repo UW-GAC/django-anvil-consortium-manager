@@ -444,16 +444,20 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
 
         node_x = []
         node_y = []
+        node_labels = []
         for node in G.nodes():
             x, y = pos[node]
             node_x.append(x)
             node_y.append(y)
+            node_labels.append(node)
 
         node_trace = go.Scatter(
             x=node_x,
             y=node_y,
-            mode="markers",
-            hoverinfo="text",
+            mode="markers+text",
+            # hoverinfo="text",
+            text=node_labels,
+            textposition="top center",
             marker=dict(color=[], size=point_size, line_width=2),
         )
 
@@ -481,6 +485,7 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
                         arrowhead=1,
                         arrowwidth=2,
                         arrowcolor="#888",
+                        opacity=0.5,
                     )
                 )
             )
