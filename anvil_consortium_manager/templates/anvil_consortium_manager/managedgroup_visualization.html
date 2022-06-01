@@ -1,0 +1,14 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% block title %}Managed Group Visualization{% endblock %}
+
+{% block content %}
+
+<h2>Managed Group Visualization</h2>
+
+<div style="width:1000;height:100">
+{{ graph|safe }}
+</div>
+
+{% endblock content %}

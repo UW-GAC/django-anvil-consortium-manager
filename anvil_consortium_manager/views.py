@@ -1,3 +1,6 @@
+import networkx as nx
+import plotly
+import plotly.graph_objects as go
 from django.contrib import messages
 from django.db import transaction
 from django.forms.forms import Form
@@ -408,6 +411,86 @@ class ManagedGroupCreate(
 class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
+
+
+class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, TemplateView):
+    """Display a visualization of all group relationships."""
+
+    template_name = "anvil_consortium_manager/managedgroup_visualization.html"
+
+    def get_context_data(self, **kwargs):
+        """Add a graph to the context data."""
+        context = super().get_context_data(**kwargs)
+
+        # Get a list of nodes and edges.
+        nodes = models.ManagedGroup.objects.values_list("name", flat=True)
+        edges = models.GroupGroupMembership.objects.values_list(
+            "parent_group__name", "child_group__name"
+        )
+
+        # Build the graph with nx.
+        G = nx.DiGraph()
+        G.add_nodes_from(nodes)
+        G.add_edges_from(edges)
+
+        # Layout from networkx/graphviz.
+        pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
+        # This gets the arrows in the right direction.
+        G = nx.DiGraph.reverse(G)
+
+        node_x = []
+        node_y = []
+        for node in G.nodes():
+            x, y = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+
+        node_trace = go.Scatter(
+            x=node_x,
+            y=node_y,
+            mode="markers",
+            hoverinfo="text",
+            marker=dict(color=[], size=50, line_width=2),
+        )
+
+        arrows = []
+        for edge in G.edges():
+            arrows.append(
+                go.layout.Annotation(
+                    dict(
+                        x=pos[edge[1]][0],
+                        y=pos[edge[1]][1],
+                        xref="x",
+                        yref="y",
+                        text="",
+                        showarrow=True,
+                        axref="x",
+                        ayref="y",
+                        ax=pos[edge[0]][0],
+                        ay=pos[edge[0]][1],
+                        arrowhead=1,
+                        arrowwidth=2,
+                        arrowcolor="#888",
+                    )
+                )
+            )
+
+        fig = go.Figure(
+            data=[node_trace],
+            layout=go.Layout(
+                titlefont_size=16,
+                showlegend=False,
+                hovermode="closest",
+                margin=dict(b=20, l=5, r=5, t=40),
+                annotations=arrows,
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            ),
+        )
+        graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
+
+        context["graph"] = graph_div
+        return context
 
 
 class ManagedGroupDelete(

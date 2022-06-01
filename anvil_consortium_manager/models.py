@@ -1,3 +1,4 @@
+import networkx as nx
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
@@ -178,6 +179,33 @@ class ManagedGroup(TimeStampedModel):
     def get_anvil_url(self):
         """Return the URL of the group on AnVIL."""
         return "https://app.terra.bio/#groups/{group}".format(group=self.name)
+
+    def _add_parents_to_graph(self, G):
+        for parent in self.get_direct_parents().distinct():
+            # Add a node and an edge.
+            G.add_node(parent.name)
+            G.add_edge(parent.name, self.name)
+            # Get the parents of that parent.
+            parent._add_parents_to_graph(G)
+
+    def _add_children_to_graph(self, G):
+        for child in self.get_direct_children().distinct():
+            # Add a node and an edge.
+            G.add_node(child.name)
+            G.add_edge(self.name, child.name)
+            # Get the parents of that parent.
+            child._add_children_to_graph(G)
+
+    def get_graph(self, G=None):
+        """Return a networkx graph of the group structure for this group."""
+        # Set up the graph.
+        if G is None:
+            G = nx.DiGraph()
+            G.add_node(self.name)
+        # Needs to be split up into subfunctions or else you get infinite recursion.
+        self._add_parents_to_graph(G)
+        self._add_children_to_graph(G)
+        return G
 
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""

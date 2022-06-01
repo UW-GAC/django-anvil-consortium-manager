@@ -36,6 +36,11 @@ managed_group_patterns = (
         path("<int:pk>", views.ManagedGroupDetail.as_view(), name="detail"),
         path("new/", views.ManagedGroupCreate.as_view(), name="new"),
         path("", views.ManagedGroupList.as_view(), name="list"),
+        path(
+            "visualization/",
+            views.ManagedGroupVisualization.as_view(),
+            name="visualization",
+        ),
         path("<int:pk>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
     ],
     "managed_groups",
