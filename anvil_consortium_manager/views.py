@@ -515,9 +515,9 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
         )
 
         # fig.update_layout({"annotations": arrows})
-        graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
+        # graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
 
-        context["graph"] = graph_div
+        context["graph"] = plotly.io.to_html(fig, full_html=False)
         return context
 
 
