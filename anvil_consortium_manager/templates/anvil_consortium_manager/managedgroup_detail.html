@@ -29,6 +29,24 @@
 </div>
 
 
+<div class="my-3">
+  <div class="accordion" id="accordionGraph">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingGraphOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGraphOne" aria-expanded="false" aria-controls="collapseGraphOne">
+          <span class="fa-solid fa-diagram-project mx-2"></span>
+          View visualization
+        </button>
+      </h2>
+      <div id="collapseGraphOne" class="accordion-collapse collapse" aria-labelledby="headingGraphOne" data-bs-parent="#accordionGraph">
+        <div class="accordion-body">
+          {{ graph|safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div class="my-3">
   <div class="accordion" id="accordionWorkspaces">
