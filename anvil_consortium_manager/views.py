@@ -65,11 +65,25 @@ class ManagedGroupGraphMixin:
         node_x = []
         node_y = []
         node_labels = []
+        node_annotations = []
         for node in self.graph.nodes():
             x, y = self.graph_layout[node]
             node_x.append(x)
             node_y.append(y)
             node_labels.append(node)
+            node_annotations.append(
+                go.layout.Annotation(
+                    dict(
+                        x=x,
+                        y=y,
+                        xref="x",
+                        yref="y",
+                        text=node,
+                        arrowhead=0,
+                        arrowcolor="#ccc",
+                    )
+                )
+            )
 
         node_trace = go.Scatter(
             x=node_x,
@@ -112,6 +126,8 @@ class ManagedGroupGraphMixin:
         fig = go.Figure(layout=layout)
         fig.add_trace(edge_trace)
         fig.add_trace(node_trace)
+        # Add group names as annotations.
+        fig.update_layout({"annotations": node_annotations})
 
         # Add info about membership direction.
         # make space for explanation / annotation
