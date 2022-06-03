@@ -489,6 +489,8 @@ class ManagedGroupDetail(
             x=self.graph_layout[self.object.name][0],
             y=self.graph_layout[self.object.name][1],
             text=self.object.name,
+            bgcolor="lightskyblue",
+            bordercolor="black",
             showarrow=True,
             arrowhead=1,
         )
