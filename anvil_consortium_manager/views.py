@@ -435,8 +435,6 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
 
         # Layout from networkx/graphviz.
         pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
-        # This gets the arrows in the right direction.
-        # G = nx.DiGraph.reverse(G)  # not needed if we don't show arrows.
 
         point_size = 10
 
@@ -493,9 +491,7 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
 
         # Add info about membership direction.
         # make space for explanation / annotation
-        fig.update_layout(
-            margin=dict(l=20, r=60, t=20, b=60)
-        )  # ,paper_bgcolor="LightSteelBlue")
+        fig.update_layout(margin=dict(l=20, r=60, t=20, b=60))
         # Add info about descending
         fig.add_annotation(
             dict(
@@ -513,9 +509,6 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
                 yref="paper",
             )
         )
-
-        # fig.update_layout({"annotations": arrows})
-        # graph_div = plotly.offline.plot(fig, auto_open=False, output_type="div")
 
         context["graph"] = plotly.io.to_html(fig, full_html=False)
         return context
