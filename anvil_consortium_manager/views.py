@@ -432,6 +432,8 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
         G = nx.DiGraph()
         G.add_nodes_from(nodes)
         G.add_edges_from(edges)
+        # Store longest path to determine how large to make the graph.
+        longest_path_length = len(nx.dag_longest_path(G))
 
         # Layout from networkx/graphviz.
         pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
@@ -510,7 +512,10 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
             )
         )
 
-        context["graph"] = plotly.io.to_html(fig, full_html=False)
+        height = 200 * longest_path_length
+        context["graph"] = plotly.io.to_html(
+            fig, default_height=height, full_html=False
+        )
         return context
 
 
