@@ -436,7 +436,7 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
         # Layout from networkx/graphviz.
         pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
         # This gets the arrows in the right direction.
-        G = nx.DiGraph.reverse(G)
+        # G = nx.DiGraph.reverse(G)  # not needed if we don't show arrows.
 
         point_size = 10
 
