@@ -44,6 +44,108 @@ class SuccessMessageMixin:
         return super().delete(request, *args, **kwargs)
 
 
+class ManagedGroupGraphMixin:
+    """Mixin to add a plotly graph of group structure to context data."""
+
+    def get_graph(self):
+        """Return a graph of the group structure."""
+        raise NotImplementedError("You must override get_graph.")
+
+    def layout_graph(self):
+        """Lay out the nodes in the graph."""
+        # Layout from networkx/graphviz.
+        self.graph_layout = nx.drawing.nx_agraph.graphviz_layout(self.graph, prog="dot")
+
+    def plot_graph(self):
+        """Create a plotly figure of the graph."""
+        longest_path_length = len(nx.dag_longest_path(self.graph))
+
+        point_size = 10
+
+        node_x = []
+        node_y = []
+        node_labels = []
+        for node in self.graph.nodes():
+            x, y = self.graph_layout[node]
+            node_x.append(x)
+            node_y.append(y)
+            node_labels.append(node)
+
+        node_trace = go.Scatter(
+            x=node_x,
+            y=node_y,
+            mode="markers",
+            hoverinfo="text",
+            text=node_labels,
+            textposition="top center",
+            marker=dict(color=[], size=point_size, line_width=2),
+        )
+
+        edge_x = []
+        edge_y = []
+        for edge in self.graph.edges():
+            # Ignore direction.
+            x1, y1 = self.graph_layout[edge[1]]
+            x0, y0 = self.graph_layout[edge[0]]
+            edge_x.append(x0)
+            edge_x.append(x1)
+            edge_x.append(None)
+            edge_y.append(y0)
+            edge_y.append(y1)
+            edge_y.append(None)
+
+        edge_trace = go.Scatter(
+            x=edge_x,
+            y=edge_y,
+            line=dict(width=0.5, color="#888"),
+            hoverinfo="none",
+            mode="lines",
+        )
+
+        layout = go.Layout(
+            showlegend=False,
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        )
+
+        # Create the figure.
+        fig = go.Figure(layout=layout)
+        fig.add_trace(edge_trace)
+        fig.add_trace(node_trace)
+
+        # Add info about membership direction.
+        # make space for explanation / annotation
+        fig.update_layout(margin=dict(l=20, r=60, t=20, b=60))
+        # Add info about descending
+        fig.add_annotation(
+            dict(
+                font=dict(color="black", size=15),
+                x=1.02,
+                ax=0,
+                y=0.75,
+                ay=100,
+                showarrow=True,
+                arrowhead=1,
+                text="Membership",
+                textangle=90,
+                xanchor="left",
+                xref="paper",
+                yref="paper",
+            )
+        )
+        # Set the height based on the longest path length.
+        fig.update_layout(height=200 * longest_path_length)
+        return fig
+
+    def get_context_data(self, **kwargs):
+        """Add the graph to the context data."""
+        context = super().get_context_data()
+        self.get_graph()
+        self.layout_graph()
+        context["graph"] = plotly.io.to_html(self.plot_graph(), full_html=False)
+        return context
+
+
 class Index(auth.AnVILConsortiumManagerViewRequired, TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
@@ -355,95 +457,25 @@ class AccountDelete(
             return super().delete(request, *args, **kwargs)
 
 
-class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
+class ManagedGroupDetail(
+    auth.AnVILConsortiumManagerViewRequired, ManagedGroupGraphMixin, DetailView
+):
     model = models.ManagedGroup
 
-    def get_plotly_graph(self):
-        """Return a plotly figure showing graph structure that can be displayed."""
+    def get_graph(self):
+        self.graph = self.object.get_graph()
 
-        # Get the networkx graph.
-        G = self.object.get_graph()
-        # Store longest path to determine how large to make the graph.
-        longest_path_length = len(nx.dag_longest_path(G))
-
-        # Layout from networkx/graphviz.
-        pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
-
-        point_size = 10
-
-        node_x = []
-        node_y = []
-        node_labels = []
-        for node in G.nodes():
-            x, y = pos[node]
-            node_x.append(x)
-            node_y.append(y)
-            node_labels.append(node)
-
-        node_trace = go.Scatter(
-            x=node_x,
-            y=node_y,
-            mode="markers",
-            hoverinfo="text",
-            text=node_labels,
-            textposition="top center",
-            marker=dict(color=[], size=point_size, line_width=2),
-        )
-
-        edge_x = []
-        edge_y = []
-        for edge in G.edges():
-            # Ignore direction.
-            x1, y1 = pos[edge[1]]
-            x0, y0 = pos[edge[0]]
-            edge_x.append(x0)
-            edge_x.append(x1)
-            edge_x.append(None)
-            edge_y.append(y0)
-            edge_y.append(y1)
-            edge_y.append(None)
-
-        edge_trace = go.Scatter(
-            x=edge_x,
-            y=edge_y,
-            line=dict(width=0.5, color="#888"),
-            hoverinfo="none",
-            mode="lines",
-        )
-
-        layout = go.Layout(
-            showlegend=False,
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        )
-
-        # Create the figure.
-        fig = go.Figure(layout=layout)
-        fig.add_trace(edge_trace)
-        fig.add_trace(node_trace)
-
-        # Add info about membership direction.
-        # make space for explanation / annotation
-        fig.update_layout(margin=dict(l=20, r=60, t=20, b=60))
-        # Add info about descending
+    def plot_graph(self):
+        fig = super().plot_graph()
+        # Replot this group in a different color.
+        # Annotate this group.
         fig.add_annotation(
-            dict(
-                font=dict(color="black", size=15),
-                x=1.02,
-                ax=0,
-                y=0.75,
-                ay=100,
-                showarrow=True,
-                arrowhead=1,
-                text="Membership",
-                textangle=90,
-                xanchor="left",
-                xref="paper",
-                yref="paper",
-            )
+            x=self.graph_layout[self.object.name][0],
+            y=self.graph_layout[self.object.name][1],
+            text=self.object.name,
+            showarrow=True,
+            arrowhead=1,
         )
-        # Set the height based on the longest path length.
-        fig.update_layout(height=200 * longest_path_length)
         return fig
 
     def get_context_data(self, **kwargs):
@@ -469,8 +501,6 @@ class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
         context["group_table"] = tables.GroupGroupMembershipTable(
             self.object.child_memberships.all(), exclude="parent_group"
         )
-        fig = self.get_plotly_graph()
-        context["graph"] = plotly.io.to_html(fig, full_html=False)
         return context
 
 
@@ -503,15 +533,14 @@ class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView)
     table_class = tables.ManagedGroupTable
 
 
-class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, TemplateView):
+class ManagedGroupVisualization(
+    auth.AnVILConsortiumManagerViewRequired, ManagedGroupGraphMixin, TemplateView
+):
     """Display a visualization of all group relationships."""
 
     template_name = "anvil_consortium_manager/managedgroup_visualization.html"
 
-    def get_context_data(self, **kwargs):
-        """Add a graph to the context data."""
-        context = super().get_context_data(**kwargs)
-
+    def get_graph(self):
         # Get a list of nodes and edges.
         nodes = models.ManagedGroup.objects.values_list("name", flat=True)
         edges = models.GroupGroupMembership.objects.values_list(
@@ -522,91 +551,7 @@ class ManagedGroupVisualization(auth.AnVILConsortiumManagerViewRequired, Templat
         G = nx.DiGraph()
         G.add_nodes_from(nodes)
         G.add_edges_from(edges)
-        # Store longest path to determine how large to make the graph.
-        longest_path_length = len(nx.dag_longest_path(G))
-
-        # Layout from networkx/graphviz.
-        pos = nx.drawing.nx_agraph.graphviz_layout(G, prog="dot")
-
-        point_size = 10
-
-        node_x = []
-        node_y = []
-        node_labels = []
-        for node in G.nodes():
-            x, y = pos[node]
-            node_x.append(x)
-            node_y.append(y)
-            node_labels.append(node)
-
-        node_trace = go.Scatter(
-            x=node_x,
-            y=node_y,
-            mode="markers",
-            hoverinfo="text",
-            text=node_labels,
-            textposition="top center",
-            marker=dict(color=[], size=point_size, line_width=2),
-        )
-
-        edge_x = []
-        edge_y = []
-        for edge in G.edges():
-            # Ignore direction.
-            x1, y1 = pos[edge[1]]
-            x0, y0 = pos[edge[0]]
-            edge_x.append(x0)
-            edge_x.append(x1)
-            edge_x.append(None)
-            edge_y.append(y0)
-            edge_y.append(y1)
-            edge_y.append(None)
-
-        edge_trace = go.Scatter(
-            x=edge_x,
-            y=edge_y,
-            line=dict(width=0.5, color="#888"),
-            hoverinfo="none",
-            mode="lines",
-        )
-
-        layout = go.Layout(
-            showlegend=False,
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        )
-
-        # Create the figure.
-        fig = go.Figure(layout=layout)
-        fig.add_trace(edge_trace)
-        fig.add_trace(node_trace)
-
-        # Add info about membership direction.
-        # make space for explanation / annotation
-        fig.update_layout(margin=dict(l=20, r=60, t=20, b=60))
-        # Add info about descending
-        fig.add_annotation(
-            dict(
-                font=dict(color="black", size=15),
-                x=1.02,
-                ax=0,
-                y=0.75,
-                ay=100,
-                showarrow=True,
-                arrowhead=1,
-                text="Membership",
-                textangle=90,
-                xanchor="left",
-                xref="paper",
-                yref="paper",
-            )
-        )
-
-        height = 200 * longest_path_length
-        context["graph"] = plotly.io.to_html(
-            fig, default_height=height, full_html=False
-        )
-        return context
+        self.graph = G
 
 
 class ManagedGroupDelete(
