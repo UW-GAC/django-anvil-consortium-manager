@@ -56,21 +56,28 @@ Note that users with `edit` permission but not `view` permission will not be abl
 
 ### Initial setup
 
-Clone the repository:
+1. Clone the repository:
 
     $ git clone git@github.com:UW-GAC/django-anvil-consortium-manager.git
 
-Set up the environment:
+2. Set up the environment:
 
     $ python -m venv venv
     $ source venv/bin/activate
     $ pip install -r requirements/dev.txt
 
-Run the example site:
+3. Ask Ben to make a service account and register it with AnVIL.
+
+4. Set an environment variable to specify the path to the service account credentials file:
+
+    $ export ANVIL_API_SERVICE_ACCOUNT_FILE="/<path>/<to>/<service_account>.json"
+
+5. Run the example site:
 
     $ python manage.py migrate
     $ python manage.py createsuperuser
     $ python manage.py runserver
+
 
 ### Tests
 
