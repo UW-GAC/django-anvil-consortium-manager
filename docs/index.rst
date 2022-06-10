@@ -10,6 +10,7 @@ Welcome to django-anvil-consortium-manager's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
 
 
 Indices and tables
