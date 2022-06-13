@@ -8,12 +8,17 @@ Welcome to django-anvil-consortium-manager's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
    quickstart
    models
    anvil_api
-   api/modules
+
+.. toctree::
+   :maxdepth: 6
+   :caption: Reference
+
+   api/anvil_consortium_manager
 
 Indices and tables
 ==================
