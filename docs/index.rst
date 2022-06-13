@@ -11,7 +11,7 @@ Welcome to django-anvil-consortium-manager's documentation!
    :caption: Contents:
 
    quickstart
-
+   models
 
 Indices and tables
 ==================
