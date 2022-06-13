@@ -29,6 +29,7 @@ Add ``anvil_consortium_manager`` to your ``INSTALLED_APPS``.
         "anvil_consortium_manager",
     ]
 
+If you would like to use the views and templates provided by the app, then you should also install `django-tables2` in your project.
 
 Set the ANVIL_API_SERVICE_ACCOUNT_FILE setting to the path to the service account credentials file.
 
