@@ -1,2 +1,3 @@
 Django
 Sphinx
+sphinx-rtd-theme
