@@ -14,42 +14,54 @@ License: MIT
 
 1. Clone the repository:
 
-    $ git clone git@github.com:UW-GAC/django-anvil-consortium-manager.git
+```
+$ git clone git@github.com:UW-GAC/django-anvil-consortium-manager.git
+```
 
 2. Set up the environment:
 
-    $ python -m venv venv
-    $ source venv/bin/activate
-    $ pip install -r requirements/dev.txt
+```
+$ python -m venv venv
+$ source venv/bin/activate
+$ pip install -r requirements/dev.txt
+```
 
 3. Ask Ben to make a service account and register it with AnVIL.
 
 4. Set an environment variable to specify the path to the service account credentials file:
 
-    $ export ANVIL_API_SERVICE_ACCOUNT_FILE="/<path>/<to>/<service_account>.json"
+```
+$ export ANVIL_API_SERVICE_ACCOUNT_FILE="/<path>/<to>/<service_account>.json"
+```
 
 5. Run the example site:
 
-    $ python manage.py migrate
-    $ python manage.py createsuperuser
-    $ python manage.py runserver
-
+```
+$ python manage.py migrate
+$ python manage.py createsuperuser
+$ python manage.py runserver
+```
 
 ### Tests
 
 #### Using pytest
 
-    $ pytest
-
+```
+$ pytest
+```
 #### Using manage.py
 
-    $ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
+```
+$ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
+```
 
 #### Using tox
 
 Running tox will test the code using both the sqlite and the MariaDB backend.
 
-    $ tox
+```
+$ tox
+```
 
 #### Test coverage
 
