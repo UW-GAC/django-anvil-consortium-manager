@@ -37,6 +37,7 @@ Set the ANVIL_API_SERVICE_ACCOUNT_FILE setting to the path to the service accoun
 
     ANVIL_API_SERVICE_ACCOUNT_FILE="/<path>/<to>/<service_account>.json"
 
+Alternatively, if you would like to browse the app without making any API, just set this to a random string (e.g., `"foo"`).
 
 Permissions
 ~~~~~~~~~~~
