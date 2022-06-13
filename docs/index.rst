@@ -13,6 +13,7 @@ Welcome to django-anvil-consortium-manager's documentation!
    quickstart
    models
    anvil_api
+   api/modules
 
 Indices and tables
 ==================

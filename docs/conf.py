@@ -10,10 +10,16 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+import django
 
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../anvil_consortium_manager"))
+os.environ["DATABASE_URL"] = "sqlite:///readthedocs.db"
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "example_site.settings")
+django.setup()
 
 # -- Project information -----------------------------------------------------
 
@@ -31,6 +37,8 @@ release = '0.1.dev1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
 ]
 

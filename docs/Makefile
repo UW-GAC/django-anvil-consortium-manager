@@ -13,12 +13,15 @@ APP = ../anvil_consortium_manager
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help livehtml Makefile
+.PHONY: help livehtml apidocs Makefile
 
 # Build, watch and serve docs with live reload
 livehtml:
 	sphinx-autobuild -b html --open-browser --port 7000 --watch $(APP) -c . $(SOURCEDIR) $(BUILDDIR)/html
 
+# Outputs rst files from django application code
+apidocs:
+	sphinx-apidoc -o $(SOURCEDIR)/api $(APP) $(APP)/tests $(APP)/migrations
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
