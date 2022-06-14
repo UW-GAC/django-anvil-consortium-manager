@@ -1,3 +1,5 @@
+-r ../requirements/dev.txt
+
 Django
 Sphinx
 sphinx-rtd-theme
