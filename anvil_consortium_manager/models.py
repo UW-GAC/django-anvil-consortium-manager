@@ -77,17 +77,33 @@ class Account(TimeStampedModel, ActivatorModel):
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
+    """Email associated with this account on AnVIL."""
+
     is_service_account = models.BooleanField()
+    """Indicator of whether this account is a service account or a user account."""
+
     history = HistoricalRecords()
+    """Django simple history record for this model."""
 
     def __str__(self):
+        """String method.
+
+        Returns:
+            A string representing the object.
+        """
         return "{email}".format(email=self.email)
 
     def save(self, *args, **kwargs):
+        """Save method to set the email address to lowercase before saving."""
         self.email = self.email.lower()
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
+        """Get the absolute url for this object.
+
+        Returns:
+            A string with the url to the detail page for this object.
+        """
         return reverse(
             "anvil_consortium_manager:accounts:detail", kwargs={"pk": self.pk}
         )
@@ -108,7 +124,11 @@ class Account(TimeStampedModel, ActivatorModel):
             membership.anvil_create()
 
     def anvil_exists(self):
-        """Check if this account exists on AnVIL."""
+        """Check if this account exists on AnVIL.
+
+        Returns:
+            Boolean indicator of whether ``email`` is associated with an account on AnVIL.
+        """
         try:
             AnVILAPIClient().get_proxy_group(self.email)
         except AnVILAPIError404:
@@ -116,7 +136,7 @@ class Account(TimeStampedModel, ActivatorModel):
         return True
 
     def anvil_remove_from_groups(self):
-        """From user from all groups on AnVIL."""
+        """Remove this account from all groups on AnVIL."""
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
