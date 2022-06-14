@@ -12,6 +12,7 @@ Welcome to django-anvil-consortium-manager's documentation!
 
    quickstart
    models
+   views
    anvil_api
 
 .. toctree::
