@@ -6,7 +6,7 @@ In addition to their representation in the Django database, most models have met
 Accounts
 ----------------------------------------------------------------------
 
-The :class:`~anvil_consortium_manager.models.Account` model represents an account on AnVIL, either for a user or for a service account. The difference is specified by a flag (``is_service_account``).
+The :class:`~anvil_consortium_manager.models.Account` model represents an account on AnVIL, either for a user or for a service account. The difference is specified by a flag (:attr:`~anvil_consortium_manager.models.Account.is_service_account`).
 
 Creating an account in the shell
 ~~~~~~
