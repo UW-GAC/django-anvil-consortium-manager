@@ -8,85 +8,60 @@ A Django app to manage Consortium AnVIL groups, workspaces, and access.
 License: MIT
 
 
-## Using the app
-
-The package is not on PyPI and there are no GitHub releases yet.
-
-Build the app (from this repository):
-
-    $ python -m build
-
-### In your django project:
-
-1. Install the app into your Django project (note: not on PyPI so this doesn't work):
-
-```
-$ pip install /<path>/<to>/<repo>/dist/django-anvil-consortium-manager-0.1.dev1.tar.gz
-```
-
-2. In the settings file, add `django_tables2` and `anvil_consortium_manager` to `INSTALLED_PACKAGES`.
-
-3. In the settings file, set the variable `ANVIL_API_SERVICE_ACCOUNT_FILE` to the path the json file with Google service account credentials. You will need to have already created this service account and registered it with Terra/AnVIL. If you want to browse the app without making any API calls, just set this to a random string (e.g., `"foo"`).
-
-```
-$ ANVIL_API_SERVICE_ACCOUNT_FILE = "/<path>/<to>/<service_account>.json"
-```
-
-4. Include the app URLs to the project urls.
-
-```
-$ path("anvil/", include("anvil_consortium_manager.urls"))
-```
-
-The app comes with default templates styled with bootstrap5. After installation, you can open the index (`anvil/`) to see what you can do with the app.
-
-### Permissions set up
-
-The app provides two different permissions settings.
-
-1. `anvil_project_manager_view` - users with this permission can view information, for example lists of users or workspace details.
-
-2. `anvil_project_manager_edit` - users with this permission can add, delete, or edit models, for example import an account from AnVIL or create a workspace.
-
-We suggest creating two groups, `viewers` (with `anvil_project_manager_view` permission) and `editors` (with both `anvil_project_manager_view` and `anvil_project_manager_edit` permission).
-Users can then be added to the appropriate group.
-Note that users with `edit` permission but not `view` permission will not be able to see lists or detail pages, so both permissions should be granted together.
-
 ## Developer set up
 
 ### Initial setup
 
-Clone the repository:
+1. Clone the repository:
 
-    $ git clone git@github.com:UW-GAC/django-anvil-consortium-manager.git
+```
+$ git clone git@github.com:UW-GAC/django-anvil-consortium-manager.git
+```
 
-Set up the environment:
+2. Set up the environment:
 
-    $ python -m venv venv
-    $ source venv/bin/activate
-    $ pip install -r requirements/dev.txt
+```
+$ python -m venv venv
+$ source venv/bin/activate
+$ pip install -r requirements/dev.txt
+```
 
-Run the example site:
+3. Ask Ben to make a service account and register it with AnVIL.
 
-    $ python manage.py migrate
-    $ python manage.py createsuperuser
-    $ python manage.py runserver
+4. Set an environment variable to specify the path to the service account credentials file:
+
+```
+$ export ANVIL_API_SERVICE_ACCOUNT_FILE="/<path>/<to>/<service_account>.json"
+```
+
+5. Run the example site:
+
+```
+$ python manage.py migrate
+$ python manage.py createsuperuser
+$ python manage.py runserver
+```
 
 ### Tests
 
 #### Using pytest
 
-    $ pytest
-
+```
+$ pytest
+```
 #### Using manage.py
 
-    $ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
+```
+$ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
+```
 
 #### Using tox
 
 Running tox will test the code using both the sqlite and the MariaDB backend.
 
-    $ tox
+```
+$ tox
+```
 
 #### Test coverage
 
