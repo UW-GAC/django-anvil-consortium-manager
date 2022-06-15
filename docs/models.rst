@@ -6,7 +6,7 @@ In addition to their representation in the Django database, most models have met
 Accounts
 ----------------------------------------------------------------------
 
-This model represents an account on AnVIL, either for a user or for a service account. The difference is specified by a flag (``is_service_account``).
+The :class:`~anvil_consortium_manager.models.Account` model represents an account on AnVIL, either for a user or for a service account. The difference is specified by a flag (``is_service_account``).
 
 Creating an account in the shell
 ~~~~~~
@@ -20,7 +20,7 @@ Creating an account in the shell
 
 Check if the account exists on AnVIL by making an API call. This prints out info about the request and response, plus
 the boolean indicator of whether the account exists.
-In this case, there is no account with this email on AnVIL and we probably don't want to save this Account to the database.
+In this case, there is no account with this email on AnVIL and we probably don't want to save this :class:`~anvil_consortium_manager.models.Account` instance to the database.
 
 .. code-block:: pycon
 
@@ -47,3 +47,10 @@ For a valid account, the ``anvil_exists`` method returns ``True``:
       status_code: 200
       text: "PROXY_255425713192032057941@firecloud.org"
     [True]
+
+
+By default, the :attr:`~anvil_consortium_manager.models.Account.status` field of an :class:`~anvil_consortium_manager.models.Account` is set to active (:attr:`anvil_consortium_manager.models.Account.STATUS_ACTIVE`).
+The status can be changed to inactive (:attr:`anvil_consortium_manager.models.Account.STATUS_INACTIVE`) by calling the :meth:`~anvil_consortium_manager.models.Account.deactivate` method on the :class:`~anvil_consortium_manager.models.Account` instance.
+This will keep the record of all :class:`~anvil_consortium_manager.models.ManagedGroup`\ s that an :class:`~anvil_consortium_manager.models.Account` is part of, but will remove that Account from all groups
+on AnVIL.
+If the :class:`~anvil_consortium_manager.models.Account` is reactivated (using the :meth:`~anvil_consortium_manager.models.Account.reactivate` method :class:`~anvil_consortium_manager.models.Account`), it will be added back to all previous Managed Groups on AnVIL.
