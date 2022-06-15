@@ -131,10 +131,13 @@ class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableVie
 class AccountDetail(
     auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
 ):
+    """Render detail page for an :class:`anvil_consortium_manager.models.Account`."""
+
     model = models.Account
     context_table_name = "group_table"
 
     def get_table(self):
+        """Get a table of :class:`anvil_consortium_manager.models.ManagedGroup` s that this account is a member of."""
         return tables.GroupAccountMembershipTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
@@ -152,10 +155,21 @@ class AccountDetail(
 class AccountImport(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
 ):
+    """Import an account from AnVIL.
+
+    This view checks that the specified email has a valid AnVIL account. If so, it saves a record in the database.
+    """
+
     model = models.Account
+
     message_account_does_not_exist = "This account does not exist on AnVIL."
+    """A string that can be displayed if the account does not exist on AnVIL."""
+
     form_class = forms.AccountImportForm
+    """A string that can be displayed if the account does not exist on AnVIL."""
+
     success_msg = "Successfully imported Account from AnVIL."
+    """A string that can be displayed if the account was imported successfully."""
 
     def form_valid(self, form):
         """If the form is valid, check that the account exists on AnVIL and save the associated model."""
