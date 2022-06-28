@@ -1606,6 +1606,20 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.anvil_create_or_update()
         responses.assert_call_count(self.url, 1)
 
+    def test_create_can_compute(self):
+        """The correct API call is made when creating the object if can_compute is True."""
+        self.object.can_compute = True
+        self.object.save()
+        self.data_add[0]["canCompute"] = True
+        responses.add(
+            responses.PATCH,
+            self.url,
+            status=200,
+            match=[responses.matchers.json_params_matcher(self.data_add)],
+        )
+        self.object.anvil_create_or_update()
+        responses.assert_call_count(self.url, 1)
+
     def test_anvil_create_or_update_unsuccessful_400(self):
         responses.add(
             responses.PATCH,
@@ -1655,6 +1669,20 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
     def test_anvil_delete_successful(self):
+        responses.add(
+            responses.PATCH,
+            self.url,
+            status=200,
+            match=[responses.matchers.json_params_matcher(self.data_delete)],
+        )
+        self.object.anvil_delete()
+        responses.assert_call_count(self.url, 1)
+
+    def test_delete_can_compute(self):
+        """The correct API call is made when deleting an object if can_compute is True."""
+        self.object.can_compute = True
+        self.object.save()
+        self.data_delete[0]["canCompute"] = True
         responses.add(
             responses.PATCH,
             self.url,

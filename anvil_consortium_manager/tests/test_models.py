@@ -1345,7 +1345,10 @@ class WorkspaceGroupAccessTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         instance = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.READER,
+            can_compute=False,
         )
         self.assertIsInstance(instance, WorkspaceGroupAccess)
 
@@ -1371,6 +1374,43 @@ class WorkspaceGroupAccessTest(TestCase):
         """The get_absolute_url() method works."""
         instance = factories.WorkspaceGroupAccessFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
+
+    def test_clean_reader_can_compute(self):
+        """Clean method raises a ValidationError if a READER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupAccess(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.READER,
+            can_compute=True,
+        )
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_clean_writer_can_compute(self):
+        """Clean method succeeds if a WRITER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupAccess(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.WRITER,
+            can_compute=True,
+        )
+        instance.full_clean()
+
+    def test_clean_owner_can_compute(self):
+        """Clean method succeeds if an OWNER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupAccess(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.OWNER,
+            can_compute=True,
+        )
+        instance.full_clean()
 
     def test_history(self):
         """A simple history record is created when model is updated."""

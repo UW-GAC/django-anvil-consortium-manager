@@ -119,7 +119,7 @@ class WorkspaceGroupAccessTable(tables.Table):
 
     class Meta:
         model = models.WorkspaceGroupAccess
-        fields = ("pk", "workspace", "group", "access")
+        fields = ("pk", "workspace", "group", "access", "can_compute")
 
     def render_pk(self, record):
         return "See details"

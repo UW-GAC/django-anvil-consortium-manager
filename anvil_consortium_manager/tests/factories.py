@@ -77,6 +77,7 @@ class WorkspaceGroupAccessFactory(DjangoModelFactory):
     workspace = SubFactory(WorkspaceFactory)
     group = SubFactory(ManagedGroupFactory)
     access = models.WorkspaceGroupAccess.READER
+    can_compute = False
 
     class Meta:
         model = models.WorkspaceGroupAccess
