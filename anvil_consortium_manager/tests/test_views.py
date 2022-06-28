@@ -7436,12 +7436,60 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
         self.assertEqual(new_object.access, models.WorkspaceGroupAccess.READER)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_can_create_a_writer_with_can_compute(self):
+        """Posting valid data to the form creates an object."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": True,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupAccess.WRITER,
+                "can_compute": True,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.WorkspaceGroupAccess.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
+        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(new_object.can_compute, True)
         responses.assert_call_count(url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
@@ -7481,6 +7529,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
             follow=True,
         )
@@ -7522,12 +7571,14 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.WRITER,
+                "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
         self.assertEqual(new_object.access, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(new_object.can_compute, False)
         responses.assert_call_count(url, 1)
 
     def test_can_create_an_object_owner(self):
@@ -7563,6 +7614,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.OWNER,
+                "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -7605,6 +7657,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.OWNER,
+                "can_compute": False,
             },
         )
         self.assertRedirects(
@@ -7627,6 +7680,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
         )
         request.user = self.user
@@ -7655,6 +7709,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.OWNER,
+                "can_compute": False,
             },
         )
         request.user = self.user
@@ -7702,6 +7757,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group_2.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -7742,6 +7798,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace_2.pk,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -7757,6 +7814,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": 1,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
         )
         request.user = self.user
@@ -7777,6 +7835,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": 1,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
         )
         request.user = self.user
@@ -7798,6 +7857,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": "foo",
+                "can_compute": False,
             },
         )
         request.user = self.user
@@ -7807,6 +7867,29 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("access", form.errors.keys())
         self.assertIn("valid choice", form.errors["access"][0])
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+
+    def test_invalid_reader_with_can_compute(self):
+        """Posting invalid data to access field does not create an object."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": True,
+            },
+        )
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertEqual(len(form.non_field_errors()), 1)
+        self.assertIn("cannot be granted compute", form.non_field_errors()[0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
     def test_post_blank_data(self):
@@ -7833,6 +7916,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
             },
         )
         request.user = self.user
@@ -7849,7 +7933,11 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {"group": group.pk, "access": models.WorkspaceGroupAccess.READER},
+            {
+                "group": group.pk,
+                "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
+            },
         )
         request.user = self.user
         response = self.get_view()(request)
@@ -7866,7 +7954,11 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         request = self.factory.post(
             self.get_url(),
-            {"group": group.pk, "workspace": workspace.pk},
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "can_compute": False,
+            },
         )
         request.user = self.user
         response = self.get_view()(request)
@@ -7876,6 +7968,46 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("access", form.errors.keys())
         self.assertIn("required", form.errors["access"][0])
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+
+    def test_post_blank_data_can_compute(self):
+        """Posting blank data to the can_compute field does not create an object."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "workspace": workspace.pk,
+                "group": group.pk,
+                "access": models.WorkspaceGroupAccess.READER,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.WorkspaceGroupAccess.objects.latest("pk")
+        self.assertEqual(new_object.can_compute, False)
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -8049,6 +8181,79 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(obj.history.count(), 2)
         self.assertEqual(obj.history.latest().history_type, "~")
 
+    def test_can_update_can_compute(self):
+        """Can update the can_compute field."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        obj = factories.WorkspaceGroupAccessFactory.create(
+            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.WRITER
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": True,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.pk),
+            {"access": models.WorkspaceGroupAccess.WRITER, "can_compute": True},
+        )
+        self.assertEqual(response.status_code, 302)
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(obj.can_compute, True)
+        # History is added.
+        self.assertEqual(obj.history.count(), 2)
+        self.assertEqual(obj.history.latest().history_type, "~")
+
+    def test_invalid_reader_can_compute(self):
+        """The form is not valid when trying to update a READER's can_compute value to True."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        obj = factories.WorkspaceGroupAccessFactory.create(
+            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.READER
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.pk),
+            {"access": models.WorkspaceGroupAccess.READER, "can_compute": True},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertEqual(len(form.non_field_errors()), 1)
+        self.assertIn("cannot be granted compute", form.non_field_errors()[0])
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+        self.assertEqual(obj.can_compute, False)
+        # History is not added.
+        self.assertEqual(obj.history.count(), 1)
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         group = factories.ManagedGroupFactory.create(name="test-group")
@@ -8148,6 +8353,46 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", form.errors["access"][0])
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+
+    def test_post_blank_data_can_compute(self):
+        """Posting blank data to the can_compute field updates the object."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project__name="test-billing-project"
+        )
+        obj = factories.WorkspaceGroupAccessFactory.create(
+            group=group,
+            workspace=workspace,
+            access=models.WorkspaceGroupAccess.OWNER,
+            can_compute=True,
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.pk),
+            {"access": models.WorkspaceGroupAccess.WRITER},
+        )
+        self.assertEqual(response.status_code, 302)
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(obj.can_compute, False)
 
     def test_post_invalid_data_access(self):
         """Posting invalid data to the access field does not update the object."""
@@ -8578,6 +8823,47 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.WorkspaceGroupAccess.objects.filter(pk=other_object.pk),
         )
         responses.assert_call_count(url, 1)
+
+    def test_delete_with_can_compute(self):
+        """Can delete a record with can_compute=True."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        object = factories.WorkspaceGroupAccessFactory.create(
+            group=group,
+            workspace=workspace,
+            can_compute=True,
+        )
+        json_data = [
+            {
+                "email": object.group.get_email(),
+                "accessLevel": "NO ACCESS",
+                "canShare": False,
+                "canCompute": True,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(object.history.count(), 2)
+        self.assertEqual(object.history.latest().history_type, "-")
 
     def test_success_url(self):
         """Redirects to the expected page."""

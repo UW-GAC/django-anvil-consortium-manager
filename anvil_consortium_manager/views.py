@@ -898,7 +898,7 @@ class WorkspaceGroupAccessCreate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
 ):
     model = models.WorkspaceGroupAccess
-    fields = ("workspace", "group", "access")
+    fields = ("workspace", "group", "access", "can_compute")
     success_msg = "Successfully shared Workspace with Group."
 
     def get_success_url(self):
@@ -925,7 +925,10 @@ class WorkspaceGroupAccessUpdate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView
 ):
     model = models.WorkspaceGroupAccess
-    fields = ("access",)
+    fields = (
+        "access",
+        "can_compute",
+    )
     template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
     success_msg = "Successfully updated Workspace sharing."
 
