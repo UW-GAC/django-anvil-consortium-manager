@@ -618,7 +618,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
         """Perform model cleaning steps."""
 
         if self.can_compute & (self.access == self.READER):
-            raise ValidationError("READERs cannot be granted can_compute.")
+            raise ValidationError("READERs cannot be granted compute privileges.")
 
     def get_absolute_url(self):
         return reverse(
