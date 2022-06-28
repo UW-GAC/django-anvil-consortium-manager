@@ -1345,7 +1345,10 @@ class WorkspaceGroupAccessTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         instance = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.READER,
+            can_compute=False,
         )
         self.assertIsInstance(instance, WorkspaceGroupAccess)
 

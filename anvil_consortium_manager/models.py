@@ -597,6 +597,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
     group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
+    can_compute = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     class Meta:
