@@ -614,6 +614,12 @@ class WorkspaceGroupAccess(TimeStampedModel):
             workspace=self.workspace,
         )
 
+    def clean(self):
+        """Perform model cleaning steps."""
+
+        if self.can_compute & (self.access == self.READER):
+            raise ValidationError("READERs cannot be granted can_compute.")
+
     def get_absolute_url(self):
         return reverse(
             "anvil_consortium_manager:workspace_group_access:detail",
@@ -626,7 +632,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
                 "email": self.group.get_email(),
                 "accessLevel": self.access,
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": self.can_compute,
             }
         ]
         AnVILAPIClient().update_workspace_acl(
@@ -639,7 +645,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
                 "email": self.group.get_email(),
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": self.can_compute,
             }
         ]
         AnVILAPIClient().update_workspace_acl(
