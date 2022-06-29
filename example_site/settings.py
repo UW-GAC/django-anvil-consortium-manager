@@ -82,6 +82,10 @@ INSTALLED_APPS = [
     "simple_history",  # model history tracking - required for viewing in admin.
     # This app.
     "anvil_consortium_manager",
+    # Autocomplete.
+    # note these are supposed to come before django.contrib.admin.
+    "dal",
+    "dal_select2",
 ]
 
 
