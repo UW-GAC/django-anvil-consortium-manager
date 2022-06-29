@@ -900,6 +900,7 @@ class WorkspaceGroupAccessCreate(
     model = models.WorkspaceGroupAccess
     fields = ("workspace", "group", "access", "can_compute")
     success_msg = "Successfully shared Workspace with Group."
+    message_group_not_found = "Managed Group not found on AnVIL."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_access:list")
@@ -911,6 +912,11 @@ class WorkspaceGroupAccessCreate(
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create_or_update()
+        except exceptions.AnVILGroupNotFound:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_group_not_found
+            )
+            return self.render_to_response(self.get_context_data(form=form))
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(

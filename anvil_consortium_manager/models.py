@@ -635,9 +635,13 @@ class WorkspaceGroupAccess(TimeStampedModel):
                 "canCompute": self.can_compute,
             }
         ]
-        AnVILAPIClient().update_workspace_acl(
+        response = AnVILAPIClient().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )
+        if len(response.json()["usersNotFound"]) > 0:
+            raise exceptions.AnVILGroupNotFound(
+                "{} not found on AnVIL".format(self.group)
+            )
 
     def anvil_delete(self):
         acl_updates = [
@@ -648,6 +652,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
                 "canCompute": self.can_compute,
             }
         ]
+        # It is ok if we try to remove access for a group that doesn't exist on AnVIL.
         AnVILAPIClient().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )

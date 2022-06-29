@@ -1596,12 +1596,22 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
 
+    def get_api_json_response(
+        self, invites_sent=[], users_not_found=[], users_updated=[]
+    ):
+        return {
+            "invitesSent": invites_sent,
+            "usersNotFound": users_not_found,
+            "usersUpdated": users_updated,
+        }
+
     def test_anvil_create_or_update_successful(self):
         responses.add(
             responses.PATCH,
             self.url,
             status=200,
             match=[responses.matchers.json_params_matcher(self.data_add)],
+            json=self.get_api_json_response(users_updated=self.data_add),
         )
         self.object.anvil_create_or_update()
         responses.assert_call_count(self.url, 1)
@@ -1616,6 +1626,7 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.url,
             status=200,
             match=[responses.matchers.json_params_matcher(self.data_add)],
+            json=self.get_api_json_response(users_updated=self.data_add),
         )
         self.object.anvil_create_or_update()
         responses.assert_call_count(self.url, 1)
@@ -1668,6 +1679,19 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create_or_update()
         responses.assert_call_count(self.url, 1)
 
+    def test_anvil_create_or_update_group_not_found_on_anvil(self):
+        responses.add(
+            responses.PATCH,
+            self.url,
+            status=200,
+            match=[responses.matchers.json_params_matcher(self.data_add)],
+            # Add the full json response.
+            json=self.get_api_json_response(users_not_found=self.data_add),
+        )
+        with self.assertRaises(exceptions.AnVILGroupNotFound):
+            self.object.anvil_create_or_update()
+        responses.assert_call_count(self.url, 1)
+
     def test_anvil_delete_successful(self):
         responses.add(
             responses.PATCH,
@@ -1688,6 +1712,7 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.url,
             status=200,
             match=[responses.matchers.json_params_matcher(self.data_delete)],
+            json=self.get_api_json_response(users_updated=self.data_delete),
         )
         self.object.anvil_delete()
         responses.assert_call_count(self.url, 1)
