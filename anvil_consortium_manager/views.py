@@ -1,3 +1,4 @@
+from dal import autocomplete
 from django.contrib import messages
 from django.db import transaction
 from django.forms.forms import Form
@@ -529,6 +530,21 @@ class ManagedGroupDelete(
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
         return super().delete(request, *args, **kwargs)
+
+
+class ManagedGroupAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for ManagedGroups."""
+
+    def get_queryset(self):
+        # Filter out unathorized users, or does the auth mixin do that?
+        qs = models.ManagedGroup.objects.filter(is_managed_by_app=True)
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs
 
 
 class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):

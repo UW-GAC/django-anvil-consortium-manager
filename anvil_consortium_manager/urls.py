@@ -37,6 +37,11 @@ managed_group_patterns = (
         path("new/", views.ManagedGroupCreate.as_view(), name="new"),
         path("", views.ManagedGroupList.as_view(), name="list"),
         path("<int:pk>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
+        path(
+            "autocomplete/",
+            views.ManagedGroupAutocomplete.as_view(),
+            name="autocomplete",
+        ),
     ],
     "managed_groups",
 )

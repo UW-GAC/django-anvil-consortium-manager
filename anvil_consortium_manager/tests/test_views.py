@@ -1,3 +1,4 @@
+import json
 from unittest import skip
 
 import responses
@@ -3195,6 +3196,127 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "AnVIL API returns 204 instead of 404 when trying to delete a group that doesn't exist."
         )
+
+
+class ManagedGroupAutocompleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with the correct permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:managed_groups:autocomplete", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ManagedGroupAutocomplete.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_returns_all_objects(self):
+        """Queryset returns all objects when there is no query."""
+        groups = factories.ManagedGroupFactory.create_batch(10)
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 10)
+        self.assertEqual(sorted(returned_ids), sorted([group.pk for group in groups]))
+
+    def test_returns_correct_object_match(self):
+        """Queryset returns the correct objects when query matches the name."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        request = self.factory.get(self.get_url(), {"q": "test-group"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], group.pk)
+
+    def test_returns_correct_object_starting_with_query(self):
+        """Queryset returns the correct objects when query matches the beginning of the name."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        request = self.factory.get(self.get_url(), {"q": "test"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], group.pk)
+
+    def test_returns_correct_object_containing_query(self):
+        """Queryset returns the correct objects when the name contains the query."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        request = self.factory.get(self.get_url(), {"q": "grou"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], group.pk)
+
+    def test_returns_correct_object_case_insensitive(self):
+        """Queryset returns the correct objects when query matches the beginning of the name."""
+        group = factories.ManagedGroupFactory.create(name="TEST-GROUP")
+        request = self.factory.get(self.get_url(), {"q": "test"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], group.pk)
+
+    def test_does_not_return_groups_not_managed_by_app(self):
+        """Queryset does not return groups that are not managed by the app."""
+        factories.ManagedGroupFactory.create(name="test-group", is_managed_by_app=False)
+        request = self.factory.get(self.get_url(), {"q": "test-group"})
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(json.loads(response.content.decode("utf-8"))["results"], [])
 
 
 class WorkspaceDetailTest(TestCase):
