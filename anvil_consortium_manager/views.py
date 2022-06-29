@@ -897,11 +897,18 @@ class WorkspaceGroupAccessDetail(auth.AnVILConsortiumManagerViewRequired, Detail
 class WorkspaceGroupAccessCreate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
 ):
+    """View to create a new WorkspaceGroupAccess object and share the Workspace with a Group on AnVIL."""
+
     model = models.WorkspaceGroupAccess
     fields = ("workspace", "group", "access", "can_compute")
     success_msg = "Successfully shared Workspace with Group."
+    """Message to display when the WorkspaceGroupAccess object was successfully created in the app and on AnVIL."""
+
+    message_group_not_found = "Managed Group not found on AnVIL."
+    """Message to display when the ManagedGroup was not found on AnVIL."""
 
     def get_success_url(self):
+        """URL to redirect to upon success."""
         return reverse("anvil_consortium_manager:workspace_group_access:list")
 
     def form_valid(self, form):
@@ -911,6 +918,11 @@ class WorkspaceGroupAccessCreate(
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create_or_update()
+        except exceptions.AnVILGroupNotFound:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_group_not_found
+            )
+            return self.render_to_response(self.get_context_data(form=form))
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
@@ -924,6 +936,8 @@ class WorkspaceGroupAccessCreate(
 class WorkspaceGroupAccessUpdate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView
 ):
+    """View to update a WorkspaceGroupAccess object and update access for the ManagedGroup to the Workspace on AnVIL."""
+
     model = models.WorkspaceGroupAccess
     fields = (
         "access",
@@ -931,6 +945,7 @@ class WorkspaceGroupAccessUpdate(
     )
     template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
     success_msg = "Successfully updated Workspace sharing."
+    """Message to display when the WorkspaceGroupAccess object was successfully updated."""
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""

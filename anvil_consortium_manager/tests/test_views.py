@@ -7355,6 +7355,15 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupAccessCreate.as_view()
 
+    def get_api_json_response(
+        self, invites_sent=[], users_not_found=[], users_updated=[]
+    ):
+        return {
+            "invitesSent": invites_sent,
+            "usersNotFound": users_not_found,
+            "usersUpdated": users_updated,
+        }
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -7428,6 +7437,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7474,6 +7484,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7521,6 +7532,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7563,6 +7575,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7606,6 +7619,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7649,6 +7663,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7749,6 +7764,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7790,6 +7806,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -7994,6 +8011,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -8008,6 +8026,58 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.WorkspaceGroupAccess.objects.latest("pk")
         self.assertEqual(new_object.can_compute, False)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+
+    def test_invalid_anvil_group_does_not_exist(self):
+        """No object is saved if the group doesn't exist on AnVIL but does exist in the app."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project__name="test-billing-project"
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_not_found=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupAccess.READER,
+                "can_compute": False,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is valid, but there was a different error.
+        self.assertTrue(form.is_valid())
+        self.assertEqual(response.status_code, 200)
+        # Check for the correct message.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            views.WorkspaceGroupAccessCreate.message_group_not_found,
+            str(messages[0]),
+        )
+        responses.assert_call_count(url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -8089,6 +8159,15 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupAccessUpdate.as_view()
 
+    def get_api_json_response(
+        self, invites_sent=[], users_not_found=[], users_updated=[]
+    ):
+        return {
+            "invitesSent": invites_sent,
+            "usersNotFound": users_not_found,
+            "usersUpdated": users_updated,
+        }
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -8166,6 +8245,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -8210,6 +8290,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -8283,6 +8364,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -8324,6 +8406,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -8383,6 +8466,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -8441,6 +8525,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -8483,6 +8568,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
         )
         self.client.force_login(self.user)
         response = self.client.post(
