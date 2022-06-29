@@ -585,20 +585,35 @@ class WorkspaceGroupAccess(TimeStampedModel):
     """A model to store which groups have access to a workspace."""
 
     OWNER = "OWNER"
+    """Constant indicating "OWNER" access."""
+
     WRITER = "WRITER"
+    """Constant indicating "WRITER" access."""
+
     READER = "READER"
+    """Constant indicating "READER" access."""
 
     ACCESS_CHOICES = [
         (OWNER, "Owner"),
         (WRITER, "Writer"),
         (READER, "Reader"),
     ]
+    """Allowed choices for the ``access`` field."""
 
     group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
+    """ManagedGroup that has access to the Workspace in ``workspace``."""
+
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
+    """Workspace that the ManagedGroup ``group`` has access to."""
+
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
+    """Access type that this ``ManagedGroup`` has to this ``Workspace``."""
+
     can_compute = models.BooleanField(default=False)
+    """Indicator of whether the group has ``can_compute`` permission. "READERS" cannot be granted compute permission."""
+
     history = HistoricalRecords()
+    """Historical records from django-simple-history."""
 
     class Meta:
         constraints = [
@@ -608,6 +623,10 @@ class WorkspaceGroupAccess(TimeStampedModel):
         ]
 
     def __str__(self):
+        """String method for this object.
+
+        Returns:
+            str: a string description of the object."""
         return "{group} with {access} to {workspace}".format(
             group=self.group,
             access=self.access,
@@ -615,18 +634,30 @@ class WorkspaceGroupAccess(TimeStampedModel):
         )
 
     def clean(self):
-        """Perform model cleaning steps."""
+        """Perform model cleaning steps.
+
+        This method checks that can_compute is not set to ``True`` for "READERS".
+        """
 
         if self.can_compute & (self.access == self.READER):
             raise ValidationError("READERs cannot be granted compute privileges.")
 
     def get_absolute_url(self):
+        """Get the absolute url for this object.
+
+        Returns:
+            str: The absolute url for the object."""
         return reverse(
             "anvil_consortium_manager:workspace_group_access:detail",
             kwargs={"pk": self.pk},
         )
 
     def anvil_create_or_update(self):
+        """Create or update the access to ``workspace`` for the ``group`` on AnVIL.
+
+        Raises:
+            exceptions.AnVILGroupNotFound: The group that the workspace is being shared with does not exist on AnVIL.
+        """
         acl_updates = [
             {
                 "email": self.group.get_email(),
@@ -644,6 +675,8 @@ class WorkspaceGroupAccess(TimeStampedModel):
             )
 
     def anvil_delete(self):
+        """Remove the access to ``workspace`` for the ``group`` on AnVIL."""
+
         acl_updates = [
             {
                 "email": self.group.get_email(),
