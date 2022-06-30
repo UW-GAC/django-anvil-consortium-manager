@@ -79,12 +79,22 @@ class GroupGroupMembershipForm(forms.ModelForm):
     """Form for the GroupGroupMembership model."""
 
     parent_group = forms.ModelChoiceField(
-        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True)
+        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:managed_groups:autocomplete",
+            attrs={"data-theme": "bootstrap-5"},
+        ),
     )
 
     class Meta:
         model = models.GroupGroupMembership
         fields = ("parent_group", "child_group", "role")
+        widgets = {
+            "child_group": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:managed_groups:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+        }
 
     #
     # def clean_parent_group(self):
