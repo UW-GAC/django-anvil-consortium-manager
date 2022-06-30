@@ -60,6 +60,12 @@ class WorkspaceCreateForm(forms.ModelForm):
     class Meta:
         model = models.Workspace
         fields = ("billing_project", "name", "authorization_domains")
+        widgets = {
+            "authorization_domains": autocomplete.ModelSelect2Multiple(
+                url="anvil_consortium_manager:managed_groups:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+        }
 
 
 class WorkspaceImportForm(forms.Form):
