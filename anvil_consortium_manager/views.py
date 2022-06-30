@@ -951,7 +951,7 @@ class WorkspaceGroupAccessCreate(
     """View to create a new WorkspaceGroupAccess object and share the Workspace with a Group on AnVIL."""
 
     model = models.WorkspaceGroupAccess
-    fields = ("workspace", "group", "access", "can_compute")
+    form_class = forms.WorkspaceGroupAccessForm
     success_msg = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupAccess object was successfully created in the app and on AnVIL."""
 

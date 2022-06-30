@@ -7768,6 +7768,9 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.WorkspaceGroupAccessForm
+        )
 
     def test_can_create_an_object_reader(self):
         """Posting valid data to the form creates an object."""
@@ -8566,6 +8569,14 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=1)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        request = self.factory.get(self.get_url(obj.pk))
+        request.user = self.user
+        response = self.get_view()(request, pk=obj.pk)
+        self.assertTrue("form" in response.context_data)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""

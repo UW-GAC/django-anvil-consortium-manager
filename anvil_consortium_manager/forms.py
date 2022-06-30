@@ -131,3 +131,22 @@ class GroupAccountMembershipForm(forms.ModelForm):
     class Meta:
         model = models.GroupAccountMembership
         fields = ("group", "account", "role")
+
+
+class WorkspaceGroupAccessForm(forms.ModelForm):
+    """Form for the WorkspaceGroupAccess model."""
+
+    class Meta:
+        model = models.WorkspaceGroupAccess
+        fields = ("workspace", "group", "access", "can_compute")
+
+        widgets = {
+            "workspace": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:workspaces:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+            "group": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:managed_groups:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+        }
