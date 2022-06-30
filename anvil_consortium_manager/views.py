@@ -374,7 +374,9 @@ class AccountAutocomplete(
 
     def get_queryset(self):
         # Only active accounts.
-        qs = models.Account.objects.filter(status=models.Account.ACTIVE_STATUS)
+        qs = models.Account.objects.filter(
+            status=models.Account.ACTIVE_STATUS
+        ).order_by("email")
 
         if self.q:
             # When Accounts are linked to users, we'll want to figure out how to filter on fields in the user model.
@@ -555,7 +557,7 @@ class ManagedGroupAutocomplete(
 
     def get_queryset(self):
         # Filter out unathorized users, or does the auth mixin do that?
-        qs = models.ManagedGroup.objects.filter(is_managed_by_app=True)
+        qs = models.ManagedGroup.objects.filter(is_managed_by_app=True).order_by("name")
 
         if self.q:
             qs = qs.filter(name__icontains=self.q)
