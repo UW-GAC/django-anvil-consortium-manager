@@ -367,6 +367,22 @@ class AccountDelete(
             return super().delete(request, *args, **kwargs)
 
 
+class AccountAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for Accounts. Only active accounts are included."""
+
+    def get_queryset(self):
+        # Only active accounts.
+        qs = models.Account.objects.filter(status=models.Account.ACTIVE_STATUS)
+
+        if self.q:
+            # When Accounts are linked to users, we'll want to figure out how to filter on fields in the user model.
+            qs = qs.filter(email__icontains=self.q)
+
+        return qs
+
+
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup
 

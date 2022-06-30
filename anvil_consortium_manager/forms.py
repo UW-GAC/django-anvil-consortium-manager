@@ -102,6 +102,9 @@ class GroupAccountMembershipForm(forms.ModelForm):
     account = forms.ModelChoiceField(
         queryset=models.Account.objects.active(),
         help_text="Only active accounts can be added.",
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:accounts:autocomplete"
+        ),
     )
     group = forms.ModelChoiceField(
         queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
@@ -114,7 +117,3 @@ class GroupAccountMembershipForm(forms.ModelForm):
     class Meta:
         model = models.GroupAccountMembership
         fields = ("group", "account", "role")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["account"].queryset = models.Account.objects.active()

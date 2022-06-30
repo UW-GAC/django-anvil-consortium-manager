@@ -27,6 +27,11 @@ account_patterns = (
         path(
             "<int:pk>/reactivate", views.AccountReactivate.as_view(), name="reactivate"
         ),
+        path(
+            "autocomplete/",
+            views.AccountAutocomplete.as_view(),
+            name="autocomplete",
+        ),
     ],
     "accounts",
 )
