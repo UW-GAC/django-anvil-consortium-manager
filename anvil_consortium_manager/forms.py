@@ -1,5 +1,6 @@
 """Forms classes for the anvil_consortium_manager app."""
 
+from dal import autocomplete
 from django import forms
 from django.core.exceptions import ValidationError
 
@@ -105,6 +106,9 @@ class GroupAccountMembershipForm(forms.ModelForm):
     group = forms.ModelChoiceField(
         queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
         help_text="Only groups managed by this app can be selected.",
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:managed_groups:autocomplete"
+        ),
     )
 
     class Meta:
