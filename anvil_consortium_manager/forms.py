@@ -103,14 +103,18 @@ class GroupAccountMembershipForm(forms.ModelForm):
         queryset=models.Account.objects.active(),
         help_text="Only active accounts can be added.",
         widget=autocomplete.ModelSelect2(
-            url="anvil_consortium_manager:accounts:autocomplete"
+            url="anvil_consortium_manager:accounts:autocomplete",
+            attrs={"data-theme": "bootstrap-5"},
         ),
     )
     group = forms.ModelChoiceField(
         queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
         help_text="Only groups managed by this app can be selected.",
         widget=autocomplete.ModelSelect2(
-            url="anvil_consortium_manager:managed_groups:autocomplete"
+            url="anvil_consortium_manager:managed_groups:autocomplete",
+            attrs={
+                "data-theme": "bootstrap-5",
+            },
         ),
     )
 
