@@ -54,13 +54,21 @@ class WorkspaceCreateForm(forms.ModelForm):
 
     # Only allow billing groups where we can create a workspace.
     billing_project = forms.ModelChoiceField(
-        queryset=models.BillingProject.objects.filter(has_app_as_user=True)
+        queryset=models.BillingProject.objects.filter(has_app_as_user=True),
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:billing_projects:autocomplete",
+            attrs={"data-theme": "bootstrap-5"},
+        ),
     )
 
     class Meta:
         model = models.Workspace
         fields = ("billing_project", "name", "authorization_domains")
         widgets = {
+            "billing_project": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:billing_projects:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
             "authorization_domains": autocomplete.ModelSelect2Multiple(
                 url="anvil_consortium_manager:managed_groups:autocomplete",
                 attrs={"data-theme": "bootstrap-5"},

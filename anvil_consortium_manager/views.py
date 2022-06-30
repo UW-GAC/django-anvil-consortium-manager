@@ -129,6 +129,21 @@ class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableVie
     table_class = tables.BillingProjectTable
 
 
+class BillingProjectAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for BillingProjects. Only billing project where the app is a user are included."""
+
+    def get_queryset(self):
+        # Only active accounts.
+        qs = models.BillingProject.objects.filter(has_app_as_user=True).order_by("name")
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs
+
+
 class AccountDetail(
     auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
 ):
