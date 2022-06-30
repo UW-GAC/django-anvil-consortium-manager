@@ -58,6 +58,11 @@ workspace_patterns = (
         path("import/", views.WorkspaceImport.as_view(), name="import"),
         path("", views.WorkspaceList.as_view(), name="list"),
         path("<int:pk>/delete", views.WorkspaceDelete.as_view(), name="delete"),
+        path(
+            "autocomplete/",
+            views.WorkspaceAutocomplete.as_view(),
+            name="autocomplete",
+        ),
     ],
     "workspaces",
 )

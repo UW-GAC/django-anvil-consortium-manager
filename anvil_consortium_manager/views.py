@@ -718,6 +718,23 @@ class WorkspaceDelete(
         return super().delete(request, *args, **kwargs)
 
 
+class WorkspaceAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for Workspaces.
+
+    Right now this only matches Workspace name, not billing project."""
+
+    def get_queryset(self):
+        # Filter out unathorized users, or does the auth mixin do that?
+        qs = models.Workspace.objects.filter().order_by("billing_project__name", "name")
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs
+
+
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupGroupMembership
 

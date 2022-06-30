@@ -5395,6 +5395,117 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 1)
 
 
+class WorkspaceAutocompleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with the correct permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:autocomplete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceAutocomplete.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_returns_all_objects(self):
+        """Queryset returns all objects when there is no query."""
+        groups = factories.WorkspaceFactory.create_batch(10)
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 10)
+        self.assertEqual(sorted(returned_ids), sorted([group.pk for group in groups]))
+
+    def test_returns_correct_object_match(self):
+        """Queryset returns the correct objects when query matches the name."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        request = self.factory.get(self.get_url(), {"q": "test-workspace"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_returns_correct_object_starting_with_query(self):
+        """Queryset returns the correct objects when query matches the beginning of the name."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        request = self.factory.get(self.get_url(), {"q": "test"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_returns_correct_object_containing_query(self):
+        """Queryset returns the correct objects when the name contains the query."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        request = self.factory.get(self.get_url(), {"q": "work"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_returns_correct_object_case_insensitive(self):
+        """Queryset returns the correct objects when query matches the beginning of the name."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        request = self.factory.get(self.get_url(), {"q": "TEST-WORKSPACE"})
+        request.user = self.user
+        response = self.get_view()(request)
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+
 class GroupGroupMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
