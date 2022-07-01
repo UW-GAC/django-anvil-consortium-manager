@@ -406,7 +406,12 @@ class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["workspace_authorization_domain_table"] = tables.WorkspaceTable(
-            self.object.workspace_set.all(), exclude="group"
+            self.object.workspace_set.all(),
+            exclude=(
+                "number_groups",
+                "has_authorization_domains",
+                "billing_project",
+            ),
         )
         context["workspace_table"] = tables.WorkspaceGroupAccessTable(
             self.object.workspacegroupaccess_set.all(), exclude="group"

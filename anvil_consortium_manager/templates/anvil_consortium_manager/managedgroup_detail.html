@@ -28,18 +28,37 @@
   </ul>
 </div>
 
-
 <div class="my-3">
-  <div class="accordion" id="accordionWorkspaces">
+  <div class="accordion" id="accordionWorkspaceAuthDomains">
     <div class="accordion-item">
       <h2 class="accordion-header" id="headingWorkspacesOne">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspacesOne" aria-expanded="false" aria-controls="collapseWorkspacesOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspaceAuthDomainsOne" aria-expanded="false" aria-controls="collapseWorkspaceAuthDomainsOne">
+          <span class="fa-solid fa-shield mx-2"></span>
+          View workspaces that this group is an authorization domain for
+          <span class="badge mx-2 bg-secondary pill"> {{ workspace_authorization_domain_table.rows|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseWorkspaceAuthDomainsOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAuthDomainsOne" data-bs-parent="#accordionWorkspaceAuthDomains">
+        <div class="accordion-body">
+          {% render_table workspace_authorization_domain_table %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="my-3">
+  <div class="accordion" id="accordionWorkspaceAccess">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingWorkspaceAccessOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspaceAccessOne" aria-expanded="false" aria-controls="collapseWorkspaceAccessOne">
           <span class="fa-solid fa-computer mx-2"></span>
           View workspaces that this group has access to
           <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
         </button>
       </h2>
-      <div id="collapseWorkspacesOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspacesOne" data-bs-parent="#accordionWorkspaces">
+      <div id="collapseWorkspaceAccessOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAccessOne" data-bs-parent="#accordionWorkspaceAccess">
         <div class="accordion-body">
           {% render_table workspace_table %}
         </div>
