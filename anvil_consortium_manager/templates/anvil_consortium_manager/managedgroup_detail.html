@@ -29,7 +29,6 @@
 </div>
 
 
-
 <div class="my-3">
   <div class="accordion" id="accordionWorkspaces">
     <div class="accordion-item">
@@ -50,63 +49,65 @@
 </div>
 
 
+{% if object.is_managed_by_app %}
 
-<div class="my-3">
-  <div class="accordion" id="accordionMembers">
+  <div class="my-3">
+    <div class="accordion" id="accordionMembers">
 
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingMembersOne">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersOne" aria-expanded="false" aria-controls="collapseMembersOne">
-          <span class="fa-solid fa-code-fork mx-2" data-fa-transform="flip-v"></span>
-          View group members
-          <span class="badge mx-2 bg-secondary pill"> {{ group_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseMembersOne" class="accordion-collapse collapse" aria-labelledby="headingMembersOne">
-        <div class="accordion-body">
-          {% render_table group_table %}
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMembersOne">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersOne" aria-expanded="false" aria-controls="collapseMembersOne">
+            <span class="fa-solid fa-code-fork mx-2" data-fa-transform="flip-v"></span>
+            View group members
+            <span class="badge mx-2 bg-secondary pill"> {{ group_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseMembersOne" class="accordion-collapse collapse" aria-labelledby="headingMembersOne">
+          <div class="accordion-body">
+            {% render_table group_table %}
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingMembersTwo">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersTwo" aria-expanded="false" aria-controls="collapseMembersTwo">
-          <span class="fa-solid fa-user-group mx-2"></span>
-          View active account members
-          <span class="badge mx-2 bg-secondary pill"> {{ active_account_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseMembersTwo" class="accordion-collapse collapse" aria-labelledby="headingMembersTwo">
-        <div class="accordion-body">
-          {% render_table active_account_table %}
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMembersTwo">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersTwo" aria-expanded="false" aria-controls="collapseMembersTwo">
+            <span class="fa-solid fa-user-group mx-2"></span>
+            View active account members
+            <span class="badge mx-2 bg-secondary pill"> {{ active_account_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseMembersTwo" class="accordion-collapse collapse" aria-labelledby="headingMembersTwo">
+          <div class="accordion-body">
+            {% render_table active_account_table %}
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingMembersThree">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersThree" aria-expanded="false" aria-controls="collapseMembersTwo">
-          <span class="fa-solid fa-users-slash mx-2"></span>
-          View inactive account members
-          <span class="badge mx-2 bg-secondary pill"> {{ inactive_account_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseMembersThree" class="accordion-collapse collapse" aria-labelledby="headingMembersThree">
-        <div class="accordion-body">
-          {% render_table inactive_account_table %}
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMembersThree">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersThree" aria-expanded="false" aria-controls="collapseMembersTwo">
+            <span class="fa-solid fa-users-slash mx-2"></span>
+            View inactive account members
+            <span class="badge mx-2 bg-secondary pill"> {{ inactive_account_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseMembersThree" class="accordion-collapse collapse" aria-labelledby="headingMembersThree">
+          <div class="accordion-body">
+            {% render_table inactive_account_table %}
+          </div>
         </div>
       </div>
-    </div>
 
+    </div>
   </div>
-</div>
-
 
 
 
 <p>
   <a href="{% url 'anvil_consortium_manager:managed_groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
+
+{% endif %}
 
 {% endblock content %}
