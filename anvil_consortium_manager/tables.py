@@ -35,13 +35,12 @@ class ManagedGroupTable(tables.Table):
     name = tables.Column(linkify=True)
     number_groups = tables.Column(
         verbose_name="Number of groups",
-        empty_values=(),
+        # empty_values=(0,),
         orderable=False,
         accessor="child_memberships__count",
     )
     number_accounts = tables.Column(
         verbose_name="Number of accounts",
-        empty_values=(),
         orderable=False,
         accessor="groupaccountmembership_set__count",
     )
@@ -49,6 +48,21 @@ class ManagedGroupTable(tables.Table):
     class Meta:
         model = models.ManagedGroup
         fields = ("name", "is_managed_by_app")
+
+    def render_number_groups(self, value, record):
+        """Render the number of groups as --- for groups not managed by the app."""
+        if not record.is_managed_by_app:
+            print("Here")
+            return self.default
+        else:
+            return value
+
+    def render_number_accounts(self, value, record):
+        """Render the number of accounts as --- for groups not managed by the app."""
+        if not record.is_managed_by_app:
+            return self.default
+        else:
+            return value
 
 
 class WorkspaceTable(tables.Table):
