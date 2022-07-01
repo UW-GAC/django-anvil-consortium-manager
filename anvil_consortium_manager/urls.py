@@ -9,6 +9,11 @@ billing_project_patterns = (
         path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
         path("import/", views.BillingProjectImport.as_view(), name="import"),
         path("", views.BillingProjectList.as_view(), name="list"),
+        path(
+            "autocomplete/",
+            views.BillingProjectAutocomplete.as_view(),
+            name="autocomplete",
+        ),
     ],
     "billing_projects",
 )
@@ -27,6 +32,11 @@ account_patterns = (
         path(
             "<int:pk>/reactivate", views.AccountReactivate.as_view(), name="reactivate"
         ),
+        path(
+            "autocomplete/",
+            views.AccountAutocomplete.as_view(),
+            name="autocomplete",
+        ),
     ],
     "accounts",
 )
@@ -37,6 +47,11 @@ managed_group_patterns = (
         path("new/", views.ManagedGroupCreate.as_view(), name="new"),
         path("", views.ManagedGroupList.as_view(), name="list"),
         path("<int:pk>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
+        path(
+            "autocomplete/",
+            views.ManagedGroupAutocomplete.as_view(),
+            name="autocomplete",
+        ),
     ],
     "managed_groups",
 )
@@ -48,6 +63,11 @@ workspace_patterns = (
         path("import/", views.WorkspaceImport.as_view(), name="import"),
         path("", views.WorkspaceList.as_view(), name="list"),
         path("<int:pk>/delete", views.WorkspaceDelete.as_view(), name="delete"),
+        path(
+            "autocomplete/",
+            views.WorkspaceAutocomplete.as_view(),
+            name="autocomplete",
+        ),
     ],
     "workspaces",
 )

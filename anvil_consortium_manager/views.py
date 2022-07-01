@@ -1,3 +1,4 @@
+from dal import autocomplete
 from django.contrib import messages
 from django.db import transaction
 from django.forms.forms import Form
@@ -126,6 +127,21 @@ class BillingProjectDetail(
 class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
+
+
+class BillingProjectAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for BillingProjects. Only billing project where the app is a user are included."""
+
+    def get_queryset(self):
+        # Only active accounts.
+        qs = models.BillingProject.objects.filter(has_app_as_user=True).order_by("name")
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs
 
 
 class AccountDetail(
@@ -366,6 +382,24 @@ class AccountDelete(
             return super().delete(request, *args, **kwargs)
 
 
+class AccountAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for Accounts. Only active accounts are included."""
+
+    def get_queryset(self):
+        # Only active accounts.
+        qs = models.Account.objects.filter(
+            status=models.Account.ACTIVE_STATUS
+        ).order_by("email")
+
+        if self.q:
+            # When Accounts are linked to users, we'll want to figure out how to filter on fields in the user model.
+            qs = qs.filter(email__icontains=self.q)
+
+        return qs
+
+
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup
 
@@ -531,6 +565,21 @@ class ManagedGroupDelete(
         return super().delete(request, *args, **kwargs)
 
 
+class ManagedGroupAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for ManagedGroups."""
+
+    def get_queryset(self):
+        # Filter out unathorized users, or does the auth mixin do that?
+        qs = models.ManagedGroup.objects.filter(is_managed_by_app=True).order_by("name")
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs
+
+
 class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.Workspace
 
@@ -682,6 +731,23 @@ class WorkspaceDelete(
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
         return super().delete(request, *args, **kwargs)
+
+
+class WorkspaceAutocomplete(
+    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
+):
+    """View to provide autocompletion for Workspaces.
+
+    Right now this only matches Workspace name, not billing project."""
+
+    def get_queryset(self):
+        # Filter out unathorized users, or does the auth mixin do that?
+        qs = models.Workspace.objects.filter().order_by("billing_project__name", "name")
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs
 
 
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
@@ -900,7 +966,7 @@ class WorkspaceGroupAccessCreate(
     """View to create a new WorkspaceGroupAccess object and share the Workspace with a Group on AnVIL."""
 
     model = models.WorkspaceGroupAccess
-    fields = ("workspace", "group", "access", "can_compute")
+    form_class = forms.WorkspaceGroupAccessForm
     success_msg = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupAccess object was successfully created in the app and on AnVIL."""
 

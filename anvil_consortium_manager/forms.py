@@ -1,5 +1,6 @@
 """Forms classes for the anvil_consortium_manager app."""
 
+from dal import autocomplete
 from django import forms
 from django.core.exceptions import ValidationError
 
@@ -53,12 +54,26 @@ class WorkspaceCreateForm(forms.ModelForm):
 
     # Only allow billing groups where we can create a workspace.
     billing_project = forms.ModelChoiceField(
-        queryset=models.BillingProject.objects.filter(has_app_as_user=True)
+        queryset=models.BillingProject.objects.filter(has_app_as_user=True),
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:billing_projects:autocomplete",
+            attrs={"data-theme": "bootstrap-5"},
+        ),
     )
 
     class Meta:
         model = models.Workspace
         fields = ("billing_project", "name", "authorization_domains")
+        widgets = {
+            "billing_project": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:billing_projects:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+            "authorization_domains": autocomplete.ModelSelect2Multiple(
+                url="anvil_consortium_manager:managed_groups:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+        }
 
 
 class WorkspaceImportForm(forms.Form):
@@ -78,12 +93,22 @@ class GroupGroupMembershipForm(forms.ModelForm):
     """Form for the GroupGroupMembership model."""
 
     parent_group = forms.ModelChoiceField(
-        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True)
+        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:managed_groups:autocomplete",
+            attrs={"data-theme": "bootstrap-5"},
+        ),
     )
 
     class Meta:
         model = models.GroupGroupMembership
         fields = ("parent_group", "child_group", "role")
+        widgets = {
+            "child_group": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:managed_groups:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+        }
 
     #
     # def clean_parent_group(self):
@@ -101,16 +126,41 @@ class GroupAccountMembershipForm(forms.ModelForm):
     account = forms.ModelChoiceField(
         queryset=models.Account.objects.active(),
         help_text="Only active accounts can be added.",
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:accounts:autocomplete",
+            attrs={"data-theme": "bootstrap-5"},
+        ),
     )
     group = forms.ModelChoiceField(
         queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
         help_text="Only groups managed by this app can be selected.",
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:managed_groups:autocomplete",
+            attrs={
+                "data-theme": "bootstrap-5",
+            },
+        ),
     )
 
     class Meta:
         model = models.GroupAccountMembership
         fields = ("group", "account", "role")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["account"].queryset = models.Account.objects.active()
+
+class WorkspaceGroupAccessForm(forms.ModelForm):
+    """Form for the WorkspaceGroupAccess model."""
+
+    class Meta:
+        model = models.WorkspaceGroupAccess
+        fields = ("workspace", "group", "access", "can_compute")
+
+        widgets = {
+            "workspace": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:workspaces:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+            "group": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:managed_groups:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+        }

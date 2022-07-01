@@ -1,4 +1,5 @@
 {% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}New Workspace Group Access{% endblock title %}
@@ -12,3 +13,10 @@
     <button type="submit" class="btn btn-success">Save access</button>
   </form>
 {% endblock %}
+
+
+{% block inline_javascript %}
+  {# script for django-autocomplete-light #}
+  <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+  {{ form.media }}
+{% endblock inline_javascript %}

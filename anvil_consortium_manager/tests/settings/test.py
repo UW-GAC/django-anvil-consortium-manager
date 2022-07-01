@@ -39,6 +39,8 @@ ROOT_URLCONF = "anvil_consortium_manager.tests.settings.urls"
 # APPS
 # ------------------------------------------------------------------------------
 INSTALLED_APPS = [
+    "dal",
+    "dal_select2",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
