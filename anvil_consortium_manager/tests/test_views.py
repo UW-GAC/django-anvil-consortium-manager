@@ -2469,17 +2469,17 @@ class ManagedGroupDetailTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        response = self.client.get(self.get_url("foo"))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo")
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, slug=obj.name)
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
@@ -2487,7 +2487,7 @@ class ManagedGroupDetailTest(TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("foo"))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
@@ -2497,23 +2497,23 @@ class ManagedGroupDetailTest(TestCase):
         obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Only clients load the template.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(obj.pk))
+        response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(obj.pk + 1))
+        factories.ManagedGroupFactory.create()
+        request = self.factory.get(self.get_url("foo"))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=obj.pk + 1)
+            self.get_view()(request, slug="foo")
 
     def test_workspace_table(self):
         """The workspace table exists."""
         obj = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, slug=obj.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertIsInstance(
             response.context_data["workspace_table"], tables.WorkspaceGroupAccessTable
@@ -2522,9 +2522,9 @@ class ManagedGroupDetailTest(TestCase):
     def test_workspace_table_none(self):
         """No workspaces are shown if the group does not have access to any workspaces."""
         group = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 
@@ -2532,9 +2532,9 @@ class ManagedGroupDetailTest(TestCase):
         """One workspace is shown if the group have access to one workspace."""
         group = factories.ManagedGroupFactory.create()
         factories.WorkspaceGroupAccessFactory.create(group=group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
 
@@ -2542,9 +2542,9 @@ class ManagedGroupDetailTest(TestCase):
         """Two workspaces are shown if the group have access to two workspaces."""
         group = factories.ManagedGroupFactory.create()
         factories.WorkspaceGroupAccessFactory.create_batch(2, group=group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
 
@@ -2553,18 +2553,18 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.WorkspaceGroupAccessFactory.create(group=other_group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 
     def test_active_account_table(self):
         """The active account table exists."""
         obj = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, slug=obj.name)
         self.assertIn("active_account_table", response.context_data)
         self.assertIsInstance(
             response.context_data["active_account_table"],
@@ -2574,9 +2574,9 @@ class ManagedGroupDetailTest(TestCase):
     def test_active_account_table_none(self):
         """No accounts are shown if the group has no active accounts."""
         group = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
 
@@ -2584,9 +2584,9 @@ class ManagedGroupDetailTest(TestCase):
         """One accounts is shown if the group has only that active account."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 1)
 
@@ -2594,9 +2594,9 @@ class ManagedGroupDetailTest(TestCase):
         """Two accounts are shown if the group has only those active accounts."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, group=group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 2)
 
@@ -2605,18 +2605,18 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupAccountMembershipFactory.create(group=other_group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("active_account_table", response.context_data)
         self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
 
     def test_group_table(self):
         """The group table exists."""
         obj = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, slug=obj.name)
         self.assertIn("group_table", response.context_data)
         self.assertIsInstance(
             response.context_data["group_table"], tables.GroupGroupMembershipTable
@@ -2625,9 +2625,9 @@ class ManagedGroupDetailTest(TestCase):
     def test_group_table_none(self):
         """No groups are shown if the group has no member groups."""
         group = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
@@ -2635,9 +2635,9 @@ class ManagedGroupDetailTest(TestCase):
         """One group is shown if the group has only that member group."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupGroupMembershipFactory.create(parent_group=group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 1)
 
@@ -2645,9 +2645,9 @@ class ManagedGroupDetailTest(TestCase):
         """Two groups are shown if the group has only those member groups."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupGroupMembershipFactory.create_batch(2, parent_group=group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 2)
 
@@ -2656,18 +2656,18 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupGroupMembershipFactory.create(parent_group=other_group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
     def test_workspace_auth_domain_table(self):
         """The auth_domain table exists."""
         obj = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, slug=obj.name)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertIsInstance(
             response.context_data["workspace_authorization_domain_table"],
@@ -2677,9 +2677,9 @@ class ManagedGroupDetailTest(TestCase):
     def test_workspace_auth_domain_table_none(self):
         """No workspaces are shown if the group is not the auth domain for any workspace."""
         group = factories.ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertEqual(
             len(response.context_data["workspace_authorization_domain_table"].rows), 0
@@ -2690,9 +2690,9 @@ class ManagedGroupDetailTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         table = response.context_data["workspace_authorization_domain_table"]
         self.assertEqual(len(table.rows), 1)
@@ -2705,9 +2705,9 @@ class ManagedGroupDetailTest(TestCase):
         workspace_1.authorization_domains.add(group)
         workspace_2 = factories.WorkspaceFactory.create()
         workspace_2.authorization_domains.add(group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         table = response.context_data["workspace_authorization_domain_table"]
         self.assertEqual(len(table.rows), 2)
@@ -2721,9 +2721,9 @@ class ManagedGroupDetailTest(TestCase):
         other_workspace = factories.WorkspaceFactory.create()
         other_workspace.authorization_domains.add(other_group)
         factories.GroupGroupMembershipFactory.create(parent_group=other_group)
-        request = self.factory.get(self.get_url(group.pk))
+        request = self.factory.get(self.get_url(group.name))
         request.user = self.user
-        response = self.get_view()(request, pk=group.pk)
+        response = self.get_view()(request, slug=group.name)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertEqual(
             len(response.context_data["workspace_authorization_domain_table"].rows), 0
@@ -3097,7 +3097,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
         responses.assert_call_count(url, 2)
@@ -3113,7 +3113,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.name), {"submit": ""}, follow=True
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -3128,7 +3128,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -3150,7 +3150,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need to use a client for messages.
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.name), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
         # Check for messages.
@@ -3174,7 +3174,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:managed_groups:list")
@@ -3192,7 +3192,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(child.pk), follow=True)
+        response = self.client.get(self.get_url(child.name), follow=True)
         self.assertRedirects(response, child.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -3220,7 +3220,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(child.pk), follow=True)
+        response = self.client.post(self.get_url(child.name), follow=True)
         self.assertRedirects(response, child.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -3244,7 +3244,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace.authorization_domains.add(group)
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(group.pk), follow=True)
+        response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -3263,7 +3263,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace.authorization_domains.add(group)
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(group.pk), follow=True)
+        response = self.client.post(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -3286,7 +3286,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(group.pk), follow=True)
+        response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -3314,7 +3314,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(group.pk), follow=True)
+        response = self.client.post(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -3342,7 +3342,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(parent.pk), {"submit": ""})
+        response = self.client.post(self.get_url(parent.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Parent was deleted.
         with self.assertRaises(models.ManagedGroup.DoesNotExist):
@@ -3366,7 +3366,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(group.pk), {"submit": ""})
+        response = self.client.post(self.get_url(group.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # The group was deleted.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
@@ -3393,7 +3393,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "group delete test error"},
         )
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -3408,7 +3408,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(group.pk), follow=True)
+        response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -3425,7 +3425,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(group.pk), follow=True)
+        response = self.client.post(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)

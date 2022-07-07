@@ -43,15 +43,15 @@ account_patterns = (
 
 managed_group_patterns = (
     [
-        path("<int:pk>/", views.ManagedGroupDetail.as_view(), name="detail"),
-        path("new/", views.ManagedGroupCreate.as_view(), name="new"),
         path("", views.ManagedGroupList.as_view(), name="list"),
-        path("<int:pk>/delete/", views.ManagedGroupDelete.as_view(), name="delete"),
+        path("new/", views.ManagedGroupCreate.as_view(), name="new"),
         path(
             "autocomplete/",
             views.ManagedGroupAutocomplete.as_view(),
             name="autocomplete",
         ),
+        path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
+        path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
     ],
     "managed_groups",
 )

@@ -155,7 +155,7 @@ class ManagedGroup(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:managed_groups:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:managed_groups:detail", kwargs={"slug": self.name}
         )
 
     def get_email(self):

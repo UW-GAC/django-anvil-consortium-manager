@@ -404,6 +404,7 @@ class AccountAutocomplete(
 
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup
+    slug_field = "name"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -469,6 +470,7 @@ class ManagedGroupDelete(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
 ):
     model = models.ManagedGroup
+    slug_field = "name"
     message_not_managed_by_app = (
         "Cannot delete group because it is not managed by this app."
     )
