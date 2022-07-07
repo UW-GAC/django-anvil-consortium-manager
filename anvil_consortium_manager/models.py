@@ -297,7 +297,11 @@ class Workspace(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:workspaces:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:workspaces:detail",
+            kwargs={
+                "billing_project_slug": self.billing_project.name,
+                "workspace_slug": self.name,
+            },
         )
 
     def get_full_name(self):

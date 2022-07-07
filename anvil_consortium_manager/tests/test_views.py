@@ -3583,10 +3583,6 @@ class WorkspaceDetailTest(TestCase):
             )
         )
 
-    def get_url(self, *args):
-        """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:detail", args=args)
-
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceDetail.as_view()
@@ -3594,17 +3590,23 @@ class WorkspaceDetailTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
-        self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+        url = reverse(
+            "anvil_consortium_manager:workspaces:detail", args=["foo1", "foo2"]
         )
+        response = self.client.get(url)
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + url)
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        print(obj)
+        request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=obj.billing_project.name,
+            workspace_slug=obj.name,
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
@@ -3612,7 +3614,10 @@ class WorkspaceDetailTest(TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        url = reverse(
+            "anvil_consortium_manager:workspaces:detail", args=["foo1", "foo2"]
+        )
+        request = self.factory.get(url)
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
@@ -3620,7 +3625,7 @@ class WorkspaceDetailTest(TestCase):
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
         obj = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(obj.pk + 1))
+        request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=obj.pk + 1)
@@ -3628,9 +3633,13 @@ class WorkspaceDetailTest(TestCase):
     def test_group_access_table(self):
         """The workspace group access table exists."""
         obj = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=obj.billing_project.name,
+            workspace_slug=obj.name,
+        )
         self.assertIn("group_access_table", response.context_data)
         self.assertIsInstance(
             response.context_data["group_access_table"],
@@ -3640,9 +3649,13 @@ class WorkspaceDetailTest(TestCase):
     def test_group_access_table_none(self):
         """No groups are shown if the workspace has not been shared with any groups."""
         workspace = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
 
@@ -3650,9 +3663,13 @@ class WorkspaceDetailTest(TestCase):
         """One group is shown if the workspace has been shared with one group."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 1)
 
@@ -3660,9 +3677,13 @@ class WorkspaceDetailTest(TestCase):
         """Two groups are shown if the workspace has been shared with two groups."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupAccessFactory.create_batch(2, workspace=workspace)
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 2)
 
@@ -3671,18 +3692,26 @@ class WorkspaceDetailTest(TestCase):
         workspace = factories.WorkspaceFactory.create(name="workspace-1")
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
         factories.WorkspaceGroupAccessFactory.create(workspace=other_workspace)
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("group_access_table", response.context_data)
         self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
 
     def test_auth_domain_table(self):
         """The workspace auth domain table exists."""
         obj = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=obj.billing_project.name,
+            workspace_slug=obj.name,
+        )
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertIsInstance(
             response.context_data["authorization_domain_table"],
@@ -3692,9 +3721,13 @@ class WorkspaceDetailTest(TestCase):
     def test_auth_domain_table_none(self):
         """No groups are shown if the workspace has no auth domains."""
         workspace = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertEqual(
             len(response.context_data["authorization_domain_table"].rows), 0
@@ -3705,9 +3738,13 @@ class WorkspaceDetailTest(TestCase):
         workspace = factories.WorkspaceFactory.create()
         group = factories.ManagedGroupFactory.create()
         workspace.authorization_domains.add(group)
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("authorization_domain_table", response.context_data)
         table = response.context_data["authorization_domain_table"]
         self.assertEqual(len(table.rows), 1)
@@ -3720,9 +3757,13 @@ class WorkspaceDetailTest(TestCase):
         workspace.authorization_domains.add(group_1)
         group_2 = factories.ManagedGroupFactory.create()
         workspace.authorization_domains.add(group_2)
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("authorization_domain_table", response.context_data)
         table = response.context_data["authorization_domain_table"]
         self.assertEqual(len(table.rows), 2)
@@ -3735,9 +3776,13 @@ class WorkspaceDetailTest(TestCase):
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
         group = factories.ManagedGroupFactory.create()
         other_workspace.authorization_domains.add(group)
-        request = self.factory.get(self.get_url(workspace.pk))
+        request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=workspace.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=workspace.billing_project.name,
+            workspace_slug=workspace.name,
+        )
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertEqual(
             len(response.context_data["authorization_domain_table"].rows), 0
