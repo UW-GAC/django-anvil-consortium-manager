@@ -490,17 +490,17 @@ class BillingProjectDetailTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        response = self.client.get(self.get_url("foo"))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo")
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.BillingProjectFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, slug=obj.name)
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
@@ -508,7 +508,7 @@ class BillingProjectDetailTest(TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("foo"))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
@@ -518,23 +518,23 @@ class BillingProjectDetailTest(TestCase):
         obj = factories.BillingProjectFactory.create(has_app_as_user=False)
         # Only clients load the template.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(obj.pk))
+        response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
 
-    def test_view_status_code_with_invalid_pk(self):
-        """Raises a 404 error with an invalid object pk."""
-        obj = factories.BillingProjectFactory.create()
-        request = self.factory.get(self.get_url(obj.pk + 1))
+    def test_view_status_code_with_invalid_slug(self):
+        """Raises a 404 error with an invalid object slug."""
+        factories.BillingProjectFactory.create()
+        request = self.factory.get(self.get_url("foo"))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=obj.pk + 1)
+            self.get_view()(request, slug="foo")
 
     def test_workspace_table(self):
         """The workspace table exists."""
         obj = factories.BillingProjectFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, slug=obj.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertIsInstance(
             response.context_data["workspace_table"], tables.WorkspaceTable
@@ -543,9 +543,9 @@ class BillingProjectDetailTest(TestCase):
     def test_workspace_table_none(self):
         """No workspaces are shown if the billing project does not have any workspaces."""
         billing_project = factories.BillingProjectFactory.create()
-        request = self.factory.get(self.get_url(billing_project.pk))
+        request = self.factory.get(self.get_url(billing_project.name))
         request.user = self.user
-        response = self.get_view()(request, pk=billing_project.pk)
+        response = self.get_view()(request, slug=billing_project.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 
@@ -553,9 +553,9 @@ class BillingProjectDetailTest(TestCase):
         """One workspace is shown if the group have access to one workspace."""
         billing_project = factories.BillingProjectFactory.create()
         factories.WorkspaceFactory.create(billing_project=billing_project)
-        request = self.factory.get(self.get_url(billing_project.pk))
+        request = self.factory.get(self.get_url(billing_project.name))
         request.user = self.user
-        response = self.get_view()(request, pk=billing_project.pk)
+        response = self.get_view()(request, slug=billing_project.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 1)
 
@@ -563,9 +563,9 @@ class BillingProjectDetailTest(TestCase):
         """Two workspaces are shown if the group have access to two workspaces."""
         billing_project = factories.BillingProjectFactory.create()
         factories.WorkspaceFactory.create_batch(2, billing_project=billing_project)
-        request = self.factory.get(self.get_url(billing_project.pk))
+        request = self.factory.get(self.get_url(billing_project.name))
         request.user = self.user
-        response = self.get_view()(request, pk=billing_project.pk)
+        response = self.get_view()(request, slug=billing_project.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 2)
 
@@ -574,9 +574,9 @@ class BillingProjectDetailTest(TestCase):
         billing_project = factories.BillingProjectFactory.create()
         other_billing_project = factories.BillingProjectFactory.create()
         factories.WorkspaceFactory.create(billing_project=other_billing_project)
-        request = self.factory.get(self.get_url(billing_project.pk))
+        request = self.factory.get(self.get_url(billing_project.name))
         request.user = self.user
-        response = self.get_view()(request, pk=billing_project.pk)
+        response = self.get_view()(request, slug=billing_project.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 

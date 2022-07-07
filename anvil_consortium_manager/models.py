@@ -41,7 +41,8 @@ class BillingProject(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:billing_projects:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:billing_projects:detail",
+            kwargs={"slug": self.name},
         )
 
     def anvil_exists(self):
@@ -397,12 +398,8 @@ class Workspace(TimeStampedModel):
                             billing_project_name
                         )
                     except AnVILAPIError404:
-                        # We are not users, but we want a record of it anyway.
-                        # We may want to modify BillingProject.anvil_import to throw a better exception here.
-                        billing_project = BillingProject(
-                            name=billing_project_name, has_app_as_user=False
-                        )
-                        billing_project.full_clean()
+                        # Use the temporary billing project we previously created above.
+                        billing_project = temporary_billing_project
                         billing_project.save()
 
                 # Finally, set the workspace's billing project to the existing or newly-added BillingProject.

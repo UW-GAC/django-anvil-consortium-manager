@@ -117,6 +117,7 @@ class BillingProjectDetail(
     auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
 ):
     model = models.BillingProject
+    slug_field = "name"
     context_table_name = "workspace_table"
 
     def get_table(self):
