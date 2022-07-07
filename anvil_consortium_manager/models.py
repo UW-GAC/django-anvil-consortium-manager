@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
@@ -77,7 +78,9 @@ class Account(TimeStampedModel, ActivatorModel):
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
     is_service_account = models.BooleanField()
+    date_verified = models.DateTimeField(null=True)
     history = HistoricalRecords()
 
     def __str__(self):
