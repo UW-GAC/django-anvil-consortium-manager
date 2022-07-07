@@ -5913,17 +5913,20 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
-        self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
-        )
+        url = self.get_url("foo1", "foo2")
+        response = self.client.get(url)
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + url)
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.WorkspaceFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.billing_project.name, obj.name))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(
+            request,
+            billing_project_slug=obj.billing_project.name,
+            workspace_slug=obj.name,
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -5936,7 +5939,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("foo1", "foo2"))
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=1)
@@ -5946,14 +5949,14 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("foo1", "foo2"))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=1)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("foo1", "foo2"))
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, pk=1)
@@ -5969,7 +5972,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
         responses.assert_call_count(url, 1)
@@ -5989,7 +5994,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.billing_project.name, object.name),
+            {"submit": ""},
+            follow=True,
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -6009,7 +6016,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -6034,7 +6043,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.WorkspaceAuthorizationDomain.objects.count(), 0)
@@ -6062,7 +6073,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
@@ -6090,7 +6103,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:workspaces:list")
@@ -6115,7 +6130,9 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "workspace delete test error"},
         )
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
