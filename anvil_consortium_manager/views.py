@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.forms.forms import Form
 from django.http import HttpResponseRedirect
@@ -144,6 +146,7 @@ class AccountDetail(
         context = super().get_context_data(**kwargs)
         # Add an indicator of whether the account is inactive.
         context["is_inactive"] = self.object.status == models.Account.INACTIVE_STATUS
+        context["date_verified"] = self.object.date_verified
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
         return context
@@ -162,6 +165,36 @@ class AccountImport(
         object = form.save(commit=False)
         try:
             account_exists = object.anvil_exists()
+        except AnVILAPIError as e:
+            # If the API call failed for some other reason, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+        if not account_exists:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_does_not_exist
+            )
+            # Re-render the page with a message.
+            return self.render_to_response(self.get_context_data(form=form))
+
+        return super().form_valid(form)
+
+class AccountLink(LoginRequiredMixin, CreateView):
+    login_url = '/accounts/login'
+    model = models.Account
+    message_account_does_not_exist = "This account does not exist on AnVIL."
+    form_class = forms.AccountLinkForm
+    User = get_user_model()
+
+    def form_valid(self, form):
+        """If the form is valid, check that the account exists on AnVIL and send verification email."""
+        object = form.save(commit=False)
+        try:
+            account_exists = object.anvil_exists()
+            object.user = self.request.user
+            object.status = object.INACTIVE_STATUS
+            object.is_service_account = False
         except AnVILAPIError as e:
             # If the API call failed for some other reason, rerender the page with the responses and show a message.
             messages.add_message(

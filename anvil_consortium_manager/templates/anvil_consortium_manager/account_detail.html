@@ -22,12 +22,21 @@
   </div>
 {% endif %}
 
+{% if not object.date_verified %}
+  <div class="my-3 alert alert-dark" role="alert">
+  This account is unverified. Check your email for a verification link.
+  </div>
+{% endif %}
+
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Email: {{ object.email }}</li>
     <li>Status: {{ object.get_status_display }}</li>
     <li>Date added: {{ object.created }}</li>
     <li>Date modified: {{ object.modified }}</li>
+    {% if object.date_verified %}
+    <li>Date verified: {{ object.date_verified }}</li>
+  {% endif %}
   </ul>
 </div>
 

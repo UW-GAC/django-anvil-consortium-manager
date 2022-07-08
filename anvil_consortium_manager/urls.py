@@ -27,6 +27,7 @@ account_patterns = (
         path(
             "<int:pk>/reactivate", views.AccountReactivate.as_view(), name="reactivate"
         ),
+        path("link/", views.AccountLink.as_view(), name="link_account"),
     ],
     "accounts",
 )
