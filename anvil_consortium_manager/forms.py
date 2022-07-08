@@ -42,7 +42,7 @@ class AccountLinkForm(forms.ModelForm):
 
     def clean_email(self):
         value = self.cleaned_data["email"]
-        if models.Account.objects.filter(email__iexact=value, date_confirmed__isnull=True).exists():
+        if models.Account.objects.filter(email__iexact=value, date_verified__isnull=True).exists():
             raise ValidationError("Account with this Email needs to be verified. Check your email for a verification link.")
         return value
 
