@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     # note these are supposed to come before django.contrib.admin.
     "dal",
     "dal_select2",
+    # The example app.
+    "app",
 ]
 
 
