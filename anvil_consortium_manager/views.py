@@ -16,6 +16,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import anvil_api, auth, exceptions, forms, models, tables
+from .adapter import get_adapter
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 
 
@@ -709,7 +710,11 @@ class WorkspaceImport(
 
 class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Workspace
-    table_class = tables.WorkspaceTable
+
+    def get_table_class(self):
+        """Use the adapter to get the table class."""
+        table_class = get_adapter().get_list_table_class()
+        return table_class
 
 
 class WorkspaceDelete(
