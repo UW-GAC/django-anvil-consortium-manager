@@ -87,7 +87,7 @@ INSTALLED_APPS = [
     "dal",
     "dal_select2",
     # The example app.
-    "app",
+    "example_site.app",
 ]
 
 
