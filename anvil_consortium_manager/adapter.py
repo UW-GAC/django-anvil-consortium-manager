@@ -9,16 +9,17 @@ from . import tables
 class DefaultWorkspaceAdapter(object):
     """Default adapter for workspaces allowing extra data to be stored."""
 
-    list_table_class = None
+    list_table_class = tables.WorkspaceTable
     """Table class to use in a list of workspaces."""
 
+    workspace_data_model = None
+    """Optional model to use for storing extra data about workspaces."""
+
+    workspace_data_form = None
+    """Optional form for the model specified in ``workspace_data_model``."""
+
     def get_list_table_class(self):
-        """Returns the table class to use for a list of workspaces."""
-        if self.list_table_class:
-            return self.list_table_class
-        else:
-            # Default.
-            return tables.WorkspaceTable
+        return self.list_table_class
 
 
 def get_adapter():
