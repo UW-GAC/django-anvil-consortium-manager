@@ -6,8 +6,15 @@
 
 {% block content %}
   <form method="post">
+
     {% csrf_token %}
+
+    {% for formset in inlines %}
+      {{ formset|crispy }}
+    {% endfor %}
+
     {{ form|crispy }}
+
     <button type="submit" class="btn btn-success">Save workspace</button>
   </form>
 {% endblock %}

@@ -14,6 +14,7 @@ from django.views.generic import (
 )
 from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
+from extra_views.advanced import CreateWithInlinesView
 
 from . import anvil_api, auth, exceptions, forms, models, tables
 from .adapter import get_adapter
@@ -602,15 +603,20 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
 
 
 class WorkspaceCreate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateWithInlinesView
 ):
     model = models.Workspace
     form_class = forms.WorkspaceCreateForm
     success_msg = "Successfully created Workspace on AnVIL."
 
+    def get_inlines(self):
+        """"""
+        return get_adapter().get_workspace_data_inlines()
+
     @transaction.atomic
-    def form_valid(self, form):
+    def forms_valid(self, form, inlines):
         """If the form is valid, save the associated model and create it on AnVIL."""
+        print("form valid")
         # Need to use a transaction because the object needs to be saved to access the many-to-many field.
         try:
             with transaction.atomic():
@@ -624,12 +630,17 @@ class WorkspaceCreate(
                         workspace=self.object, group=auth_domain
                     )
                 self.object.anvil_create()
+                # Then save the workspace data object.
+                for formset in inlines:
+                    formset.save()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
-            return self.render_to_response(self.get_context_data(form=form))
+            return self.render_to_response(
+                self.get_context_data(form=form, inlines=inlines)
+            )
         # Add the success message here because we're not calling a super method.
         self.add_success_message()
         return HttpResponseRedirect(self.get_success_url())
