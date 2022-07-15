@@ -7,11 +7,12 @@ from django.contrib.auth.models import Permission, User
 from django.core.exceptions import PermissionDenied
 from django.http.response import Http404
 from django.shortcuts import resolve_url
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from .. import forms, models, tables, views
 from . import factories
+from .adapter_app import tables as app_tables
 from .utils import AnVILAPIMockTestMixin
 
 
@@ -5270,6 +5271,19 @@ class WorkspaceListTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    @override_settings(
+        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
+    )
+    def test_adapter(self):
+        """Displays the correct table if specified in the adapter."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], app_tables.TestWorkspaceDataTable
+        )
 
 
 class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
