@@ -616,7 +616,6 @@ class WorkspaceCreate(
     @transaction.atomic
     def forms_valid(self, form, inlines):
         """If the form is valid, save the associated model and create it on AnVIL."""
-        print("form valid")
         # Need to use a transaction because the object needs to be saved to access the many-to-many field.
         try:
             with transaction.atomic():
