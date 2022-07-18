@@ -610,7 +610,7 @@ class WorkspaceCreate(
 
     def get_workspace_data_form(self):
         """Return an instance of the workspace data form to be used in this view."""
-        form_class = get_adapter().get_workspace_data_form()
+        form_class = get_adapter().get_workspace_data_form_class()
         if form_class:
             kwargs = {
                 "initial": self.get_initial(),
@@ -748,7 +748,7 @@ class WorkspaceImport(
 
     def get_workspace_data_form(self):
         """Return an instance of the workspace data form to be used in this view."""
-        form_class = get_adapter().get_workspace_data_form()
+        form_class = get_adapter().get_workspace_data_form_class()
         if form_class:
             kwargs = {
                 "initial": self.get_initial(),
