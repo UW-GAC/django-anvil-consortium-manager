@@ -9,10 +9,7 @@
 
     {% csrf_token %}
 
-    {% for formset in inlines %}
-      {{ formset|crispy }}
-    {% endfor %}
-
+    {{ workspace_data_form|crispy }}
     {{ form|crispy }}
 
     <button type="submit" class="btn btn-success">Save workspace</button>

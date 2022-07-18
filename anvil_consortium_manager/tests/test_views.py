@@ -5,7 +5,6 @@ import responses
 from django.conf import settings
 from django.contrib.auth.models import Permission, User
 from django.core.exceptions import PermissionDenied
-from django.forms import BaseInlineFormSet
 from django.http.response import Http404
 from django.shortcuts import resolve_url
 from django.test import RequestFactory, TestCase, override_settings
@@ -4329,19 +4328,14 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     @override_settings(
         ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
     )
-    def test_adapter_includes_inlines(self):
-        """Response includes the inlines form if specified."""
+    def test_adapter_includes_workspace_data_form(self):
+        """Response includes the workspace data form if specified."""
         request = self.factory.get(self.get_url())
         request.user = self.user
         response = self.get_view()(request)
-        self.assertTrue("inlines" in response.context_data)
-        inlines = response.context_data["inlines"]
-        self.assertEqual(len(inlines), 1)
-        self.assertIsInstance(inlines[0], BaseInlineFormSet)
-        # Check workspace data class.
-        self.assertEqual(inlines[0].model, app_models.TestWorkspaceData)
-        # Check form class.
-        self.assertIsInstance(inlines[0].forms[0], app_forms.TestWorkspaceDataForm)
+        self.assertTrue("workspace_data_form" in response.context_data)
+        workspace_data_form = response.context_data["workspace_data_form"]
+        self.assertIsInstance(workspace_data_form, app_forms.TestWorkspaceDataForm)
 
     @override_settings(
         ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
@@ -4369,10 +4363,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "billing_project": billing_project.pk,
                 "name": "test-workspace",
-                "testworkspacedata-TOTAL_FORMS": "1",
-                "testworkspacedata-INITIAL_FORMS": "0",
-                "testworkspacedata-0-study_name": "test study",
-                "testworkspacedata-0-workspace": "",
+                "study_name": "test study",
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -4388,21 +4379,17 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     @override_settings(
         ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
     )
-    def test_adapter_does_not_create_objects_if_inlines_invalid(self):
-        """Posting invalid data to the inlines form does not create a workspace when using an adapter."""
+    def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
+        """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
         billing_project = factories.BillingProjectFactory.create()
         request = self.factory.post(
             self.get_url(),
             {
                 "billing_project": billing_project.pk,
                 "name": "test-workspace",
-                "testworkspacedata-TOTAL_FORMS": "1",
-                "testworkspacedata-INITIAL_FORMS": "0",
-                "testworkspacedata-MIN_NUM_FORMS": "0",
-                "testworkspacedata-MAX_NUM_FORMS": "1",
                 # study name is only allowed to have 16 characters.
-                "testworkspacedata-0-study_name": "abcdefghijklmnopqrtstuvwxyz",
-                "testworkspacedata-0-id": "",
+                "study_name": "",
+                #                "testworkspacedata-0-id": "",
             },
         )
         request.user = self.user
@@ -4411,10 +4398,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Workspace form is valid.
         form = response.context_data["form"]
         self.assertTrue(form.is_valid())
-        # Inline form is not valid.
-        formset = response.context_data["inlines"][0]
-        self.assertEqual(formset.is_valid(), False)
-        self.assertIn("study_name", formset.errors[0])
+        # workspace_data_form is not valid.
+        workspace_data_form = response.context_data["workspace_data_form"]
+        self.assertEqual(workspace_data_form.is_valid(), False)
+        self.assertEqual(len(workspace_data_form.errors), 1)
+        self.assertIn("study_name", workspace_data_form.errors)
+        self.assertEqual(len(workspace_data_form.errors["study_name"]), 1)
+        self.assertIn("required", workspace_data_form.errors["study_name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
         self.assertEqual(len(responses.calls), 0)
