@@ -5273,6 +5273,132 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.BillingProject.objects.count(), 0)
         self.assertEqual(models.Workspace.objects.count(), 0)
 
+    @override_settings(
+        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
+    )
+    def test_adapter_includes_workspace_data_form(self):
+        """Response includes the workspace data form if specified."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertTrue("workspace_data_form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["workspace_data_form"],
+            app_forms.TestWorkspaceDataForm,
+        )
+
+    @override_settings(
+        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
+    )
+    def test_adapter_creates_workspace_data(self):
+        """Posting valid data to the form creates a workspace data object when using a custom adapter."""
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        url = self.get_api_url(billing_project.name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+                "study_name": "test study",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # The workspace is created.
+        new_workspace = models.Workspace.objects.latest("pk")
+        # Workspace data is added.
+        self.assertEqual(app_models.TestWorkspaceData.objects.count(), 1)
+        new_workspace_data = app_models.TestWorkspaceData.objects.latest("pk")
+        self.assertEqual(new_workspace_data.workspace, new_workspace)
+        self.assertEqual(new_workspace_data.study_name, "test study")
+        responses.assert_call_count(url, 1)
+
+    @override_settings(
+        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
+    )
+    def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
+        """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        url = self.get_api_url(billing_project.name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        self.client.force_login(self.user)
+        request = self.factory.post(
+            self.get_url(),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+                "study_name": "",
+            },
+        )
+
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        # Workspace form is valid.
+        form = response.context_data["form"]
+        self.assertTrue(form.is_valid())
+        # workspace_data_form is not valid.
+        workspace_data_form = response.context_data["workspace_data_form"]
+        self.assertEqual(workspace_data_form.is_valid(), False)
+        self.assertEqual(len(workspace_data_form.errors), 1)
+        self.assertIn("study_name", workspace_data_form.errors)
+        self.assertEqual(len(workspace_data_form.errors["study_name"]), 1)
+        self.assertIn("required", workspace_data_form.errors["study_name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 1)
+
 
 class WorkspaceListTest(TestCase):
     def setUp(self):

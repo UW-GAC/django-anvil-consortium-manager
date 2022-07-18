@@ -660,17 +660,17 @@ class WorkspaceCreate(
             with transaction.atomic():
                 # Calling form.save() does not create the history for the authorization domain many to many field.
                 # Instead, save the workspace first and then create the auth domain relationships one by one.
-                self.object = form.save(commit=False)
-                self.object.save()
-                self.object.refresh_from_db()
+                self.workspace = form.save(commit=False)
+                self.workspace.save()
+                self.workspace.refresh_from_db()
                 for auth_domain in form.cleaned_data["authorization_domains"]:
                     models.WorkspaceAuthorizationDomain.objects.create(
-                        workspace=self.object, group=auth_domain
+                        workspace=self.workspace, group=auth_domain
                     )
-                self.object.anvil_create()
+                self.workspace.anvil_create()
                 # Then save the workspace data object.
                 if workspace_data_form:
-                    workspace_data_form.instance.workspace = self.object
+                    workspace_data_form.instance.workspace = self.workspace
                     workspace_data_form.save()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
@@ -682,15 +682,16 @@ class WorkspaceCreate(
                     form=form, workspace_data_form=workspace_data_form
                 )
             )
-        # Add the success message here because we're not calling a super method.
-        self.add_success_message()
-        return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().form_valid(form)
 
     def form_invalid(self, form, workspace_data_form):
         """If the form is invalid, render the invalid form."""
         return self.render_to_response(
             self.get_context_data(form=form, workspace_data_form=workspace_data_form)
         )
+
+    def get_success_url(self):
+        return self.workspace.get_absolute_url()
 
 
 class WorkspaceImport(
@@ -745,10 +746,55 @@ class WorkspaceImport(
             workspace_choices=workspace_choices, **self.get_form_kwargs()
         )
 
+    def get_workspace_data_form(self):
+        """Return an instance of the workspace data form to be used in this view."""
+        form_class = get_adapter().get_workspace_data_form()
+        if form_class:
+            kwargs = {
+                "initial": self.get_initial(),
+                "prefix": self.get_prefix(),
+            }
+            if self.request.method in ("POST", "PUT"):
+                kwargs.update(
+                    {
+                        "data": self.request.POST,
+                        "files": self.request.FILES,
+                    }
+                )
+            return form_class(**kwargs)
+        else:
+            return None
+
+    def get_context_data(self, **kwargs):
+        """Insert the workspace data form into the context dict."""
+        if "workspace_data_form" not in kwargs:
+            kwargs["workspace_data_form"] = self.get_workspace_data_form()
+        return super().get_context_data(**kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests: instantiate the forms instances with the passed
+        POST variables and then check if they are valid.
+        """
+        # print(self.POST)
+        form = self.get_form()
+        workspace_data_form = self.get_workspace_data_form()
+        # Make sure both the workspace form and the workspace data form (if it exists) are valid.
+        if form.is_valid() and not workspace_data_form:
+            # The workspace form is valid, and no workspace data form exists.
+            return self.form_valid(form, workspace_data_form)
+        if form.is_valid() and workspace_data_form and workspace_data_form.is_valid():
+            # Both forms are valid.
+            return self.form_valid(form, workspace_data_form)
+        else:
+            # One or both of the forms are invalid.
+            return self.form_invalid(form, workspace_data_form)
+
     def get_success_url(self):
         return self.workspace.get_absolute_url()
 
-    def form_valid(self, form):
+    @transaction.atomic
+    def form_valid(self, form, workspace_data_form):
         """If the form is valid, check that the workspace exists on AnVIL and save the associated model."""
         # Separate the billing project and workspace name.
         billing_project_name, workspace_name = form.cleaned_data["workspace"].split("/")
@@ -757,6 +803,10 @@ class WorkspaceImport(
             self.workspace = models.Workspace.anvil_import(
                 billing_project_name, workspace_name
             )
+            if workspace_data_form:
+                workspace_data_form.instance.workspace = self.workspace
+                # import ipdb; ipdb.set_trace()
+                workspace_data_form.save()
         except anvil_api.AnVILAPIError as e:
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -764,6 +814,12 @@ class WorkspaceImport(
             return self.render_to_response(self.get_context_data(form=form))
 
         return super().form_valid(form)
+
+    def form_invalid(self, form, workspace_data_form):
+        """If the form is invalid, render the invalid form."""
+        return self.render_to_response(
+            self.get_context_data(form=form, workspace_data_form=workspace_data_form)
+        )
 
 
 class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
