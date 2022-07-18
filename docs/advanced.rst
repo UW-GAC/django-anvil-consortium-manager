@@ -49,7 +49,7 @@ This table will need to operate on the :class:`~anvil_consortium_manager.models.
             fields = ("customworkspacedata__study_name", "workspacedata__consent_code", "name")
 
 
-Next, set up the adapter by subclassing ``DefaultWorkspaceAdapter``. You will typically want to set:
+Next, set up the adapter by subclassing :class:`anvil_consortium_manager.adapter.DefaultWorkspaceAdapter`. You will typically want to set:
 
 * ``workspace_data_model``
 * ``workspace_data_form_class``
@@ -70,6 +70,3 @@ Here is example of the custom adapter for ``my_app``.
         list_table_class = tables.CustomWorkspaceTable
 
 Finally, to tell the app to use this adapter, set ``ANVIL_ADAPTER`` in your settings file, e.g.: ``ANVIL_ADAPTER = my_app.adapters.CustomWorkspaceAdapter``
-
-.. autoclass:: anvil_consortium_manager.adapter.DefaultWorkspaceAdapter
-   :members:
