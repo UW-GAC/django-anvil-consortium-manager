@@ -20,10 +20,14 @@ class DefaultWorkspaceAdapter(object):
     """Optional form for the model specified in ``workspace_data_model``."""
 
     def get_list_table_class(self):
+        """Return the table class to use for the WorkspaceList view."""
         return self.list_table_class
 
     def get_workspace_data_form(self):
-        """This could be expanded to build a form from the workspace_data_model specified."""
+        """Return the form used to create `workspace_data_model`. If `workspace_data_model` is not set, return None.
+
+        This could be expanded to build a form from the workspace_data_model specified.
+        """
         if self.workspace_data_model and not self.workspace_data_form:
             raise ImproperlyConfigured(
                 "If specifying workspace_data_model, then workspace_data_form must also be set."
