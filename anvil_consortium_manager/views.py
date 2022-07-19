@@ -652,7 +652,6 @@ class WorkspaceCreate(
             # One or both of the forms are invalid.
             return self.form_invalid(form, workspace_data_form)
 
-    @transaction.atomic
     def form_valid(self, form, workspace_data_form):
         """If the form(s) are valid, save the associated model(s) and create the workspace on AnVIL."""
         # Need to use a transaction because the object needs to be saved to access the many-to-many field.
