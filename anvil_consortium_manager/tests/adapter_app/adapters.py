@@ -8,4 +8,4 @@ class TestWorkspaceAdapter(DefaultWorkspaceAdapter):
 
     list_table_class = tables.TestWorkspaceDataTable
     workspace_data_model = models.TestWorkspaceData
-    workspace_data_form = forms.TestWorkspaceDataForm
+    workspace_data_form_class = forms.TestWorkspaceDataForm

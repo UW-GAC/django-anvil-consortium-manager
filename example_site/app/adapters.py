@@ -8,4 +8,4 @@ class WorkspaceAdapter(DefaultWorkspaceAdapter):
 
     list_table_class = tables.WorkspaceDataTable
     workspace_data_model = models.WorkspaceData
-    workspace_data_form = forms.WorkspaceDataForm
+    workspace_data_form_class = forms.WorkspaceDataForm
