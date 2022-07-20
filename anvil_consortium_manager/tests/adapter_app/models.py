@@ -9,6 +9,3 @@ class TestWorkspaceData(models.Model):
 
     study_name = models.CharField(max_length=16, unique=True)
     workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.study_name + " - " + self.workspace.get_full_name()
