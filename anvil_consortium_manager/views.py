@@ -661,7 +661,6 @@ class WorkspaceCreate(
                 # Instead, save the workspace first and then create the auth domain relationships one by one.
                 self.workspace = form.save(commit=False)
                 self.workspace.save()
-                self.workspace.refresh_from_db()
                 for auth_domain in form.cleaned_data["authorization_domains"]:
                     models.WorkspaceAuthorizationDomain.objects.create(
                         workspace=self.workspace, group=auth_domain
