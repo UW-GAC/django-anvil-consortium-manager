@@ -614,7 +614,7 @@ class WorkspaceCreate(
         if form_class:
             kwargs = {
                 "initial": self.get_initial(),
-                "prefix": self.get_prefix(),
+                "prefix": "workspace_data_form",
             }
             if self.request.method in ("POST", "PUT"):
                 kwargs.update(
@@ -751,7 +751,7 @@ class WorkspaceImport(
         if form_class:
             kwargs = {
                 "initial": self.get_initial(),
-                "prefix": self.get_prefix(),
+                "prefix": "workspace_data_form",
             }
             if self.request.method in ("POST", "PUT"):
                 kwargs.update(

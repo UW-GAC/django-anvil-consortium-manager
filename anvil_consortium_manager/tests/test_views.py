@@ -4358,12 +4358,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         self.client.force_login(self.user)
+        # import ipdb; ipdb.set_trace()
         response = self.client.post(
             self.get_url(),
             {
                 "billing_project": billing_project.pk,
                 "name": "test-workspace",
-                "study_name": "test study",
+                "workspace_data_form-study_name": "test study",
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -4388,7 +4389,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "billing_project": billing_project.pk,
                 "name": "test-workspace",
                 # study name is only allowed to have 16 characters.
-                "study_name": "",
+                "workspace_data_form-study_name": "",
                 #                "testworkspacedata-0-id": "",
             },
         )
@@ -5333,7 +5334,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
-                "study_name": "test study",
+                "workspace_data_form-study_name": "test study",
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -5378,7 +5379,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
-                "study_name": "",
+                "workspace_data_form-study_name": "",
             },
         )
 
