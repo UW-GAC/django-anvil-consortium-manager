@@ -70,3 +70,17 @@ Here is example of the custom adapter for ``my_app``.
         list_table_class = tables.CustomWorkspaceTable
 
 Finally, to tell the app to use this adapter, set ``ANVIL_ADAPTER`` in your settings file, e.g.: ``ANVIL_ADAPTER = my_app.adapters.CustomWorkspaceAdapter``
+
+If you would like to display information from the custom workspace data model, you can include it in the ``workspace_data`` block of the workspace_detail.html template. For example:
+
+.. code-block:: html
+
+    {% extends "anvil_consortium_manager/workspace_detail.html" %}
+    {% block workspace_data %}
+    <ul>
+      <li>Study name: {{ object.customworkspacedata.study_name }}</li>
+      <li>Consent: {{ object.customworkspacedata.consent_code }}</li>
+    </ul>
+    {% endblock workspace_data %}
+
+If custom content is not provided for the ``workspace_data`` block, a default set of information will be displayed: the billing project, the date added, and the date modified.

@@ -1,0 +1,10 @@
+{% extends "anvil_consortium_manager/workspace_detail.html" %}
+
+{% block workspace_data %}
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <ul>
+    <li>Study: {{ object.workspacedata.study_name }}</li>
+    <li>Consent: {{ object.workspacedata.consent_code }}</li>
+  </ul>
+</div>
+{% endblock workspace_data %}
