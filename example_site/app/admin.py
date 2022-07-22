@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import WorkspaceData
+from .models import ExampleWorkspaceData
 
 # Register your models here.
-admin.site.register(WorkspaceData)
+admin.site.register(ExampleWorkspaceData)

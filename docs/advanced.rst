@@ -6,21 +6,19 @@ The workspace adapter
 
 The app provides an adapter that you can use to provide extra, customized data about a workspace.
 
-First, you will need to define a new model with the additional fields as well as a one-to-one field to :class:`~anvil_consortium_manager.models.Workspace`, e.g., ``WorkspaceData``. This one-to-one field should be called ``workspace``.
+First, you will need to define a new model with the additional fields.
+It must inherit from :class:`~anvil_consortium_manager.models.AbstractWorkspaceData`, which provides a one-to-one field called ``workspace`` to the :class:`~anvil_consortium_manager.models.Workspace` model.
 
 .. code-block:: python
 
     from django.db import models
-    from anvil_consortium_manager.models import Workspace
+    from anvil_consortium_manager.models import AbstractWorkspaceData
 
-    class CustomWorkspaceData(models.Model):
+    class CustomWorkspaceData(AbstractWorkspaceData):
         study_name = models.CharField(max_length=255)
         consent_code = models.CharField(max_length=16)
-        # This field *must* be called "workspace".
-        workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
 
-
-You should also define a form containing the additional fields, and excluding the ``workspace`` field.
+You must also define a form containing the additional fields, and excluding the ``workspace`` field.
 
 .. code-block:: python
 
@@ -49,13 +47,15 @@ This table will need to operate on the :class:`~anvil_consortium_manager.models.
             fields = ("customworkspacedata__study_name", "workspacedata__consent_code", "name")
 
 
-Next, set up the adapter by subclassing :class:`anvil_consortium_manager.adapter.DefaultWorkspaceAdapter`. You will typically want to set:
+Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapter.DefaultWorkspaceAdapter`. You will typically want to set:
 
-* ``workspace_data_model``
-* ``workspace_data_form_class``
-* ``list_table_class``
+* ``workspace_data_model`` (default: :class:`~anvil_consortium_manager.models.DefaultWorkspaceData`)
+* ``workspace_data_form_class`` (default: :class:`~anvil_consortium_manager.forms.DefaultWorkspaceDataForm`)
+* ``list_table_class`` (default: :class:`~anvil_consortium_manager.tables.WorkspaceTable`.)
 
-Here is example of the custom adapter for ``my_app``.
+The default ``workspace_data_model`` has no fields other than those provided by :class:`~anvil_consortium_manager.models.AbstractWorkspaceData`.
+
+Here is example of the custom adapter for ``my_app`` with the model, form and table defined above.
 
 .. code-block:: python
 

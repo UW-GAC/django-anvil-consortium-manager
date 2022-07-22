@@ -611,21 +611,18 @@ class WorkspaceCreate(
     def get_workspace_data_form(self):
         """Return an instance of the workspace data form to be used in this view."""
         form_class = get_adapter().get_workspace_data_form_class()
-        if form_class:
-            kwargs = {
-                "initial": self.get_initial(),
-                "prefix": "workspace_data_form",
-            }
-            if self.request.method in ("POST", "PUT"):
-                kwargs.update(
-                    {
-                        "data": self.request.POST,
-                        "files": self.request.FILES,
-                    }
-                )
-            return form_class(**kwargs)
-        else:
-            return None
+        kwargs = {
+            "initial": self.get_initial(),
+            "prefix": "workspace_data_form",
+        }
+        if self.request.method in ("POST", "PUT"):
+            kwargs.update(
+                {
+                    "data": self.request.POST,
+                    "files": self.request.FILES,
+                }
+            )
+        return form_class(**kwargs)
 
     def get_context_data(self, **kwargs):
         """Insert the workspace data form into the context dict."""
@@ -641,15 +638,10 @@ class WorkspaceCreate(
         # print(self.POST)
         form = self.get_form()
         workspace_data_form = self.get_workspace_data_form()
-        # Make sure both the workspace form and the workspace data form (if it exists) are valid.
-        if form.is_valid() and not workspace_data_form:
-            # The workspace form is valid, and no workspace data form exists.
-            return self.form_valid(form, workspace_data_form)
-        if form.is_valid() and workspace_data_form and workspace_data_form.is_valid():
-            # Both forms are valid.
+        # Make sure both the workspace form and the workspace data form are valid.
+        if form.is_valid() and workspace_data_form.is_valid():
             return self.form_valid(form, workspace_data_form)
         else:
-            # One or both of the forms are invalid.
             return self.form_invalid(form, workspace_data_form)
 
     def form_valid(self, form, workspace_data_form):
@@ -667,9 +659,8 @@ class WorkspaceCreate(
                     )
                 self.workspace.anvil_create()
                 # Then save the workspace data object.
-                if workspace_data_form:
-                    workspace_data_form.instance.workspace = self.workspace
-                    workspace_data_form.save()
+                workspace_data_form.instance.workspace = self.workspace
+                workspace_data_form.save()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(

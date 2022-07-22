@@ -5,9 +5,9 @@ from django import forms
 from . import models
 
 
-class WorkspaceDataForm(forms.ModelForm):
-    """Form for a WorkspaceData object."""
+class ExampleWorkspaceDataForm(forms.ModelForm):
+    """Form for an ExampleWorkspaceData object."""
 
     class Meta:
-        model = models.WorkspaceData
+        model = models.ExampleWorkspaceData
         fields = ("study_name", "consent_code")

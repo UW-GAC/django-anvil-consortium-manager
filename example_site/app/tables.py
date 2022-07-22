@@ -3,7 +3,7 @@ import django_tables2 as tables
 from anvil_consortium_manager import models as acm_models
 
 
-class WorkspaceDataTable(tables.Table):
+class ExampleWorkspaceDataTable(tables.Table):
 
     name = tables.columns.Column(linkify=True)
 
