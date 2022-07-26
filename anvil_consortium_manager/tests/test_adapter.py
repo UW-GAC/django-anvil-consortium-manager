@@ -1,7 +1,7 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 
-from ..adapter import DefaultWorkspaceAdapter
+from ..adapter import BaseWorkspaceAdapter, DefaultWorkspaceAdapter
 from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
 from ..tables import WorkspaceTable
@@ -20,7 +20,7 @@ class WorkspaceAdapterTest(TestCase):
     def test_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
 
-        class TestAdapter(DefaultWorkspaceAdapter):
+        class TestAdapter(BaseWorkspaceAdapter):
             list_table_class = tables.TestWorkspaceDataTable
 
         self.assertEqual(
@@ -30,7 +30,7 @@ class WorkspaceAdapterTest(TestCase):
     def test_list_table_class_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
 
-        class TestAdapter(DefaultWorkspaceAdapter):
+        class TestAdapter(BaseWorkspaceAdapter):
             list_table_class = None
 
         with self.assertRaises(ImproperlyConfigured):
@@ -46,7 +46,7 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_data_form_class_custom(self):
         """get_workspace_data_form_class returns the correct form when using a custom adapter."""
 
-        class TestAdapter(DefaultWorkspaceAdapter):
+        class TestAdapter(BaseWorkspaceAdapter):
             workspace_data_form_class = forms.TestWorkspaceDataForm
 
         self.assertEqual(
@@ -56,7 +56,7 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_data_form_class_none(self):
         """get_workspace_data_form_class raises exception if form class but not model is set."""
 
-        class TestAdapter(DefaultWorkspaceAdapter):
+        class TestAdapter(BaseWorkspaceAdapter):
             workspace_data_form_class = None
 
         with self.assertRaises(ImproperlyConfigured):
@@ -71,7 +71,7 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_data_model_custom(self):
         """get_workspace_data_model returns the correct model when using a custom adapter."""
 
-        class TestAdapter(DefaultWorkspaceAdapter):
+        class TestAdapter(BaseWorkspaceAdapter):
             workspace_data_model = models.TestWorkspaceData
 
         self.assertEqual(
@@ -81,7 +81,7 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_data_model_none(self):
         """get_workspace_data_model raises ImproperlyConfigured when workspace_data_model is not set."""
 
-        class TestAdapter(DefaultWorkspaceAdapter):
+        class TestAdapter(BaseWorkspaceAdapter):
             workspace_data_model = None
 
         with self.assertRaises(ImproperlyConfigured):
