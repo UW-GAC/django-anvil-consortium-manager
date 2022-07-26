@@ -29,6 +29,10 @@ class BaseWorkspaceAdapter(object):
         """Return the `workspace_data_model`."""
         if not self.workspace_data_model:
             raise ImproperlyConfigured("Set `workspace_data_model`.")
+        elif not issubclass(self.workspace_data_model, models.AbstractWorkspaceData):
+            raise ImproperlyConfigured(
+                "`workspace_data_model` must be a subclass of `AbstractWorkspaceData`."
+            )
         return self.workspace_data_model
 
     def get_workspace_data_form_class(self):

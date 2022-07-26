@@ -78,6 +78,15 @@ class WorkspaceAdapterTest(TestCase):
             TestAdapter().get_workspace_data_model(), models.TestWorkspaceData
         )
 
+    def test_get_workspace_data_model_subclass(self):
+        """workspace_data_model must be a subclass of models.AbstractWorkspaceData"""
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_model = forms.TestWorkspaceDataForm  # use a random class.
+
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_workspace_data_model()
+
     def test_get_workspace_data_model_none(self):
         """get_workspace_data_model raises ImproperlyConfigured when workspace_data_model is not set."""
 
