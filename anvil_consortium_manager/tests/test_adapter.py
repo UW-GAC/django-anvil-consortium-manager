@@ -1,11 +1,12 @@
 from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
-from ..adapter import BaseWorkspaceAdapter, DefaultWorkspaceAdapter
+from ..adapter import BaseWorkspaceAdapter, DefaultWorkspaceAdapter, get_adapter
 from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
 from ..tables import WorkspaceTable
 from .adapter_app import forms, models, tables
+from .adapter_app.adapters import TestWorkspaceAdapter
 
 
 class WorkspaceAdapterTest(TestCase):
@@ -109,3 +110,18 @@ class WorkspaceAdapterTest(TestCase):
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()
+
+
+class GetAdapterTest(TestCase):
+    """Tests for the get_adapter method."""
+
+    def test_default(self):
+        """get_adapter returns the default adapter with standard test settings."""
+        self.assertIsInstance(get_adapter(), DefaultWorkspaceAdapter)
+
+    @override_settings(
+        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
+    )
+    def test_custom(self):
+        """get_adapter returns the custom test adapter when set."""
+        self.assertIsInstance(get_adapter(), TestWorkspaceAdapter)
