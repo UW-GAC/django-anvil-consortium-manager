@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 
@@ -125,6 +126,13 @@ class GetAdapterTest(TestCase):
     def test_custom(self):
         """get_adapter returns the custom test adapter when set."""
         self.assertIsInstance(get_adapter(), TestWorkspaceAdapter)
+
+    @override_settings()
+    def test_anviL_adapter_not_set(self):
+        """get_adapter raises ImproperlyConfigured when ANVIL_ADAPTER is not set."""
+        del settings.ANVIL_ADAPTER
+        with self.assertRaises(ImproperlyConfigured):
+            get_adapter()
 
     # Use a random class here.
     @override_settings(
