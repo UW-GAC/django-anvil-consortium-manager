@@ -129,10 +129,9 @@ class GetAdapterTest(TestCase):
 
     @override_settings()
     def test_anviL_adapter_not_set(self):
-        """get_adapter raises ImproperlyConfigured when ANVIL_ADAPTER is not set."""
+        """get_adapter uses the default if ANVIL_ADAPTER is not set."""
         del settings.ANVIL_ADAPTER
-        with self.assertRaises(ImproperlyConfigured):
-            get_adapter()
+        self.assertIsInstance(get_adapter(), DefaultWorkspaceAdapter)
 
     # Use a random class here.
     @override_settings(
