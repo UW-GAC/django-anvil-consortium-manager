@@ -125,3 +125,12 @@ class GetAdapterTest(TestCase):
     def test_custom(self):
         """get_adapter returns the custom test adapter when set."""
         self.assertIsInstance(get_adapter(), TestWorkspaceAdapter)
+
+    # Use a random class here.
+    @override_settings(
+        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.forms.TestWorkspaceDataForm"
+    )
+    def test_subclass(self):
+        """get_adapter raises an error when the subclass of the adapter is incorrect."""
+        with self.assertRaises(ImproperlyConfigured):
+            get_adapter()

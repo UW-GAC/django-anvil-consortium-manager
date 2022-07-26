@@ -63,4 +63,8 @@ class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
 
 def get_adapter():
     adapter = import_string(settings.ANVIL_ADAPTER)()
+    if not isinstance(adapter, BaseWorkspaceAdapter):
+        raise ImproperlyConfigured(
+            "ANVIL_ADAPTER must inherit from `BaseWorkspaceAdapter`."
+        )
     return adapter
