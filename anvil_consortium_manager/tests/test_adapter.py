@@ -22,6 +22,8 @@ class WorkspaceAdapterTest(TestCase):
 
         class TestAdapter(BaseWorkspaceAdapter):
             list_table_class = tables.TestWorkspaceDataTable
+            workspace_data_model = None
+            workspace_data_form_class = None
 
         self.assertEqual(
             TestAdapter().get_list_table_class(), tables.TestWorkspaceDataTable
@@ -32,6 +34,8 @@ class WorkspaceAdapterTest(TestCase):
 
         class TestAdapter(BaseWorkspaceAdapter):
             list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class()
@@ -47,6 +51,8 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_form_class returns the correct form when using a custom adapter."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            list_table_class = None
+            workspace_data_model = None
             workspace_data_form_class = forms.TestWorkspaceDataForm
 
         self.assertEqual(
@@ -57,6 +63,8 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_form_class raises exception if form class but not model is set."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            list_table_class = None
+            workspace_data_model = None
             workspace_data_form_class = None
 
         with self.assertRaises(ImproperlyConfigured):
@@ -72,7 +80,9 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_model returns the correct model when using a custom adapter."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            list_table_class = None
             workspace_data_model = models.TestWorkspaceData
+            workspace_data_form_class = None
 
         self.assertEqual(
             TestAdapter().get_workspace_data_model(), models.TestWorkspaceData
@@ -82,7 +92,9 @@ class WorkspaceAdapterTest(TestCase):
         """workspace_data_model must be a subclass of models.AbstractWorkspaceData"""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            list_table_class = None
             workspace_data_model = forms.TestWorkspaceDataForm  # use a random class.
+            workspace_data_form_class = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()
@@ -91,7 +103,9 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_model raises ImproperlyConfigured when workspace_data_model is not set."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            list_table_class = None
             workspace_data_model = None
+            workspace_data_form_class = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()

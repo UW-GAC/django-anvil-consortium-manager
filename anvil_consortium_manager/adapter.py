@@ -1,5 +1,7 @@
 """Contains default adapter for workspaces."""
 
+from abc import ABC, abstractproperty
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
@@ -7,17 +9,23 @@ from django.utils.module_loading import import_string
 from . import forms, models, tables
 
 
-class BaseWorkspaceAdapter(object):
+class BaseWorkspaceAdapter(ABC):
     """Base class to inherit when customizing the workspace adapter."""
 
-    list_table_class = None
-    """Table class to use in a list of workspaces."""
+    @abstractproperty
+    def list_table_class(self):
+        """Table class to use in a list of workspaces."""
+        ...
 
-    workspace_data_model = None
-    """Optional model to use for storing extra data about workspaces."""
+    @abstractproperty
+    def workspace_data_model(self):
+        """Model to use for storing extra data about workspaces."""
+        ...
 
-    workspace_data_form_class = None
-    """Optional form for the model specified in ``workspace_data_model``."""
+    @abstractproperty
+    def workspace_data_form_class(self):
+        """Form for the model specified in ``workspace_data_model``."""
+        ...
 
     def get_list_table_class(self):
         """Return the table class to use for the WorkspaceList view."""
