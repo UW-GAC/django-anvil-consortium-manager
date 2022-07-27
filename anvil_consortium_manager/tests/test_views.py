@@ -3871,6 +3871,44 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
+    def test_creates_default_workspace_data(self):
+        """Posting valid data to the form creates the default workspace data object."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_workspace = models.Workspace.objects.latest("pk")
+        # Also creates a workspace data object.
+        self.assertEqual(models.DefaultWorkspaceData.objects.count(), 1)
+        self.assertIsInstance(
+            new_workspace.defaultworkspacedata, models.DefaultWorkspaceData
+        )
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         billing_project = factories.BillingProjectFactory.create()
@@ -4918,6 +4956,55 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # History is added for the BillingProject.
         self.assertEqual(new_billing_project.history.count(), 1)
         self.assertEqual(new_billing_project.history.latest().history_type, "+")
+
+    def test_creates_default_workspace_data_without_custom_adapter(self):
+        """The default workspace data object is created if no custom aadpter is used."""
+        billing_project_name = "billing-project"
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        workspace_list_url = self.entry_point + "/api/workspaces"
+        responses.add(
+            responses.GET,
+            workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
+        # Billing project API call.
+        billing_project_url = (
+            self.entry_point + "/api/billing/v2/" + billing_project_name
+        )
+        responses.add(responses.GET, billing_project_url, status=200)
+        url = self.get_api_url(billing_project_name, workspace_name)
+        responses.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "workspace": billing_project_name + "/" + workspace_name,
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_workspace = models.Workspace.objects.latest("pk")
+        # Also creates a workspace data object.
+        self.assertEqual(models.DefaultWorkspaceData.objects.count(), 1)
+        self.assertIsInstance(
+            new_workspace.defaultworkspacedata, models.DefaultWorkspaceData
+        )
 
     def test_success_message(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""

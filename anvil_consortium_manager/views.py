@@ -675,7 +675,7 @@ class WorkspaceCreate(
                     models.WorkspaceAuthorizationDomain.objects.create(
                         workspace=self.workspace, group=auth_domain
                     )
-                workspace_data_formset.save()
+                workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL.
                 self.workspace.anvil_create()
         except AnVILAPIError as e:
@@ -824,7 +824,7 @@ class WorkspaceImport(
                 # self.workspace.delete()
                 transaction.set_rollback(True)
                 return self.forms_invalid(form, workspace_data_formset)
-            workspace_data_formset.save()
+            workspace_data_formset.forms[0].save()
         except anvil_api.AnVILAPIError as e:
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
