@@ -8,8 +8,7 @@
   <form method="post">
 
     {% csrf_token %}
-
-    {{ workspace_data_form|crispy }}
+    {{ workspace_data_formset|crispy }}
     {{ form|crispy }}
 
     <button type="submit" class="btn btn-success">Save workspace</button>

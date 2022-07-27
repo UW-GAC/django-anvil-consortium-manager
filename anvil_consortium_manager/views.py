@@ -1,7 +1,7 @@
 from dal import autocomplete
 from django.contrib import messages
 from django.db import transaction
-from django.forms.forms import Form
+from django.forms import Form, inlineformset_factory
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import (
@@ -608,35 +608,36 @@ class WorkspaceCreate(
     success_msg = "Successfully created Workspace on AnVIL."
     template_name = "anvil_consortium_manager/workspace_form.html"
 
-    def get_workspace_data_form(self):
+    def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
+        formset_prefix = "workspacedata"
         form_class = get_adapter().get_workspace_data_form_class()
-        kwargs = {
-            "initial": self.get_initial(),
-            "prefix": "workspace_data_form",
-        }
-        if self.request.method in ("POST", "PUT"):
-            # Add the workspace that was just created to the form data.
-            form_data = self.request.POST.copy()
-            if self.workspace:
-                form_data.update({"workspace_data_form-workspace": self.workspace})
-            kwargs.update(
-                {
-                    "data": form_data,
-                    "files": self.request.FILES,
-                }
+        model = get_adapter().get_workspace_data_model()
+        formset_factory = inlineformset_factory(
+            models.Workspace,
+            model,
+            form=form_class,
+            can_delete=False,
+            can_delete_extra=False,
+            absolute_max=1,
+            max_num=1,
+            min_num=1,
+        )
+        if self.request.method in ("POST"):
+            formset = formset_factory(
+                self.request.POST,
+                instance=self.workspace,
+                prefix=formset_prefix,
+                initial=[{"workspace": self.workspace}],
             )
-        form = form_class(**kwargs)
-        from django.forms import HiddenInput
-
-        form.fields["workspace"].widget = HiddenInput()
-        print(form.data)
-        return form
+        else:
+            formset = formset_factory(prefix=formset_prefix, initial=[{}])
+        return formset
 
     def get_context_data(self, **kwargs):
-        """Insert the workspace data form into the context dict."""
-        if "workspace_data_form" not in kwargs:
-            kwargs["workspace_data_form"] = self.get_workspace_data_form()
+        """Insert the workspace data formset into the context dict."""
+        if "workspace_data_formset" not in kwargs:
+            kwargs["workspace_data_formset"] = self.get_workspace_data_formset()
         return super().get_context_data(**kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -645,15 +646,14 @@ class WorkspaceCreate(
         POST variables and then check if they are valid.
         """
         self.workspace = None
-        # print(self.POST)
         form = self.get_form()
         # First, check if the workspace form is valid.
-        # If it is, we'll save the model and then check the workspace data form.
+        # If it is, we'll save the model and then check the workspace data formset in the post method.
         if form.is_valid():
             return self.form_valid(form)
         else:
-            workspace_data_form = self.get_workspace_data_form()
-            return self.forms_invalid(form, workspace_data_form)
+            workspace_data_formset = self.get_workspace_data_formset()
+            return self.forms_invalid(form, workspace_data_formset)
 
     def form_valid(self, form):
         """If the form(s) are valid, save the associated model(s) and create the workspace on AnVIL."""
@@ -664,18 +664,18 @@ class WorkspaceCreate(
                 # Instead, save the workspace first and then create the auth domain relationships one by one.
                 self.workspace = form.save(commit=False)
                 self.workspace.save()
-                # Add the workspace_id to the workspace_data_form, then check if the workspace_data_form is valid.
-                workspace_data_form = self.get_workspace_data_form()
-                if not workspace_data_form.is_valid():
-                    # Delete the workspace, since we are not raising an exception.
-                    self.workspace.delete()
-                    return self.forms_invalid(form, workspace_data_form)
+                # Now check the workspace_data_formset.
+                workspace_data_formset = self.get_workspace_data_formset()
+                if not workspace_data_formset.is_valid():
+                    # Tell the transaction to roll back, since we are not raising an exception.
+                    transaction.set_rollback(True)
+                    return self.forms_invalid(form, workspace_data_formset)
                 # Now save the auth domains and the workspace_data_form.
                 for auth_domain in form.cleaned_data["authorization_domains"]:
                     models.WorkspaceAuthorizationDomain.objects.create(
                         workspace=self.workspace, group=auth_domain
                     )
-                workspace_data_form.save()
+                workspace_data_formset.save()
                 # Then create the workspace on AnVIL.
                 self.workspace.anvil_create()
         except AnVILAPIError as e:
@@ -685,15 +685,17 @@ class WorkspaceCreate(
             )
             return self.render_to_response(
                 self.get_context_data(
-                    form=form, workspace_data_form=workspace_data_form
+                    form=form, workspace_data_formset=workspace_data_formset
                 )
             )
         return super().form_valid(form)
 
-    def forms_invalid(self, form, workspace_data_form):
+    def forms_invalid(self, form, workspace_data_formset):
         """If the form(s) are invalid, render the invalid form."""
         return self.render_to_response(
-            self.get_context_data(form=form, workspace_data_form=workspace_data_form)
+            self.get_context_data(
+                form=form, workspace_data_formset=workspace_data_formset
+            )
         )
 
     def get_success_url(self):
@@ -752,35 +754,36 @@ class WorkspaceImport(
             workspace_choices=workspace_choices, **self.get_form_kwargs()
         )
 
-    def get_workspace_data_form(self):
+    def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
+        formset_prefix = "workspacedata"
         form_class = get_adapter().get_workspace_data_form_class()
-        kwargs = {
-            "initial": self.get_initial(),
-            "prefix": "workspace_data_form",
-        }
-        if self.request.method in ("POST", "PUT"):
-            # Add the workspace that was just created to the form data.
-            form_data = self.request.POST.copy()
-            if self.workspace:
-                form_data.update({"workspace_data_form-workspace": self.workspace})
-            kwargs.update(
-                {
-                    "data": form_data,
-                    "files": self.request.FILES,
-                }
+        model = get_adapter().get_workspace_data_model()
+        formset_factory = inlineformset_factory(
+            models.Workspace,
+            model,
+            form=form_class,
+            can_delete=False,
+            can_delete_extra=False,
+            absolute_max=1,
+            max_num=1,
+            min_num=1,
+        )
+        if self.request.method in ("POST"):
+            formset = formset_factory(
+                self.request.POST,
+                instance=self.workspace,
+                prefix=formset_prefix,
+                initial=[{"workspace": self.workspace}],
             )
-        form = form_class(**kwargs)
-        from django.forms import HiddenInput
-
-        form.fields["workspace"].widget = HiddenInput()
-        print(form.data)
-        return form
+        else:
+            formset = formset_factory(prefix=formset_prefix, initial=[{}])
+        return formset
 
     def get_context_data(self, **kwargs):
         """Insert the workspace data form into the context dict."""
-        if "workspace_data_form" not in kwargs:
-            kwargs["workspace_data_form"] = self.get_workspace_data_form()
+        if "workspace_data_formset" not in kwargs:
+            kwargs["workspace_data_formset"] = self.get_workspace_data_formset()
         return super().get_context_data(**kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -796,8 +799,8 @@ class WorkspaceImport(
         if form.is_valid():
             return self.form_valid(form)
         else:
-            workspace_data_form = self.get_workspace_data_form()
-            return self.forms_invalid(form, workspace_data_form)
+            workspace_data_formset = self.get_workspace_data_formset()
+            return self.forms_invalid(form, workspace_data_formset)
 
     def get_success_url(self):
         return self.workspace.get_absolute_url()
@@ -815,12 +818,13 @@ class WorkspaceImport(
             self.workspace = models.Workspace.anvil_import(
                 billing_project_name, workspace_name
             )
-            workspace_data_form = self.get_workspace_data_form()
-            if not workspace_data_form.is_valid():
+            workspace_data_formset = self.get_workspace_data_formset()
+            if not workspace_data_formset.is_valid():
                 # Delete the workspace, since we are not raising an exception.
-                self.workspace.delete()
-                return self.forms_invalid(form, workspace_data_form)
-            workspace_data_form.save()
+                # self.workspace.delete()
+                transaction.set_rollback(True)
+                return self.forms_invalid(form, workspace_data_formset)
+            workspace_data_formset.save()
         except anvil_api.AnVILAPIError as e:
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
@@ -828,10 +832,12 @@ class WorkspaceImport(
             return self.render_to_response(self.get_context_data(form=form))
         return super().form_valid(form)
 
-    def forms_invalid(self, form, workspace_data_form):
+    def forms_invalid(self, form, workspace_data_formset):
         """If the form is invalid, render the invalid form."""
         return self.render_to_response(
-            self.get_context_data(form=form, workspace_data_form=workspace_data_form)
+            self.get_context_data(
+                form=form, workspace_data_formset=workspace_data_formset
+            )
         )
 
 
