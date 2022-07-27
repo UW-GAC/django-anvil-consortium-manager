@@ -9,4 +9,8 @@ class ExampleWorkspaceDataTable(tables.Table):
 
     class Meta:
         model = acm_models.Workspace
-        fields = ("workspacedata__study_name", "workspacedata__consent_code", "name")
+        fields = (
+            "exampleworkspacedata__study_name",
+            "exampleworkspacedata__consent_code",
+            "name",
+        )
