@@ -108,7 +108,7 @@ class WorkspaceAdapterTest(TestCase):
         )
 
     def test_get_workspace_data_model_subclass(self):
-        """workspace_data_model must be a subclass of models.AbstractWorkspaceData"""
+        """workspace_data_model must be a subclass of models.BaseWorkspaceData"""
 
         class TestAdapter(BaseWorkspaceAdapter):
             list_table_class = None

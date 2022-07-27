@@ -1,10 +1,10 @@
 from django.db import models
 
-from anvil_consortium_manager.models import AbstractWorkspaceData
+from anvil_consortium_manager.models import BaseWorkspaceData
 
 
 # Create your models here.
-class ExampleWorkspaceData(AbstractWorkspaceData):
+class ExampleWorkspaceData(BaseWorkspaceData):
     """Example custom model to hold additional data about a Workspace."""
 
     study_name = models.CharField(max_length=255)

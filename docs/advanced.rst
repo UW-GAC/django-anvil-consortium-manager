@@ -6,18 +6,18 @@ The workspace adapter
 
 The app provides an adapter that you can use to provide extra, customized data about a workspace.
 By default, the app uses :class:`~anvil_consortium_manager.adapter.DefaultWorkspaceAdapter`.
-The default ``workspace_data_model`` specified in this adapter has no fields other than those provided by :class:`~anvil_consortium_manager.models.AbstractWorkspaceData`.
+The default ``workspace_data_model`` specified in this adapter has no fields other than those provided by :class:`~anvil_consortium_manager.models.BaseWorkspaceData`.
 This section describes how to store additional information about a workspace by setting up a custom adapter.
 
 First, you will need to define a new model with the additional fields.
-It must inherit from :class:`~anvil_consortium_manager.models.AbstractWorkspaceData`, which provides a one-to-one field called ``workspace`` to the :class:`~anvil_consortium_manager.models.Workspace` model.
+It must inherit from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`, which provides a one-to-one field called ``workspace`` to the :class:`~anvil_consortium_manager.models.Workspace` model.
 
 .. code-block:: python
 
     from django.db import models
-    from anvil_consortium_manager.models import AbstractWorkspaceData
+    from anvil_consortium_manager.models import BaseWorkspaceData
 
-    class CustomWorkspaceData(AbstractWorkspaceData):
+    class CustomWorkspaceData(BaseWorkspaceData):
         study_name = models.CharField(max_length=255)
         consent_code = models.CharField(max_length=16)
 
@@ -53,7 +53,7 @@ If you do not want to define a custom table, you can use the default table provi
 
 Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapter.BaseWorkspaceAdapter`. You will need to set:
 
-* ``workspace_data_model``: the model used to store additional data about a workspace, subclassed from :class:`~anvil_consortium_manager.models.AbstractWorkspaceData`
+* ``workspace_data_model``: the model used to store additional data about a workspace, subclassed from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`
 * ``workspace_data_form_class``: the form to use to create an instance of the ``workspace_data_model``
 * ``list_table_class``: the table to use to display the list of workspaces
 

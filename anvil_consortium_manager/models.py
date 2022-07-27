@@ -436,7 +436,7 @@ class Workspace(TimeStampedModel):
         return workspace
 
 
-class AbstractWorkspaceData(models.Model):
+class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""
 
     workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
@@ -445,7 +445,7 @@ class AbstractWorkspaceData(models.Model):
         abstract = True
 
 
-class DefaultWorkspaceData(AbstractWorkspaceData):
+class DefaultWorkspaceData(BaseWorkspaceData):
     """Default empty WorkspaceData model."""
 
     pass
