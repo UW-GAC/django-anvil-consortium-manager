@@ -50,6 +50,11 @@ class BaseWorkspaceAdapter(ABC):
         """
         if not self.workspace_data_form_class:
             raise ImproperlyConfigured("Set `workspace_data_form_class`.")
+        # Make sure it has the "workspace" field.
+        if "workspace" not in self.workspace_data_form_class().fields:
+            raise ImproperlyConfigured(
+                "`workspace_data_form_class` must have a field for workspace."
+            )
         return self.workspace_data_form_class
 
 

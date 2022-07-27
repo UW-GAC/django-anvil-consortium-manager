@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.forms import ModelForm
 from django.test import TestCase, override_settings
 
 from ..adapter import BaseWorkspaceAdapter, DefaultWorkspaceAdapter, get_adapter
@@ -62,12 +63,28 @@ class WorkspaceAdapterTest(TestCase):
         )
 
     def test_get_workspace_data_form_class_none(self):
-        """get_workspace_data_form_class raises exception if form class but not model is set."""
+        """get_workspace_data_form_class raises exception if form class is not set."""
 
         class TestAdapter(BaseWorkspaceAdapter):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_workspace_data_form_class()
+
+    def test_get_workspace_data_form_class_missing_workspace(self):
+        """get_workspace_data_form_class raises exception if form does not have a workspace field."""
+
+        class TestFormClass(ModelForm):
+            class Meta:
+                model = models.TestWorkspaceData
+                fields = ("study_name",)
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            list_table_class = None
+            workspace_data_model = models.TestWorkspaceData
+            workspace_data_form_class = TestFormClass
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_form_class()
