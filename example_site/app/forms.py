@@ -10,4 +10,4 @@ class ExampleWorkspaceDataForm(forms.ModelForm):
 
     class Meta:
         model = models.ExampleWorkspaceData
-        fields = ("study_name", "consent_code")
+        fields = ("study_name", "consent_code", "workspace")

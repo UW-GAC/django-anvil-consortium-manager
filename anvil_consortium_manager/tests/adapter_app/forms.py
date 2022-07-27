@@ -10,4 +10,7 @@ class TestWorkspaceDataForm(forms.ModelForm):
 
     class Meta:
         model = models.TestWorkspaceData
-        fields = ("study_name",)
+        fields = (
+            "study_name",
+            "workspace",
+        )

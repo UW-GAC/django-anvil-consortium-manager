@@ -94,7 +94,7 @@ class DefaultWorkspaceDataForm(forms.ModelForm):
 
     class Meta:
         model = models.DefaultWorkspaceData
-        fields = ()
+        fields = ("workspace",)
 
 
 class GroupGroupMembershipForm(forms.ModelForm):

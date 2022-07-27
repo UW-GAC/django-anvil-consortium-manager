@@ -5398,7 +5398,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", workspace_data_form.errors["study_name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
-        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(len(responses.calls), 2)
 
 
 class WorkspaceListTest(TestCase):

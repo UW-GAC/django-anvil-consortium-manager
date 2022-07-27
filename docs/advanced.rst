@@ -21,7 +21,7 @@ It must inherit from :class:`~anvil_consortium_manager.models.AbstractWorkspaceD
         study_name = models.CharField(max_length=255)
         consent_code = models.CharField(max_length=16)
 
-You must also define a form containing the additional fields, and excluding the ``workspace`` field.
+You must also define a form containing the additional fields. You must include the ``workspace`` field, but it will be hidden in the views to create or import a workspace.
 
 .. code-block:: python
 
@@ -31,7 +31,7 @@ You must also define a form containing the additional fields, and excluding the 
     class WorkspaceDataForm(ModelForm):
         class Meta:
             model = CustomWorkspaceData
-            fields = ("study_name", "consent_code",)
+            fields = ("study_name", "consent_code", workspace")
 
 
 Optionally, you can define a new ``django-tables2`` table to use in place of the default ``WorkspaceTable`` that comes with the app.
