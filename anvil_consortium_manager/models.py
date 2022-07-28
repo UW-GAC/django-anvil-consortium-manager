@@ -436,6 +436,21 @@ class Workspace(TimeStampedModel):
         return workspace
 
 
+class BaseWorkspaceData(models.Model):
+    """Abstract base class to subclass when creating a custom WorkspaceData model."""
+
+    workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+
+class DefaultWorkspaceData(BaseWorkspaceData):
+    """Default empty WorkspaceData model."""
+
+    pass
+
+
 class WorkspaceAuthorizationDomain(TimeStampedModel):
     """Through table for the Workspace authorization_domains field."""
 

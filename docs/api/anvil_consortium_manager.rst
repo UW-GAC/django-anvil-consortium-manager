@@ -7,6 +7,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   anvil_consortium_manager.adapter
    anvil_consortium_manager.admin
    anvil_consortium_manager.anvil_api
    anvil_consortium_manager.apps

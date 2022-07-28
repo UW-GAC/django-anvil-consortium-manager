@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     # note these are supposed to come before django.contrib.admin.
     "dal",
     "dal_select2",
+    # The example app.
+    "example_site.app",
 ]
 
 
@@ -207,3 +209,4 @@ INTERNAL_IPS = ["127.0.0.1"]
 # ------------------------------------------------------------------------------
 # Specify the path to the service account to use for managing access on AnVIL.
 ANVIL_API_SERVICE_ACCOUNT_FILE = os.getenv("ANVIL_API_SERVICE_ACCOUNT_FILE")
+ANVIL_ADAPTER = "example_site.app.adapters.WorkspaceAdapter"

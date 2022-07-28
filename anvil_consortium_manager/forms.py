@@ -89,6 +89,14 @@ class WorkspaceImportForm(forms.Form):
         )
 
 
+class DefaultWorkspaceDataForm(forms.ModelForm):
+    """Default (empty) form for the workspace data object."""
+
+    class Meta:
+        model = models.DefaultWorkspaceData
+        fields = ("workspace",)
+
+
 class GroupGroupMembershipForm(forms.ModelForm):
     """Form for the GroupGroupMembership model."""
 
