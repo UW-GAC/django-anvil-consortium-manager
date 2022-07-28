@@ -28,7 +28,7 @@ copyright = '2022, Adrienne Stilp'
 author = 'Adrienne Stilp'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.dev1'
+release = '0.1.dev2'
 
 
 # -- General configuration ---------------------------------------------------
