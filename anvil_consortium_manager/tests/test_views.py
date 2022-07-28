@@ -3614,7 +3614,6 @@ class WorkspaceDetailTest(TestCase):
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.WorkspaceFactory.create()
-        print(obj)
         request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
         response = self.get_view()(
@@ -3643,7 +3642,7 @@ class WorkspaceDetailTest(TestCase):
         request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=obj.pk + 1)
+            self.get_view()(request, billing_project_slug="foo1", workspace_slug="foo2")
 
     def test_group_access_table(self):
         """The workspace group access table exists."""
