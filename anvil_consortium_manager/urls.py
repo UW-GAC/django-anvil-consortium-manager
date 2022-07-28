@@ -67,7 +67,7 @@ workspace_patterns = (
         path("import/", views.WorkspaceImport.as_view(), name="import"),
         path("", views.WorkspaceList.as_view(), name="list"),
         path(
-            "<slug:billing_project_slug>--<slug:workspace_slug>/delete/",
+            "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
             views.WorkspaceDelete.as_view(),
             name="delete",
         ),
