@@ -1067,6 +1067,27 @@ class GroupGroupMembershipDelete(
 class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupAccountMembership
 
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        group_slug = self.kwargs.get("group_slug", None)
+        account_uuid = self.kwargs.get("account_uuid", None)
+        queryset = queryset.filter(group__name=group_slug, account__uuid=account_uuid)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
 
 class GroupAccountMembershipCreate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
@@ -1137,6 +1158,27 @@ class GroupAccountMembershipDelete(
     message_group_not_managed_by_app = (
         "Cannot remove members from group because it is not managed by this app."
     )
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        group_slug = self.kwargs.get("group_slug", None)
+        account_uuid = self.kwargs.get("account_uuid", None)
+        queryset = queryset.filter(group__name=group_slug, account__uuid=account_uuid)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:group_account_membership:list")

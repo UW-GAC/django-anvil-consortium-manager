@@ -7286,17 +7286,25 @@ class GroupAccountMembershipDetailTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        uuid = uuid4()
+        response = self.client.get(self.get_url("foo1", uuid))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo1", uuid),
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.GroupAccountMembershipFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        request = self.factory.get(self.get_url(obj.group.name, obj.account.uuid))
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            group_slug=obj.group.name,
+            account_uuid=obj.account.uuid,
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
@@ -7304,18 +7312,19 @@ class GroupAccountMembershipDetailTest(TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url("foo1", uuid))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+            self.get_view()(request, group_slug="foo1", account_uuid=uuid)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.GroupAccountMembershipFactory.create()
-        request = self.factory.get(self.get_url(obj.pk + 1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url("foo1", uuid))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=obj.pk + 1)
+            self.get_view()(request, group_slug="foo1", account_uuid=uuid)
 
 
 class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -8149,17 +8158,21 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        uuid = uuid4()
+        response = self.client.get(self.get_url("foo", uuid))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", uuid),
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.GroupAccountMembershipFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.group.name, obj.account.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(
+            request, group_slug=obj.group.name, account_uuid=obj.account.uuid
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -8172,27 +8185,30 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url("foo", uuid))
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, group_slug="foo", account_uuid=uuid)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url("foo", uuid))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, group_slug="foo", account_uuid=uuid)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url("foo", uuid))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, group_slug="foo", account_uuid=uuid)
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
@@ -8208,7 +8224,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         responses.assert_call_count(url, 1)
@@ -8231,7 +8249,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.group.name, object.account.uuid),
+            {"submit": ""},
+            follow=True,
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -8255,7 +8275,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -8279,7 +8301,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:group_account_membership:list")
@@ -8295,7 +8319,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(membership.pk), follow=True)
+        response = self.client.get(
+            self.get_url(membership.group.name, membership.account.uuid), follow=True
+        )
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -8317,7 +8343,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(membership.pk), follow=True)
+        response = self.client.post(
+            self.get_url(membership.group.name, membership.account.uuid), follow=True
+        )
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
@@ -8350,7 +8378,9 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "group account membership delete test error"},
         )
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])

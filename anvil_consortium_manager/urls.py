@@ -101,7 +101,7 @@ group_group_membership_patterns = (
 
 group_account_membership_patterns = (
     [
-        path("<int:pk>/", views.GroupAccountMembershipDetail.as_view(), name="detail"),
+        # Note: these URLs will be removed and/or reworked in the future.
         path("new/", views.GroupAccountMembershipCreate.as_view(), name="new"),
         path("all/", views.GroupAccountMembershipList.as_view(), name="list"),
         path(
@@ -115,7 +115,12 @@ group_account_membership_patterns = (
             name="list_inactive",
         ),
         path(
-            "<int:pk>/delete/",
+            "<slug:group_slug>/account_members/<uuid:account_uuid>/",
+            views.GroupAccountMembershipDetail.as_view(),
+            name="detail",
+        ),
+        path(
+            "<slug:group_slug>/account_members/<uuid:account_uuid>/delete/",
             views.GroupAccountMembershipDelete.as_view(),
             name="delete",
         ),

@@ -586,7 +586,7 @@ class GroupAccountMembership(TimeStampedModel):
     def get_absolute_url(self):
         return reverse(
             "anvil_consortium_manager:group_account_membership:detail",
-            kwargs={"pk": self.pk},
+            kwargs={"group_slug": self.group.name, "account_uuid": self.account.uuid},
         )
 
     def anvil_create(self):
