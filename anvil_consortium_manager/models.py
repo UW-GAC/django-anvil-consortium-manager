@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
@@ -83,6 +85,9 @@ class Account(TimeStampedModel, ActivatorModel):
     is_service_account = models.BooleanField()
     """Indicator of whether this account is a service account or a user account."""
 
+    uuid = models.UUIDField(default=uuid.uuid4)
+    """UUID for use in urls."""
+
     history = HistoricalRecords()
     """Django simple history record for this model."""
 
@@ -106,7 +111,7 @@ class Account(TimeStampedModel, ActivatorModel):
             A string with the url to the detail page for this object.
         """
         return reverse(
-            "anvil_consortium_manager:accounts:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:accounts:detail", kwargs={"uuid": self.uuid}
         )
 
     def deactivate(self):

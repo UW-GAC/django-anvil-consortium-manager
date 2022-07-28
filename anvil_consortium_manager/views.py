@@ -147,12 +147,39 @@ class BillingProjectAutocomplete(
         return qs
 
 
+class SingleAccountMixin(object):
+    """Retrieve an account using the uuid field."""
+
+    model = models.Account
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        uuid = self.kwargs.get("uuid", None)
+        queryset = queryset.filter(uuid=uuid)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+
 class AccountDetail(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
+    auth.AnVILConsortiumManagerViewRequired,
+    SingleTableMixin,
+    SingleAccountMixin,
+    DetailView,
 ):
     """Render detail page for an :class:`anvil_consortium_manager.models.Account`."""
 
-    model = models.Account
     context_table_name = "group_table"
 
     def get_table(self):
@@ -236,11 +263,11 @@ class AccountDeactivate(
     auth.AnVILConsortiumManagerEditRequired,
     SuccessMessageMixin,
     SingleTableMixin,
+    SingleAccountMixin,
     DeleteView,
 ):
     """Deactivate an account and remove it from all groups on AnVIL."""
 
-    model = models.Account
     template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
     context_table_name = "group_table"
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
@@ -298,12 +325,12 @@ class AccountReactivate(
     auth.AnVILConsortiumManagerEditRequired,
     SuccessMessageMixin,
     SingleTableMixin,
+    SingleAccountMixin,
     SingleObjectMixin,
     FormView,
 ):
     """Reactivate an account and re-add it to all groups on AnVIL."""
 
-    model = models.Account
     context_table_name = "group_table"
     form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
@@ -359,7 +386,10 @@ class AccountReactivate(
 
 
 class AccountDelete(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    SingleAccountMixin,
+    DeleteView,
 ):
     model = models.Account
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
@@ -367,7 +397,6 @@ class AccountDelete(
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:accounts:list")
-        # exceptions.AnVILRemoveAccountFromGroupError
 
     def delete(self, request, *args, **kwargs):
         """

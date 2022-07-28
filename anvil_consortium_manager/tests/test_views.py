@@ -1,5 +1,6 @@
 import json
 from unittest import skip
+from uuid import uuid4
 
 import responses
 from django.conf import settings
@@ -814,25 +815,27 @@ class AccountDetailTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        uuid = uuid4()
+        response = self.client.get(self.get_url(uuid))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(uuid)
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, uuid=obj.uuid)
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
+        uuid = uuid4()
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url(uuid))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
@@ -840,9 +843,9 @@ class AccountDetailTest(TestCase):
     def test_context_active_account(self):
         """An is_inactive flag is included in the context."""
         active_account = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(active_account.pk))
+        request = self.factory.get(self.get_url(active_account.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=active_account.pk)
+        response = self.get_view()(request, uuid=active_account.uuid)
         context = response.context_data
         self.assertIn("is_inactive", context)
         self.assertFalse(context["is_inactive"])
@@ -856,9 +859,9 @@ class AccountDetailTest(TestCase):
         active_account = factories.AccountFactory.create(
             status=models.Account.INACTIVE_STATUS
         )
-        request = self.factory.get(self.get_url(active_account.pk))
+        request = self.factory.get(self.get_url(active_account.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=active_account.pk)
+        response = self.get_view()(request, uuid=active_account.uuid)
         context = response.context_data
         self.assertIn("is_inactive", context)
         self.assertTrue(context["is_inactive"])
@@ -872,23 +875,23 @@ class AccountDetailTest(TestCase):
         obj = factories.AccountFactory.create(is_service_account=True)
         # Only clients load the template.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(obj.pk))
+        response = self.client.get(self.get_url(obj.uuid))
         self.assertEqual(response.status_code, 200)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(obj.pk + 1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=obj.pk + 1)
+            self.get_view()(request, uuid=uuid)
 
     def test_group_account_membership_table(self):
         """The group membership table exists."""
         obj = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, uuid=obj.uuid)
         self.assertIn("group_table", response.context_data)
         self.assertIsInstance(
             response.context_data["group_table"], tables.GroupAccountMembershipTable
@@ -897,9 +900,9 @@ class AccountDetailTest(TestCase):
     def test_group_account_membership_none(self):
         """No groups are shown if the account is not part of any groups."""
         account = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(account.pk))
+        request = self.factory.get(self.get_url(account.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=account.pk)
+        response = self.get_view()(request, uuid=account.uuid)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
@@ -907,9 +910,9 @@ class AccountDetailTest(TestCase):
         """One group is shown if the account is part of one group."""
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account)
-        request = self.factory.get(self.get_url(account.pk))
+        request = self.factory.get(self.get_url(account.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=account.pk)
+        response = self.get_view()(request, uuid=account.uuid)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 1)
 
@@ -917,9 +920,9 @@ class AccountDetailTest(TestCase):
         """Two groups are shown if the account is part of two groups."""
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, account=account)
-        request = self.factory.get(self.get_url(account.pk))
+        request = self.factory.get(self.get_url(account.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=account.pk)
+        response = self.get_view()(request, uuid=account.uuid)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 2)
 
@@ -928,9 +931,9 @@ class AccountDetailTest(TestCase):
         account = factories.AccountFactory.create(email="email_1@example.com")
         other_account = factories.AccountFactory.create(email="email_2@example.com")
         factories.GroupAccountMembershipFactory.create(account=other_account)
-        request = self.factory.get(self.get_url(account.pk))
+        request = self.factory.get(self.get_url(account.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=account.pk)
+        response = self.get_view()(request, uuid=account.uuid)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
@@ -1523,25 +1526,26 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
+        uuid = uuid4()
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        response = self.client.get(self.get_url(uuid))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(uuid)
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, uuid=obj.uuid)
         self.assertEqual(response.status_code, 200)
 
     def test_template_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.AccountFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(obj.pk))
+        response = self.client.get(self.get_url(obj.uuid))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -1554,33 +1558,36 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, uuid=uuid)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, uuid=uuid)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, uuid=uuid)
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.AccountFactory.create()
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
         # History is added.
@@ -1592,7 +1599,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1603,7 +1610,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Posting submit to the form successfully deletes the service account object."""
         object = factories.AccountFactory.create(is_service_account=True)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
 
@@ -1612,7 +1619,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         other_object = factories.AccountFactory.create()
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -1625,7 +1632,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:accounts:list")
@@ -1641,7 +1648,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, remove_from_group_url, status=204)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
         # Also removes the user from groups.
@@ -1665,7 +1672,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, remove_from_group_url_2, status=204)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 0)
         # Also removes the user from groups.
@@ -1697,7 +1704,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client for messages.
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
         self.assertIn("messages", response.context)
@@ -1753,24 +1760,25 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        uuid = uuid4()
+        response = self.client.get(self.get_url(uuid))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(uuid)
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.AccountFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, uuid=obj.uuid)
         self.assertEqual(response.status_code, 200)
 
     def test_template_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.AccountFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(obj.pk))
+        response = self.client.get(self.get_url(obj.uuid))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -1783,28 +1791,30 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, uuid=uuid)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, pk=uuid)
 
     def test_get_context_data(self):
         """Context data is correct."""
         object = factories.AccountFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(account=object)
-        request = self.factory.get(self.get_url(object.pk))
+        request = self.factory.get(self.get_url(object.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=object.pk)
+        response = self.get_view()(request, uuid=object.uuid)
         self.assertIn("group_table", response.context_data)
         table = response.context_data["group_table"]
         self.assertEqual(len(table.rows), 1)
@@ -1812,16 +1822,17 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, uuid=uuid)
 
     def test_view_deactivates_object(self):
         """Posting submit to the form successfully deactivates the object."""
         object = factories.AccountFactory.create()
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
         self.assertEqual(object.status, object.INACTIVE_STATUS)
@@ -1835,7 +1846,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1846,7 +1857,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting submit to the form successfully deactivates a service account object."""
         object = factories.AccountFactory.create(is_service_account=True)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
         self.assertEqual(object.status, object.INACTIVE_STATUS)
@@ -1857,7 +1868,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         other_object = factories.AccountFactory.create()
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 2)
         other_object.refresh_from_db()
@@ -1868,11 +1879,11 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.AccountFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response,
-            reverse("anvil_consortium_manager:accounts:detail", args=[object.pk]),
+            reverse("anvil_consortium_manager:accounts:detail", args=[object.uuid]),
         )
 
     def test_removes_account_from_one_group(self):
@@ -1885,7 +1896,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, remove_from_group_url, status=204)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Memberships are *not* deleted from the app.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
@@ -1910,7 +1921,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.DELETE, remove_from_group_url_2, status=204)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Status was updated.
         object.refresh_from_db()
@@ -1944,7 +1955,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client for messages.
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
         self.assertIn("messages", response.context)
@@ -1975,7 +1986,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         # No API calls are made.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(object.pk), follow=True)
+        response = self.client.get(self.get_url(object.uuid), follow=True)
         self.assertRedirects(response, object.get_absolute_url())
         # The object is unchanged.
         object.refresh_from_db()
@@ -1999,7 +2010,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # No API calls are made.
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
         # The object is unchanged.
@@ -2050,9 +2061,10 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        uuid = uuid4()
+        response = self.client.get(self.get_url(uuid))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(uuid)
         )
 
     def test_status_code_with_user_permission(self):
@@ -2060,9 +2072,9 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.AccountFactory.create()
         obj.status = obj.INACTIVE_STATUS
         obj.save()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url(obj.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(request, uuid=obj.uuid)
         self.assertEqual(response.status_code, 200)
 
     def test_template_with_user_permission(self):
@@ -2071,7 +2083,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         obj.status = obj.INACTIVE_STATUS
         obj.save()
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(obj.pk))
+        response = self.client.get(self.get_url(obj.uuid))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -2084,27 +2096,30 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, pk=uuid)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, pk=uuid)
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
-        request = self.factory.get(self.get_url(1))
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=1)
+            self.get_view()(request, pk=uuid)
 
     def test_get_context_data(self):
         """Context data is correct."""
@@ -2112,9 +2127,9 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         membership = factories.GroupAccountMembershipFactory.create(account=object)
         object.status = object.INACTIVE_STATUS
         object.save()
-        request = self.factory.get(self.get_url(object.pk))
+        request = self.factory.get(self.get_url(object.uuid))
         request.user = self.user
-        response = self.get_view()(request, pk=object.pk)
+        response = self.get_view()(request, uuid=object.uuid)
         self.assertIn("group_table", response.context_data)
         table = response.context_data["group_table"]
         self.assertEqual(len(table.rows), 1)
@@ -2126,7 +2141,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.status = object.INACTIVE_STATUS
         object.save()
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
         self.assertEqual(object.status, object.ACTIVE_STATUS)
@@ -2141,7 +2156,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -2154,7 +2169,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.status = object.INACTIVE_STATUS
         object.save()
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         object.refresh_from_db()
         self.assertEqual(object.status, object.ACTIVE_STATUS)
@@ -2168,7 +2183,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         other_object.status = other_object.INACTIVE_STATUS
         other_object.save()
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 2)
         other_object.refresh_from_db()
@@ -2181,11 +2196,11 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response,
-            reverse("anvil_consortium_manager:accounts:detail", args=[object.pk]),
+            reverse("anvil_consortium_manager:accounts:detail", args=[object.uuid]),
         )
 
     def test_adds_account_from_one_group(self):
@@ -2198,7 +2213,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         add_to_group_url = self.get_api_remove_from_group_url(group.name, object.email)
         responses.add(responses.PUT, add_to_group_url, status=204)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         responses.assert_call_count(add_to_group_url, 1)
         # History is not added for the GroupAccountMembership.
@@ -2223,7 +2238,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.add(responses.PUT, add_to_group_url_2, status=204)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         # Status was updated.
         object.refresh_from_db()
@@ -2257,7 +2272,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client for messages.
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
         self.assertIn("messages", response.context)
@@ -2284,7 +2299,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupAccountMembershipFactory.create_batch(2, account=object)
         # No API calls are made.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(object.pk), follow=True)
+        response = self.client.get(self.get_url(object.uuid), follow=True)
         self.assertRedirects(response, object.get_absolute_url())
         # The object is unchanged.
         object.refresh_from_db()
@@ -2304,7 +2319,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         # No API calls are made.
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
         # The object is unchanged.

@@ -20,17 +20,21 @@ billing_project_patterns = (
 
 account_patterns = (
     [
-        path("<int:pk>/", views.AccountDetail.as_view(), name="detail"),
+        path("<uuid:uuid>/", views.AccountDetail.as_view(), name="detail"),
         path("import/", views.AccountImport.as_view(), name="import"),
         path("all/", views.AccountList.as_view(), name="list"),
         path("active/", views.AccountActiveList.as_view(), name="list_active"),
         path("inactive/", views.AccountInactiveList.as_view(), name="list_inactive"),
-        path("<int:pk>/delete/", views.AccountDelete.as_view(), name="delete"),
+        path("<uuid:uuid>/delete/", views.AccountDelete.as_view(), name="delete"),
         path(
-            "<int:pk>/deactivate/", views.AccountDeactivate.as_view(), name="deactivate"
+            "<uuid:uuid>/deactivate/",
+            views.AccountDeactivate.as_view(),
+            name="deactivate",
         ),
         path(
-            "<int:pk>/reactivate/", views.AccountReactivate.as_view(), name="reactivate"
+            "<uuid:uuid>/reactivate/",
+            views.AccountReactivate.as_view(),
+            name="reactivate",
         ),
         path(
             "autocomplete/",
