@@ -18,7 +18,7 @@
 </div>
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:group_group_membership:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  <a href="{% url 'anvil_consortium_manager:group_group_membership:delete' parent_group_slug=object.parent_group.name child_group_slug=object.child_group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
 
 {% endblock content %}

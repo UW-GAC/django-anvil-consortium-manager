@@ -87,11 +87,15 @@ workspace_patterns = (
 
 group_group_membership_patterns = (
     [
-        path("<int:pk>/", views.GroupGroupMembershipDetail.as_view(), name="detail"),
-        path("new/", views.GroupGroupMembershipCreate.as_view(), name="new"),
         path("", views.GroupGroupMembershipList.as_view(), name="list"),
+        path("new/", views.GroupGroupMembershipCreate.as_view(), name="new"),
         path(
-            "<int:pk>/delete/",
+            "<slug:parent_group_slug>/group_members/<slug:child_group_slug>/",
+            views.GroupGroupMembershipDetail.as_view(),
+            name="detail",
+        ),
+        path(
+            "<slug:parent_group_slug>/group_members/<slug:child_group_slug>/delete/",
             views.GroupGroupMembershipDelete.as_view(),
             name="delete",
         ),

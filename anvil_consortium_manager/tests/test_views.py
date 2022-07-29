@@ -6293,17 +6293,24 @@ class GroupGroupMembershipDetailTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        response = self.client.get(self.get_url("parent", "child"))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url("parent", "child"),
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.GroupGroupMembershipFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(self.get_url("parent", "child"))
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(
+            request,
+            parent_group_slug=obj.parent_group.name,
+            child_group_slug=obj.child_group.name,
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
@@ -6311,18 +6318,22 @@ class GroupGroupMembershipDetailTest(TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("parent", "child"))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+            self.get_view()(
+                request, parent_group_slug="parent", child_group_slug="child"
+            )
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.GroupGroupMembershipFactory.create()
-        request = self.factory.get(self.get_url(obj.pk + 1))
+        factories.GroupGroupMembershipFactory.create()
+        request = self.factory.get(self.get_url("parent", "child"))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=obj.pk + 1)
+            self.get_view()(
+                request, parent_group_slug="parent", child_group_slug="child"
+            )
 
 
 class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -7020,17 +7031,26 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(1))
+        response = self.client.get(self.get_url("parent", "child"))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(1)
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url("parent", "child"),
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         obj = factories.GroupGroupMembershipFactory.create()
-        request = self.factory.get(self.get_url(obj.pk))
+        request = self.factory.get(
+            self.get_url(obj.parent_group.name, obj.child_group.name)
+        )
         request.user = self.user
-        response = self.get_view()(request, pk=obj.pk)
+        response = self.get_view()(
+            request,
+            parent_group_slug=obj.parent_group.name,
+            child_group_slug=obj.child_group.name,
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -7043,70 +7063,80 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("parent", "child"))
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(
+                request, parent_group_slug="parent", child_group_slug="child"
+            )
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("parent", "child"))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, pk=1)
+            self.get_view()(
+                request, parent_group_slug="parent", child_group_slug="child"
+            )
 
     def test_view_with_invalid_pk(self):
         """Returns a 404 when the object doesn't exist."""
-        request = self.factory.get(self.get_url(1))
+        request = self.factory.get(self.get_url("parent", "child"))
         request.user = self.user
         with self.assertRaises(Http404):
-            self.get_view()(request, pk=1)
+            self.get_view()(
+                request, parent_group_slug="parent", child_group_slug="child"
+            )
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        object = factories.GroupGroupMembershipFactory.create(
+        obj = factories.GroupGroupMembershipFactory.create(
             role=models.GroupGroupMembership.MEMBER
         )
         url = (
             self.entry_point
             + "/api/groups/"
-            + object.parent_group.name
+            + obj.parent_group.name
             + "/"
-            + object.role
+            + obj.role
             + "/"
-            + object.child_group.get_email()
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(object.history.count(), 2)
-        self.assertEqual(object.history.latest().history_type, "-")
-
-    def test_success_message(self):
-        """Response includes a success message if successful."""
-        object = factories.GroupGroupMembershipFactory.create(
-            role=models.GroupGroupMembership.MEMBER
-        )
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + object.parent_group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.child_group.get_email()
+            + obj.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.pk), {"submit": ""}, follow=True
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(obj.history.count(), 2)
+        self.assertEqual(obj.history.latest().history_type, "-")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + obj.parent_group.name
+            + "/"
+            + obj.role
+            + "/"
+            + obj.child_group.get_email()
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name),
+            {"submit": ""},
+            follow=True,
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -7115,20 +7145,22 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        object = factories.GroupGroupMembershipFactory.create()
+        obj = factories.GroupGroupMembershipFactory.create()
         other_object = factories.GroupGroupMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
-            + object.parent_group.name
+            + obj.parent_group.name
             + "/"
-            + object.role
+            + obj.role
             + "/"
-            + object.child_group.get_email()
+            + obj.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
         self.assertQuerysetEqual(
@@ -7139,20 +7171,22 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        object = factories.GroupGroupMembershipFactory.create()
+        obj = factories.GroupGroupMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
-            + object.parent_group.name
+            + obj.parent_group.name
             + "/"
-            + object.role
+            + obj.role
             + "/"
-            + object.child_group.get_email()
+            + obj.child_group.get_email()
         )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:group_group_membership:list")
@@ -7162,15 +7196,15 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        object = factories.GroupGroupMembershipFactory.create()
+        obj = factories.GroupGroupMembershipFactory.create()
         url = (
             self.entry_point
             + "/api/groups/"
-            + object.parent_group.name
+            + obj.parent_group.name
             + "/"
-            + object.role
+            + obj.role
             + "/"
-            + object.child_group.get_email()
+            + obj.child_group.get_email()
         )
         responses.add(
             responses.DELETE,
@@ -7179,7 +7213,9 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "group group membership delete test error"},
         )
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.pk), {"submit": ""})
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -7196,13 +7232,15 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Redirect get when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
         parent_group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         child_group = factories.ManagedGroupFactory.create()
-        membership = factories.GroupGroupMembershipFactory.create(
+        obj = factories.GroupGroupMembershipFactory.create(
             parent_group=parent_group, child_group=child_group
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(membership.pk), follow=True)
-        self.assertRedirects(response, membership.get_absolute_url())
+        response = self.client.get(
+            self.get_url(obj.parent_group.name, obj.child_group.name), follow=True
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -7218,13 +7256,15 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Redirect post when trying to delete GroupGroupMembership when a parent group is not managed by the app."""
         parent_group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         child_group = factories.ManagedGroupFactory.create()
-        membership = factories.GroupGroupMembershipFactory.create(
+        obj = factories.GroupGroupMembershipFactory.create(
             parent_group=parent_group, child_group=child_group
         )
         # Need to use a client for messages.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(membership.pk), follow=True)
-        self.assertRedirects(response, membership.get_absolute_url())
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), follow=True
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
         # Check for messages.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])

@@ -975,6 +975,29 @@ class WorkspaceAutocomplete(
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupGroupMembership
 
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        parent_group_slug = self.kwargs.get("parent_group_slug", None)
+        child_group_slug = self.kwargs.get("child_group_slug", None)
+        queryset = queryset.filter(
+            parent_group__name=parent_group_slug, child_group__name=child_group_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
 
 class GroupGroupMembershipCreate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
@@ -1019,6 +1042,29 @@ class GroupGroupMembershipDelete(
     message_parent_group_not_managed_by_app = (
         "Cannot remove members from parent group because it is not managed by this app."
     )
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        parent_group_slug = self.kwargs.get("parent_group_slug", None)
+        child_group_slug = self.kwargs.get("child_group_slug", None)
+        queryset = queryset.filter(
+            parent_group__name=parent_group_slug, child_group__name=child_group_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:group_group_membership:list")
