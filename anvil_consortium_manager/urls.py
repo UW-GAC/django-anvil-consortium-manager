@@ -134,18 +134,23 @@ group_account_membership_patterns = (
 
 workspace_group_access_patterns = (
     [
-        path("<int:pk>/", views.WorkspaceGroupAccessDetail.as_view(), name="detail"),
-        path("new/", views.WorkspaceGroupAccessCreate.as_view(), name="new"),
+        # Note: these URLs will be removed and/or reworked in the future.
         path("", views.WorkspaceGroupAccessList.as_view(), name="list"),
+        path("new/", views.WorkspaceGroupAccessCreate.as_view(), name="new"),
         path(
-            "<int:pk>/delete/",
-            views.WorkspaceGroupAccessDelete.as_view(),
-            name="delete",
+            "<slug:billing_project_slug>/<slug:workspace_slug>/access/<slug:group_slug>/",
+            views.WorkspaceGroupAccessDetail.as_view(),
+            name="detail",
         ),
         path(
-            "<int:pk>/update/",
+            "<slug:billing_project_slug>/<slug:workspace_slug>/access/<slug:group_slug>/update/",
             views.WorkspaceGroupAccessUpdate.as_view(),
             name="update",
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/access/<slug:group_slug>/delete/",
+            views.WorkspaceGroupAccessDelete.as_view(),
+            name="delete",
         ),
     ],
     "workspace_group_access",

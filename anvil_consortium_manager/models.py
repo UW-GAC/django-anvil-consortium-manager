@@ -673,7 +673,11 @@ class WorkspaceGroupAccess(TimeStampedModel):
             str: The absolute url for the object."""
         return reverse(
             "anvil_consortium_manager:workspace_group_access:detail",
-            kwargs={"pk": self.pk},
+            kwargs={
+                "billing_project_slug": self.workspace.billing_project.name,
+                "workspace_slug": self.workspace.name,
+                "group_slug": self.group.name,
+            },
         )
 
     def anvil_create_or_update(self):
