@@ -6283,7 +6283,7 @@ class GroupGroupMembershipDetailTest(TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse(
-            "anvil_consortium_manager:group_group_membership:detail", args=args
+            "anvil_consortium_manager:managed_groups:member_groups:detail", args=args
         )
 
     def get_view(self):
@@ -7021,7 +7021,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse(
-            "anvil_consortium_manager:group_group_membership:delete", args=args
+            "anvil_consortium_manager:managed_groups:member_groups:delete", args=args
         )
 
     def get_view(self):
@@ -7172,6 +7172,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_url(self):
         """Redirects to the expected page."""
         obj = factories.GroupGroupMembershipFactory.create()
+        parent_group = obj.parent_group
         url = (
             self.entry_point
             + "/api/groups/"
@@ -7188,9 +7189,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(
-            response, reverse("anvil_consortium_manager:group_group_membership:list")
-        )
+        self.assertRedirects(response, parent_group.get_absolute_url())
         responses.assert_call_count(url, 1)
 
     def test_api_error(self):
@@ -7316,7 +7315,7 @@ class GroupAccountMembershipDetailTest(TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse(
-            "anvil_consortium_manager:group_account_membership:detail", args=args
+            "anvil_consortium_manager:managed_groups:member_accounts:detail", args=args
         )
 
     def get_view(self):
@@ -8188,7 +8187,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse(
-            "anvil_consortium_manager:group_account_membership:delete", args=args
+            "anvil_consortium_manager:managed_groups:member_accounts:delete", args=args
         )
 
     def get_view(self):
@@ -8329,6 +8328,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupAccountMembershipFactory.create()
+        group = object.group
         # Need to use the client instead of RequestFactory to check redirection url.
         url = (
             self.entry_point
@@ -8345,9 +8345,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(
-            response, reverse("anvil_consortium_manager:group_account_membership:list")
-        )
+        self.assertRedirects(response, group.get_absolute_url())
         responses.assert_call_count(url, 1)
 
     def test_get_redirect_group_not_managed_by_app(self):

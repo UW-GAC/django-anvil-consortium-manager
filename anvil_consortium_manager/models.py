@@ -513,7 +513,7 @@ class GroupGroupMembership(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:group_group_membership:detail",
+            "anvil_consortium_manager:managed_groups:member_groups:detail",
             kwargs={
                 "parent_group_slug": self.parent_group.name,
                 "child_group_slug": self.child_group.name,
@@ -588,7 +588,7 @@ class GroupAccountMembership(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:group_account_membership:detail",
+            "anvil_consortium_manager:managed_groups:member_accounts:detail",
             kwargs={"group_slug": self.group.name, "account_uuid": self.account.uuid},
         )
 

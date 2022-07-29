@@ -1067,7 +1067,7 @@ class GroupGroupMembershipDelete(
         return obj
 
     def get_success_url(self):
-        return reverse("anvil_consortium_manager:group_group_membership:list")
+        return self.parent_group.get_absolute_url()
 
     def get(self, request, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -1088,6 +1088,7 @@ class GroupGroupMembershipDelete(
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
+        self.parent_group = self.object.parent_group
         # Check if managed by the app.
         if not self.object.parent_group.is_managed_by_app:
             messages.add_message(
@@ -1227,7 +1228,7 @@ class GroupAccountMembershipDelete(
         return obj
 
     def get_success_url(self):
-        return reverse("anvil_consortium_manager:group_account_membership:list")
+        return self.group.get_absolute_url()
 
     def get(self, request, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -1246,6 +1247,7 @@ class GroupAccountMembershipDelete(
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
+        self.group = self.object.group
         # Check if managed by the app.
         if not self.object.group.is_managed_by_app:
             messages.add_message(
