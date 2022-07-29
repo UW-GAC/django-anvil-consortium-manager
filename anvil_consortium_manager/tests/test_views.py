@@ -8470,9 +8470,7 @@ class WorkspaceGroupAccessDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse(
-            "anvil_consortium_manager:workspace_group_access:detail", args=args
-        )
+        return reverse("anvil_consortium_manager:workspaces:access:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -9366,9 +9364,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse(
-            "anvil_consortium_manager:workspace_group_access:update", args=args
-        )
+        return reverse("anvil_consortium_manager:workspaces:access:update", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -10039,9 +10035,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse(
-            "anvil_consortium_manager:workspace_group_access:delete", args=args
-        )
+        return reverse("anvil_consortium_manager:workspaces:access:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
