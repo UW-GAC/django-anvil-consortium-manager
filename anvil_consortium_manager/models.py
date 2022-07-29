@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.urls import reverse
@@ -41,7 +43,8 @@ class BillingProject(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:billing_projects:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:billing_projects:detail",
+            kwargs={"slug": self.name},
         )
 
     def anvil_exists(self):
@@ -82,6 +85,9 @@ class Account(TimeStampedModel, ActivatorModel):
     is_service_account = models.BooleanField()
     """Indicator of whether this account is a service account or a user account."""
 
+    uuid = models.UUIDField(default=uuid.uuid4)
+    """UUID for use in urls."""
+
     history = HistoricalRecords()
     """Django simple history record for this model."""
 
@@ -105,7 +111,7 @@ class Account(TimeStampedModel, ActivatorModel):
             A string with the url to the detail page for this object.
         """
         return reverse(
-            "anvil_consortium_manager:accounts:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:accounts:detail", kwargs={"uuid": self.uuid}
         )
 
     def deactivate(self):
@@ -154,7 +160,7 @@ class ManagedGroup(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:managed_groups:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:managed_groups:detail", kwargs={"slug": self.name}
         )
 
     def get_email(self):
@@ -296,7 +302,11 @@ class Workspace(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:workspaces:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:workspaces:detail",
+            kwargs={
+                "billing_project_slug": self.billing_project.name,
+                "workspace_slug": self.name,
+            },
         )
 
     def get_full_name(self):
@@ -397,12 +407,8 @@ class Workspace(TimeStampedModel):
                             billing_project_name
                         )
                     except AnVILAPIError404:
-                        # We are not users, but we want a record of it anyway.
-                        # We may want to modify BillingProject.anvil_import to throw a better exception here.
-                        billing_project = BillingProject(
-                            name=billing_project_name, has_app_as_user=False
-                        )
-                        billing_project.full_clean()
+                        # Use the temporary billing project we previously created above.
+                        billing_project = temporary_billing_project
                         billing_project.save()
 
                 # Finally, set the workspace's billing project to the existing or newly-added BillingProject.
@@ -507,8 +513,11 @@ class GroupGroupMembership(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:group_group_membership:detail",
-            kwargs={"pk": self.pk},
+            "anvil_consortium_manager:managed_groups:member_groups:detail",
+            kwargs={
+                "parent_group_slug": self.parent_group.name,
+                "child_group_slug": self.child_group.name,
+            },
         )
 
     def clean(self):
@@ -579,8 +588,8 @@ class GroupAccountMembership(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:group_account_membership:detail",
-            kwargs={"pk": self.pk},
+            "anvil_consortium_manager:managed_groups:member_accounts:detail",
+            kwargs={"group_slug": self.group.name, "account_uuid": self.account.uuid},
         )
 
     def anvil_create(self):
@@ -663,8 +672,12 @@ class WorkspaceGroupAccess(TimeStampedModel):
         Returns:
             str: The absolute url for the object."""
         return reverse(
-            "anvil_consortium_manager:workspace_group_access:detail",
-            kwargs={"pk": self.pk},
+            "anvil_consortium_manager:workspaces:access:detail",
+            kwargs={
+                "billing_project_slug": self.workspace.billing_project.name,
+                "workspace_slug": self.workspace.name,
+                "group_slug": self.group.name,
+            },
         )
 
     def anvil_create_or_update(self):

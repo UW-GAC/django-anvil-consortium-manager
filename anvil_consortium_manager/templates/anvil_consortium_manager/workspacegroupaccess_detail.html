@@ -19,8 +19,8 @@
 </div>
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:workspace_group_access:update' pk=object.pk %}" class="btn btn-secondary" role="button">Update Access</a>
-  <a href="{% url 'anvil_consortium_manager:workspace_group_access:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:access:update' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-secondary" role="button">Update Access</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:access:delete' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
 
 {% endblock content %}

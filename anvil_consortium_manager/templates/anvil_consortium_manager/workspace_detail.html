@@ -60,7 +60,7 @@
 
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
 
 {% endblock content %}

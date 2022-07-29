@@ -2,8 +2,9 @@ from dal import autocomplete
 from django.contrib import messages
 from django.db import transaction
 from django.forms import Form, inlineformset_factory
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -117,6 +118,7 @@ class BillingProjectDetail(
     auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
 ):
     model = models.BillingProject
+    slug_field = "name"
     context_table_name = "workspace_table"
 
     def get_table(self):
@@ -145,12 +147,39 @@ class BillingProjectAutocomplete(
         return qs
 
 
+class SingleAccountMixin(object):
+    """Retrieve an account using the uuid field."""
+
+    model = models.Account
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        uuid = self.kwargs.get("uuid", None)
+        queryset = queryset.filter(uuid=uuid)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+
 class AccountDetail(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
+    auth.AnVILConsortiumManagerViewRequired,
+    SingleTableMixin,
+    SingleAccountMixin,
+    DetailView,
 ):
     """Render detail page for an :class:`anvil_consortium_manager.models.Account`."""
 
-    model = models.Account
     context_table_name = "group_table"
 
     def get_table(self):
@@ -234,11 +263,11 @@ class AccountDeactivate(
     auth.AnVILConsortiumManagerEditRequired,
     SuccessMessageMixin,
     SingleTableMixin,
+    SingleAccountMixin,
     DeleteView,
 ):
     """Deactivate an account and remove it from all groups on AnVIL."""
 
-    model = models.Account
     template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
     context_table_name = "group_table"
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
@@ -296,12 +325,12 @@ class AccountReactivate(
     auth.AnVILConsortiumManagerEditRequired,
     SuccessMessageMixin,
     SingleTableMixin,
+    SingleAccountMixin,
     SingleObjectMixin,
     FormView,
 ):
     """Reactivate an account and re-add it to all groups on AnVIL."""
 
-    model = models.Account
     context_table_name = "group_table"
     form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
@@ -357,7 +386,10 @@ class AccountReactivate(
 
 
 class AccountDelete(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    SingleAccountMixin,
+    DeleteView,
 ):
     model = models.Account
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
@@ -365,7 +397,6 @@ class AccountDelete(
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:accounts:list")
-        # exceptions.AnVILRemoveAccountFromGroupError
 
     def delete(self, request, *args, **kwargs):
         """
@@ -403,6 +434,7 @@ class AccountAutocomplete(
 
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup
+    slug_field = "name"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -468,6 +500,7 @@ class ManagedGroupDelete(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
 ):
     model = models.ManagedGroup
+    slug_field = "name"
     message_not_managed_by_app = (
         "Cannot delete group because it is not managed by this app."
     )
@@ -588,6 +621,29 @@ class ManagedGroupAutocomplete(
 
 class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.Workspace
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(
+            billing_project__name=billing_project_slug, name=workspace_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -856,6 +912,29 @@ class WorkspaceDelete(
     model = models.Workspace
     success_msg = "Successfully deleted Workspace on AnVIL."
 
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(
+            billing_project__name=billing_project_slug, name=workspace_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspaces:list")
 
@@ -895,6 +974,29 @@ class WorkspaceAutocomplete(
 
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupGroupMembership
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        parent_group_slug = self.kwargs.get("parent_group_slug", None)
+        child_group_slug = self.kwargs.get("child_group_slug", None)
+        queryset = queryset.filter(
+            parent_group__name=parent_group_slug, child_group__name=child_group_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
 
 class GroupGroupMembershipCreate(
@@ -941,8 +1043,31 @@ class GroupGroupMembershipDelete(
         "Cannot remove members from parent group because it is not managed by this app."
     )
 
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        parent_group_slug = self.kwargs.get("parent_group_slug", None)
+        child_group_slug = self.kwargs.get("child_group_slug", None)
+        queryset = queryset.filter(
+            parent_group__name=parent_group_slug, child_group__name=child_group_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
     def get_success_url(self):
-        return reverse("anvil_consortium_manager:group_group_membership:list")
+        return self.parent_group.get_absolute_url()
 
     def get(self, request, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -963,6 +1088,7 @@ class GroupGroupMembershipDelete(
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
+        self.parent_group = self.object.parent_group
         # Check if managed by the app.
         if not self.object.parent_group.is_managed_by_app:
             messages.add_message(
@@ -987,6 +1113,27 @@ class GroupGroupMembershipDelete(
 
 class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupAccountMembership
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        group_slug = self.kwargs.get("group_slug", None)
+        account_uuid = self.kwargs.get("account_uuid", None)
+        queryset = queryset.filter(group__name=group_slug, account__uuid=account_uuid)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
 
 class GroupAccountMembershipCreate(
@@ -1059,8 +1206,29 @@ class GroupAccountMembershipDelete(
         "Cannot remove members from group because it is not managed by this app."
     )
 
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        group_slug = self.kwargs.get("group_slug", None)
+        account_uuid = self.kwargs.get("account_uuid", None)
+        queryset = queryset.filter(group__name=group_slug, account__uuid=account_uuid)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
     def get_success_url(self):
-        return reverse("anvil_consortium_manager:group_account_membership:list")
+        return self.group.get_absolute_url()
 
     def get(self, request, *args, **kwargs):
         response = super().get(self, *args, **kwargs)
@@ -1079,6 +1247,7 @@ class GroupAccountMembershipDelete(
         Make an API call to AnVIL and then call the delete method on the object.
         """
         self.object = self.get_object()
+        self.group = self.object.group
         # Check if managed by the app.
         if not self.object.group.is_managed_by_app:
             messages.add_message(
@@ -1101,6 +1270,32 @@ class GroupAccountMembershipDelete(
 
 class WorkspaceGroupAccessDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.WorkspaceGroupAccess
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        group_slug = self.kwargs.get("group_slug", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            group__name=group_slug,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
 
 class WorkspaceGroupAccessCreate(
@@ -1156,6 +1351,32 @@ class WorkspaceGroupAccessUpdate(
     success_msg = "Successfully updated Workspace sharing."
     """Message to display when the WorkspaceGroupAccess object was successfully updated."""
 
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        group_slug = self.kwargs.get("group_slug", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            group__name=group_slug,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
         # Create but don't save the new group.
@@ -1185,6 +1406,32 @@ class WorkspaceGroupAccessDelete(
 ):
     model = models.WorkspaceGroupAccess
     success_msg = "Successfully removed workspace sharing on AnVIL."
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        group_slug = self.kwargs.get("group_slug", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            group__name=group_slug,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_access:list")
