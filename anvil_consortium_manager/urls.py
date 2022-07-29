@@ -90,12 +90,12 @@ group_group_membership_patterns = (
         path("", views.GroupGroupMembershipList.as_view(), name="list"),
         path("new/", views.GroupGroupMembershipCreate.as_view(), name="new"),
         path(
-            "<slug:parent_group_slug>/group_members/<slug:child_group_slug>/",
+            "<slug:parent_group_slug>/member_groups/<slug:child_group_slug>/",
             views.GroupGroupMembershipDetail.as_view(),
             name="detail",
         ),
         path(
-            "<slug:parent_group_slug>/group_members/<slug:child_group_slug>/delete/",
+            "<slug:parent_group_slug>/member_groups/<slug:child_group_slug>/delete/",
             views.GroupGroupMembershipDelete.as_view(),
             name="delete",
         ),
@@ -119,12 +119,12 @@ group_account_membership_patterns = (
             name="list_inactive",
         ),
         path(
-            "<slug:group_slug>/account_members/<uuid:account_uuid>/",
+            "<slug:group_slug>/member_accounts/<uuid:account_uuid>/",
             views.GroupAccountMembershipDetail.as_view(),
             name="detail",
         ),
         path(
-            "<slug:group_slug>/account_members/<uuid:account_uuid>/delete/",
+            "<slug:group_slug>/member_accounts/<uuid:account_uuid>/delete/",
             views.GroupAccountMembershipDelete.as_view(),
             name="delete",
         ),
