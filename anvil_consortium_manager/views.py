@@ -184,7 +184,6 @@ class AccountImport(
 class AccountLink(LoginRequiredMixin, FormView):
     login_url = '/accounts/login'
     template_name = "anvil_consortium_manager/account_form.html"
-
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
     form_class = forms.AccountLinkForm
@@ -192,23 +191,25 @@ class AccountLink(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         """If the form is valid, check that the account exists on AnVIL and send verification email."""
         email = form.cleaned_data.get('email')
-        # try:
-        #     account_exists = models.Account.anvil_exists(self)
+        acct = models.Account(
+                    email = email,
+                )
+        try:
+            account_exists = acct.anvil_exists()
 
-        # except AnVILAPIError as e:
-        #     # If the API call failed for some other reason, rerender the page with the responses and show a message.
-        #     messages.add_message(
-        #         self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-        #     )
-        #     return self.render_to_response(self.get_context_data(form=form))
+        except AnVILAPIError as e:
+            # If the API call failed for some other reason, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
 
-        # if not account_exists:
-        #     messages.add_message(
-        #         self.request, messages.ERROR, self.message_account_does_not_exist
-        #     )
-        #     # Re-render the page with a message.
-        #     return self.render_to_response(self.get_context_data(form=form))
-
+        if not account_exists:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_does_not_exist
+            )
+            # Re-render the page with a message.
+            return self.render_to_response(self.get_context_data(form=form))
 
         #Account exists in ACM and is not verified
         if models.Account.objects.filter(email__iexact=email, date_verified__isnull=True).count() == 1:
