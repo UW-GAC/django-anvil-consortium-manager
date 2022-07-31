@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.mail import send_mail
 from django.db import transaction
 from django.forms.forms import Form
 from django.http import HttpResponseRedirect
@@ -180,35 +181,70 @@ class AccountImport(
 
         return super().form_valid(form)
 
-class AccountLink(LoginRequiredMixin, CreateView):
+class AccountLink(LoginRequiredMixin, FormView):
     login_url = '/accounts/login'
+    template_name = "anvil_consortium_manager/account_form.html"
+
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
     form_class = forms.AccountLinkForm
-    User = get_user_model()
 
     def form_valid(self, form):
         """If the form is valid, check that the account exists on AnVIL and send verification email."""
-        object = form.save(commit=False)
-        try:
-            account_exists = object.anvil_exists()
-            object.user = self.request.user
-            object.status = object.INACTIVE_STATUS
-            object.is_service_account = False
-        except AnVILAPIError as e:
-            # If the API call failed for some other reason, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
-            return self.render_to_response(self.get_context_data(form=form))
-        if not account_exists:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_account_does_not_exist
-            )
-            # Re-render the page with a message.
-            return self.render_to_response(self.get_context_data(form=form))
+        email = form.cleaned_data.get('email')
+        # try:
+        #     account_exists = models.Account.anvil_exists(self)
 
-        return super().form_valid(form)
+        # except AnVILAPIError as e:
+        #     # If the API call failed for some other reason, rerender the page with the responses and show a message.
+        #     messages.add_message(
+        #         self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+        #     )
+        #     return self.render_to_response(self.get_context_data(form=form))
+
+        # if not account_exists:
+        #     messages.add_message(
+        #         self.request, messages.ERROR, self.message_account_does_not_exist
+        #     )
+        #     # Re-render the page with a message.
+        #     return self.render_to_response(self.get_context_data(form=form))
+
+
+        #Account exists in ACM and is not verified
+        if models.Account.objects.filter(email__iexact=email, date_verified__isnull=True).count() == 1:
+            self.send_mail(email)
+            messages.add_message(
+                 self.request, messages.ERROR, "This email is not verified, check your email for a verification link"
+             )
+
+        #Account exists in ACM and is verified
+        elif models.Account.objects.filter(email__iexact=email, date_verified__isnull=False).count() == 1:
+            messages.add_message(
+                 self.request, messages.ERROR, "Account is already linked to this email."
+             )
+
+        else:
+            self.send_mail(email)
+            models.Account(
+                    user = self.request.user,
+                    email = email,
+                    status = models.Account.INACTIVE_STATUS,
+                    is_service_account = False
+                ).save()
+            messages.add_message(
+                 self.request, messages.ERROR, "To complete linking the account, check your email for a verification link"
+             )
+
+        return self.render_to_response(self.get_context_data(form=form))
+
+
+    def send_mail(self, email):
+        mail_subject = 'Activate your account.'
+        message = 'Test send email'
+        to_email = email
+        send_mail(mail_subject, message, 'wkirdpoo@uw.edu', [to_email],fail_silently=False,)
+        print(email)
+        pass
 
 
 class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):

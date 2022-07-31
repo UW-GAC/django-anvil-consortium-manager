@@ -33,18 +33,10 @@ class AccountImportForm(forms.ModelForm):
             raise ValidationError("Account with this Email already exists.")
         return value
 
-class AccountLinkForm(forms.ModelForm):
+class AccountLinkForm(forms.Form):
     """Form for user to link their AnVIL account."""
 
-    class Meta:
-        model = models.Account
-        fields = ("email",)
-
-    def clean_email(self):
-        value = self.cleaned_data["email"]
-        if models.Account.objects.filter(email__iexact=value, date_verified__isnull=True).exists():
-            raise ValidationError("Account with this Email needs to be verified. Check your email for a verification link.")
-        return value
+    email = forms.EmailField(label="Email")
 
 
 class ManagedGroupCreateForm(forms.ModelForm):
