@@ -1,11 +1,15 @@
+from base64 import urlsafe_b64decode
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
 from django.db import transaction
 from django.forms.forms import Form
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.utils.encoding import force_bytes, force_text
+from django.utils.http import urlsafe_base64_encode
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -16,6 +20,9 @@ from django.views.generic import (
 )
 from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
+from django.template.loader import render_to_string
+from tomlkit import datetime
+from .tokens import account_verification_token
 
 from . import anvil_api, auth, exceptions, forms, models, tables
 from .anvil_api import AnVILAPIClient, AnVILAPIError
@@ -241,9 +248,16 @@ class AccountLink(LoginRequiredMixin, FormView):
 
     def send_mail(self, email):
         mail_subject = 'Activate your account.'
-        message = 'Test send email'
+        user = self.request.user
+        current_site = get_current_site(self.request)
+        message = render_to_string('anvil_consortium_manager/account_verification_email.html', {
+                'user': user,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': account_verification_token.make_token(user),
+            })
         to_email = email
-        send_mail(mail_subject, message, 'wkirdpoo@uw.edu', [to_email],fail_silently=False,)
+        send_mail(mail_subject, message, settings.FROM_EMAIL, [to_email],fail_silently=False,)
         print(email)
         pass
 

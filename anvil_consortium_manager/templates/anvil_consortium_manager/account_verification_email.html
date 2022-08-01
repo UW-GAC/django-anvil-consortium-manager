@@ -1,0 +1,5 @@
+{% autoescape off %}
+Hi {{ user.username }},
+
+Please click on the link to verify your email,  http://{{ domain }}{% url 'anvil_consortium_manager:accounts:verify' uidb64=uid token=token %}
+{% endautoescape %}
