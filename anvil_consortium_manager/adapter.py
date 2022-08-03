@@ -94,6 +94,14 @@ def get_adapter():
     return adapter
 
 
+class AdapterAlreadyRegisteredError(Exception):
+    """Exception raised when an adapter or its workspace_data_type is already registered."""
+
+
+class AdapterNotRegisteredError(Exception):
+    """Exception raised when an adapter is not registered."""
+
+
 class WorkspaceAdapterRegistry:
     """Registry to store workspace adapters for different model types."""
 
@@ -101,9 +109,57 @@ class WorkspaceAdapterRegistry:
         """Initialize the registry."""
         self._registry = {}  # Stores the adapters for each model type.
 
-    def register(self, adapter):
-        """Register an adapter."""
-        pass
+    def register(self, adapter_class):
+        """Register an adapter class using its workspace_data_type."""
+        # Make sure the adapter has the correct subclass.
+        if not issubclass(adapter_class, BaseWorkspaceAdapter):
+            raise ImproperlyConfigured(
+                "`adapter_class` must inherit from `BaseWorkspaceAdapter`."
+            )
+        # Make sure that an adapter for this workspace_data_type is not already registered.
+        adapter = adapter_class()
+        workspace_data_type = adapter.get_workspace_data_type()
+        if workspace_data_type in self._registry:
+            if self._registry[workspace_data_type] is adapter_class:
+                raise AdapterAlreadyRegisteredError(
+                    "adapter {} already exists in registry.".format(adapter_class)
+                )
+            else:
+                raise AdapterAlreadyRegisteredError(
+                    "workspace_data_type `{}` already exists in registry.".format(
+                        workspace_data_type
+                    )
+                )
+        # Add the adapter to the registry.
+        self._registry[workspace_data_type] = adapter_class
+
+    def unregister(self, adapter_class):
+        """Unregister an adapter class."""
+        if not issubclass(adapter_class, BaseWorkspaceAdapter):
+            raise ImproperlyConfigured(
+                "`adapter_class` must inherit from `BaseWorkspaceAdapter`."
+            )
+        workspace_data_type = adapter_class().workspace_data_type
+        if workspace_data_type in self._registry:
+            # Check that the registered adapter is the same class and raise an exception if not.
+            registered_adapter = self._registry[workspace_data_type]
+            if registered_adapter is not adapter_class:
+                raise AdapterNotRegisteredError(
+                    "adapter {} has not been registered yet.".format(adapter_class)
+                )
+            else:
+                del self._registry[workspace_data_type]
+        else:
+            raise AdapterNotRegisteredError(
+                "adapter {} has not been registered yet.".format(adapter_class)
+            )
+
+    def get_adapter(self, workspace_data_type):
+        print(self._registry.keys())
+        adapter_class = self._registry[workspace_data_type]
+        return adapter_class()
 
 
+# Initalize a global variable for the registry for use throughout the app.
+# Adapters will be added to the registry in the AppConfig for this app via a setting.
 workspace_adapter_registry = WorkspaceAdapterRegistry()

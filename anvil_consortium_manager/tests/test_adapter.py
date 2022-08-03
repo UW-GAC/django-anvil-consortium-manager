@@ -3,7 +3,14 @@ from django.core.exceptions import ImproperlyConfigured
 from django.forms import ModelForm
 from django.test import TestCase, override_settings
 
-from ..adapter import BaseWorkspaceAdapter, DefaultWorkspaceAdapter, get_adapter
+from ..adapter import (
+    AdapterAlreadyRegisteredError,
+    AdapterNotRegisteredError,
+    BaseWorkspaceAdapter,
+    DefaultWorkspaceAdapter,
+    WorkspaceAdapterRegistry,
+    get_adapter,
+)
 from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
 from ..tables import WorkspaceTable
@@ -196,3 +203,121 @@ class GetAdapterTest(TestCase):
         """get_adapter raises an error when the subclass of the adapter is incorrect."""
         with self.assertRaises(ImproperlyConfigured):
             get_adapter()
+
+
+class WorkspaceAdapterRegistryTest(TestCase):
+    """Tests for the WorkspaceAdapterRegstry model."""
+
+    def test_can_register_adapter(self):
+        """Can register an adapter."""
+        registry = WorkspaceAdapterRegistry()
+        registry.register(DefaultWorkspaceAdapter)
+        self.assertEqual(len(registry._registry), 1)
+        self.assertIn("default_workspace_data", registry._registry)
+        self.assertEqual(
+            registry._registry["default_workspace_data"], DefaultWorkspaceAdapter
+        )
+
+    def test_cannot_register_adapter_twicwe(self):
+        """Cannot register an adapter with the same type as another registered adapter."""
+        registry = WorkspaceAdapterRegistry()
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = "adapter_type"
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        registry.register(TestAdapter)
+        with self.assertRaises(AdapterAlreadyRegisteredError):
+            registry.register(TestAdapter)
+        self.assertEqual(len(registry._registry), 1)
+        self.assertIn("adapter_type", registry._registry)
+        self.assertEqual(registry._registry["adapter_type"], TestAdapter)
+
+    def test_cannot_register_adapter_with_same_type(self):
+        """Cannot register an adapter with the same type as another registered adapter."""
+        registry = WorkspaceAdapterRegistry()
+
+        class Adapter1(BaseWorkspaceAdapter):
+            workspace_data_type = "adapter_type"
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        class Adapter2(BaseWorkspaceAdapter):
+            workspace_data_type = "adapter_type"
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        registry.register(Adapter1)
+        with self.assertRaises(AdapterAlreadyRegisteredError):
+            registry.register(Adapter2)
+        self.assertEqual(len(registry._registry), 1)
+        self.assertIn("adapter_type", registry._registry)
+        self.assertEqual(registry._registry["adapter_type"], Adapter1)
+
+    def test_cannot_register_adapter_with_wrong_subclass(self):
+        """Cannot register an adapter that does not subclass `BaseWorkspaceAdapter`."""
+        registry = WorkspaceAdapterRegistry()
+
+        class TestAdapter:
+            pass
+
+        with self.assertRaises(ImproperlyConfigured):
+            registry.register(TestAdapter)
+
+    def test_can_unregister_adapter(self):
+        """Can unregister an adapter."""
+        registry = WorkspaceAdapterRegistry()
+        registry.register(DefaultWorkspaceAdapter)
+        registry.unregister(DefaultWorkspaceAdapter)
+        self.assertEqual(len(registry._registry), 0)
+
+    def test_cannot_unregister_adapter_that_is_not_registered(self):
+        """Cannot unregister an adapter that has not been registered yet."""
+        registry = WorkspaceAdapterRegistry()
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = "adapter_type"
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        with self.assertRaises(AdapterNotRegisteredError):
+            registry.unregister(TestAdapter)
+        self.assertEqual(len(registry._registry), 0)
+
+    def test_cannot_unregister_adapter_with_same_type(self):
+        """Cannot unregister an adapter with the same type as another registered adapter."""
+        registry = WorkspaceAdapterRegistry()
+
+        class Adapter1(BaseWorkspaceAdapter):
+            workspace_data_type = "adapter_type"
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        class Adapter2(BaseWorkspaceAdapter):
+            workspace_data_type = "adapter_type"
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        registry.register(Adapter1)
+        with self.assertRaises(AdapterNotRegisteredError):
+            registry.unregister(Adapter2)
+        self.assertEqual(len(registry._registry), 1)
+        self.assertIn("adapter_type", registry._registry)
+        self.assertEqual(registry._registry["adapter_type"], Adapter1)
+
+    def test_cannot_unregister_adapter_with_wrong_subclass(self):
+        """Cannot unregister an adapter that does not subclass `BaseWorkspaceAdapter`."""
+        registry = WorkspaceAdapterRegistry()
+
+        class TestAdapter:
+            pass
+
+        with self.assertRaises(ImproperlyConfigured):
+            registry.unregister(TestAdapter)
