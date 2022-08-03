@@ -718,6 +718,10 @@ class WorkspaceCreate(
             with transaction.atomic():
                 # Calling form.save() does not create the history for the authorization domain many to many field.
                 # Instead, save the workspace first and then create the auth domain relationships one by one.
+                # Add the workspace data type from the adapter to the instance.
+                form.instance.workspace_data_type = (
+                    get_adapter().get_workspace_data_type()
+                )
                 self.workspace = form.save(commit=False)
                 self.workspace.save()
                 # Now check the workspace_data_formset.
@@ -869,10 +873,13 @@ class WorkspaceImport(
         billing_project_name, workspace_name = form.cleaned_data["workspace"].split("/")
 
         try:
+            workspace_data_type = get_adapter().get_workspace_data_type()
             # This is not ideal because we attempt to import the workspace before validating the workspace_data_Form.
             # However, we need to add the workspace to the form before validating it.
             self.workspace = models.Workspace.anvil_import(
-                billing_project_name, workspace_name
+                billing_project_name,
+                workspace_name,
+                workspace_data_type=workspace_data_type,
             )
             workspace_data_formset = self.get_workspace_data_formset()
             if not workspace_data_formset.is_valid():

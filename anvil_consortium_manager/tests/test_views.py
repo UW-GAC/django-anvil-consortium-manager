@@ -13,10 +13,12 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from .. import forms, models, tables, views
+from ..adapter import DefaultWorkspaceAdapter
 from . import factories
 from .adapter_app import forms as app_forms
 from .adapter_app import models as app_models
 from .adapter_app import tables as app_tables
+from .adapter_app.adapters import TestWorkspaceAdapter
 from .utils import AnVILAPIMockTestMixin
 
 
@@ -3925,6 +3927,10 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(
+            new_object.workspace_data_type,
+            DefaultWorkspaceAdapter().get_workspace_data_type(),
+        )
         responses.assert_call_count(url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
@@ -4596,6 +4602,11 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
+        # workspace_data_type is set properly.
+        self.assertEqual(
+            new_workspace.workspace_data_type,
+            TestWorkspaceAdapter().get_workspace_data_type(),
+        )
         # Workspace data is added.
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 1)
         new_workspace_data = app_models.TestWorkspaceData.objects.latest("pk")
@@ -5007,6 +5018,10 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 1)
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, workspace_name)
+        self.assertEqual(
+            new_workspace.workspace_data_type,
+            DefaultWorkspaceAdapter().get_workspace_data_type(),
+        )
         responses.assert_call_count(billing_project_url, 1)
         responses.assert_call_count(url, 1)
         # History is added for the workspace.
@@ -5728,6 +5743,10 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(
+            new_workspace.workspace_data_type,
+            TestWorkspaceAdapter().get_workspace_data_type(),
+        )
         # Workspace data is added.
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 1)
         new_workspace_data = app_models.TestWorkspaceData.objects.latest("pk")

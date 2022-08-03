@@ -758,15 +758,21 @@ class WorkspaceTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         billing_project = factories.BillingProjectFactory.create()
-        instance = Workspace(billing_project=billing_project, name="my-name")
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_data_type="default_workspace_data",
+        )
         instance.save()
         self.assertIsInstance(instance, Workspace)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        billing_project = factories.BillingProjectFactory.create(name="my-project")
-        instance = Workspace(billing_project=billing_project, name="my-name")
-        instance.save()
+        instance = factories.WorkspaceFactory.build(
+            billing_project__name="my-project",
+            name="my-name",
+            workspace_data_type="default_workspace_data",
+        )
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my-project/my-name")
 
