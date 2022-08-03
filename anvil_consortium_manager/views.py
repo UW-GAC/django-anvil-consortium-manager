@@ -7,15 +7,16 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.forms.forms import Form
 from django.http import HttpResponseRedirect
-from django.urls import reverse
-from django.utils.encoding import force_bytes, force_text
-from django.utils.http import urlsafe_base64_encode
+from django.urls import reverse, reverse_lazy
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import (
     CreateView,
     DeleteView,
     DetailView,
     FormView,
     TemplateView,
+    RedirectView,
     UpdateView,
 )
 from django.views.generic.detail import SingleObjectMixin
@@ -26,7 +27,7 @@ from .tokens import account_verification_token
 
 from . import anvil_api, auth, exceptions, forms, models, tables
 from .anvil_api import AnVILAPIClient, AnVILAPIError
-
+import datetime
 
 class SuccessMessageMixin:
     """Mixin to add a success message to views."""
@@ -258,8 +259,36 @@ class AccountLink(LoginRequiredMixin, FormView):
             })
         to_email = email
         send_mail(mail_subject, message, settings.FROM_EMAIL, [to_email],fail_silently=False,)
-        print(email)
         pass
+
+class AccountLinkVerify(RedirectView):
+
+    def get(self, request, uidb64, token):
+
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            acct = models.Account.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, models.Account.DoesNotExist):
+            acct = None
+
+        if acct is not None and account_verification_token.check_token(acct, token):
+            if acct.date_verified is not None:
+                messages.add_message(
+                    self.request, messages.SUCCESS, "The email is already verified."
+                )
+            else:
+                acct.status = models.Account.ACTIVE_STATUS
+                acct.date_verified = datetime.datetime.now()
+                acct.save()
+                messages.add_message(
+                     self.request, messages.SUCCESS, "Thank you for verifying your email."
+                )
+        else:
+            messages.add_message(
+                 self.request, messages.ERROR, "The link is invalid."
+            )
+
+        return HttpResponseRedirect(reverse('anvil_consortium_manager:index'))
 
 
 class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
