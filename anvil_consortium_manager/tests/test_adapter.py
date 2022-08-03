@@ -24,6 +24,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_list_table_class returns the correct table when using a custom adapter."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = tables.TestWorkspaceDataTable
             workspace_data_model = None
             workspace_data_form_class = None
@@ -36,6 +37,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -54,6 +56,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_form_class returns the correct form when using a custom adapter."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -66,6 +69,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_form_class raises exception if form class is not set."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -82,6 +86,7 @@ class WorkspaceAdapterTest(TestCase):
                 fields = ("study_name",)
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = None
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = TestFormClass
@@ -99,6 +104,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_model returns the correct model when using a custom adapter."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = None
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = None
@@ -111,6 +117,7 @@ class WorkspaceAdapterTest(TestCase):
         """workspace_data_model must be a subclass of models.BaseWorkspaceData"""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = None
             workspace_data_model = forms.TestWorkspaceDataForm  # use a random class.
             workspace_data_form_class = None
@@ -122,12 +129,43 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_model raises ImproperlyConfigured when workspace_data_model is not set."""
 
         class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()
+
+    def test_get_workspace_data_type_default(self):
+        """get_workspace_data_type returns the correct string when using the default adapter."""
+        self.assertEqual(
+            DefaultWorkspaceAdapter().get_workspace_data_type(),
+            "default_workspace_data",
+        )
+
+    def test_get_workspace_data_type_custom(self):
+        """get_workspace_data_type returns the correct model when using a custom adapter."""
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = "test_adapter"
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        self.assertEqual(TestAdapter().get_workspace_data_type(), "test_adapter")
+
+    def test_get_workspace_data_type_none(self):
+        """get_workspace_data_type raises ImproperlyConfigured when get_workspace_data_type is not set."""
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            workspace_data_type = None
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_workspace_data_type()
 
 
 class GetAdapterTest(TestCase):

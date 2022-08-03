@@ -13,6 +13,13 @@ class BaseWorkspaceAdapter(ABC):
     """Base class to inherit when customizing the workspace adapter."""
 
     @abstractproperty
+    def workspace_data_type(self):
+        """String specifying the type of the workspace data object.
+
+        This will be added to the :class:`anvil_consortium_manager.models.Workspace` `workspace_data_type` field."""
+        ...
+
+    @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of workspaces."""
         ...
@@ -26,6 +33,12 @@ class BaseWorkspaceAdapter(ABC):
     def workspace_data_form_class(self):
         """Form for the model specified in ``workspace_data_model``."""
         ...
+
+    def get_workspace_data_type(self):
+        """Return the workspace data type specified in the adapter."""
+        if not self.workspace_data_type:
+            raise ImproperlyConfigured("Set `workspace_data_type`.")
+        return self.workspace_data_type
 
     def get_list_table_class(self):
         """Return the table class to use for the WorkspaceList view."""
@@ -61,9 +74,10 @@ class BaseWorkspaceAdapter(ABC):
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     """Default adapter for use with the app."""
 
-    list_table_class = tables.WorkspaceTable
+    workspace_data_type = "default_workspace_data"
     workspace_data_model = models.DefaultWorkspaceData
     workspace_data_form_class = forms.DefaultWorkspaceDataForm
+    list_table_class = tables.WorkspaceTable
 
 
 def get_adapter():
