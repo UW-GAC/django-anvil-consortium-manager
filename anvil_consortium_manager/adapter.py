@@ -78,3 +78,18 @@ def get_adapter():
             "ANVIL_ADAPTER must inherit from `BaseWorkspaceAdapter`."
         )
     return adapter
+
+
+class WorkspaceAdapterRegistry:
+    """Registry to store workspace adapters for different model types."""
+
+    def __init__(self):
+        """Initialize the registry."""
+        self._registry = {}  # Stores the adapters for each model type.
+
+    def register(self, adapter):
+        """Register an adapter."""
+        pass
+
+
+workspace_adapter_registry = WorkspaceAdapterRegistry()
