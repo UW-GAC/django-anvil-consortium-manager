@@ -74,7 +74,7 @@ class BaseWorkspaceAdapter(ABC):
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     """Default adapter for use with the app."""
 
-    workspace_data_type = "default_workspace_data"
+    workspace_data_type = "default"
     workspace_data_model = models.DefaultWorkspaceData
     workspace_data_form_class = forms.DefaultWorkspaceDataForm
     list_table_class = tables.WorkspaceTable

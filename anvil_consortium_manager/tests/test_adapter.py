@@ -148,7 +148,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_type returns the correct string when using the default adapter."""
         self.assertEqual(
             DefaultWorkspaceAdapter().get_workspace_data_type(),
-            "default_workspace_data",
+            "default",
         )
 
     def test_get_workspace_data_type_custom(self):
@@ -213,10 +213,8 @@ class WorkspaceAdapterRegistryTest(TestCase):
         registry = WorkspaceAdapterRegistry()
         registry.register(DefaultWorkspaceAdapter)
         self.assertEqual(len(registry._registry), 1)
-        self.assertIn("default_workspace_data", registry._registry)
-        self.assertEqual(
-            registry._registry["default_workspace_data"], DefaultWorkspaceAdapter
-        )
+        self.assertIn("default", registry._registry)
+        self.assertEqual(registry._registry["default"], DefaultWorkspaceAdapter)
 
     def test_cannot_register_adapter_twicwe(self):
         """Cannot register an adapter with the same type as another registered adapter."""
