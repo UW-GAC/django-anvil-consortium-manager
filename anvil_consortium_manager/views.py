@@ -190,7 +190,7 @@ class AccountImport(
         return super().form_valid(form)
 
 class AccountLink(LoginRequiredMixin, FormView):
-    login_url = '/accounts/login'
+    login_url = settings.LOGIN_URL
     template_name = "anvil_consortium_manager/account_form.html"
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
