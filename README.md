@@ -66,6 +66,11 @@ Set up the environment:
     $ source venv/bin/activate
     $ pip install -r requirements/dev.txt
 
+Set an environment variables for email interface settings:
+    $ source EMAIL_HOST="smtp.washington.edu"
+    $ source EMAIL_HOST_USER="your_UWNetID"
+    $ source EMAIL_HOST_PASSWORD="your_UWNetID_password"
+
 Run the example site:
 
     $ python manage.py migrate
