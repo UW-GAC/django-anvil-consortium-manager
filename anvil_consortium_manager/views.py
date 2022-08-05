@@ -625,7 +625,10 @@ class WorkspaceAdapterMixin:
     def get_adapter(self):
         workspace_type = self.kwargs.get("workspace_type")
         if workspace_type:
-            adapter = workspace_adapter_registry.get_adapter(workspace_type)
+            try:
+                adapter = workspace_adapter_registry.get_adapter(workspace_type)
+            except KeyError:
+                raise Http404("workspace_type is not registered.")
         else:
             raise AttributeError(
                 "View %s must be called with `workspace_type` in the URLconf."

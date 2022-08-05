@@ -3897,6 +3897,20 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, workspace_type=self.workspace_type)
 
+    def test_get_workspace_type_not_registered(self):
+        """Raises 404 with get request if workspace type is not registered with adapter."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, workspace_type="foo")
+
+    def test_post_workspace_type_not_registered(self):
+        """Raises 404 with post request if workspace type is not registered with adapter."""
+        request = self.factory.post(self.get_url("foo"), {})
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, workspace_type="foo")
+
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url(self.workspace_type))
@@ -4820,6 +4834,20 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
+
+    def test_get_workspace_type_not_registered(self):
+        """Raises 404 with get request if workspace type is not registered with adapter."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, workspace_type="foo")
+
+    def test_post_workspace_type_not_registered(self):
+        """Raises 404 with post request if workspace type is not registered with adapter."""
+        request = self.factory.post(self.get_url("foo"), {})
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, workspace_type="foo")
 
     def test_has_form_in_context(self):
         """Response includes a form."""
@@ -5938,6 +5966,20 @@ class WorkspaceListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
+
+    def test_get_workspace_type_not_registered(self):
+        """Raises 404 with get request if workspace type is not registered with adapter."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, workspace_type="foo")
+
+    def test_post_workspace_type_not_registered(self):
+        """Raises 404 with post request if workspace type is not registered with adapter."""
+        request = self.factory.post(self.get_url("foo"), {})
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, workspace_type="foo")
 
     def test_view_has_correct_table_class(self):
         request = self.factory.get(self.get_url(self.workspace_type))
