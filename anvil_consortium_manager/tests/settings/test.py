@@ -121,3 +121,7 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
 # Path to the service account to use for managing access.
 # Because the calls are mocked, we don't need to set this.
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
+
+ANVIL_WORKSPACE_ADAPTERS = [
+    "anvil_consortium_manager.adapter.DefaultWorkspaceAdapter",
+]
