@@ -4718,6 +4718,20 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
             )
         )
+        self.workspace_type = DefaultWorkspaceAdapter().get_type()
+
+    def tearDown(self):
+        # Clean up the workspace adapter registry if the test adapter was added.
+        try:
+            workspace_adapter_registry.unregister(TestWorkspaceAdapter)
+        except AdapterNotRegisteredError:
+            pass
+        # Register the default adapter in case it has been unregistered.
+        try:
+            workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        except AdapterAlreadyRegisteredError:
+            pass
+        super().tearDown()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -4756,9 +4770,12 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url())
+        response = self.client.get(self.get_url(self.workspace_type))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.workspace_type),
         )
 
     def test_status_code_with_user_permission(self):
@@ -4776,7 +4793,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -4789,7 +4806,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
@@ -4799,7 +4816,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
@@ -4820,9 +4837,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_json_response(billing_project_name, workspace_name)],
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
 
@@ -4842,9 +4859,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_json_response(billing_project_name, workspace_name)],
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertTrue("workspace_data_formset" in response.context_data)
         formset = response.context_data["workspace_data_formset"]
         self.assertIsInstance(formset, BaseInlineFormSet)
@@ -4866,7 +4883,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        response = self.client.get(self.get_url(self.workspace_type))
         # Choices are populated correctly.
         workspace_choices = response.context_data["form"].fields["workspace"].choices
         self.assertEqual(len(workspace_choices), 1)
@@ -4894,9 +4911,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_json_response("bp-1", "ws-1")],
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         # Choices are populated correctly.
         workspace_choices = response.context_data["form"].fields["workspace"].choices
         self.assertEqual(len(workspace_choices), 2)
@@ -4922,9 +4939,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 self.get_api_json_response("bp-2", "ws-2"),
             ],
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         # Choices are populated correctly.
         workspace_choices = response.context_data["form"].fields["workspace"].choices
         self.assertEqual(len(workspace_choices), 3)
@@ -4955,7 +4972,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        response = self.client.get(self.get_url(self.workspace_type))
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
         form_choices = response.context_data["form"].fields["workspace"].choices
@@ -4987,9 +5004,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 self.get_api_json_response("bp", "ws-reader", access="READER"),
             ],
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
         form_choices = response.context_data["form"].fields["workspace"].choices
@@ -5029,7 +5046,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project_name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5093,7 +5110,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project_name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5142,7 +5159,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project_name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5191,7 +5208,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project_name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5246,7 +5263,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5302,7 +5319,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5379,7 +5396,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5441,7 +5458,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5478,7 +5495,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Messages need the client.
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": workspace.billing_project.name + "/" + workspace.name,
                 # Default workspace data for formset.
@@ -5516,7 +5533,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # No API call.
         request = self.factory.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": "billing-project/workspace name",
                 # Default workspace data for formset.
@@ -5527,7 +5544,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
         form = response.context_data["form"]
@@ -5554,7 +5571,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_json_response("foo", "bar")],
         )
         request = self.factory.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
@@ -5564,7 +5581,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
@@ -5611,7 +5628,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project_name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5649,7 +5666,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "an error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
         # Check messages.
@@ -5678,7 +5695,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": "billing-project/workspace",
                 # Default workspace data for formset.
@@ -5703,11 +5720,14 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.BillingProject.objects.count(), 0)
         self.assertEqual(models.Workspace.objects.count(), 0)
 
-    @override_settings(
-        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
-    )
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         workspace_list_url = self.entry_point + "/api/workspaces"
@@ -5722,20 +5742,23 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_json_response(billing_project_name, workspace_name)],
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertTrue("workspace_data_formset" in response.context_data)
         formset = response.context_data["workspace_data_formset"]
         self.assertIsInstance(formset, BaseInlineFormSet)
         self.assertEqual(len(formset.forms), 1)
         self.assertIsInstance(formset.forms[0], app_forms.TestWorkspaceDataForm)
 
-    @override_settings(
-        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
-    )
     def test_adapter_creates_workspace_data(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
@@ -5760,7 +5783,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5785,11 +5808,14 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace_data.study_name, "test study")
         responses.assert_call_count(url, 1)
 
-    @override_settings(
-        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
-    )
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
@@ -5812,9 +5838,8 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project.name, workspace_name),
         )
-        self.client.force_login(self.user)
         request = self.factory.post(
-            self.get_url(),
+            self.get_url(self.workspace_type),
             {
                 "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
@@ -5827,7 +5852,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
 
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertEqual(response.status_code, 200)
         # Workspace form is valid.
         form = response.context_data["form"]

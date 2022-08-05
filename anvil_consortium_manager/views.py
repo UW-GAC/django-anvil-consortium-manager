@@ -789,7 +789,10 @@ class WorkspaceCreate(
 
 
 class WorkspaceImport(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, FormView
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    WorkspaceAdapterMixin,
+    FormView,
 ):
     template_name = "anvil_consortium_manager/workspace_import.html"
     message_anvil_no_access_to_workspace = (
@@ -843,8 +846,8 @@ class WorkspaceImport(
     def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
         formset_prefix = "workspacedata"
-        form_class = get_adapter().get_workspace_data_form_class()
-        model = get_adapter().get_workspace_data_model()
+        form_class = self.adapter.get_workspace_data_form_class()
+        model = self.adapter.get_workspace_data_model()
         formset_factory = inlineformset_factory(
             models.Workspace,
             model,
@@ -877,8 +880,8 @@ class WorkspaceImport(
         Handle POST requests: instantiate the forms instances with the passed
         POST variables and then check if they are valid.
         """
+        self.adapter = self.get_adapter()
         self.workspace = None
-        # print(self.POST)
         form = self.get_form()
         # First, check if the workspace form is valid.
         # If it is, we'll save the model and then check the workspace data form.
@@ -899,7 +902,7 @@ class WorkspaceImport(
         billing_project_name, workspace_name = form.cleaned_data["workspace"].split("/")
 
         try:
-            workspace_data_type = get_adapter().get_type()
+            workspace_data_type = self.adapter.get_type()
             # This is not ideal because we attempt to import the workspace before validating the workspace_data_Form.
             # However, we need to add the workspace to the form before validating it.
             self.workspace = models.Workspace.anvil_import(
