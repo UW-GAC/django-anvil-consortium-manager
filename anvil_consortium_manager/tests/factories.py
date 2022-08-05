@@ -1,7 +1,8 @@
 from factory import Faker, SubFactory
 from factory.django import DjangoModelFactory
 
-from anvil_consortium_manager import models
+# from anvil_consortium_manager import models
+from .. import adapter, models
 
 
 class BillingProjectFactory(DjangoModelFactory):
@@ -41,7 +42,7 @@ class WorkspaceFactory(DjangoModelFactory):
 
     billing_project = SubFactory(BillingProjectFactory)
     name = Faker("slug")
-    workspace_data_type = "default_workspace_data"
+    workspace_data_type = adapter.DefaultWorkspaceAdapter().get_type()
 
     class Meta:
         model = models.Workspace

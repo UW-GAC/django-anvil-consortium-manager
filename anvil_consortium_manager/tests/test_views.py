@@ -6217,7 +6217,41 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
-            response, reverse("anvil_consortium_manager:workspaces:list")
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                args=[DefaultWorkspaceAdapter().get_type()],
+            ),
+        )
+        responses.assert_call_count(url, 1)
+
+    def test_adapter_success_url(self):
+        """Redirects to the expected page."""
+        # Register a new adapter.
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        object = factories.WorkspaceFactory.create(
+            workspace_data_type=TestWorkspaceAdapter().get_type()
+        )
+        # Need to use the client instead of RequestFactory to check redirection url.
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + object.billing_project.name
+            + "/"
+            + object.name
+        )
+        responses.add(responses.DELETE, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                args=[TestWorkspaceAdapter().get_type()],
+            ),
         )
         responses.assert_call_count(url, 1)
 

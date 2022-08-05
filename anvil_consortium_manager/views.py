@@ -973,7 +973,10 @@ class WorkspaceDelete(
         return obj
 
     def get_success_url(self):
-        return reverse("anvil_consortium_manager:workspaces:list")
+        return reverse(
+            "anvil_consortium_manager:workspaces:list",
+            args=[self.object.workspace_data_type],
+        )
 
     def delete(self, request, *args, **kwargs):
         """
