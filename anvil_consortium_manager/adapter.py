@@ -2,9 +2,7 @@
 
 from abc import ABC, abstractproperty
 
-from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.utils.module_loading import import_string
 
 from . import forms, models, tables
 
@@ -78,20 +76,6 @@ class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_model = models.DefaultWorkspaceData
     workspace_data_form_class = forms.DefaultWorkspaceDataForm
     list_table_class = tables.WorkspaceTable
-
-
-def get_adapter():
-    try:
-        adapter_class = import_string(settings.ANVIL_ADAPTER)
-    except AttributeError:
-        # Use the default adapter.
-        adapter_class = DefaultWorkspaceAdapter
-    adapter = adapter_class()
-    if not isinstance(adapter, BaseWorkspaceAdapter):
-        raise ImproperlyConfigured(
-            "ANVIL_ADAPTER must inherit from `BaseWorkspaceAdapter`."
-        )
-    return adapter
 
 
 class AdapterAlreadyRegisteredError(Exception):

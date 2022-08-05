@@ -1,7 +1,6 @@
-from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import ModelForm
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from ..adapter import (
     AdapterAlreadyRegisteredError,
@@ -9,13 +8,11 @@ from ..adapter import (
     BaseWorkspaceAdapter,
     DefaultWorkspaceAdapter,
     WorkspaceAdapterRegistry,
-    get_adapter,
 )
 from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
 from ..tables import WorkspaceTable
 from .adapter_app import forms, models, tables
-from .adapter_app.adapters import TestWorkspaceAdapter
 
 
 class WorkspaceAdapterTest(TestCase):
@@ -175,36 +172,6 @@ class WorkspaceAdapterTest(TestCase):
             TestAdapter().get_type()
 
 
-class GetAdapterTest(TestCase):
-    """Tests for the get_adapter method."""
-
-    def test_default(self):
-        """get_adapter returns the default adapter with standard test settings."""
-        self.assertIsInstance(get_adapter(), DefaultWorkspaceAdapter)
-
-    @override_settings(
-        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
-    )
-    def test_custom(self):
-        """get_adapter returns the custom test adapter when set."""
-        self.assertIsInstance(get_adapter(), TestWorkspaceAdapter)
-
-    @override_settings()
-    def test_anviL_adapter_not_set(self):
-        """get_adapter uses the default if ANVIL_ADAPTER is not set."""
-        del settings.ANVIL_ADAPTER
-        self.assertIsInstance(get_adapter(), DefaultWorkspaceAdapter)
-
-    # Use a random class here.
-    @override_settings(
-        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.forms.TestWorkspaceDataForm"
-    )
-    def test_subclass(self):
-        """get_adapter raises an error when the subclass of the adapter is incorrect."""
-        with self.assertRaises(ImproperlyConfigured):
-            get_adapter()
-
-
 class WorkspaceAdapterRegistryTest(TestCase):
     """Tests for the WorkspaceAdapterRegstry model."""
 
@@ -216,8 +183,8 @@ class WorkspaceAdapterRegistryTest(TestCase):
         self.assertIn("default", registry._registry)
         self.assertEqual(registry._registry["default"], DefaultWorkspaceAdapter)
 
-    def test_cannot_register_adapter_twicwe(self):
-        """Cannot register an adapter with the same type as another registered adapter."""
+    def test_cannot_register_adapter_twice(self):
+        """Cannot register the same adapter twice."""
         registry = WorkspaceAdapterRegistry()
 
         class TestAdapter(BaseWorkspaceAdapter):
