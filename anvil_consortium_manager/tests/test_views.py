@@ -9,7 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.forms import BaseInlineFormSet
 from django.http.response import Http404
 from django.shortcuts import resolve_url
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from .. import forms, models, tables, views
@@ -5882,6 +5882,20 @@ class WorkspaceListTest(TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
+        self.workspace_type = DefaultWorkspaceAdapter().get_type()
+
+    def tearDown(self):
+        # Clean up the workspace adapter registry if the test adapter was added.
+        try:
+            workspace_adapter_registry.unregister(TestWorkspaceAdapter)
+        except AdapterNotRegisteredError:
+            pass
+        # Register the default adapter in case it has been unregistered.
+        try:
+            workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        except AdapterAlreadyRegisteredError:
+            pass
+        super().tearDown()
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5894,16 +5908,19 @@ class WorkspaceListTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url())
+        response = self.client.get(self.get_url(self.workspace_type))
         self.assertRedirects(
-            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.workspace_type),
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
@@ -5911,58 +5928,61 @@ class WorkspaceListTest(TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+            self.get_view()(request, workspace_type=self.workspace_type)
 
     def test_view_status_code_client(self):
         factories.WorkspaceFactory()
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
 
     def test_view_has_correct_table_class(self):
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
 
     def test_view_with_no_objects(self):
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_one_object(self):
         factories.WorkspaceFactory()
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
         factories.WorkspaceFactory.create_batch(2)
-        request = self.factory.get(self.get_url())
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
-    @override_settings(
-        ANVIL_ADAPTER="anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter"
-    )
     def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
-        request = self.factory.get(self.get_url())
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = TestWorkspaceAdapter().get_type()
+        request = self.factory.get(self.get_url(self.workspace_type))
         request.user = self.user
-        response = self.get_view()(request)
+        response = self.get_view()(request, workspace_type=self.workspace_type)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
             response.context_data["table"], app_tables.TestWorkspaceDataTable

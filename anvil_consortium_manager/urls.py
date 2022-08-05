@@ -117,14 +117,13 @@ workspace_access_patterns = (
 
 workspace_patterns = (
     [
-        path("", views.WorkspaceList.as_view(), name="list"),
+        path("list/<str:workspace_type>/", views.WorkspaceList.as_view(), name="list"),
         path("new/<str:workspace_type>/", views.WorkspaceCreate.as_view(), name="new"),
         path(
             "import/<str:workspace_type>/",
             views.WorkspaceImport.as_view(),
             name="import",
         ),
-        path("", views.WorkspaceList.as_view(), name="list"),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
             views.WorkspaceDelete.as_view(),
