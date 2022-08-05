@@ -937,6 +937,9 @@ class WorkspaceList(
 ):
     model = models.Workspace
 
+    def get_queryset(self):
+        return self.model.objects.filter(workspace_data_type=self.adapter.get_type())
+
     def get_table_class(self):
         """Use the adapter to get the table class."""
         table_class = self.adapter.get_list_table_class()
