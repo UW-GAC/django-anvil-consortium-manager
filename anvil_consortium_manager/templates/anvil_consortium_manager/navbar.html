@@ -70,6 +70,9 @@
             </ul>
           </li>
 
+          {% comment %}
+            This won't work because of new url parameters. Figure out how to get a list of workspace types. Possibly a template tag?
+
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="navbarDarkDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Workspaces
@@ -79,7 +82,7 @@
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:list' %}">List workspaces</a>
               </li>
               <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:new' %}">Add a workspace</a>
+                {# <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:new' %}">Add a workspace</a> #}
               </li>
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:import' %}">Import a workspace from AnVIL</a>
@@ -89,6 +92,10 @@
               </li>
             </ul>
           </li>
+
+        {% endcomment %}
+
+
         </ul>
 
 

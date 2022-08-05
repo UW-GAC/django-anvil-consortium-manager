@@ -118,7 +118,7 @@ workspace_access_patterns = (
 workspace_patterns = (
     [
         path("", views.WorkspaceList.as_view(), name="list"),
-        path("new/", views.WorkspaceCreate.as_view(), name="new"),
+        path("new/<str:workspace_type>/", views.WorkspaceCreate.as_view(), name="new"),
         path("import/", views.WorkspaceImport.as_view(), name="import"),
         path("", views.WorkspaceList.as_view(), name="list"),
         path(

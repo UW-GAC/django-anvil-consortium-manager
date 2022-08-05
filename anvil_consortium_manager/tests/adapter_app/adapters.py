@@ -1,12 +1,12 @@
-from anvil_consortium_manager.adapter import DefaultWorkspaceAdapter
+from anvil_consortium_manager.adapter import BaseWorkspaceAdapter
 
 from . import forms, models, tables
 
 
-class TestWorkspaceAdapter(DefaultWorkspaceAdapter):
+class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     """Example adapter for workspaces."""
 
-    workspace_data_type = "test_workspace_adapter"
+    type = "test"
     list_table_class = tables.TestWorkspaceDataTable
     workspace_data_model = models.TestWorkspaceData
     workspace_data_form_class = forms.TestWorkspaceDataForm
