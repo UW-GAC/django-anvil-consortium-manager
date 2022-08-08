@@ -830,7 +830,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project.name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         # Check workspace values.
         self.assertEqual(workspace.billing_project, billing_project)
@@ -862,7 +862,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project_name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         # A billing project was created.
         self.assertEqual(models.BillingProject.objects.count(), 1)
@@ -898,7 +898,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project_name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         # A billing project was created.
         self.assertEqual(models.BillingProject.objects.count(), 1)
@@ -930,7 +930,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check workspace values.
         # Check that no objects were saved.
@@ -957,7 +957,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project.name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check workspace values.
         # Check that no objects were saved.
@@ -985,7 +985,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check workspace values.
         # Check that no objects were saved.
@@ -1014,7 +1014,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project.name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check workspace values.
         # Check that no objects were saved.
@@ -1029,7 +1029,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 workspace.billing_project.name,
                 workspace.name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # No additional objects were created.
         self.assertEqual(models.BillingProject.objects.count(), 1)
@@ -1049,7 +1049,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -1069,7 +1069,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -1096,7 +1096,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -1123,7 +1123,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -1135,7 +1135,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 "test billing project",
                 "test-workspace",
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -1148,7 +1148,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 "test-billing-project",
                 "test workspace",
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
@@ -1178,7 +1178,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project_name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         # A billing project was created and that the previous billing project exists.
         self.assertEqual(models.BillingProject.objects.count(), 2)
@@ -1206,7 +1206,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project.name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         # No new billing projects were created.
         self.assertEqual(models.BillingProject.objects.count(), 1)
@@ -1250,7 +1250,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project.name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
@@ -1288,7 +1288,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project.name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
@@ -1338,7 +1338,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project.name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
@@ -1397,7 +1397,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = models.Workspace.anvil_import(
             billing_project.name,
             workspace_name,
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertEqual(workspace.name, workspace_name)
@@ -1449,7 +1449,7 @@ class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
-                workspace_data_type="default_workspace_data",
+                workspace_type="default_workspace_data",
             )
         # No billing projects were created.
         self.assertEqual(models.BillingProject.objects.count(), 0)

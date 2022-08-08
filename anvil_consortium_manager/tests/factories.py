@@ -42,7 +42,7 @@ class WorkspaceFactory(DjangoModelFactory):
 
     billing_project = SubFactory(BillingProjectFactory)
     name = Faker("slug")
-    workspace_data_type = adapter.DefaultWorkspaceAdapter().get_type()
+    workspace_type = adapter.DefaultWorkspaceAdapter().get_type()
 
     class Meta:
         model = models.Workspace

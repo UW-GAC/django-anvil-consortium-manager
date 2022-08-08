@@ -761,7 +761,7 @@ class WorkspaceTest(TestCase):
         instance = Workspace(
             billing_project=billing_project,
             name="my-name",
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         instance.save()
         self.assertIsInstance(instance, Workspace)
@@ -771,7 +771,7 @@ class WorkspaceTest(TestCase):
         instance = factories.WorkspaceFactory.build(
             billing_project__name="my-project",
             name="my-name",
-            workspace_data_type="default_workspace_data",
+            workspace_type="default_workspace_data",
         )
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my-project/my-name")

@@ -3964,7 +3964,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
         self.assertEqual(
-            new_object.workspace_data_type,
+            new_object.workspace_type,
             DefaultWorkspaceAdapter().get_type(),
         )
         responses.assert_call_count(url, 1)
@@ -4644,9 +4644,9 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
-        # workspace_data_type is set properly.
+        # workspace_type is set properly.
         self.assertEqual(
-            new_workspace.workspace_data_type,
+            new_workspace.workspace_type,
             TestWorkspaceAdapter().get_type(),
         )
         # Workspace data is added.
@@ -5095,7 +5095,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, workspace_name)
         self.assertEqual(
-            new_workspace.workspace_data_type,
+            new_workspace.workspace_type,
             DefaultWorkspaceAdapter().get_type(),
         )
         responses.assert_call_count(billing_project_url, 1)
@@ -5826,7 +5826,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(
-            new_workspace.workspace_data_type,
+            new_workspace.workspace_type,
             TestWorkspaceAdapter().get_type(),
         )
         # Workspace data is added.
@@ -6032,7 +6032,7 @@ class WorkspaceListTest(TestCase):
 
     def test_only_shows_workspaces_with_correct_type(self):
         """Only workspaces with the same workspace_type are shown in the table."""
-        factories.WorkspaceFactory(workspace_data_type="test")
+        factories.WorkspaceFactory(workspace_type="test")
         default_type = DefaultWorkspaceAdapter().get_type()
         request = self.factory.get(self.get_url(default_type))
         request.user = self.user
@@ -6283,7 +6283,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Register a new adapter.
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         object = factories.WorkspaceFactory.create(
-            workspace_data_type=TestWorkspaceAdapter().get_type()
+            workspace_type=TestWorkspaceAdapter().get_type()
         )
         # Need to use the client instead of RequestFactory to check redirection url.
         url = (

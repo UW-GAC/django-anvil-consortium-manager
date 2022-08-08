@@ -19,7 +19,7 @@ class BaseWorkspaceAdapter(ABC):
     def type(self):
         """String specifying the workspace type.
 
-        This will be added to the :class:`anvil_consortium_manager.models.Workspace` `workspace_data_type` field."""
+        This will be added to the :class:`anvil_consortium_manager.models.Workspace` `workspace_type` field."""
         ...
 
     @abstractproperty
