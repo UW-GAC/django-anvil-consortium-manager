@@ -11,6 +11,11 @@ class BaseWorkspaceAdapter(ABC):
     """Base class to inherit when customizing the workspace adapter."""
 
     @abstractproperty
+    def name(self):
+        """String specifying the namee of this type of workspace."""
+        ...
+
+    @abstractproperty
     def type(self):
         """String specifying the workspace type.
 
@@ -31,6 +36,12 @@ class BaseWorkspaceAdapter(ABC):
     def workspace_data_form_class(self):
         """Form for the model specified in ``workspace_data_model``."""
         ...
+
+    def get_name(self):
+        """Return the name specified in the adapter."""
+        if not self.name:
+            raise ImproperlyConfigured("Set `name`.")
+        return self.name
 
     def get_type(self):
         """Return the workspace data type specified in the adapter."""
@@ -72,7 +83,8 @@ class BaseWorkspaceAdapter(ABC):
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     """Default adapter for use with the app."""
 
-    type = "default"
+    name = "Workspace"
+    type = "workspace"
     workspace_data_model = models.DefaultWorkspaceData
     workspace_data_form_class = forms.DefaultWorkspaceDataForm
     list_table_class = tables.WorkspaceTable
@@ -140,6 +152,14 @@ class WorkspaceAdapterRegistry:
         print(self._registry.keys())
         adapter_class = self._registry[type]
         return adapter_class()
+
+    def get_registered_adapters(self):
+        """Return the registered adapters."""
+        return self._registry
+
+    def get_registered_names(self):
+        """Return a dictionary of registered adapter names."""
+        return {key: value().get_name() for (key, value) in self._registry.items()}
 
 
 # Initalize a global variable for the registry for use throughout the app.

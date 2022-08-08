@@ -6,6 +6,7 @@ from . import forms, models, tables
 class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     """Example adapter for workspaces."""
 
+    name = "Test workspace"
     type = "test"
     list_table_class = tables.TestWorkspaceDataTable
     workspace_data_model = models.TestWorkspaceData

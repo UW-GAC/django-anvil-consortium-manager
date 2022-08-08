@@ -6033,9 +6033,10 @@ class WorkspaceListTest(TestCase):
     def test_only_shows_workspaces_with_correct_type(self):
         """Only workspaces with the same workspace_type are shown in the table."""
         factories.WorkspaceFactory(workspace_data_type="test")
-        request = self.factory.get(self.get_url("default"))
+        default_type = DefaultWorkspaceAdapter().get_type()
+        request = self.factory.get(self.get_url(default_type))
         request.user = self.user
-        response = self.get_view()(request, workspace_type="default")
+        response = self.get_view()(request, workspace_type=default_type)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)

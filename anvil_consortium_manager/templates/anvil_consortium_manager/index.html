@@ -93,38 +93,33 @@
         </div>
       </div>
 
-      {% comment %}
 
-      This won't work yet because we need to get the list of the types of workspaces. Possibly with a template tag?
-
+      {% for workspace_type, workspace_name in registered_workspaces.items %}
       <div class="col">
         <div class="card shadow-sm">
-          <h5 class="card-header"><span class="fa-solid fa-computer mx-2"></span>Workspaces</h5>
+          <h5 class="card-header"><span class="fa-solid fa-computer mx-2"></span>{{ workspace_name }}s</h5>
           <div class="card-body">
-            <p>Interact with workspaces on AnVIL. You can create or import workspaces and then share them with a group.</p>
+            <p>Interact with <b>{{ workspace_name }}s</b> on AnVIL. You can create or import workspaces and then share them with a group.</p>
           </div>
+
           <ul class="list-group list-group-flush">
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:workspaces:list' %}" class="icon-link">List workspaces</a>
+              <a href="{% url 'anvil_consortium_manager:workspaces:list' workspace_type %}" class="icon-link">List workspaces</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:workspaces:new' %}" class="icon-link">Add a workspace</a>
+              <a href="{% url 'anvil_consortium_manager:workspaces:new' workspace_type %}" class="icon-link">Add a workspace</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:workspaces:import' %}" class="icon-link">Import a workspace from AnVIL</a>
-              <span class="fa-solid fa-angle-right"></span>
-            </li>
-            <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:workspace_group_access:new' %}" class="icon-link">Give a group access to a workspace</a>
+              <a href="{% url 'anvil_consortium_manager:workspaces:import' workspace_type  %}" class="icon-link">Import a workspace from AnVIL</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
           </ul>
+
         </div>
       </div>
-
-      {% endcomment %}
+      {% endfor %}
 
     </div>
   </div>
