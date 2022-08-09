@@ -949,9 +949,13 @@ class WorkspaceTest(TestCase):
 
     def test_workspace_type_not_registered(self):
         """A ValidationError is raised if the workspace_type is not a registered adapter type."""
-        instance = factories.WorkspaceFactory.build(workspace_type="foo")
-        with self.assertRaises(ValidationError):
+        billing_project = factories.BillingProjectFactory.create()
+        instance = factories.WorkspaceFactory.build(
+            billing_project=billing_project, workspace_type="foo"
+        )
+        with self.assertRaises(ValidationError) as e:
             instance.clean_fields()
+        self.assertIn("not a registered adapter type", str(e.exception))
 
 
 class WorkspaceAuthorizationDomainTestCase(TestCase):

@@ -285,13 +285,17 @@ class Workspace(TimeStampedModel):
             )
         ]
 
-    def clean_workspace_type(self):
-        """Check that workspace_type is one of the registered adapters."""
-        registered_adapters = workspace_adapter_registry.get_registered_adapters()
-        if self.workspace_type not in registered_adapters:
-            raise ValidationError(
-                "Value ``workspace_type`` is not a registered adapter type."
-            )
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+        # Check that workspace type is a registered adapter type.
+        if not exclude or "workspace_type" not in exclude:
+            registered_adapters = workspace_adapter_registry.get_registered_adapters()
+            if self.workspace_type not in registered_adapters:
+                raise ValidationError(
+                    {
+                        "workspace_type": "Value ``workspace_type`` is not a registered adapter type."
+                    }
+                )
 
     def clean(self):
         super().clean()
