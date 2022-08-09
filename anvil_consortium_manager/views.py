@@ -17,7 +17,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import anvil_api, auth, exceptions, forms, models, tables
-from .adapter import workspace_adapter_registry
+from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 
 

@@ -124,5 +124,5 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
 
 ANVIL_WORKSPACE_ADAPTERS = [
-    "anvil_consortium_manager.adapter.DefaultWorkspaceAdapter",
+    "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]

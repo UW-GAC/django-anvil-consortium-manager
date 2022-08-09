@@ -2,11 +2,11 @@ from django.core.exceptions import ImproperlyConfigured
 from django.forms import ModelForm
 from django.test import TestCase
 
-from ..adapter import (
+from ..adapters.default import DefaultWorkspaceAdapter
+from ..adapters.workspace import (
     AdapterAlreadyRegisteredError,
     AdapterNotRegisteredError,
     BaseWorkspaceAdapter,
-    DefaultWorkspaceAdapter,
     WorkspaceAdapterRegistry,
 )
 from ..forms import DefaultWorkspaceDataForm

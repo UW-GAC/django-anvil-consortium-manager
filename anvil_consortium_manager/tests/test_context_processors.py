@@ -4,11 +4,8 @@ from django.http import HttpRequest
 from django.test import TestCase
 
 from .. import context_processors
-from ..adapter import (
-    BaseWorkspaceAdapter,
-    DefaultWorkspaceAdapter,
-    workspace_adapter_registry,
-)
+from ..adapters.default import DefaultWorkspaceAdapter
+from ..adapters.workspace import BaseWorkspaceAdapter, workspace_adapter_registry
 
 
 class WorkspaceAdapterTest(TestCase):

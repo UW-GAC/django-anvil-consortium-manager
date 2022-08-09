@@ -1,4 +1,4 @@
-from anvil_consortium_manager.adapter import BaseWorkspaceAdapter
+from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 
 from . import forms, models, tables
 

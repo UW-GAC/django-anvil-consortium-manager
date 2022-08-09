@@ -4,7 +4,7 @@ from abc import ABC, abstractproperty
 
 from django.core.exceptions import ImproperlyConfigured
 
-from . import forms, models, tables
+from .. import models
 
 
 class BaseWorkspaceAdapter(ABC):
@@ -78,16 +78,6 @@ class BaseWorkspaceAdapter(ABC):
                 "`workspace_data_form_class` must have a field for workspace."
             )
         return self.workspace_data_form_class
-
-
-class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
-    """Default adapter for use with the app."""
-
-    name = "Workspace"
-    type = "workspace"
-    workspace_data_model = models.DefaultWorkspaceData
-    workspace_data_form_class = forms.DefaultWorkspaceDataForm
-    list_table_class = tables.WorkspaceTable
 
 
 class AdapterAlreadyRegisteredError(Exception):

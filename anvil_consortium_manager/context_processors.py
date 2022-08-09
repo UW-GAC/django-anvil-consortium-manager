@@ -1,6 +1,6 @@
 """Context processors for the anvil_consortium_manager app."""
 
-from .adapter import workspace_adapter_registry
+from .adapters.workspace import workspace_adapter_registry
 
 
 def workspace_adapter(request):

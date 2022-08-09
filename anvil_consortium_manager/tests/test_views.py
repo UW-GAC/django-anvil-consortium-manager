@@ -13,7 +13,8 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from .. import forms, models, tables, views
-from ..adapter import DefaultWorkspaceAdapter, workspace_adapter_registry
+from ..adapters.default import DefaultWorkspaceAdapter
+from ..adapters.workspace import workspace_adapter_registry
 from . import factories
 from .adapter_app import forms as app_forms
 from .adapter_app import models as app_models
