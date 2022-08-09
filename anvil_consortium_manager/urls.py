@@ -122,7 +122,11 @@ workspace_patterns = (
             views.WorkspaceAutocomplete.as_view(),
             name="autocomplete",
         ),
-        path("types/<str:workspace_type>/", views.WorkspaceList.as_view(), name="list"),
+        path(
+            "types/<str:workspace_type>/",
+            views.WorkspaceListByType.as_view(),
+            name="list",
+        ),
         path(
             "types/<str:workspace_type>/new/",
             views.WorkspaceCreate.as_view(),

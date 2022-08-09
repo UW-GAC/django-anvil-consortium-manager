@@ -5884,7 +5884,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(responses.calls), 2)
 
 
-class WorkspaceListTest(TestCase):
+class WorkspaceListByTypeTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -5911,7 +5911,7 @@ class WorkspaceListTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceList.as_view()
+        return views.WorkspaceListByType.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."

@@ -935,9 +935,11 @@ class WorkspaceImport(
         )
 
 
-class WorkspaceList(
+class WorkspaceListByType(
     auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, SingleTableView
 ):
+    """Display a list of workspaces of the given ``workspace_type``."""
+
     model = models.Workspace
 
     def get_queryset(self):
