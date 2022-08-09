@@ -8,6 +8,7 @@ from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import exceptions
+from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
@@ -283,6 +284,14 @@ class Workspace(TimeStampedModel):
                 fields=["billing_project", "name"], name="unique_workspace"
             )
         ]
+
+    def clean_workspace_type(self):
+        """Check that workspace_type is one of the registered adapters."""
+        registered_adapters = workspace_adapter_registry.get_registered_adapters()
+        if self.workspace_type not in registered_adapters:
+            raise ValidationError(
+                "Value ``workspace_type`` is not a registered adapter type."
+            )
 
     def clean(self):
         super().clean()

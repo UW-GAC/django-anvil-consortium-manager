@@ -6,6 +6,7 @@ from django.db.utils import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
+from ..adapters.default import DefaultWorkspaceAdapter
 from ..models import (
     Account,
     BillingProject,
@@ -761,7 +762,7 @@ class WorkspaceTest(TestCase):
         instance = Workspace(
             billing_project=billing_project,
             name="my-name",
-            workspace_type="default_workspace_data",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
         )
         instance.save()
         self.assertIsInstance(instance, Workspace)
@@ -771,7 +772,7 @@ class WorkspaceTest(TestCase):
         instance = factories.WorkspaceFactory.build(
             billing_project__name="my-project",
             name="my-name",
-            workspace_type="default_workspace_data",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
         )
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my-project/my-name")
@@ -945,6 +946,12 @@ class WorkspaceTest(TestCase):
         """get_anvil_url returns a string."""
         instance = factories.WorkspaceFactory.create()
         self.assertIsInstance(instance.get_anvil_url(), str)
+
+    def test_workspace_type_not_registered(self):
+        """A ValidationError is raised if the workspace_type is not a registered adapter type."""
+        instance = factories.WorkspaceFactory.build(workspace_type="foo")
+        with self.assertRaises(ValidationError):
+            instance.clean_fields()
 
 
 class WorkspaceAuthorizationDomainTestCase(TestCase):
