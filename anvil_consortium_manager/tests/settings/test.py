@@ -93,6 +93,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "anvil_consortium_manager.context_processors.workspace_adapter",
             ],
             "debug": True,  # Required for coverage to work.
         },
