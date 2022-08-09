@@ -935,6 +935,13 @@ class WorkspaceImport(
         )
 
 
+class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+    """Display a list of all workspaces using the default table."""
+
+    model = models.Workspace
+    table_class = tables.WorkspaceTable
+
+
 class WorkspaceListByType(
     auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, SingleTableView
 ):

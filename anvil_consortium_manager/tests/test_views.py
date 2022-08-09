@@ -5885,6 +5885,119 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(responses.calls), 2)
 
 
+class WorkspaceListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.workspace_type = DefaultWorkspaceAdapter().get_type()
+
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:list_all", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceList.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_view_status_code_client(self):
+        factories.WorkspaceFactory()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_has_correct_table_class(self):
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
+
+    def test_view_with_no_objects(self):
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.WorkspaceFactory()
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.WorkspaceFactory.create_batch(2)
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_only_shows_workspaces_of_any_type(self):
+        """The table includes all workspaces regardless of type."""
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        test_workspace = factories.WorkspaceFactory(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        default_workspace = factories.WorkspaceFactory(
+            workspace_type=DefaultWorkspaceAdapter().get_name()
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertIn(test_workspace, response.context_data["table"].data)
+        self.assertIn(default_workspace, response.context_data["table"].data)
+
+
 class WorkspaceListByTypeTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -5951,13 +6064,6 @@ class WorkspaceListByTypeTest(TestCase):
     def test_get_workspace_type_not_registered(self):
         """Raises 404 with get request if workspace type is not registered with adapter."""
         request = self.factory.get(self.get_url("foo"))
-        request.user = self.user
-        with self.assertRaises(Http404):
-            self.get_view()(request, workspace_type="foo")
-
-    def test_post_workspace_type_not_registered(self):
-        """Raises 404 with post request if workspace type is not registered with adapter."""
-        request = self.factory.post(self.get_url("foo"), {})
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, workspace_type="foo")

@@ -117,6 +117,7 @@ workspace_access_patterns = (
 
 workspace_patterns = (
     [
+        path("", views.WorkspaceList.as_view(), name="list_all"),
         path(
             "autocomplete/",
             views.WorkspaceAutocomplete.as_view(),

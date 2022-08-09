@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from .. import models, tables
+from ..adapters.default import DefaultWorkspaceAdapter
 from . import factories
 
 
@@ -143,6 +144,14 @@ class WorkspaceTableTest(TestCase):
         self.assertEqual(table.rows[0].get_cell("number_groups"), 0)
         self.assertEqual(table.rows[1].get_cell("number_groups"), 1)
         self.assertEqual(table.rows[2].get_cell("number_groups"), 2)
+
+    def test_workspace_type_display(self):
+        """workspace_type field shows the name of the workspace in the adapter."""
+        workspace_type = DefaultWorkspaceAdapter().get_type()
+        workspace_name = DefaultWorkspaceAdapter().get_name()
+        self.model_factory.create(workspace_type=workspace_type)
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(table.rows[0].get_cell("workspace_type"), workspace_name)
 
 
 class GroupGroupMembershipTableTest(TestCase):
