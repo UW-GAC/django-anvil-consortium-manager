@@ -149,6 +149,7 @@ class WorkspaceAdapterRegistry:
             )
 
     def get_adapter(self, type):
+        """ "Return an instance of the adapter for a given workspace ``type``."""
         print(self._registry.keys())
         adapter_class = self._registry[type]
         return adapter_class()
@@ -165,3 +166,8 @@ class WorkspaceAdapterRegistry:
 # Initalize a global variable for the registry for use throughout the app.
 # Adapters will be added to the registry in the AppConfig for this app via a setting.
 workspace_adapter_registry = WorkspaceAdapterRegistry()
+"""Global variable to store all registsered workspace adapters.
+
+Adapters specified in the ``ANVIL_WORKSPACE_ADAPTERS`` setting will be registered in
+the app config's ``.ready()`` method.
+"""

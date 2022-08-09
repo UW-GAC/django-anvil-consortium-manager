@@ -1,3 +1,5 @@
+.. _advanced:
+
 Advanced Usage
 ==============
 
@@ -21,14 +23,14 @@ It must inherit from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`
         study_name = models.CharField(max_length=255)
         consent_code = models.CharField(max_length=16)
 
-You must also define a form containing the additional fields. You must include the ``workspace`` field, but it will be hidden in the views to create or import a workspace.
+You must also define a form containing the additional fields. You must include the ``workspace`` field, which will automatically be linked to the new :class:`~anvil_consortium_manager.models.Workspace` when creating or importing a workspace.
 
 .. code-block:: python
 
     from django.forms import ModelForm
     from models import CustomWorkspaceData
 
-    class WorkspaceDataForm(ModelForm):
+    class CustomWorkspaceDataForm(ModelForm):
         class Meta:
             model = CustomWorkspaceData
             fields = ("study_name", "consent_code", workspace")
@@ -37,14 +39,14 @@ You must also define a form containing the additional fields. You must include t
 Optionally, you can define a new ``django-tables2`` table to use in place of the default ``WorkspaceTable`` that comes with the app.
 This is helpful if you would like to display fields from your custom workspace data model in the :class:`~anvil_consortium_manager.models.Workspace` list view.
 This table will need to operate on the :class:`~anvil_consortium_manager.models.Workspace` model, but it can include fields from your custom workspace data model.
-If you do not want to define a custom table, you can use the default table provided by the app: :class:`~anvil_consortium_manager.tables.WorkspaceTable`.
+If you do not want to define a custom table, you can use the default table provided by the app: :class:`anvil_consortium_manager.tables.WorkspaceTable`.
 
 .. code-block:: python
 
     import django_tables2 as tables
     from anvil_consortium_manager import models as acm_models
 
-    class WorkspaceDataTable(tables.Table):
+    class CustomWorkspaceDataTable(tables.Table):
         name = tables.columns.Column(linkify=True)
         class Meta:
             model = acm_models.Workspace
@@ -53,6 +55,8 @@ If you do not want to define a custom table, you can use the default table provi
 
 Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapter.BaseWorkspaceAdapter`. You will need to set:
 
+* ``type``: a string indicating the workspace type (e.g., ``"custom"``). This will be stored in the ``workspace_type`` field of the :class:`anvil_consortium_manager.models.Workspace` model for any workspaces created using the adapter.
+* ``name``: a human-readable name for workspaces created with this adapater (e.g., ``"Custom workspace"``). This will be used when displaying information about workspaces created with this adapter.
 * ``workspace_data_model``: the model used to store additional data about a workspace, subclassed from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`
 * ``workspace_data_form_class``: the form to use to create an instance of the ``workspace_data_model``
 * ``list_table_class``: the table to use to display the list of workspaces
@@ -67,13 +71,25 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
     from my_app.tables import CustomWorkspaceTable
 
     class CustomWorkspaceAdapter(DefaultWorkspaceAdapter):
+        type = "custom"
+        name = "Custom workspace"
         workspace_data_model = models.CustomWorkspaceData
         workspace_data_form_class = forms.CustomWorkspaceDataForm
         list_table_class = tables.CustomWorkspaceTable
 
-Finally, to tell the app to use this adapter, set ``ANVIL_ADAPTER`` in your settings file, e.g.: ``ANVIL_ADAPTER = my_app.adapters.CustomWorkspaceAdapter``
+Finally, to tell the app to use this adapter, set ``ANVIL_WORKSPACE_ADAPTERS`` in your settings file, e.g.: ``ANVIL_WORKSPACE_ADAPTERS = ["my_app.adapters.CustomWorkspaceAdapter"]``. You can even define multiple adapters for different types of workspaces, e.g.:
 
-If you would like to display information from the custom workspace data model in the :class:`~anvil_consortium_manager.views.WorkspaceDetail` view, you can include it in the ``workspace_data`` block of the workspace_detail.html template. For example:
+.. code-block:: python
+
+    ANVIL_WORKSPACE_ADAPTERS = [
+        "my_app.adapters.FirstWorkspaceAdapter",
+        "my_app.adapters.SecondWorkspaceAdapter",
+    ]
+
+as long as you have defined both ``FirstWorkspaceAdapter`` and ``SecondWorkspaceAdapter`` in your code.
+If you define multiple workspaces, the index page and the navbar that comes with the app will show links for each different type of workspace.
+
+If you would like to display information from the custom workspace data model in the :class:`~anvil_consortium_manager.views.WorkspaceDetail` view, you can include it in the ``workspace_data`` block of the ``workspace_detail.html`` template. For example:
 
 .. code-block:: html
 
