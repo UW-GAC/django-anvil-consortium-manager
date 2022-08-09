@@ -13,12 +13,7 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from .. import forms, models, tables, views
-from ..adapter import (
-    AdapterAlreadyRegisteredError,
-    AdapterNotRegisteredError,
-    DefaultWorkspaceAdapter,
-    workspace_adapter_registry,
-)
+from ..adapter import DefaultWorkspaceAdapter, workspace_adapter_registry
 from . import factories
 from .adapter_app import forms as app_forms
 from .adapter_app import models as app_models
@@ -3834,16 +3829,11 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace_type = DefaultWorkspaceAdapter.type
 
     def tearDown(self):
-        # Clean up the workspace adapter registry if the test adapter was added.
-        try:
-            workspace_adapter_registry.unregister(TestWorkspaceAdapter)
-        except AdapterNotRegisteredError:
-            pass
-        # Register the default adapter in case it has been unregistered.
-        try:
-            workspace_adapter_registry.register(DefaultWorkspaceAdapter)
-        except AdapterAlreadyRegisteredError:
-            pass
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -4735,16 +4725,11 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
 
     def tearDown(self):
-        # Clean up the workspace adapter registry if the test adapter was added.
-        try:
-            workspace_adapter_registry.unregister(TestWorkspaceAdapter)
-        except AdapterNotRegisteredError:
-            pass
-        # Register the default adapter in case it has been unregistered.
-        try:
-            workspace_adapter_registry.register(DefaultWorkspaceAdapter)
-        except AdapterAlreadyRegisteredError:
-            pass
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -5913,16 +5898,11 @@ class WorkspaceListTest(TestCase):
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
 
     def tearDown(self):
-        # Clean up the workspace adapter registry if the test adapter was added.
-        try:
-            workspace_adapter_registry.unregister(TestWorkspaceAdapter)
-        except AdapterNotRegisteredError:
-            pass
-        # Register the default adapter in case it has been unregistered.
-        try:
-            workspace_adapter_registry.register(DefaultWorkspaceAdapter)
-        except AdapterAlreadyRegisteredError:
-            pass
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
