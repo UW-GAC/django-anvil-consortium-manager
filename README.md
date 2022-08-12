@@ -67,9 +67,9 @@ Set up the environment:
     $ pip install -r requirements/dev.txt
 
 Set an environment variables for email interface settings:
-    $ source EMAIL_HOST="smtp.washington.edu"
-    $ source EMAIL_HOST_USER="your_UWNetID"
-    $ source EMAIL_HOST_PASSWORD="your_UWNetID_password"
+    $ export EMAIL_HOST="smtp.washington.edu"
+    $ export EMAIL_HOST_USER="your_UWNetID"
+    $ export EMAIL_HOST_PASSWORD="your_UWNetID_password"
 
 Run the example site:
 
