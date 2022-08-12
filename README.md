@@ -70,6 +70,7 @@ Set environment variables for email interface settings:
     $ export EMAIL_HOST="smtp.washington.edu"
     $ export EMAIL_HOST_USER="your_UWNetID"
     $ export EMAIL_HOST_PASSWORD="your_UWNetID_password"
+    $ export FROM_EMAIL="your_email"
 
 Run the example site:
 
