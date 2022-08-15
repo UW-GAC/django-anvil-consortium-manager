@@ -93,6 +93,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "anvil_consortium_manager.context_processors.workspace_adapter",
             ],
             "debug": True,  # Required for coverage to work.
         },
@@ -121,3 +122,7 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
 # Path to the service account to use for managing access.
 # Because the calls are mocked, we don't need to set this.
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
+
+ANVIL_WORKSPACE_ADAPTERS = [
+    "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+]

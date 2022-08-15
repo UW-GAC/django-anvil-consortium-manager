@@ -17,7 +17,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import anvil_api, auth, exceptions, forms, models, tables
-from .adapter import get_adapter
+from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 
 
@@ -619,6 +619,32 @@ class ManagedGroupAutocomplete(
         return qs
 
 
+class WorkspaceAdapterMixin:
+    """Class for handling workspace adapters."""
+
+    def get_adapter(self):
+        workspace_type = self.kwargs.get("workspace_type")
+        if workspace_type:
+            try:
+                adapter = workspace_adapter_registry.get_adapter(workspace_type)
+            except KeyError:
+                raise Http404("workspace_type is not registered.")
+        else:
+            raise AttributeError(
+                "View %s must be called with `workspace_type` in the URLconf."
+                % self.__class__.__name__
+            )
+        return adapter
+
+    def get(self, request, *args, **kwargs):
+        self.adapter = self.get_adapter()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.adapter = self.get_adapter()
+        return super().post(request, *args, **kwargs)
+
+
 class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.Workspace
 
@@ -658,7 +684,10 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
 
 
 class WorkspaceCreate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, FormView
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    WorkspaceAdapterMixin,
+    FormView,
 ):
     form_class = forms.WorkspaceCreateForm
     success_msg = "Successfully created Workspace on AnVIL."
@@ -667,8 +696,8 @@ class WorkspaceCreate(
     def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
         formset_prefix = "workspacedata"
-        form_class = get_adapter().get_workspace_data_form_class()
-        model = get_adapter().get_workspace_data_model()
+        form_class = self.adapter.get_workspace_data_form_class()
+        model = self.adapter.get_workspace_data_model()
         formset_factory = inlineformset_factory(
             models.Workspace,
             model,
@@ -701,6 +730,7 @@ class WorkspaceCreate(
         Handle POST requests: instantiate the forms instances with the passed
         POST variables and then check if they are valid.
         """
+        self.adapter = self.get_adapter()
         self.workspace = None
         form = self.get_form()
         # First, check if the workspace form is valid.
@@ -718,6 +748,8 @@ class WorkspaceCreate(
             with transaction.atomic():
                 # Calling form.save() does not create the history for the authorization domain many to many field.
                 # Instead, save the workspace first and then create the auth domain relationships one by one.
+                # Add the workspace data type from the adapter to the instance.
+                form.instance.workspace_type = self.adapter.get_type()
                 self.workspace = form.save(commit=False)
                 self.workspace.save()
                 # Now check the workspace_data_formset.
@@ -759,7 +791,10 @@ class WorkspaceCreate(
 
 
 class WorkspaceImport(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, FormView
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    WorkspaceAdapterMixin,
+    FormView,
 ):
     template_name = "anvil_consortium_manager/workspace_import.html"
     message_anvil_no_access_to_workspace = (
@@ -813,8 +848,8 @@ class WorkspaceImport(
     def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
         formset_prefix = "workspacedata"
-        form_class = get_adapter().get_workspace_data_form_class()
-        model = get_adapter().get_workspace_data_model()
+        form_class = self.adapter.get_workspace_data_form_class()
+        model = self.adapter.get_workspace_data_model()
         formset_factory = inlineformset_factory(
             models.Workspace,
             model,
@@ -847,8 +882,8 @@ class WorkspaceImport(
         Handle POST requests: instantiate the forms instances with the passed
         POST variables and then check if they are valid.
         """
+        self.adapter = self.get_adapter()
         self.workspace = None
-        # print(self.POST)
         form = self.get_form()
         # First, check if the workspace form is valid.
         # If it is, we'll save the model and then check the workspace data form.
@@ -869,10 +904,13 @@ class WorkspaceImport(
         billing_project_name, workspace_name = form.cleaned_data["workspace"].split("/")
 
         try:
+            workspace_type = self.adapter.get_type()
             # This is not ideal because we attempt to import the workspace before validating the workspace_data_Form.
             # However, we need to add the workspace to the form before validating it.
             self.workspace = models.Workspace.anvil_import(
-                billing_project_name, workspace_name
+                billing_project_name,
+                workspace_name,
+                workspace_type=workspace_type,
             )
             workspace_data_formset = self.get_workspace_data_formset()
             if not workspace_data_formset.is_valid():
@@ -898,11 +936,25 @@ class WorkspaceImport(
 
 
 class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+    """Display a list of all workspaces using the default table."""
+
     model = models.Workspace
+    table_class = tables.WorkspaceTable
+
+
+class WorkspaceListByType(
+    auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, SingleTableView
+):
+    """Display a list of workspaces of the given ``workspace_type``."""
+
+    model = models.Workspace
+
+    def get_queryset(self):
+        return self.model.objects.filter(workspace_type=self.adapter.get_type())
 
     def get_table_class(self):
         """Use the adapter to get the table class."""
-        table_class = get_adapter().get_list_table_class()
+        table_class = self.adapter.get_list_table_class()
         return table_class
 
 
@@ -936,7 +988,10 @@ class WorkspaceDelete(
         return obj
 
     def get_success_url(self):
-        return reverse("anvil_consortium_manager:workspaces:list")
+        return reverse(
+            "anvil_consortium_manager:workspaces:list",
+            args=[self.object.workspace_type],
+        )
 
     def delete(self, request, *args, **kwargs):
         """

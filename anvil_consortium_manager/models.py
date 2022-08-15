@@ -8,6 +8,7 @@ from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import exceptions
+from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
@@ -270,6 +271,11 @@ class Workspace(TimeStampedModel):
     authorization_domains = models.ManyToManyField(
         "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
     )
+
+    # If this doesn't work easily, we could switch to using generic relationships.
+    workspace_type = models.CharField(max_length=255)
+    """Workspace data type as indicated in an adapter."""
+
     history = HistoricalRecords()
 
     class Meta:
@@ -278,6 +284,18 @@ class Workspace(TimeStampedModel):
                 fields=["billing_project", "name"], name="unique_workspace"
             )
         ]
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+        # Check that workspace type is a registered adapter type.
+        if not exclude or "workspace_type" not in exclude:
+            registered_adapters = workspace_adapter_registry.get_registered_adapters()
+            if self.workspace_type not in registered_adapters:
+                raise ValidationError(
+                    {
+                        "workspace_type": "Value ``workspace_type`` is not a registered adapter type."
+                    }
+                )
 
     def clean(self):
         super().clean()
@@ -344,7 +362,7 @@ class Workspace(TimeStampedModel):
         AnVILAPIClient().delete_workspace(self.billing_project.name, self.name)
 
     @classmethod
-    def anvil_import(cls, billing_project_name, workspace_name):
+    def anvil_import(cls, billing_project_name, workspace_name, workspace_type):
         """Create a new instance for a workspace that already exists on AnVIL.
 
         Methods calling this should handle AnVIL API exceptions appropriately.
@@ -382,7 +400,7 @@ class Workspace(TimeStampedModel):
 
                 # Do not set the Billing yet, since we might be importing it or creating it later.
                 # This is only to validate the other fields.
-                workspace = cls(name=workspace_name)
+                workspace = cls(name=workspace_name, workspace_type=workspace_type)
                 workspace.clean_fields(exclude="billing_project")
                 # At this point, they should be valid objects.
 

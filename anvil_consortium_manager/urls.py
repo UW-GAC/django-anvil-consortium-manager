@@ -117,19 +117,31 @@ workspace_access_patterns = (
 
 workspace_patterns = (
     [
-        path("", views.WorkspaceList.as_view(), name="list"),
-        path("new/", views.WorkspaceCreate.as_view(), name="new"),
-        path("import/", views.WorkspaceImport.as_view(), name="import"),
-        path("", views.WorkspaceList.as_view(), name="list"),
-        path(
-            "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
-            views.WorkspaceDelete.as_view(),
-            name="delete",
-        ),
+        path("", views.WorkspaceList.as_view(), name="list_all"),
         path(
             "autocomplete/",
             views.WorkspaceAutocomplete.as_view(),
             name="autocomplete",
+        ),
+        path(
+            "types/<str:workspace_type>/",
+            views.WorkspaceListByType.as_view(),
+            name="list",
+        ),
+        path(
+            "types/<str:workspace_type>/new/",
+            views.WorkspaceCreate.as_view(),
+            name="new",
+        ),
+        path(
+            "types/<str:workspace_type>/import/",
+            views.WorkspaceImport.as_view(),
+            name="import",
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
+            views.WorkspaceDelete.as_view(),
+            name="delete",
         ),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/",

@@ -5,7 +5,7 @@ from anvil_consortium_manager.tests import factories
 
 accounts = factories.AccountFactory.create_batch(5)
 groups = factories.ManagedGroupFactory.create_batch(5)
-workspaces = factories.WorkspaceFactory.create_batch(5)
+workspaces = factories.WorkspaceFactory.create_batch(5, workspace_type="example")
 
 # Add some groups to other groups.
 factories.GroupGroupMembershipFactory.create(

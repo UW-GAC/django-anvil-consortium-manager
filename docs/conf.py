@@ -28,7 +28,7 @@ copyright = '2022, Adrienne Stilp'
 author = 'Adrienne Stilp'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.dev2'
+release = '0.1.dev3'
 
 
 # -- General configuration ---------------------------------------------------
@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
+    "sphinx.ext.autosectionlabel",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
