@@ -140,7 +140,6 @@ class WorkspaceAdapterRegistry:
 
     def get_adapter(self, type):
         """ "Return an instance of the adapter for a given workspace ``type``."""
-        print(self._registry.keys())
         adapter_class = self._registry[type]
         return adapter_class()
 

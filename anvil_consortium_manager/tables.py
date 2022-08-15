@@ -53,7 +53,6 @@ class ManagedGroupTable(tables.Table):
     def render_number_groups(self, value, record):
         """Render the number of groups as --- for groups not managed by the app."""
         if not record.is_managed_by_app:
-            print("Here")
             return self.default
         else:
             return value
