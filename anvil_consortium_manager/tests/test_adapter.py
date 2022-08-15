@@ -1,6 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import ModelForm
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import (
@@ -13,6 +13,7 @@ from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
 from ..tables import WorkspaceTable
 from .adapter_app import forms, models, tables
+from .adapter_app.adapters import TestWorkspaceAdapter
 
 
 class WorkspaceAdapterTest(TestCase):
@@ -450,3 +451,28 @@ class WorkspaceAdapterRegistryTest(TestCase):
             registry.get_registered_names(),
             {"adapter1": "Adapter 1", "adapter2": "Adapter 2"},
         )
+
+    def test_populate_from_settings_default(self):
+        registry = WorkspaceAdapterRegistry()
+        registry.populate_from_settings()
+        self.assertEqual(len(registry._registry), 1)
+        adapter_type = DefaultWorkspaceAdapter().get_type()
+        self.assertIn(adapter_type, registry._registry)
+        self.assertEqual(registry._registry[adapter_type], DefaultWorkspaceAdapter)
+
+    @override_settings(
+        ANVIL_WORKSPACE_ADAPTERS=[
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+            "anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter",
+        ]
+    )
+    def test_populate_from_settings_multiple(self):
+        registry = WorkspaceAdapterRegistry()
+        registry.populate_from_settings()
+        self.assertEqual(len(registry._registry), 2)
+        adapter_type = DefaultWorkspaceAdapter().get_type()
+        self.assertIn(adapter_type, registry._registry)
+        self.assertEqual(registry._registry[adapter_type], DefaultWorkspaceAdapter)
+        adapter_type = TestWorkspaceAdapter().get_type()
+        self.assertIn(adapter_type, registry._registry)
+        self.assertEqual(registry._registry[adapter_type], TestWorkspaceAdapter)

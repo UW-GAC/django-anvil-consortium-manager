@@ -2,7 +2,9 @@
 
 from abc import ABC, abstractproperty
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.module_loading import import_string
 
 from .. import models
 
@@ -150,6 +152,13 @@ class WorkspaceAdapterRegistry:
     def get_registered_names(self):
         """Return a dictionary of registered adapter names."""
         return {key: value().get_name() for (key, value) in self._registry.items()}
+
+    def populate_from_settings(self):
+        """Populate the workspace adapter registry from settings. Called by AppConfig ready() method."""
+        adapter_modules = settings.ANVIL_WORKSPACE_ADAPTERS
+        for adapter_module in adapter_modules:
+            adapter = import_string(adapter_module)
+            self.register(adapter)
 
 
 # Initalize a global variable for the registry for use throughout the app.

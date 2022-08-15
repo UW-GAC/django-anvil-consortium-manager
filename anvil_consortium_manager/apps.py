@@ -1,6 +1,4 @@
 from django.apps import AppConfig
-from django.conf import settings
-from django.utils.module_loading import import_string
 
 
 class AnVILConsortiumManagerConfig(AppConfig):
@@ -12,13 +10,10 @@ class AnVILConsortiumManagerConfig(AppConfig):
 
     def ready(self):
         super().ready()
-        # Register specified adapters.
+        # Register adapters sepcified in settings.
         # Import here because importing outside of this method raises the AppRegistryNotReady exception.
         from anvil_consortium_manager.adapters.workspace import (
             workspace_adapter_registry,
         )
 
-        adapter_modules = settings.ANVIL_WORKSPACE_ADAPTERS
-        for adapter_module in adapter_modules:
-            adapter = import_string(adapter_module)
-            workspace_adapter_registry.register(adapter)
+        workspace_adapter_registry.populate_from_settings()
