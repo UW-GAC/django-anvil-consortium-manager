@@ -65,12 +65,12 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
 
 .. code-block:: python
 
-    from anvil_consortium_manager.adapter import DefaultWorkspaceAdapter
+    from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
     from my_app.models import CustomWorkspaceData
     from my_app.forms import CustomWorkspaceDataForm
     from my_app.tables import CustomWorkspaceTable
 
-    class CustomWorkspaceAdapter(DefaultWorkspaceAdapter):
+    class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
         type = "custom"
         name = "Custom workspace"
         workspace_data_model = models.CustomWorkspaceData

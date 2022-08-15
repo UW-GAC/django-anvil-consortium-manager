@@ -43,7 +43,7 @@ Settings
 
   .. code-block:: python
 
-      ANVIL_WORKSPACE_ADAPTERS=["anvil_consortium_manager.adapter.DefaultWorkspaceAdapter"]
+      ANVIL_WORKSPACE_ADAPTERS=["anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter"]
 
   See the :ref:`Advanced Usage` section for information about customized workspace types.
 
