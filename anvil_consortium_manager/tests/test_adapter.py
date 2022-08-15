@@ -476,3 +476,18 @@ class WorkspaceAdapterRegistryTest(TestCase):
         adapter_type = TestWorkspaceAdapter().get_type()
         self.assertIn(adapter_type, registry._registry)
         self.assertEqual(registry._registry[adapter_type], TestWorkspaceAdapter)
+
+    @override_settings(ANVIL_WORKSPACE_ADAPTERS=[])
+    def test_populate_from_settings_zero_adapters_error(self):
+        """ImproperlyConfigured error is raised when zero adapters are specified."""
+        registry = WorkspaceAdapterRegistry()
+        with self.assertRaises(ImproperlyConfigured) as e:
+            registry.populate_from_settings()
+        self.assertIn("at least one adapter", str(e.exception))
+
+    def test_populate_from_settings_cannot_populate_twice(self):
+        registry = WorkspaceAdapterRegistry()
+        registry.populate_from_settings()
+        with self.assertRaises(RuntimeError) as e:
+            registry.populate_from_settings()
+        self.assertIn("already been populated", str(e.exception))

@@ -156,6 +156,15 @@ class WorkspaceAdapterRegistry:
     def populate_from_settings(self):
         """Populate the workspace adapter registry from settings. Called by AppConfig ready() method."""
         adapter_modules = settings.ANVIL_WORKSPACE_ADAPTERS
+        if len(self._registry):
+            msg = "Registry has already been populated."
+            raise RuntimeError(msg)
+        if not len(adapter_modules):
+            msg = (
+                "ANVIL_WORKSPACE_ADAPTERS must specify at least one adapter. Did you mean to use "
+                "the default `anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter`?"
+            )
+            raise ImproperlyConfigured(msg)
         for adapter_module in adapter_modules:
             adapter = import_string(adapter_module)
             self.register(adapter)
