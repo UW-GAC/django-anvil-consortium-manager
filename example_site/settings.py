@@ -214,5 +214,5 @@ ANVIL_API_SERVICE_ACCOUNT_FILE = os.getenv("ANVIL_API_SERVICE_ACCOUNT_FILE")
 # Workspace adapters.
 ANVIL_WORKSPACE_ADAPTERS = [
     "example_site.app.adapters.ExampleWorkspaceAdapter",
-    # "anvil_consortium_manager.adapter.DefaultWorkspaceAdapter",
+    # "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
