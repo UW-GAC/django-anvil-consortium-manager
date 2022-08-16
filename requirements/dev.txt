@@ -20,7 +20,7 @@ sphinx-rtd-theme==1.0.0  # sphinx docs theme
 # ------------------------------------------------------------------------------
 flake8==4.0.1  # https://github.com/PyCQA/flake8
 flake8-isort==4.1.1  # https://github.com/gforcada/flake8-isort
-coverage==6.3.1  # https://github.com/nedbat/coveragepy
+coverage==6.4.4  # https://github.com/nedbat/coveragepy
 black==22.3.0  # https://github.com/psf/black
 pylint-django==2.5.0  # https://github.com/PyCQA/pylint-django
 pre-commit==2.17.0  # https://github.com/pre-commit/pre-commit
