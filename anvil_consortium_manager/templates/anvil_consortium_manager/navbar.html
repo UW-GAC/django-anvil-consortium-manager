@@ -1,15 +1,15 @@
-  <nav class="navbar navbar-expand-md">
+  <nav id="nav-acm" class="navbar navbar-expand-lg navbar-light" aria-label="AnVIL Consortium Manager navbar">
     <div class="container">
 
-      <button class="navbar-toggler navbar-toggler-right" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <a class="navbar-brand" href="{% url 'anvil_consortium_manager:index' %}">ACM</a>
+
+      <button class="navbar-toggler navbar-toggler-right" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAnvilConsortiumManager" aria-controls="navbarAnvilConsortiumManager" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
 
-      <a class="navbar-brand" href="{% url 'anvil_consortium_manager:index' %}">AnVIL Consortium Manager</a>
+      <div class="collapse navbar-collapse" id="navbarAnvilConsortiumManager">
 
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-
-        <ul class="navbar-nav mr-auto">
+        <ul class="navbar-nav">
 
           {% block anvil_consortium_manager_nav_items %}
 
