@@ -14,6 +14,7 @@ import os
 import sys
 import django
 
+
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../anvil_consortium_manager"))
@@ -28,7 +29,9 @@ copyright = '2022, Adrienne Stilp'
 author = 'Adrienne Stilp'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.dev6'
+with open("../anvil_consortium_manager/__init__.py", "rb") as f:
+    release = str(re.search('__version__ = "(.+?)"', f.read().decode()).group(1))
+version = release.rpartition(".")[0]
 
 
 # -- General configuration ---------------------------------------------------
