@@ -517,6 +517,8 @@ class GroupGroupMembership(TimeStampedModel):
     history = HistoricalRecords()
 
     class Meta:
+        verbose_name = "group-group membership"
+
         constraints = [
             models.UniqueConstraint(
                 fields=["parent_group", "child_group"],
@@ -591,6 +593,7 @@ class GroupAccountMembership(TimeStampedModel):
     history = HistoricalRecords()
 
     class Meta:
+        verbose_name = "group-account membership"
         constraints = [
             models.UniqueConstraint(
                 fields=["account", "group"], name="unique_group_account_membership"
@@ -658,6 +661,7 @@ class WorkspaceGroupAccess(TimeStampedModel):
     """Historical records from django-simple-history."""
 
     class Meta:
+        verbose_name_plural = "workspace group access"
         constraints = [
             models.UniqueConstraint(
                 fields=["group", "workspace"], name="unique_workspace_group_access"
