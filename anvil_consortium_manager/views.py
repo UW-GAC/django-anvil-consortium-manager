@@ -16,7 +16,7 @@ from django.views.generic import (
 from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
-from . import anvil_api, auth, exceptions, forms, models, tables
+from . import __version__, anvil_api, auth, exceptions, forms, models, tables
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 
@@ -46,6 +46,12 @@ class SuccessMessageMixin:
 
 class Index(auth.AnVILConsortiumManagerViewRequired, TemplateView):
     template_name = "anvil_consortium_manager/index.html"
+
+    def get_context_data(self, *args, **kwargs):
+        """Add ACM version to the context data."""
+        if "app_version" not in kwargs:
+            kwargs["app_version"] = __version__
+        return super().get_context_data(**kwargs)
 
 
 class AnVILStatus(auth.AnVILConsortiumManagerViewRequired, TemplateView):

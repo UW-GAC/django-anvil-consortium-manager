@@ -12,7 +12,7 @@ from django.shortcuts import resolve_url
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
-from .. import forms, models, tables, views
+from .. import __version__, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from . import factories
@@ -67,6 +67,14 @@ class IndexTest(TestCase):
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
+
+    def test_context_data_version(self):
+        """Context data includes version."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("app_version", response.context_data)
+        self.assertEqual(response.context_data["app_version"], __version__)
 
 
 class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
