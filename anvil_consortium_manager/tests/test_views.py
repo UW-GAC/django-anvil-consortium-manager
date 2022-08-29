@@ -1079,7 +1079,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         response = self.get_view()(request)
         self.assertEqual(response.status_code, 200)
 
-
     def test_has_form_in_context(self):
         """Response includes a form."""
         request = self.factory.get(self.get_url())
@@ -1088,7 +1087,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.AccountLinkForm)
 
-    #def test_anvil
+    # def test_anvil
+
 
 class AccountListTest(TestCase):
     def setUp(self):

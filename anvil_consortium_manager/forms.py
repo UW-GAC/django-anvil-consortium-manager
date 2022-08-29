@@ -33,6 +33,7 @@ class AccountImportForm(forms.ModelForm):
             raise ValidationError("Account with this Email already exists.")
         return value
 
+
 class AccountLinkForm(forms.Form):
     """Form for user to link their AnVIL account."""
 

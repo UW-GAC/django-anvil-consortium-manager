@@ -115,6 +115,7 @@ class AccountImportFormTest(TestCase):
         self.assertEqual(len(form.errors["email"]), 1)
         self.assertIn("already exists", form.errors["email"][0])
 
+
 class AccountLinkFormTest(TestCase):
     """Tests for the AccountLinkForm class."""
 

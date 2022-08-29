@@ -1,4 +1,5 @@
-from base64 import urlsafe_b64decode
+import datetime
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -7,27 +8,26 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.forms.forms import Form
 from django.http import HttpResponseRedirect
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.generic import (
     CreateView,
     DeleteView,
     DetailView,
     FormView,
-    TemplateView,
     RedirectView,
+    TemplateView,
     UpdateView,
 )
 from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
-from django.template.loader import render_to_string
-from tomlkit import datetime
-from .tokens import account_verification_token
 
 from . import anvil_api, auth, exceptions, forms, models, tables
 from .anvil_api import AnVILAPIClient, AnVILAPIError
-import datetime
+from .tokens import account_verification_token
+
 
 class SuccessMessageMixin:
     """Mixin to add a success message to views."""
@@ -189,6 +189,7 @@ class AccountImport(
 
         return super().form_valid(form)
 
+
 class AccountLink(LoginRequiredMixin, FormView):
     login_url = settings.LOGIN_URL
     template_name = "anvil_consortium_manager/account_form.html"
@@ -198,10 +199,10 @@ class AccountLink(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         """If the form is valid, check that the account exists on AnVIL and send verification email."""
-        email = form.cleaned_data.get('email')
+        email = form.cleaned_data.get("email")
         acct = models.Account(
-                    email = email,
-                )
+            email=email,
+        )
         try:
             account_exists = acct.anvil_exists()
 
@@ -219,50 +220,72 @@ class AccountLink(LoginRequiredMixin, FormView):
             # Re-render the page with a message.
             return self.render_to_response(self.get_context_data(form=form))
 
-        #Account exists in ACM and is not verified
-        if models.Account.objects.filter(email__iexact=email, date_verified__isnull=True).count() == 1:
+        # Account exists in ACM and is not verified
+        if (
+            models.Account.objects.filter(
+                email__iexact=email, date_verified__isnull=True
+            ).count()
+            == 1
+        ):
             self.send_mail(email)
             messages.add_message(
-                 self.request, messages.ERROR, "This email is not verified, check your email for a verification link"
-             )
+                self.request,
+                messages.ERROR,
+                "This email is not verified, check your email for a verification link",
+            )
 
-        #Account exists in ACM and is verified
-        elif models.Account.objects.filter(email__iexact=email, date_verified__isnull=False).count() == 1:
+        # Account exists in ACM and is verified
+        elif (
+            models.Account.objects.filter(
+                email__iexact=email, date_verified__isnull=False
+            ).count()
+            == 1
+        ):
             messages.add_message(
-                 self.request, messages.ERROR, "Account is already linked to this email."
-             )
+                self.request, messages.ERROR, "Account is already linked to this email."
+            )
 
         else:
             self.send_mail(email)
             models.Account(
-                    user = self.request.user,
-                    email = email,
-                    status = models.Account.INACTIVE_STATUS,
-                    is_service_account = False
-                ).save()
+                user=self.request.user,
+                email=email,
+                status=models.Account.INACTIVE_STATUS,
+                is_service_account=False,
+            ).save()
             messages.add_message(
-                 self.request, messages.ERROR, "To complete linking the account, check your email for a verification link"
-             )
+                self.request,
+                messages.ERROR,
+                "To complete linking the account, check your email for a verification link",
+            )
 
         return self.render_to_response(self.get_context_data(form=form))
 
-
     def send_mail(self, email):
-        mail_subject = 'Activate your account.'
+        mail_subject = "Activate your account."
         user = self.request.user
         current_site = get_current_site(self.request)
-        message = render_to_string('anvil_consortium_manager/account_verification_email.html', {
-                'user': user,
-                'domain': current_site.domain,
-                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                'token': account_verification_token.make_token(user),
-            })
+        message = render_to_string(
+            "anvil_consortium_manager/account_verification_email.html",
+            {
+                "user": user,
+                "domain": current_site.domain,
+                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                "token": account_verification_token.make_token(user),
+            },
+        )
         to_email = email
-        send_mail(mail_subject, message, settings.FROM_EMAIL, [to_email],fail_silently=False,)
+        send_mail(
+            mail_subject,
+            message,
+            settings.FROM_EMAIL,
+            [to_email],
+            fail_silently=False,
+        )
         pass
 
-class AccountLinkVerify(RedirectView):
 
+class AccountLinkVerify(RedirectView):
     def get(self, request, uidb64, token):
 
         try:
@@ -281,14 +304,14 @@ class AccountLinkVerify(RedirectView):
                 acct.date_verified = datetime.datetime.now()
                 acct.save()
                 messages.add_message(
-                     self.request, messages.SUCCESS, "Thank you for verifying your email."
+                    self.request,
+                    messages.SUCCESS,
+                    "Thank you for verifying your email.",
                 )
         else:
-            messages.add_message(
-                 self.request, messages.ERROR, "The link is invalid."
-            )
+            messages.add_message(self.request, messages.ERROR, "The link is invalid.")
 
-        return HttpResponseRedirect(reverse('anvil_consortium_manager:index'))
+        return HttpResponseRedirect(reverse("anvil_consortium_manager:index"))
 
 
 class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):

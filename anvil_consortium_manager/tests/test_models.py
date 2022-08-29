@@ -161,7 +161,7 @@ class AccountTest(TestCase):
 
     def test_user_has_unique_account(self):
         """User links to more than one ANVIL account email fails"""
-        user = get_user_model().objects.create_user(username='testuser')
+        user = get_user_model().objects.create_user(username="testuser")
         email = "email1@example.com"
         email2 = "email2@example.com"
         instance = Account(email=email, user=user, is_service_account=False)
@@ -169,6 +169,7 @@ class AccountTest(TestCase):
         instance2 = Account(email=email2, user=user, is_service_account=False)
         with self.assertRaises(IntegrityError):
             instance2.save()
+
 
 class ManagedGroupTest(TestCase):
     def test_model_saving(self):
