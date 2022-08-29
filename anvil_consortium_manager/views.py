@@ -275,14 +275,7 @@ class AccountLink(LoginRequiredMixin, FormView):
             },
         )
         to_email = email
-        send_mail(
-            mail_subject,
-            message,
-            settings.FROM_EMAIL,
-            [to_email],
-            fail_silently=False,
-        )
-        pass
+        send_mail(mail_subject, message, None, [to_email], fail_silently=False)
 
 
 class AccountLinkVerify(RedirectView):
