@@ -78,7 +78,9 @@ class Account(TimeStampedModel, ActivatorModel):
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE
+    )
     is_service_account = models.BooleanField()
     date_verified = models.DateTimeField(null=True)
     history = HistoricalRecords()
