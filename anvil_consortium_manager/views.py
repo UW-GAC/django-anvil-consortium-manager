@@ -304,7 +304,7 @@ class AccountLinkVerify(RedirectView):
         else:
             messages.add_message(self.request, messages.ERROR, "The link is invalid.")
 
-        return HttpResponseRedirect(reverse("anvil_consortium_manager:index"))
+        return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
 
 class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
