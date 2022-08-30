@@ -1090,6 +1090,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
     # def test_anvil
 
 
+class AccountLinkVerifyTest(TestCase):
+    """Tests for the AccountVerify view."""
+
+
 class AccountListTest(TestCase):
     def setUp(self):
         """Set up test class."""
