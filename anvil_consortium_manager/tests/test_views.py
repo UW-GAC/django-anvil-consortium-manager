@@ -1059,7 +1059,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:accounts:link_account", args=args)
+        return reverse("anvil_consortium_manager:accounts:link", args=args)
 
     def get_view(self):
         """Return the view being tested."""
