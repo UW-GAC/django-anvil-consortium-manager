@@ -73,6 +73,53 @@ class BillingProject(TimeStampedModel):
         return billing_project
 
 
+class UserEmailEntry(TimeStampedModel, models.Model):
+    """A model to store emails that users could link to their AnVIL account after verification."""
+
+    email = models.EmailField(unique=True)
+    """The email entered by the user."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE
+    )
+    """The user who created the record."""
+
+    date_verification_email_sent = models.DateTimeField()
+    """Most recent date that a verification email was sent."""
+
+    can_be_verified = models.BooleanField(default=True)
+    """Indicator of whether this UserEmailEntry can be verified.
+
+    This field will be set to False when a user verifies an email for all records associated with
+    either the user or the email that they verified.
+    """
+
+    verified_account = models.ForeignKey("Account", null=True, on_delete=models.CASCADE)
+    """A link to the Account created when an email was verified for a user."""
+
+    history = HistoricalRecords()
+    """Django simple history."""
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["email", "user"], name="unique_user_email_entry"
+            )
+        ]
+
+    def __str__(self):
+        """String method."""
+        return "{email} for {user}".format(email=self.email, user=self.user)
+
+    def anvil_exists(self):
+        """Check if this account exists on AnVIL."""
+        try:
+            AnVILAPIClient().get_proxy_group(self.email)
+        except AnVILAPIError404:
+            return False
+        return True
+
+
 class Account(TimeStampedModel, ActivatorModel):
     """A model to store information about AnVIL accounts."""
 
