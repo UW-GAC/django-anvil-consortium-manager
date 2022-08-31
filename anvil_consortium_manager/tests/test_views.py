@@ -1307,7 +1307,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors.keys())
-        self.assertIn("valid email", form.errors["email"][0])
+        self.assertIn("required", form.errors["email"][0])
         self.assertEqual(models.Account.objects.count(), 0)
 
 
