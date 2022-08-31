@@ -2,6 +2,7 @@ import datetime
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
@@ -283,11 +284,12 @@ class AccountLinkVerify(RedirectView):
 
         try:
             uid = force_str(urlsafe_base64_decode(uidb64))
-            acct = models.Account.objects.get(pk=uid)
+            user = get_user_model().objects.get(pk=uid)
+            acct = models.Account.objects.get(user=user)
         except (TypeError, ValueError, OverflowError, models.Account.DoesNotExist):
             acct = None
 
-        if acct is not None and account_verification_token.check_token(acct, token):
+        if acct is not None and account_verification_token.check_token(user, token):
             if acct.date_verified is not None:
                 messages.add_message(
                     self.request, messages.SUCCESS, "The email is already verified."
