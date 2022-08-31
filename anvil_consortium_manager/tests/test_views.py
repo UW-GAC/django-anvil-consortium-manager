@@ -1124,6 +1124,19 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # API call to AnVIL is made.
         responses.assert_call_count(api_url, 1)
 
+    def test_success_message(self):
+        """A success message is added."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email}, follow=True)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), views.AccountLink.success_msg)
+
     def test_redirect(self):
         """View redirects to the correct URL."""
         email = "test@example.com"
@@ -1204,7 +1217,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_user_already_linked_to_an_existing_unverified_account(self):
-        """View redirects with a message when the user already has an AnVIL account linked."""
+        """The user already has an existing unverified account."""
         existing_account = factories.AccountFactory.create(
             email="foo@bar.com", user=self.user, status=models.Account.INACTIVE_STATUS
         )
@@ -1254,7 +1267,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(str(messages[0]), "")
 
     def test_account_already_linked_to_different_user_and_not_verified(self):
-        """The user already has an AnVIL account linked."""
+        """The AnVIL account is already linked to a different user."""
         email = "test@example.com"
         other_user = User.objects.create_user(username="test2", password="test2")
         other_account = factories.AccountFactory.create(
@@ -1276,8 +1289,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.fail("What should the message be?")
-        self.assertEqual(str(messages[0]), "")
+        self.assertEqual(
+            str(messages[0]), views.AccountLink.message_account_already_linked
+        )
 
     def test_account_does_not_exist_on_anvil(self):
         """Page is reloaded with a message if the account does not exist on AnVIL."""
