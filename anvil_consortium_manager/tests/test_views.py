@@ -1,15 +1,22 @@
+import datetime
 from unittest import skip
 
 import responses
 from django.conf import settings
 from django.contrib.auth.models import Permission, User
+from django.core import mail
 from django.core.exceptions import PermissionDenied
 from django.http.response import Http404
 from django.shortcuts import resolve_url
+from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from .. import forms, models, tables, views
+from ..tokens import account_verification_token
 from . import factories
 from .utils import AnVILAPIMockTestMixin
 
@@ -1050,6 +1057,8 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the AccountLink view."""
+
     def setUp(self):
         """Set up test class."""
         super().setUp()
@@ -1060,6 +1069,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:accounts:link", args=args)
+
+    def get_api_url(self, email):
+        """Get the AnVIL API url that is called by the anvil_exists method."""
+        return self.entry_point + "/api/proxyGroup/" + email
 
     def get_view(self):
         """Return the view being tested."""
@@ -1087,11 +1100,219 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.AccountLinkForm)
 
-    # def test_anvil
+    def test_form_valid(self):
+        """Posting valid data to the form works as expected."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 302)
+        # A new Account is created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        # The new Account is linked to the logged-in user.
+        new_object = models.Account.objects.latest("pk")
+        self.assertEqual(new_object.email, email)
+        self.assertEqual(new_object.user, self.user)
+        self.assertFalse(new_object.is_service_account)
+        self.assertIsNone(new_object.date_verified)
+        self.assertEqual(new_object.status, models.Account.INACTIVE_STATUS)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+        # API call to AnVIL is made.
+        responses.assert_call_count(api_url, 1)
+
+    def test_redirect(self):
+        """View redirects to the correct URL."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+
+    def test_email_is_sent(self):
+        """An email is sent when the form is submitted correctly."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        self.client.post(self.get_url(), {"email": email})
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        import ipdb
+
+        ipdb.set_trace()
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, settings.ANVIL_ACCOUNT_LINK_SUBJECT)
+        # The contents are correct.
+        body = render_to_string(
+            "anvil_consortium_manager/account_verification_email.html",
+            {
+                "user": self.user,
+                "domain": "testserver",
+                "uid": urlsafe_base64_encode(force_bytes(self.user.pk)),
+                "token": account_verification_token.make_token(self.user),
+            },
+        )
+        self.assertEqual(mail.outbox[0].body, body)
+
+    def test_user_already_linked_to_an_existing_verified_account(self):
+        """View redirects with a message when the user already has an AnVIL account linked."""
+        existing_account = factories.AccountFactory.create(
+            email="foo@bar.com", user=self.user, date_verified=timezone.now()
+        )
+        email = "test@example.com"
+        # No API call should be made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        # No new account is created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(models.Account.objects.latest("pk"), existing_account)
+        # A message is included.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLink.message_user_already_linked
+        )
+
+    def test_user_already_linked_to_an_existing_unverified_account(self):
+        """View redirects with a message when the user already has an AnVIL account linked."""
+        existing_account = factories.AccountFactory.create(
+            email="foo@bar.com", user=self.user, status=models.Account.INACITVE_STATUS
+        )
+        email = "test@example.com"
+        # No API call should be made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        # No new account is created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(models.Account.objects.latest("pk"), existing_account)
+        # A message is included.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.fail("What message do we want to show the user?")
+        self.assertEqual(
+            str(messages[0]), views.AccountLink.message_user_already_linked
+        )
+
+    def test_account_already_linked_to_different_user_and_verified(self):
+        """The user already has an AnVIL account linked and verified."""
+        email = "test@example.com"
+        date_verified = timezone.now() - datetime.timedelta(days=1)
+        other_user = User.objects.create_user(username="test2", password="test2")
+        other_account = factories.AccountFactory.create(
+            email=email, user=other_user, date_verified=date_verified
+        )
+        # No API call should be made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        # No new account is created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(models.Account.objects.latest("pk"), other_account)
+        other_account.refresh_from_db()
+        self.assertEqual(other_account.user, other_user)
+        self.assertEqual(other_account.objects.date_verified, date_verified)
+        self.assertEqual(other_account.objects.status, models.Account.ACTIVE_STATUS)
+        # A message is included.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.fail("What should the message be?")
+        self.assertEqual(str(messages[0]), "")
+
+    def test_account_already_linked_to_different_user_and_not_verified(self):
+        """The user already has an AnVIL account linked."""
+        email = "test@example.com"
+        other_user = User.objects.create_user(username="test2", password="test2")
+        other_account = factories.AccountFactory.create(
+            email=email, user=other_user, status=models.Account.INACTIVE_STATUS
+        )
+        # No API call should be made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        # No new account is created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(models.Account.objects.latest("pk"), other_account)
+        other_account.refresh_from_db()
+        self.assertEqual(other_account.user, other_user)
+        self.assertIsNone(other_account.objects.date_verified)
+        self.assertEqual(other_account.objects.status, models.Account.ACTIVE_STATUS)
+        # A message is included.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.fail("What should the message be?")
+        self.assertEqual(str(messages[0]), "")
+
+    def test_account_does_not_exist_on_anvil(self):
+        """Page is reloaded with a message if the account does not exist on AnVIL."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        responses.add(
+            responses.GET, api_url, status=404, json={"message": "mock message"}
+        )
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        # The form is valid.
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertTrue(form.is_valid())
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLink.message_account_does_not_exist
+        )
+        # No new Accounts are created.
+        self.assertEqual(models.Account.objects.count(), 0)
+        # API call to AnVIL was made.
+        responses.assert_call_count(api_url, 1)
+
+    def test_invalid_input_email(self):
+        """Posting invalid data to email field returns a form error."""
+        request = self.factory.post(self.get_url(), {"email": "foo"})
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("email", form.errors.keys())
+        self.assertIn("valid email", form.errors["email"][0])
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_blank_email(self):
+        """Posting invalid data to email field returns a form error."""
+        request = self.factory.post(self.get_url(), {})
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("email", form.errors.keys())
+        self.assertIn("valid email", form.errors["email"][0])
+        self.assertEqual(models.Account.objects.count(), 0)
 
 
 class AccountLinkVerifyTest(TestCase):
-    """Tests for the AccountVerify view."""
+    """Tests for the AccountLinkVerify view."""
 
 
 class AccountListTest(TestCase):
