@@ -196,7 +196,34 @@ class AccountLink(LoginRequiredMixin, FormView):
     template_name = "anvil_consortium_manager/account_form.html"
     model = models.Account
     message_account_does_not_exist = "This account does not exist on AnVIL."
+    message_user_already_linked = "You have already linked an AnVIL account."
     form_class = forms.AccountLinkForm
+
+    def get(self, request, *args, **kwargs):
+        """Check if the user already has an account linked and redirect."""
+        try:
+            request.user.account
+        except models.Account.DoesNotExist:
+            return super().get(request, *args, **kwargs)
+        else:
+            # The user already has a linked account, so redirect with a message.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_user_already_linked
+            )
+            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+
+    def post(self, request, *args, **kwargs):
+        """Check if the user already has an account linked and redirect."""
+        try:
+            request.user.account
+        except models.Account.DoesNotExist:
+            return super().post(request, *args, **kwargs)
+        else:
+            # The user already has a linked account, so redirect with a message.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_user_already_linked
+            )
+            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
     def form_valid(self, form):
         """If the form is valid, check that the account exists on AnVIL and send verification email."""

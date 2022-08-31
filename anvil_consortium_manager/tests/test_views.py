@@ -1158,7 +1158,29 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(mail.outbox[0].body, body)
 
-    def test_user_already_linked_to_an_existing_verified_account(self):
+    def test_get_user_already_linked_to_an_existing_verified_account(self):
+        """View redirects with a message when the user already has an AnVIL account linked."""
+        existing_account = factories.AccountFactory.create(
+            user=self.user, date_verified=timezone.now()
+        )
+        # No API call should be made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), follow=True)
+        # import ipdb; ipdb.set_trace()
+        self.assertRedirects(response, "/test_home/")
+        # No new account is created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(models.Account.objects.latest("pk"), existing_account)
+        # A message is included.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLink.message_user_already_linked
+        )
+
+    def test_post_user_already_linked_to_an_existing_verified_account(self):
         """View redirects with a message when the user already has an AnVIL account linked."""
         existing_account = factories.AccountFactory.create(
             email="foo@bar.com", user=self.user, date_verified=timezone.now()
@@ -1167,8 +1189,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"email": email})
-        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        response = self.client.post(self.get_url(), {"email": email}, follow=True)
+        # import ipdb; ipdb.set_trace()
+        self.assertRedirects(response, "/test_home/")
         # No new account is created.
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertEqual(models.Account.objects.latest("pk"), existing_account)
@@ -1183,14 +1206,14 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
     def test_user_already_linked_to_an_existing_unverified_account(self):
         """View redirects with a message when the user already has an AnVIL account linked."""
         existing_account = factories.AccountFactory.create(
-            email="foo@bar.com", user=self.user, status=models.Account.INACITVE_STATUS
+            email="foo@bar.com", user=self.user, status=models.Account.INACTIVE_STATUS
         )
         email = "test@example.com"
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
-        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        self.assertRedirects(response, "/test_home/")
         # No new account is created.
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertEqual(models.Account.objects.latest("pk"), existing_account)
