@@ -260,7 +260,7 @@ class AccountLink(LoginRequiredMixin, FormView):
                 "To complete linking the account, check your email for a verification link",
             )
 
-        return self.render_to_response(self.get_context_data(form=form))
+        return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
     def send_mail(self, email):
         mail_subject = "Activate your account."

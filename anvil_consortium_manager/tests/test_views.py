@@ -1132,7 +1132,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
-        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        self.assertRedirects(response, "/test_home/")
 
     def test_email_is_sent(self):
         """An email is sent when the form is submitted correctly."""
