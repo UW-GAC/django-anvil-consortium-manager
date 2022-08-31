@@ -1408,6 +1408,10 @@ class AccountLinkVerifyTest(TestCase):
         """The user pk and account pk are different."""
         pass
 
+    def test_account_no_longer_exists_on_anvil(self):
+        """The account no longer exists on AnVIL."""
+        pass
+
 
 class AccountListTest(TestCase):
     def setUp(self):
