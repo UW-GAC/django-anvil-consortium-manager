@@ -1314,6 +1314,76 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 class AccountLinkVerifyTest(TestCase):
     """Tests for the AccountLinkVerify view."""
 
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with no special permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:accounts:verify", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AccountLinkVerify.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        response = self.client.get(self.get_url("foo", "bar"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"),
+        )
+
+    def test_authenticated_user_can_access_view(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = self.user
+        response = self.get_view()(request, args=["foo", "bar"])
+        self.assertEqual(response.status_code, 200)
+
+    def test_can_link_account(self):
+        """A user can successfully link their account."""
+        pass
+
+    def test_incorrect_uidb64(self):
+        """The uidb64 in the url is incorrect (how?? may need multiple tests)."""
+        pass
+
+    def test_incorrect_token(self):
+        """The token in the url is incorrect (how?? may need multiple tests)."""
+        pass
+
+    def test_account_does_not_exist(self):
+        """The account does not exist (is this different from a previous test?)."""
+        pass
+
+    def test_account_already_verified(self):
+        """The account has already been verified for this user."""
+        pass
+
+    def test_account_linked_to_a_different_user_and_unverified(self):
+        """The account has already been linked to a different user and is unverified."""
+        pass
+
+    def test_account_linked_to_a_different_user_and_verified(self):
+        """The account has already been linked to a different user and is verified."""
+        pass
+
+    def test_user_already_linked_to_different_account_verified(self):
+        """The user is already linked to another account that has been verified."""
+        pass
+
+    def test_user_already_linked_to_different_account_unverified(self):
+        """The user is already linked to another account that is unverified."""
+        pass
+
+    def test_user_and_account_pk_are_different(self):
+        """The user pk and account pk are different."""
+        pass
+
 
 class AccountListTest(TestCase):
     def setUp(self):
