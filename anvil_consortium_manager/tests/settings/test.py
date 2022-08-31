@@ -118,4 +118,4 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
 # Because the calls are mocked, we don't need to set this.
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
 ANVIL_ACCOUNT_LINK_REDIRECT = "test_home"
-ANVIL_ACCOUNT_LINK_SUBJECT = "Activate your account"
+ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "account activation"

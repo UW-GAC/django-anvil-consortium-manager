@@ -1144,11 +1144,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.client.post(self.get_url(), {"email": email})
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
-        import ipdb
-
-        ipdb.set_trace()
         # The subject is correct.
-        self.assertEqual(mail.outbox[0].subject, settings.ANVIL_ACCOUNT_LINK_SUBJECT)
+        self.assertEqual(mail.outbox[0].subject, "account activation")
         # The contents are correct.
         body = render_to_string(
             "anvil_consortium_manager/account_verification_email.html",

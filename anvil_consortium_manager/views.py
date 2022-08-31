@@ -263,7 +263,7 @@ class AccountLink(LoginRequiredMixin, FormView):
         return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
     def send_mail(self, email):
-        mail_subject = "Activate your account."
+        mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
         user = self.request.user
         current_site = get_current_site(self.request)
         message = render_to_string(
