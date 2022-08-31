@@ -1310,6 +1310,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", form.errors["email"][0])
         self.assertEqual(models.Account.objects.count(), 0)
 
+    def test_email_already_verified_but_not_linked_to_user(self):
+        """The email is already attached to a verified account that is not linked to a user."""
+        self.fail()
+
 
 class AccountLinkVerifyTest(TestCase):
     """Tests for the AccountLinkVerify view."""
