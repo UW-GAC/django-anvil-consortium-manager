@@ -34,8 +34,8 @@ class AccountImportForm(forms.ModelForm):
         return value
 
 
-class AccountLinkForm(forms.Form):
-    """Form for user to link their AnVIL account."""
+class UserEmailEntryForm(forms.Form):
+    """Form for user to enter their email attempting to link their AnVIL account."""
 
     email = forms.EmailField(label="Email")
 
