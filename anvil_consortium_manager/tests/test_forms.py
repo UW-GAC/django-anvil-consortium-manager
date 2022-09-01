@@ -116,10 +116,10 @@ class AccountImportFormTest(TestCase):
         self.assertIn("already exists", form.errors["email"][0])
 
 
-class AccountLinkFormTest(TestCase):
-    """Tests for the AccountLinkForm class."""
+class UserEmailEntryFormTest(TestCase):
+    """Tests for the UserEmailEntryForm class."""
 
-    form_class = forms.AccountLinkForm
+    form_class = forms.UserEmailEntryForm
 
     def test_valid(self):
         """Form is valid with necessary input."""
