@@ -119,6 +119,10 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             return False
         return True
 
+    def save(self, *args, **kwargs):
+        self.email = self.email.lower()
+        return super().save(*args, **kwargs)
+
 
 class Account(TimeStampedModel, ActivatorModel):
     """A model to store information about AnVIL accounts."""

@@ -13,6 +13,7 @@ from ..models import (
     GroupAccountMembership,
     GroupGroupMembership,
     ManagedGroup,
+    UserEmailEntry,
     Workspace,
     WorkspaceAuthorizationDomain,
     WorkspaceGroupAccess,
@@ -167,6 +168,36 @@ class AccountTest(TestCase):
         instance = Account(email=email, user=user, is_service_account=False)
         instance.save()
         instance2 = Account(email=email2, user=user, is_service_account=False)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+
+class UserEmailEntryTest(TestCase):
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
+    def test_save_unique_email_case_insensitive(self):
+        """Email uniqueness does not depend on case."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        instance2 = UserEmailEntry(
+            email="EMAIL@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
         with self.assertRaises(IntegrityError):
             instance2.save()
 
