@@ -203,4 +203,6 @@ INTERNAL_IPS = ["127.0.0.1"]
 # Specify the path to the service account to use for managing access on AnVIL.
 ANVIL_API_SERVICE_ACCOUNT_FILE = os.getenv("ANVIL_API_SERVICE_ACCOUNT_FILE")
 # Specify the URL for AccountLinkVerify view redirect
-ANVIL_ACCOUNT_LINK_REDIRECT = "anvil_consortium_manager:index"
+ANVIL_ACCOUNT_LINK_REDIRECT = "home"
+# Specify the subject for AnVIL account verification emails.
+ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
