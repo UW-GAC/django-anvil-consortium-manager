@@ -14,6 +14,22 @@ class BillingProjectAdmin(SimpleHistoryAdmin):
     search_fields = ("name",)
 
 
+@admin.register(models.UserEmailEntry)
+class UserEmailEntryAdmin(SimpleHistoryAdmin):
+    """Admin class for the UserEmailEntry model."""
+
+    list_display = (
+        "email",
+        "user",
+        "date_verification_email_sent",
+    )
+    list_filter = ("can_be_verified",)
+    search_fields = (
+        "email",
+        "user",
+    )
+
+
 @admin.register(models.Account)
 class AccountAdmin(SimpleHistoryAdmin):
     """Admin class for the Account model."""
