@@ -1534,7 +1534,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
 
-class AccountLinkVerifyTest(TestCase):
+class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the AccountLinkVerify view."""
 
     def setUp(self):
@@ -1552,6 +1552,10 @@ class AccountLinkVerifyTest(TestCase):
         """Return the view being tested."""
         return views.AccountLinkVerify.as_view()
 
+    def get_api_url(self, email):
+        """Get the AnVIL API url that is called by the anvil_exists method."""
+        return self.entry_point + "/api/proxyGroup/" + email
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         response = self.client.get(self.get_url("foo", "bar"))
@@ -1560,48 +1564,242 @@ class AccountLinkVerifyTest(TestCase):
             resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"),
         )
 
-    def test_authenticated_user_can_access_view(self):
-        """Returns successful response code."""
-        request = self.factory.get(self.get_url("foo", "bar"))
-        request.user = self.user
-        response = self.get_view()(request, args=["foo", "bar"])
-        self.assertEqual(response.status_code, 200)
+    def test_authenticated_user_can_verify_email(self):
+        """A user can successfully verify their email."""
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email=email
+        )
+        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # A new account is created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        new_object = models.Account.objects.latest("pk")
+        self.assertEqual(new_object.email, email)
+        self.assertEqual(new_object.user, self.user)
+        self.assertFalse(new_object.is_service_account)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+        # The UserEmailEntry is linked to this account.
+        email_entry.refresh_from_db()
+        self.assertEqual(email_entry.verified_account, new_object)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
+        # API call to AnVIL is made.
+        responses.assert_call_count(api_url, 1)
 
-    def test_can_link_account(self):
-        """A user can successfully link their account."""
-        pass
+    def test_user_email_entry_does_not_exist(self):
+        """ "There is no UserEmailEntry with the decoded pk."""
+        uid = urlsafe_base64_encode(force_bytes(1))
+        token = "foo"
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No new accounts are created.
+        self.assertEqual(models.Account.objects.count(), 0)
+        # No UserEmailEntry objects exist.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_link_invalid)
 
-    def test_incorrect_uidb64(self):
-        """The uidb64 in the url is incorrect (how?? may need multiple tests)."""
-        pass
-
-    def test_incorrect_token(self):
-        """The token in the url is incorrect (how?? may need multiple tests)."""
-        pass
-
-    def test_account_does_not_exist(self):
-        """The account does not exist (is this different from a previous test?)."""
-        pass
-
-    def test_email_already_verified_by_this_user(self):
-        """The account has already been verified for this user."""
-        pass
-
-    def test_email_already_verified_by_different_user(self):
-        """The email has already been verified by a different user."""
-        pass
+    def test_this_user_already_verified_this_email(self):
+        """The user has already verified their email."""
+        email = "test@example.com"
+        existing_account = factories.AccountFactory.create(user=self.user, email=email)
+        existing_email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user,
+            email=email,
+            verified_account=existing_account,
+            verified=True,
+        )
+        uid = urlsafe_base64_encode(force_bytes(existing_email_entry.pk))
+        token = account_verification_token.make_token(existing_email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No new accounts are created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(existing_account, models.Account.objects.latest("pk"))
+        # The exsting email entry object is not changed -- no history is added.
+        self.assertEqual(existing_email_entry.history.count(), 1)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLinkVerify.message_already_linked
+        )
 
     def test_user_already_verified_different_email(self):
-        """The user has already verified a different email."""
-        pass
+        """The user already verified a different email."""
+        email = "test@example.com"
+        existing_account = factories.AccountFactory.create(
+            user=self.user, email="foo@bar.com"
+        )
+        existing_email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user,
+            email="foo@bar.com",
+            verified_account=existing_account,
+            verified=True,
+        )
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email=email
+        )
+        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
+        token = account_verification_token.make_token(email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No new accounts are created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(existing_account, models.Account.objects.latest("pk"))
+        # The exsting email entry object is not changed -- no history is added.
+        self.assertEqual(existing_email_entry.history.count(), 1)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLinkVerify.message_already_linked
+        )
 
-    def test_user_and_account_pk_are_different(self):
-        """The user pk and account pk are different."""
-        pass
+    def test_token_does_not_match(self):
+        """The token does not match."""
+        other_email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email="foo@bar.com"
+        )
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email="test@example.com"
+        )
+        # Use the uid from this email entry, but the token from the other email entry.
+        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
+        token = account_verification_token.make_token(other_email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No accounts are created.
+        self.assertEqual(models.Account.objects.count(), 0)
+        # The email entry objects are not changed -- no history is added.
+        self.assertEqual(email_entry.history.count(), 1)
+        self.assertEqual(other_email_entry.history.count(), 1)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_link_invalid)
 
-    def test_account_no_longer_exists_on_anvil(self):
-        """The account no longer exists on AnVIL."""
-        pass
+    def test_different_user_verified_this_email(self):
+        """The email has already been verified by a different user."""
+        email = "test@example.com"
+        other_user = factories.UserFactory.create()
+        # Create an email entry record for both users with the same email
+        other_account = factories.AccountFactory.create(user=other_user, email=email)
+        other_email_entry = factories.UserEmailEntryFactory.create(
+            user=other_user, email=email, verified_account=other_account
+        )
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email=email
+        )
+        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
+        token = account_verification_token.make_token(email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No new accounts are created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertEqual(other_account, models.Account.objects.latest("pk"))
+        # The existing account has not been changed.
+        other_account.refresh_from_db()
+        self.assertEqual(other_account.user, other_user)
+        self.assertEqual(other_account.history.count(), 1)
+        # The email entry objects are not changed -- no history is added.
+        self.assertEqual(email_entry.history.count(), 1)
+        self.assertEqual(other_email_entry.history.count(), 1)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLinkVerify.message_account_already_exists
+        )
+
+    def test_anvil_account_no_longer_exists(self):
+        """The email no longer has an associated AnVIL account."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        api_url = self.get_api_url(email_entry.email)
+        responses.add(
+            responses.GET, api_url, status=404, json={"message": "mock message"}
+        )
+        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
+        token = account_verification_token.make_token(email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No accounts are created.
+        self.assertEqual(models.Account.objects.count(), 0)
+        # The email_entry object was not updated.
+        email_entry.refresh_from_db()
+        self.assertIsNone(email_entry.verified_account)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLinkVerify.message_account_does_not_exist
+        )
+        # API call to AnVIL was made.
+        responses.assert_call_count(api_url, 1)
+
+    def test_api_call_fails(self):
+        """The API call to AnVIL fails."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        api_url = self.get_api_url(email_entry.email)
+        responses.add(
+            responses.GET, api_url, status=500, json={"message": "other error"}
+        )
+        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
+        token = account_verification_token.make_token(email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(uid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No accounts are created.
+        self.assertEqual(models.Account.objects.count(), 0)
+        # The email_entry object was not updated.
+        email_entry.refresh_from_db()
+        self.assertIsNone(email_entry.verified_account)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: other error", str(messages[0]))
+        # API call to AnVIL was made.
+        responses.assert_call_count(api_url, 1)
 
 
 class AccountListTest(TestCase):
