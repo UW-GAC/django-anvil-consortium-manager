@@ -1276,7 +1276,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(
             str(messages[0]), views.AccountLink.message_account_already_exists
         )
-        self.fail("Is this the right message?")
 
     def test_account_does_not_exist_on_anvil(self):
         """Page is reloaded with a message if the account does not exist on AnVIL."""
@@ -1352,7 +1351,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(
             str(messages[0]), views.AccountLink.message_account_already_exists
         )
-        self.fail("Is this the right message?")
 
     def test_user_can_attempt_to_link_two_different_emails(self):
         """A user can attempt to link two different emails."""
