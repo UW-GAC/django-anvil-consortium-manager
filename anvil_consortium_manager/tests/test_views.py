@@ -1155,6 +1155,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         self.client.post(self.get_url(), {"email": email})
+        email_entry = models.UserEmailEntry.objects.get(email=email)
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
@@ -1165,8 +1166,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "user": self.user,
                 "domain": "testserver",
-                "uid": urlsafe_base64_encode(force_bytes(self.user.pk)),
-                "token": account_verification_token.make_token(self.user),
+                "uid": urlsafe_base64_encode(force_bytes(email_entry.pk)),
+                "token": account_verification_token.make_token(email_entry),
             },
         )
         self.assertEqual(mail.outbox[0].body, body)
