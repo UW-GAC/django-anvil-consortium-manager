@@ -76,7 +76,7 @@ class BillingProject(TimeStampedModel):
 class UserEmailEntry(TimeStampedModel, models.Model):
     """A model to store emails that users could link to their AnVIL account after verification."""
 
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
     """The email entered by the user."""
 
     user = models.ForeignKey(
