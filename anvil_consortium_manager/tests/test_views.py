@@ -1,5 +1,6 @@
 import datetime
 from unittest import skip
+from uuid import uuid4
 
 import responses
 from django.conf import settings
@@ -12,8 +13,6 @@ from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 
 from .. import forms, models, tables, views
 from ..tokens import account_verification_token
@@ -1170,7 +1169,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "user": self.user,
                 "domain": "testserver",
-                "uid": urlsafe_base64_encode(force_bytes(email_entry.pk)),
+                "uuid": email_entry.uuid,
                 "token": account_verification_token.make_token(email_entry),
             },
         )
@@ -1389,7 +1388,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "user": self.user,
                 "domain": "testserver",
-                "uid": urlsafe_base64_encode(force_bytes(new_object.pk)),
+                "uuid": new_object.uuid,
                 "token": account_verification_token.make_token(new_object),
             },
         )
@@ -1446,7 +1445,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "user": self.user,
                 "domain": "testserver",
-                "uid": urlsafe_base64_encode(force_bytes(new_object.pk)),
+                "uuid": new_object.uuid,
                 "token": account_verification_token.make_token(new_object),
             },
         )
@@ -1556,10 +1555,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
-        response = self.client.get(self.get_url("foo", "bar"))
+        uuid = uuid4()
+        response = self.client.get(self.get_url(uuid, "bar"))
         self.assertRedirects(
             response,
-            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"),
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(uuid, "bar"),
         )
 
     def test_authenticated_user_can_verify_email(self):
@@ -1568,13 +1568,12 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         email_entry = factories.UserEmailEntryFactory.create(
             user=self.user, email=email
         )
-        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
         responses.add(responses.GET, api_url, status=200)
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # A new account is created.
         self.assertEqual(models.Account.objects.count(), 1)
@@ -1597,12 +1596,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(api_url, 1)
 
     def test_user_email_entry_does_not_exist(self):
-        """ "There is no UserEmailEntry with the decoded pk."""
-        uid = urlsafe_base64_encode(force_bytes(1))
+        """ "There is no UserEmailEntry with the uuid."""
         token = "foo"
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(uuid4(), token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1617,25 +1615,24 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     def test_this_user_already_verified_this_email(self):
         """The user has already verified their email."""
         email = "test@example.com"
-        existing_account = factories.AccountFactory.create(user=self.user, email=email)
-        existing_email_entry = factories.UserEmailEntryFactory.create(
+        account = factories.AccountFactory.create(user=self.user, email=email)
+        email_entry = factories.UserEmailEntryFactory.create(
             user=self.user,
             email=email,
-            verified_account=existing_account,
+            verified_account=account,
             verified=True,
         )
-        uid = urlsafe_base64_encode(force_bytes(existing_email_entry.pk))
-        token = account_verification_token.make_token(existing_email_entry)
+        token = account_verification_token.make_token(email_entry)
         # No API calls are made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 1)
-        self.assertEqual(existing_account, models.Account.objects.latest("pk"))
+        self.assertEqual(account, models.Account.objects.latest("pk"))
         # The exsting email entry object is not changed -- no history is added.
-        self.assertEqual(existing_email_entry.history.count(), 1)
+        self.assertEqual(email_entry.history.count(), 1)
         # A message is added.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1659,12 +1656,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         email_entry = factories.UserEmailEntryFactory.create(
             user=self.user, email=email
         )
-        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
         token = account_verification_token.make_token(email_entry)
         # No API calls are made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 1)
@@ -1688,12 +1684,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             user=self.user, email="test@example.com"
         )
         # Use the uid from this email entry, but the token from the other email entry.
-        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
         token = account_verification_token.make_token(other_email_entry)
         # No API calls are made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # No accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1718,12 +1713,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         email_entry = factories.UserEmailEntryFactory.create(
             user=self.user, email=email
         )
-        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
         token = account_verification_token.make_token(email_entry)
         # No API calls are made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 1)
@@ -1750,12 +1744,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(
             responses.GET, api_url, status=404, json={"message": "mock message"}
         )
-        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
         token = account_verification_token.make_token(email_entry)
         # No API calls are made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # No accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1779,12 +1772,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(
             responses.GET, api_url, status=500, json={"message": "other error"}
         )
-        uid = urlsafe_base64_encode(force_bytes(email_entry.pk))
         token = account_verification_token.make_token(email_entry)
         # No API calls are made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(uid, token), follow=True)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
         # No accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)

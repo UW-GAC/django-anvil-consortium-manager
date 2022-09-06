@@ -29,7 +29,9 @@ account_patterns = (
         ),
         path("link/", views.AccountLink.as_view(), name="link"),
         path(
-            "verify/<uidb64>/<token>/", views.AccountLinkVerify.as_view(), name="verify"
+            "verify/<uuid:uuid>/<token>/",
+            views.AccountLinkVerify.as_view(),
+            name="verify",
         ),
     ],
     "accounts",

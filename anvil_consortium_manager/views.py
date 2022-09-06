@@ -9,8 +9,6 @@ from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -195,7 +193,9 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
     model = models.UserEmailEntry
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_user_already_linked = "You have already linked an AnVIL account."
-    message_account_already_exists = "An AnVIL Account with this email already exists."
+    message_account_already_exists = (
+        "An AnVIL Account with this email already exists in this app."
+    )
     form_class = forms.UserEmailEntryForm
     success_msg = (
         "To complete linking the account, check your email for a verification link."
@@ -282,7 +282,7 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
             {
                 "user": user,
                 "domain": current_site.domain,
-                "uid": urlsafe_base64_encode(force_bytes(email_entry.pk)),
+                "uuid": email_entry.uuid,
                 "token": account_verification_token.make_token(email_entry),
             },
         )
@@ -293,7 +293,9 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
 class AccountLinkVerify(LoginRequiredMixin, RedirectView):
     message_already_linked = "You have already linked an AnVIL account."
     message_link_invalid = "AnVIL account verification link is invalid."
-    message_account_already_exists = "An AnVIL Account with this email already exists."
+    message_account_already_exists = (
+        "An AnVIL Account with this email already exists in this app."
+    )
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_success = "Thank you for verifying your email."
 
@@ -301,7 +303,6 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
         return reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT)
 
     def get(self, request, *args, **kwargs):
-
         # Check if this user already has an account linked.
         if models.Account.objects.filter(user=request.user).count():
             messages.add_message(
@@ -309,12 +310,11 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
             )
             return super().get(request, *args, **kwargs)
 
-        uidb64 = kwargs.get("uidb64")
+        uuid = kwargs.get("uuid")
         token = kwargs.get("token")
 
-        uid = force_str(urlsafe_base64_decode(uidb64))
         try:
-            email_entry = models.UserEmailEntry.objects.get(pk=uid)
+            email_entry = models.UserEmailEntry.objects.get(uuid=uuid)
         except models.UserEmailEntry.DoesNotExist:
             messages.add_message(
                 self.request, messages.ERROR, self.message_link_invalid

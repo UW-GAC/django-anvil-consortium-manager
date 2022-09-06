@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
@@ -75,6 +77,9 @@ class BillingProject(TimeStampedModel):
 
 class UserEmailEntry(TimeStampedModel, models.Model):
     """A model to store emails that users could link to their AnVIL account after verification."""
+
+    uuid = models.UUIDField(default=uuid.uuid4)
+    """UUID for use in urls."""
 
     email = models.EmailField()
     """The email entered by the user."""
