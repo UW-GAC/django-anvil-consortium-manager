@@ -111,7 +111,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         """String method."""
         return "{email} for {user}".format(email=self.email, user=self.user)
 
-    def anvil_exists(self):
+    def anvil_account_exists(self):
         """Check if this account exists on AnVIL."""
         try:
             AnVILAPIClient().get_proxy_group(self.email)
