@@ -201,6 +201,14 @@ class UserEmailEntryTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_verified_account_deleted(self):
+        """A verified account is deleted."""
+        pass
+
+    def test_user_deleted(self):
+        """The user linked to the account is deleted."""
+        pass
+
 
 class ManagedGroupTest(TestCase):
     def test_model_saving(self):

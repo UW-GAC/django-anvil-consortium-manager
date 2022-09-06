@@ -1349,6 +1349,14 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """The email is already attached to a verified account that is not linked to a user."""
         self.fail()
 
+    def test_user_can_attempt_to_link_emails(self):
+        """A user can attempt to link two different emails."""
+        self.fail()
+
+    def test_two_users_can_attempt_to_link_same_email(self):
+        """Two users can attempt to link the same email."""
+        self.fail()
+
 
 class AccountLinkVerifyTest(TestCase):
     """Tests for the AccountLinkVerify view."""
@@ -1399,24 +1407,16 @@ class AccountLinkVerifyTest(TestCase):
         """The account does not exist (is this different from a previous test?)."""
         pass
 
-    def test_account_already_verified(self):
+    def test_email_already_verified_by_this_user(self):
         """The account has already been verified for this user."""
         pass
 
-    def test_account_linked_to_a_different_user_and_unverified(self):
-        """The account has already been linked to a different user and is unverified."""
+    def test_email_already_verified_by_different_user(self):
+        """The email has already been verified by a different user."""
         pass
 
-    def test_account_linked_to_a_different_user_and_verified(self):
-        """The account has already been linked to a different user and is verified."""
-        pass
-
-    def test_user_already_linked_to_different_account_verified(self):
-        """The user is already linked to another account that has been verified."""
-        pass
-
-    def test_user_already_linked_to_different_account_unverified(self):
-        """The user is already linked to another account that is unverified."""
+    def test_user_already_verified_different_email(self):
+        """The user has already verified a different email."""
         pass
 
     def test_user_and_account_pk_are_different(self):
