@@ -197,6 +197,9 @@ class AccountLink(LoginRequiredMixin, FormView):
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_user_already_linked = "You have already linked an AnVIL account."
     form_class = forms.UserEmailEntryForm
+    success_msg = (
+        "To complete linking the account, check your email for a verification link."
+    )
 
     def get(self, request, *args, **kwargs):
         """Check if the user already has an account linked and redirect."""
@@ -266,7 +269,7 @@ class AccountLink(LoginRequiredMixin, FormView):
             messages.add_message(
                 self.request,
                 messages.SUCCESS,
-                "To complete linking the account, check your email for a verification link",
+                self.success_msg,
             )
         # User already attempted to link this email
         else:
