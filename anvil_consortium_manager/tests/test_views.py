@@ -1100,23 +1100,27 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.UserEmailEntryForm)
 
-    def test_form_valid(self):
+    def test_can_create_an_entry(self):
         """Posting valid data to the form works as expected."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
         responses.add(responses.GET, api_url, status=200)
+        timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         self.assertEqual(response.status_code, 302)
         # A new UserEmailEntry is created.
         self.assertEqual(models.UserEmailEntry.objects.count(), 1)
-
         # The new UserEmailentry is linked to the logged-in user.
         new_object = models.UserEmailEntry.objects.latest("pk")
         self.assertEqual(new_object.email, email)
         self.assertEqual(new_object.user, self.user)
         self.assertIsNotNone(new_object.date_verification_email_sent)
+        self.assertGreaterEqual(
+            new_object.date_verification_email_sent, timestamp_lower_limit
+        )
+        self.assertLessEqual(new_object.date_verification_email_sent, timezone.now())
         self.assertIsNone(new_object.verified_account)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
@@ -1174,18 +1178,17 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_get_user_already_linked_to_an_existing_verified_account(self):
         """View redirects with a message when the user already has an AnVIL account linked."""
-        existing_account = factories.AccountFactory.create(
-            user=self.user, date_verified=timezone.now()
-        )
+        factories.AccountFactory.create(user=self.user, date_verified=timezone.now())
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), follow=True)
         # import ipdb; ipdb.set_trace()
         self.assertRedirects(response, "/test_home/")
-        # No new account is created.
-        self.assertEqual(models.Account.objects.count(), 1)
-        self.assertEqual(models.Account.objects.latest("pk"), existing_account)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
+        # No new entry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
         # A message is included.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1209,6 +1212,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No new account is created.
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertEqual(models.Account.objects.latest("pk"), existing_account)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
         # A message is included.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1217,82 +1222,61 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             str(messages[0]), views.AccountLink.message_user_already_linked
         )
 
-    def test_user_already_linked_to_an_existing_unverified_account(self):
-        """The user already has an existing unverified account."""
-        existing_account = factories.AccountFactory.create(
-            email="foo@bar.com", user=self.user, status=models.Account.INACTIVE_STATUS
-        )
+    def test_same_user_same_email_unverified(self):
+        """A UserEmailEntry record already exists for this user and email combo, but it is not verified yet."""
         email = "test@example.com"
-        # No API call should be made, so do not add a mocked response.
+        original_date = timezone.now() - datetime.timedelta(days=30)
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email=email, date_verification_email_sent=original_date
+        )
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
         # Need a client because messages are added.
+        timestamp_lower_limit = timezone.now()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
-        self.assertRedirects(response, "/test_home/")
-        # No new account is created.
-        self.assertEqual(models.Account.objects.count(), 1)
-        self.assertEqual(models.Account.objects.latest("pk"), existing_account)
-        # A message is included.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.fail("What message do we want to show the user?")
-        self.assertEqual(
-            str(messages[0]), views.AccountLink.message_user_already_linked
+        self.assertEqual(response.status_code, 302)
+        # No new UserEmailEntry is created.
+        email_entry.refresh_from_db()
+        self.assertEqual(models.UserEmailEntry.objects.count(), 1)
+        self.assertIn(email_entry, models.UserEmailEntry.objects.all())
+        # date_verification_email_sent is updated.
+        self.assertGreater(email_entry.date_verification_email_sent, original_date)
+        self.assertGreaterEqual(
+            email_entry.date_verification_email_sent, timestamp_lower_limit
         )
+        # An email is sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # But it still does not have a verified account.
+        self.assertIsNone(email_entry.verified_account)
+        # History is added.
+        self.assertEqual(email_entry.history.count(), 2)
+        self.assertEqual(email_entry.history.latest().history_type, "~")
+        # API call to AnVIL is made.
+        responses.assert_call_count(api_url, 1)
 
     def test_account_already_linked_to_different_user_and_verified(self):
-        """The user already has an AnVIL account linked and verified."""
+        """A different user already has already verified this email."""
         email = "test@example.com"
-        date_verified = timezone.now() - datetime.timedelta(days=1)
         other_user = User.objects.create_user(username="test2", password="test2")
-        other_account = factories.AccountFactory.create(
-            email=email, user=other_user, date_verified=date_verified
-        )
+        factories.AccountFactory.create(email=email, user=other_user)
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"email": email})
-        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
-        # No new account is created.
-        self.assertEqual(models.Account.objects.count(), 1)
-        self.assertEqual(models.Account.objects.latest("pk"), other_account)
-        other_account.refresh_from_db()
-        self.assertEqual(other_account.user, other_user)
-        self.assertEqual(other_account.objects.date_verified, date_verified)
-        self.assertEqual(other_account.objects.status, models.Account.ACTIVE_STATUS)
-        # A message is included.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.fail("What should the message be?")
-        self.assertEqual(str(messages[0]), "")
-
-    def test_account_already_linked_to_different_user_and_not_verified(self):
-        """The AnVIL account is already linked to a different user."""
-        email = "test@example.com"
-        other_user = User.objects.create_user(username="test2", password="test2")
-        other_account = factories.UserEmailEntryFactory.create(
-            email=email, user=other_user, status=models.Account.INACTIVE_STATUS
-        )
-        # No API call should be made, so do not add a mocked response.
-        # Need a client because messages are added.
-        self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"email": email})
-        self.assertRedirects(response, settings.ANVIL_ACCOUNT_LINK_REDIRECT)
-        # No new account is created.
-        self.assertEqual(models.Account.objects.count(), 1)
-        self.assertEqual(models.Account.objects.latest("pk"), other_account)
-        other_account.refresh_from_db()
-        self.assertEqual(other_account.user, other_user)
-        self.assertIsNone(other_account.objects.date_verified)
-        self.assertEqual(other_account.objects.status, models.Account.ACTIVE_STATUS)
-        # A message is included.
+        response = self.client.post(self.get_url(), {"email": email}, follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No new UserEmailEntry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
+        # A message is added.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            str(messages[0]), views.AccountLink.message_account_already_linked
+            str(messages[0]), views.AccountLink.message_account_already_exists
         )
+        self.fail("Is this the right message?")
 
     def test_account_does_not_exist_on_anvil(self):
         """Page is reloaded with a message if the account does not exist on AnVIL."""
@@ -1309,6 +1293,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("form", response.context_data)
         form = response.context_data["form"]
         self.assertTrue(form.is_valid())
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
         # A message is added.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1321,7 +1307,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # API call to AnVIL was made.
         responses.assert_call_count(api_url, 1)
 
-    def test_invalid_input_email(self):
+    def test_invalid_email(self):
         """Posting invalid data to email field returns a form error."""
         request = self.factory.post(self.get_url(), {"email": "foo"})
         request.user = self.user
@@ -1345,17 +1331,207 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", form.errors["email"][0])
         self.assertEqual(models.Account.objects.count(), 0)
 
-    def test_email_already_verified_but_not_linked_to_user(self):
-        """The email is already attached to a verified account that is not linked to a user."""
-        self.fail()
+    def test_account_exists_with_email_but_not_linked_to_user(self):
+        """An Account with this email exists but is not linked to a user."""
+        email = "test@example.com"
+        User.objects.create_user(username="test2", password="test2")
+        factories.AccountFactory.create(email=email)
+        # No API call should be made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email}, follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No new UserEmailEntry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLink.message_account_already_exists
+        )
+        self.fail("Is this the right message?")
 
-    def test_user_can_attempt_to_link_emails(self):
+    def test_user_can_attempt_to_link_two_different_emails(self):
         """A user can attempt to link two different emails."""
-        self.fail()
+        other_timestamp = timezone.now() - datetime.timedelta(days=30)
+        other_email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user,
+            email="other@test.com",
+            date_verification_email_sent=other_timestamp,
+        )
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        timestamp_lower_limit = timezone.now()
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 302)
+        # A new UserEmailEntry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 2)
+        self.assertIn(other_email_entry, models.UserEmailEntry.objects.all())
+        # The new UserEmailentry is linked to the logged-in user.
+        new_object = models.UserEmailEntry.objects.latest("pk")
+        self.assertEqual(new_object.email, email)
+        self.assertEqual(new_object.user, self.user)
+        self.assertIsNotNone(new_object.date_verification_email_sent)
+        self.assertGreaterEqual(
+            new_object.date_verification_email_sent, timestamp_lower_limit
+        )
+        self.assertLessEqual(new_object.date_verification_email_sent, timezone.now())
+        self.assertIsNone(new_object.verified_account)
+        # An email is sent using the new email.
+        self.assertEqual(len(mail.outbox), 1)
+        # The contents are correct.
+        body = render_to_string(
+            "anvil_consortium_manager/account_verification_email.html",
+            {
+                "user": self.user,
+                "domain": "testserver",
+                "uid": urlsafe_base64_encode(force_bytes(new_object.pk)),
+                "token": account_verification_token.make_token(new_object),
+            },
+        )
+        self.assertEqual(mail.outbox[0].body, body)
+        # The timestamp on the other entry hasn't changed.
+        other_email_entry.refresh_from_db()
+        self.assertLess(
+            other_email_entry.date_verification_email_sent, timestamp_lower_limit
+        )
+        self.assertEqual(
+            other_email_entry.date_verification_email_sent, other_timestamp
+        )
+        self.assertEqual(other_email_entry.history.count(), 1)
+        self.assertEqual(other_email_entry.history.latest().history_type, "+")
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+        # API call to AnVIL is made.
+        responses.assert_call_count(api_url, 1)
 
-    def test_two_users_can_attempt_to_link_same_email(self):
-        """Two users can attempt to link the same email."""
-        self.fail()
+    def test_two_different_users_can_attempt_to_link_same_email(self):
+        """Two different users can enter the same email."""
+        email = "test@example.com"
+        other_timestamp = timezone.now() - datetime.timedelta(days=30)
+        other_user = factories.UserFactory.create()
+        other_email_entry = factories.UserEmailEntryFactory.create(
+            user=other_user, email=email, date_verification_email_sent=other_timestamp
+        )
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        timestamp_lower_limit = timezone.now()
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 302)
+        # A new UserEmailEntry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 2)
+        self.assertIn(other_email_entry, models.UserEmailEntry.objects.all())
+        # The new UserEmailentry is linked to the logged-in user.
+        new_object = models.UserEmailEntry.objects.latest("pk")
+        self.assertEqual(new_object.email, email)
+        self.assertEqual(new_object.user, self.user)
+        self.assertIsNotNone(new_object.date_verification_email_sent)
+        self.assertGreaterEqual(
+            new_object.date_verification_email_sent, timestamp_lower_limit
+        )
+        self.assertLessEqual(new_object.date_verification_email_sent, timezone.now())
+        self.assertIsNone(new_object.verified_account)
+        # An email is sent using the new object.
+        self.assertEqual(len(mail.outbox), 1)
+        # The contents are correct.
+        body = render_to_string(
+            "anvil_consortium_manager/account_verification_email.html",
+            {
+                "user": self.user,
+                "domain": "testserver",
+                "uid": urlsafe_base64_encode(force_bytes(new_object.pk)),
+                "token": account_verification_token.make_token(new_object),
+            },
+        )
+        self.assertEqual(mail.outbox[0].body, body)
+        # The other entry hasn't changed.
+        other_email_entry.refresh_from_db()
+        self.assertEqual(other_email_entry.email, email)
+        self.assertEqual(other_email_entry.user, other_user)
+        self.assertLess(
+            other_email_entry.date_verification_email_sent, timestamp_lower_limit
+        )
+        self.assertEqual(
+            other_email_entry.date_verification_email_sent, other_timestamp
+        )
+        self.assertEqual(other_email_entry.history.count(), 1)
+        self.assertEqual(other_email_entry.history.latest().history_type, "+")
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+        # API call to AnVIL is made.
+        responses.assert_call_count(api_url, 1)
+
+    def test_email_case_insensitive(self):
+        """Case sensitivity."""
+        email = "TEST@example.com"
+        original_date = timezone.now() - datetime.timedelta(days=30)
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user,
+            email=email.lower(),
+            date_verification_email_sent=original_date,
+        )
+        # API call will be made with the existing entry.
+        api_url = self.get_api_url(email_entry.email)
+        responses.add(responses.GET, api_url, status=200)
+        # Need a client because messages are added.
+        timestamp_lower_limit = timezone.now()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 302)
+        # No new UserEmailEntry is created.
+        email_entry.refresh_from_db()
+        self.assertEqual(models.UserEmailEntry.objects.count(), 1)
+        self.assertIn(email_entry, models.UserEmailEntry.objects.all())
+        # date_verification_email_sent is updated.
+        self.assertGreater(email_entry.date_verification_email_sent, original_date)
+        self.assertGreaterEqual(
+            email_entry.date_verification_email_sent, timestamp_lower_limit
+        )
+        # An email is sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # But it still does not have a verified account.
+        self.assertIsNone(email_entry.verified_account)
+        # History is added.
+        self.assertEqual(email_entry.history.count(), 2)
+        self.assertEqual(email_entry.history.latest().history_type, "~")
+        # API call to AnVIL is made.
+        responses.assert_call_count(api_url, 1)
+
+    def test_api_error(self):
+        """Does not create a new entry or send email if the API returns some other error."""
+        email = "test@example.com"
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=500,
+            json={"message": "other error"},
+        )
+        # Need the client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but there was some error from the API.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: other error", str(messages[0]))
+        # No accounts were created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class AccountLinkVerifyTest(TestCase):

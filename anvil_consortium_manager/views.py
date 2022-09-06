@@ -190,12 +190,13 @@ class AccountImport(
         return super().form_valid(form)
 
 
-class AccountLink(LoginRequiredMixin, FormView):
+class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
     login_url = settings.LOGIN_URL
     template_name = "anvil_consortium_manager/user_email_entry.html"
     model = models.UserEmailEntry
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_user_already_linked = "You have already linked an AnVIL account."
+    message_account_already_exists = "An AnVIL Account with this email already exists."
     form_class = forms.UserEmailEntryForm
     success_msg = (
         "To complete linking the account, check your email for a verification link."
@@ -227,65 +228,55 @@ class AccountLink(LoginRequiredMixin, FormView):
             )
             return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
+    def get_success_url(self):
+        return reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+
     def form_valid(self, form):
         """If the form is valid, check that the email exists on AnVIL and send verification email."""
         email = form.cleaned_data.get("email")
-        email = email.lower()
-        email_entry = models.UserEmailEntry(
-            email=email,
-        )
-        try:
-            email_entry_exists = email_entry.anvil_exists()
 
+        try:
+            email_entry = models.UserEmailEntry.objects.get(
+                email__iexact=email, user=self.request.user
+            )
+        except models.UserEmailEntry.DoesNotExist:
+            email_entry = models.UserEmailEntry(email=email, user=self.request.user)
+
+        # Check if this email has an account already linked to a different user.
+        # Don't need to check the user, because a user who has already linked their account shouldn't get here.
+        if models.Account.objects.filter(email=email).count():
+            # The user already has a linked account, so redirect with a message.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_already_exists
+            )
+            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+
+        # Check if it exists on AnVIL.
+        try:
+            anvil_account_exists = email_entry.anvil_account_exists()
         except AnVILAPIError as e:
-            # If the API call failed for some other reason, rerender the page with the responses and show a message.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             return self.render_to_response(self.get_context_data(form=form))
 
-        if not email_entry_exists:
+        if not anvil_account_exists:
             messages.add_message(
                 self.request, messages.ERROR, self.message_account_does_not_exist
             )
             # Re-render the page with a message.
             return self.render_to_response(self.get_context_data(form=form))
 
-        entry_query = models.UserEmailEntry.objects.filter(
-            email=email,
-            user=self.request.user,
-            date_verification_email_sent__isnull=False,
-            can_be_verified=True,
-        )
+        email_entry.date_verification_email_sent = timezone.now()
+        email_entry.save()
+        self.send_mail(email_entry)
 
-        # Email doesn't exist in UserEmailEntry
-        if entry_query.count() == 0:
-            models.UserEmailEntry(
-                email=email,
-                user=self.request.user,
-                date_verification_email_sent=timezone.now(),
-            ).save()
-            self.send_mail(email)
-            messages.add_message(
-                self.request,
-                messages.SUCCESS,
-                self.success_msg,
-            )
-        # User already attempted to link this email
-        else:
-            self.send_mail(email)
-            messages.add_message(
-                self.request,
-                messages.ERROR,
-                "This email is not verified, check your email for a verification link",
-            )
+        return super().form_valid(form)
 
-        return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
-
-    def send_mail(self, email):
+    def send_mail(self, email_entry):
         mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
         user = self.request.user
-        email_entry = models.UserEmailEntry.objects.get(email=email)
+        # email_entry = models.UserEmailEntry.objects.get(email=email)
         current_site = get_current_site(self.request)
         message = render_to_string(
             "anvil_consortium_manager/account_verification_email.html",
@@ -296,7 +287,7 @@ class AccountLink(LoginRequiredMixin, FormView):
                 "token": account_verification_token.make_token(email_entry),
             },
         )
-        to_email = email
+        to_email = email_entry.email
         send_mail(mail_subject, message, None, [to_email], fail_silently=False)
 
 
