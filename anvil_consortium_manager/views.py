@@ -1,5 +1,3 @@
-import datetime
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -11,6 +9,7 @@ from django.forms.forms import Form
 from django.http import HttpResponseRedirect
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.generic import (
@@ -193,11 +192,11 @@ class AccountImport(
 
 class AccountLink(LoginRequiredMixin, FormView):
     login_url = settings.LOGIN_URL
-    template_name = "anvil_consortium_manager/account_form.html"
-    model = models.Account
+    template_name = "anvil_consortium_manager/user_email_entry.html"
+    model = models.UserEmailEntry
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_user_already_linked = "You have already linked an AnVIL account."
-    form_class = forms.AccountLinkForm
+    form_class = forms.UserEmailEntryForm
 
     def get(self, request, *args, **kwargs):
         """Check if the user already has an account linked and redirect."""
@@ -226,13 +225,14 @@ class AccountLink(LoginRequiredMixin, FormView):
             return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
     def form_valid(self, form):
-        """If the form is valid, check that the account exists on AnVIL and send verification email."""
+        """If the form is valid, check that the email exists on AnVIL and send verification email."""
         email = form.cleaned_data.get("email")
-        acct = models.Account(
+        email = email.lower()
+        email_entry = models.UserEmailEntry(
             email=email,
         )
         try:
-            account_exists = acct.anvil_exists()
+            email_entry_exists = email_entry.anvil_exists()
 
         except AnVILAPIError as e:
             # If the API call failed for some other reason, rerender the page with the responses and show a message.
@@ -241,20 +241,35 @@ class AccountLink(LoginRequiredMixin, FormView):
             )
             return self.render_to_response(self.get_context_data(form=form))
 
-        if not account_exists:
+        if not email_entry_exists:
             messages.add_message(
                 self.request, messages.ERROR, self.message_account_does_not_exist
             )
             # Re-render the page with a message.
             return self.render_to_response(self.get_context_data(form=form))
 
-        # Account exists in ACM and is not verified
-        if (
-            models.Account.objects.filter(
-                email__iexact=email, date_verified__isnull=True
-            ).count()
-            == 1
-        ):
+        entry_query = models.UserEmailEntry.objects.filter(
+            email=email,
+            user=self.request.user,
+            date_verification_email_sent__isnull=False,
+            can_be_verified=True,
+        )
+
+        # Email doesn't exist in UserEmailEntry
+        if entry_query.count() == 0:
+            models.UserEmailEntry(
+                email=email,
+                user=self.request.user,
+                date_verification_email_sent=timezone.now(),
+            ).save()
+            self.send_mail(email)
+            messages.add_message(
+                self.request,
+                messages.SUCCESS,
+                "To complete linking the account, check your email for a verification link",
+            )
+        # User already attempted to link this email
+        else:
             self.send_mail(email)
             messages.add_message(
                 self.request,
@@ -262,44 +277,20 @@ class AccountLink(LoginRequiredMixin, FormView):
                 "This email is not verified, check your email for a verification link",
             )
 
-        # Account exists in ACM and is verified
-        elif (
-            models.Account.objects.filter(
-                email__iexact=email, date_verified__isnull=False
-            ).count()
-            == 1
-        ):
-            messages.add_message(
-                self.request, messages.ERROR, "Account is already linked to this email."
-            )
-
-        else:
-            self.send_mail(email)
-            models.Account(
-                user=self.request.user,
-                email=email,
-                status=models.Account.INACTIVE_STATUS,
-                is_service_account=False,
-            ).save()
-            messages.add_message(
-                self.request,
-                messages.ERROR,
-                "To complete linking the account, check your email for a verification link",
-            )
-
         return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
     def send_mail(self, email):
         mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
         user = self.request.user
+        email_entry = models.UserEmailEntry.objects.get(email=email)
         current_site = get_current_site(self.request)
         message = render_to_string(
             "anvil_consortium_manager/account_verification_email.html",
             {
                 "user": user,
                 "domain": current_site.domain,
-                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                "token": account_verification_token.make_token(user),
+                "uid": urlsafe_base64_encode(force_bytes(email_entry.pk)),
+                "token": account_verification_token.make_token(email_entry),
             },
         )
         to_email = email
@@ -307,31 +298,49 @@ class AccountLink(LoginRequiredMixin, FormView):
 
 
 class AccountLinkVerify(RedirectView):
+    message_user_already_linked = "You have already linked an AnVIL account."
+    message_link_invalid = "The link is invalid."
+    message_success = "Thank you for verifying your email."
+
     def get(self, request, uidb64, token):
 
         try:
+            request.user.account
+        except models.Account.DoesNotExist:
+            # User doesn't have a linked account
             uid = force_str(urlsafe_base64_decode(uidb64))
-            user = get_user_model().objects.get(pk=uid)
-            acct = models.Account.objects.get(user=user)
-        except (TypeError, ValueError, OverflowError, models.Account.DoesNotExist):
-            acct = None
+            email_entry = models.UserEmailEntry.objects.get(pk=uid)
+            user = get_user_model().objects.get(username=self.request.user)
+            if account_verification_token.check_token(email_entry, token):
+                acct = models.Account(
+                    user=self.request.user,
+                    email=email_entry.email,
+                    status=models.Account.ACTIVE_STATUS,
+                    is_service_account=False,
+                    date_verified=timezone.now(),
+                )
+                acct.save()
 
-        if acct is not None and account_verification_token.check_token(user, token):
-            if acct.date_verified is not None:
+                # if there are other emails attempts, set can_be_verified to false
+                models.UserEmailEntry.objects.filter(user=user).exclude(
+                    email=email_entry.email
+                ).update(can_be_verified=False)
+
+                # link account to this email entry
+                email_entry.verified_account = acct
+                email_entry.save()
                 messages.add_message(
-                    self.request, messages.SUCCESS, "The email is already verified."
+                    self.request, messages.SUCCESS, self.message_success
                 )
             else:
-                acct.status = models.Account.ACTIVE_STATUS
-                acct.date_verified = datetime.datetime.now()
-                acct.save()
                 messages.add_message(
-                    self.request,
-                    messages.SUCCESS,
-                    "Thank you for verifying your email.",
+                    self.request, messages.ERROR, self.message_link_invalid
                 )
         else:
-            messages.add_message(self.request, messages.ERROR, "The link is invalid.")
+            # user already linked the account
+            messages.add_message(
+                self.request, messages.ERROR, self.message_user_already_linked
+            )
 
         return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 

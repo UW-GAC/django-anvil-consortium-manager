@@ -1098,7 +1098,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         request.user = self.user
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.AccountLinkForm)
+        self.assertIsInstance(response.context_data["form"], forms.UserEmailEntryForm)
 
     def test_form_valid(self):
         """Posting valid data to the form works as expected."""
@@ -1109,15 +1109,15 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         self.assertEqual(response.status_code, 302)
-        # A new Account is created.
-        self.assertEqual(models.Account.objects.count(), 1)
-        # The new Account is linked to the logged-in user.
-        new_object = models.Account.objects.latest("pk")
+        # A new UserEmailEntry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 1)
+
+        # The new UserEmailentry is linked to the logged-in user.
+        new_object = models.UserEmailEntry.objects.latest("pk")
         self.assertEqual(new_object.email, email)
         self.assertEqual(new_object.user, self.user)
-        self.assertFalse(new_object.is_service_account)
-        self.assertIsNone(new_object.date_verified)
-        self.assertEqual(new_object.status, models.Account.INACTIVE_STATUS)
+        self.assertIsNotNone(new_object.date_verification_email_sent)
+        self.assertIsNone(new_object.verified_account)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -1270,7 +1270,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """The AnVIL account is already linked to a different user."""
         email = "test@example.com"
         other_user = User.objects.create_user(username="test2", password="test2")
-        other_account = factories.AccountFactory.create(
+        other_account = factories.UserEmailEntryFactory.create(
             email=email, user=other_user, status=models.Account.INACTIVE_STATUS
         )
         # No API call should be made, so do not add a mocked response.
