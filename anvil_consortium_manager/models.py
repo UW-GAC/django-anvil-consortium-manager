@@ -99,7 +99,9 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     either the user or the email that they verified.
     """
 
-    verified_account = models.ForeignKey("Account", null=True, on_delete=models.CASCADE)
+    verified_account = models.ForeignKey(
+        "Account", null=True, on_delete=models.SET_NULL
+    )
     """A link to the Account created when an email was verified for a user."""
 
     history = HistoricalRecords()
