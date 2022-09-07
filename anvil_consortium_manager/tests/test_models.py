@@ -1,3 +1,4 @@
+import datetime
 from unittest import skip
 
 from django.contrib.auth import get_user_model
@@ -220,6 +221,20 @@ class UserEmailEntryTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_verified(self):
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now() - datetime.timedelta(days=30),
+        )
+        instance.save()
+        account = factories.AccountFactory.create(email=instance.email, user=user)
+        instance.date_verified = timezone.now()
+        instance.verified_account = account
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
     def test_verified_account_deleted(self):
         """A verified account linked to the entry is deleted."""
         obj = factories.UserEmailEntryFactory.create(verified=True)
@@ -235,6 +250,12 @@ class UserEmailEntryTest(TestCase):
         user.delete()
         with self.assertRaises(UserEmailEntry.DoesNotExist):
             obj.refresh_from_db()
+
+    def test_user_deleted_with_verified_account(self):
+        """Cannot delete a user if it is attached to a verified account via a UserEmailEntry."""
+        obj = factories.UserEmailEntryFactory.create(verified=True)
+        with self.assertRaises(ProtectedError):
+            obj.user.delete()
 
 
 class ManagedGroupTest(TestCase):

@@ -53,8 +53,13 @@ class UserEmailEntryFactory(DjangoModelFactory):
 
     class Params:
         verified = Trait(
+            date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
             # Create an Account with the same user.
-            verified_account=SubFactory(AccountFactory, user=SelfAttribute("..user")),
+            verified_account=SubFactory(
+                AccountFactory,
+                user=SelfAttribute("..user"),
+                email=SelfAttribute("..email"),
+            ),
         )
 
 

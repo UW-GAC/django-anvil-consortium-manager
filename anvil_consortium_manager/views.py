@@ -152,7 +152,6 @@ class AccountDetail(
         context = super().get_context_data(**kwargs)
         # Add an indicator of whether the account is inactive.
         context["is_inactive"] = self.object.status == models.Account.INACTIVE_STATUS
-        context["date_verified"] = self.object.date_verified
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
         return context
@@ -345,7 +344,6 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
             email=email_entry.email,
             status=models.Account.ACTIVE_STATUS,
             is_service_account=False,
-            date_verified=timezone.now(),
         )
         account.full_clean()
         # Make sure an AnVIL account still exists.
@@ -367,6 +365,7 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
 
         # Link the account to the email_entry.
         email_entry.verified_account = account
+        email_entry.date_verified = timezone.now()
         email_entry.save()
 
         # Add a success message.

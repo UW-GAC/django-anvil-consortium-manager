@@ -97,6 +97,9 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     )
     """A link to the Account created when an email was verified for a user."""
 
+    date_verified = models.DateTimeField(null=True, blank=True)
+    """The date that the email was verified by the user."""
+
     history = HistoricalRecords()
     """Django simple history."""
 
@@ -137,7 +140,6 @@ class Account(TimeStampedModel, ActivatorModel):
         settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT
     )
     is_service_account = models.BooleanField()
-    date_verified = models.DateTimeField(null=True)
     history = HistoricalRecords()
 
     def __str__(self):
