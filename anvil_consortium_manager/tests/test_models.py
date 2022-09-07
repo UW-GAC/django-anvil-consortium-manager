@@ -171,6 +171,23 @@ class AccountTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_linked_user_deleted(self):
+        """Cannot delete a user if they have a linked account."""
+        user = factories.UserFactory.create()
+        factories.AccountFactory.create(user=user)
+        with self.assertRaises(ProtectedError):
+            user.delete()
+
+    @skip("decided to table this, but keep the test if we want to revisit.")
+    def test_linked_user_deleted_deactivated(self):
+        """The account is deactivated when the linked user is deleted."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.create(user=user)
+        user.delete()
+        account.refresh_from_db()
+        self.assertIsNone(account.user)
+        self.assertEqual(account.status, account.INACTIVE_STATUS)
+
 
 class UserEmailEntryTest(TestCase):
     """Tests for the UserEmailEntry model."""

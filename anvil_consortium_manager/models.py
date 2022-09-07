@@ -136,8 +136,12 @@ class Account(TimeStampedModel, ActivatorModel):
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
+    # Use on_delete=PROTECT here because additional things need to happen when an account is deleted,
+    # and we're not sure what that should be. Deactivate the account or and/or remove it from groups?
+    # I think it's unlikely we will be deleting users frequently, and we can revisit this if necessary.
+    # So table it for later.
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT
     )
     is_service_account = models.BooleanField()
     date_verified = models.DateTimeField(null=True)
