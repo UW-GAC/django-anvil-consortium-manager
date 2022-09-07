@@ -1496,6 +1496,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         # An email is sent.
         self.assertEqual(len(mail.outbox), 1)
+        # The email has the correct link generated from the lowercase email.
+        token = account_verification_token.make_token(email_entry)
+        self.assertIn(token, mail.outbox[0].body)
         # But it still does not have a verified account.
         self.assertIsNone(email_entry.verified_account)
         # History is added.
