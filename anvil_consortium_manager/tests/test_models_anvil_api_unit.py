@@ -118,6 +118,27 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.assertEqual(models.BillingProject.objects.count(), 0)
 
 
+class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the UserEmailEntry model that call the AnVIL API."""
+
+    def setUp(self):
+        super().setUp()
+        self.object = factories.UserEmailEntryFactory.create()
+        self.api_url = self.entry_point + "/api/proxyGroup/" + self.object.email
+
+    def test_anvil_account_exists_does_exist(self):
+        responses.add(responses.GET, self.api_url, status=200)
+        self.assertIs(self.object.anvil_account_exists(), True)
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_anvil_account_exists_does_not_exist(self):
+        responses.add(
+            responses.GET, self.api_url, status=404, json={"message": "mock message"}
+        )
+        self.assertIs(self.object.anvil_account_exists(), False)
+        responses.assert_call_count(self.api_url, 1)
+
+
 class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         super().setUp()
