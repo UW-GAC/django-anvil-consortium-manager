@@ -129,6 +129,16 @@ class UserEmailEntryFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_invalid_invalid_email(self):
+        """Form is invalid when an invalid email is entered."""
+        form_data = {"email": "foo"}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("valid email", form.errors["email"][0])
+
     def test_invalid_missing_email(self):
         """Form is invalid when missing email."""
         form_data = {}
