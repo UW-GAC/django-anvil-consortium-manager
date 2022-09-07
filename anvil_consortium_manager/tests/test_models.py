@@ -173,6 +173,8 @@ class AccountTest(TestCase):
 
 
 class UserEmailEntryTest(TestCase):
+    """Tests for the UserEmailEntry model."""
+
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         user = get_user_model().objects.create_user(username="testuser")
@@ -202,12 +204,20 @@ class UserEmailEntryTest(TestCase):
             instance2.save()
 
     def test_verified_account_deleted(self):
-        """A verified account is deleted."""
-        pass
+        """A verified account linked to the entry is deleted."""
+        obj = factories.UserEmailEntryFactory.create(verified=True)
+        account = obj.verified_account
+        account.delete()
+        obj.refresh_from_db()
+        self.assertIsNone(obj.verified_account)
 
     def test_user_deleted(self):
-        """The user linked to the account is deleted."""
-        pass
+        """The user linked to the entry is deleted."""
+        user = factories.UserFactory.create()
+        obj = factories.UserEmailEntryFactory.create(user=user)
+        user.delete()
+        with self.assertRaises(UserEmailEntry.DoesNotExist):
+            obj.refresh_from_db()
 
 
 class ManagedGroupTest(TestCase):
