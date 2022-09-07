@@ -53,7 +53,6 @@ class UserEmailEntryFactory(DjangoModelFactory):
 
     class Params:
         verified = Trait(
-            can_be_verified=False,
             # Create an Account with the same user.
             verified_account=SubFactory(AccountFactory, user=SelfAttribute("..user")),
         )

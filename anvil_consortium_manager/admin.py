@@ -23,7 +23,7 @@ class UserEmailEntryAdmin(SimpleHistoryAdmin):
         "user",
         "date_verification_email_sent",
     )
-    list_filter = ("can_be_verified",)
+    list_filter = ()
     search_fields = (
         "email",
         "user",

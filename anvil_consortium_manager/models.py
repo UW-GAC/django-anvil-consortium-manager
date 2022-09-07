@@ -92,13 +92,6 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     date_verification_email_sent = models.DateTimeField()
     """Most recent date that a verification email was sent."""
 
-    can_be_verified = models.BooleanField(default=True)
-    """Indicator of whether this UserEmailEntry can be verified.
-
-    This field will be set to False when a user verifies an email for all records associated with
-    either the user or the email that they verified.
-    """
-
     verified_account = models.ForeignKey(
         "Account", null=True, on_delete=models.SET_NULL
     )
