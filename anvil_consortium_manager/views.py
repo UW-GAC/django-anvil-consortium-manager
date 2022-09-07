@@ -188,6 +188,8 @@ class AccountImport(
 
 
 class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
+    """View where a user enter their AnVIL email to get an email verification link."""
+
     login_url = settings.LOGIN_URL
     template_name = "anvil_consortium_manager/user_email_entry.html"
     model = models.UserEmailEntry
@@ -291,6 +293,8 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
 
 class AccountLinkVerify(LoginRequiredMixin, RedirectView):
+    """View where a user can verify their email and create an Account object."""
+
     message_already_linked = "You have already linked an AnVIL account."
     message_link_invalid = "AnVIL account verification link is invalid."
     message_account_already_exists = (
