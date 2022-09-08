@@ -107,6 +107,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
                 fields=["email", "user"], name="unique_user_email_entry"
             )
         ]
+        verbose_name_plural = "user email entries"
 
     def __str__(self):
         """String method."""
