@@ -22,6 +22,7 @@ class UserEmailEntryAdmin(SimpleHistoryAdmin):
         "email",
         "user",
         "date_verification_email_sent",
+        "date_verified",
     )
     list_filter = ()
     search_fields = (
@@ -36,6 +37,7 @@ class AccountAdmin(SimpleHistoryAdmin):
 
     list_display = (
         "email",
+        "user",
         "is_service_account",
         "status",
     )
