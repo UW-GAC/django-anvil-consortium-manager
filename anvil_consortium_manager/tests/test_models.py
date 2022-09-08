@@ -82,6 +82,88 @@ class BillingProjectTest(TestCase):
             instance.save()
 
 
+class UserEmailEntryTest(TestCase):
+    """Tests for the UserEmailEntry model."""
+
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
+    def test_save_unique_email_case_insensitive(self):
+        """Email uniqueness does not depend on case."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        instance2 = UserEmailEntry(
+            email="EMAIL@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_verified(self):
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now() - datetime.timedelta(days=30),
+            date_verified=timezone.now(),
+        )
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
+    def test_verified_account_deleted(self):
+        """A verified account linked to the entry is deleted."""
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
+        account.delete()
+        # Make sure it still exists.
+        obj.refresh_from_db()
+        with self.assertRaises(ObjectDoesNotExist):
+            obj.verified_account
+
+    def test_user_deleted(self):
+        """The user linked to the entry is deleted."""
+        user = factories.UserFactory.create()
+        obj = factories.UserEmailEntryFactory.create(user=user)
+        user.delete()
+        with self.assertRaises(UserEmailEntry.DoesNotExist):
+            obj.refresh_from_db()
+
+    def test_cannot_delete_if_verified_account(self):
+        """Cannot delete a UserEmailEntry object if it is linked to an Account."""
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
+        with self.assertRaises(ProtectedError):
+            obj.delete()
+
+    def test_send_verification_emaiL(self):
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_verification_email("www.test.com")
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "account activation")
+        # The contents are correct.
+        email_body = mail.outbox[0].body
+        self.assertIn("http://www.test.com", email_body)
+        self.assertIn(email_entry.user.username, email_body)
+        self.assertIn(account_verification_token.make_token(email_entry), email_body)
+        self.assertIn(str(email_entry.uuid), email_body)
+
+
 class AccountTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
@@ -281,88 +363,6 @@ class AccountTest(TestCase):
         self.assertIn(
             Account.ERROR_MISMATCHED_USER, e.exception.error_dict["user"][0].message
         )
-
-
-class UserEmailEntryTest(TestCase):
-    """Tests for the UserEmailEntry model."""
-
-    def test_model_saving(self):
-        """Creation using the model constructor and .save() works."""
-        user = get_user_model().objects.create_user(username="testuser")
-        instance = UserEmailEntry(
-            email="email@example.com",
-            user=user,
-            date_verification_email_sent=timezone.now(),
-        )
-        instance.save()
-        self.assertIsInstance(instance, UserEmailEntry)
-
-    def test_save_unique_email_case_insensitive(self):
-        """Email uniqueness does not depend on case."""
-        user = get_user_model().objects.create_user(username="testuser")
-        instance = UserEmailEntry(
-            email="email@example.com",
-            user=user,
-            date_verification_email_sent=timezone.now(),
-        )
-        instance.save()
-        instance2 = UserEmailEntry(
-            email="EMAIL@example.com",
-            user=user,
-            date_verification_email_sent=timezone.now(),
-        )
-        with self.assertRaises(IntegrityError):
-            instance2.save()
-
-    def test_verified(self):
-        user = get_user_model().objects.create_user(username="testuser")
-        instance = UserEmailEntry(
-            email="email@example.com",
-            user=user,
-            date_verification_email_sent=timezone.now() - datetime.timedelta(days=30),
-            date_verified=timezone.now(),
-        )
-        instance.save()
-        self.assertIsInstance(instance, UserEmailEntry)
-
-    def test_verified_account_deleted(self):
-        """A verified account linked to the entry is deleted."""
-        account = factories.AccountFactory.create(verified=True)
-        obj = account.verified_email_entry
-        account.delete()
-        # Make sure it still exists.
-        obj.refresh_from_db()
-        with self.assertRaises(ObjectDoesNotExist):
-            obj.verified_account
-
-    def test_user_deleted(self):
-        """The user linked to the entry is deleted."""
-        user = factories.UserFactory.create()
-        obj = factories.UserEmailEntryFactory.create(user=user)
-        user.delete()
-        with self.assertRaises(UserEmailEntry.DoesNotExist):
-            obj.refresh_from_db()
-
-    def test_cannot_delete_if_verified_account(self):
-        """Cannot delete a UserEmailEntry object if it is linked to an Account."""
-        account = factories.AccountFactory.create(verified=True)
-        obj = account.verified_email_entry
-        with self.assertRaises(ProtectedError):
-            obj.delete()
-
-    def test_send_verification_emaiL(self):
-        email_entry = factories.UserEmailEntryFactory.create()
-        email_entry.send_verification_email("www.test.com")
-        # One message has been sent.
-        self.assertEqual(len(mail.outbox), 1)
-        # The subject is correct.
-        self.assertEqual(mail.outbox[0].subject, "account activation")
-        # The contents are correct.
-        email_body = mail.outbox[0].body
-        self.assertIn("http://www.test.com", email_body)
-        self.assertIn(email_entry.user.username, email_body)
-        self.assertIn(account_verification_token.make_token(email_entry), email_body)
-        self.assertIn(str(email_entry.uuid), email_body)
 
 
 class ManagedGroupTest(TestCase):
