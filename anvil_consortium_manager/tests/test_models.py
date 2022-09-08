@@ -2,6 +2,7 @@ import datetime
 from unittest import skip
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
@@ -19,6 +20,7 @@ from ..models import (
     WorkspaceAuthorizationDomain,
     WorkspaceGroupAccess,
 )
+from ..tokens import account_verification_token
 from . import factories
 
 
@@ -347,6 +349,20 @@ class UserEmailEntryTest(TestCase):
         obj = account.verified_email_entry
         with self.assertRaises(ProtectedError):
             obj.delete()
+
+    def test_send_verification_emaiL(self):
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_verification_email("www.test.com")
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "account activation")
+        # The contents are correct.
+        email_body = mail.outbox[0].body
+        self.assertIn("http://www.test.com", email_body)
+        self.assertIn(email_entry.user.username, email_body)
+        self.assertIn(account_verification_token.make_token(email_entry), email_body)
+        self.assertIn(str(email_entry.uuid), email_body)
 
 
 class ManagedGroupTest(TestCase):

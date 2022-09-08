@@ -2,11 +2,9 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.mail import send_mail
 from django.db import transaction
 from django.forms.forms import Form
 from django.http import HttpResponseRedirect
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import (
@@ -269,26 +267,9 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
         email_entry.date_verification_email_sent = timezone.now()
         email_entry.save()
-        self.send_mail(email_entry)
+        email_entry.send_verification_email(get_current_site(self.request).domain)
 
         return super().form_valid(form)
-
-    def send_mail(self, email_entry):
-        mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
-        user = self.request.user
-        # email_entry = models.UserEmailEntry.objects.get(email=email)
-        current_site = get_current_site(self.request)
-        message = render_to_string(
-            "anvil_consortium_manager/account_verification_email.html",
-            {
-                "user": user,
-                "domain": current_site.domain,
-                "uuid": email_entry.uuid,
-                "token": account_verification_token.make_token(email_entry),
-            },
-        )
-        to_email = email_entry.email
-        send_mail(mail_subject, message, None, [to_email], fail_silently=False)
 
 
 class AccountLinkVerify(LoginRequiredMixin, RedirectView):

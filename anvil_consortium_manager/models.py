@@ -2,7 +2,9 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.mail import send_mail
 from django.db import models, transaction
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
@@ -10,6 +12,7 @@ from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import exceptions
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
+from .tokens import account_verification_token
 
 
 class AnVILProjectManagerAccess(models.Model):
@@ -120,6 +123,24 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     def save(self, *args, **kwargs):
         self.email = self.email.lower()
         return super().save(*args, **kwargs)
+
+    def send_verification_email(self, domain):
+        """Send a verification email to the email on record.
+
+        Args:
+            domain (str): The domain of the current site, used to create the link.
+        """
+        mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
+        message = render_to_string(
+            "anvil_consortium_manager/account_verification_email.html",
+            {
+                "user": self.user,
+                "domain": domain,
+                "uuid": self.uuid,
+                "token": account_verification_token.make_token(self),
+            },
+        )
+        send_mail(mail_subject, message, None, [self.email], fail_silently=False)
 
 
 class Account(TimeStampedModel, ActivatorModel):
