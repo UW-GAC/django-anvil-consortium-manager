@@ -17,17 +17,6 @@ class BillingProjectFactory(DjangoModelFactory):
         django_get_or_create = ["name"]
 
 
-class AccountFactory(DjangoModelFactory):
-    """A factory for the Account model."""
-
-    email = Faker("email")
-    is_service_account = False
-
-    class Meta:
-        model = models.Account
-        django_get_or_create = ["email"]
-
-
 class UserFactory(DjangoModelFactory):
     """A factory to create a user."""
 
@@ -51,14 +40,38 @@ class UserEmailEntryFactory(DjangoModelFactory):
     class Meta:
         model = models.UserEmailEntry
 
+    # class Params:
+    #     verified = Trait(
+    #         date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
+    #         # Create an Account with the same user.
+    #         verified_account=SubFactory(
+    #             AccountFactory,
+    #             user=SelfAttribute("..user"),
+    #             email=SelfAttribute("..email"),
+    #         ),
+    #     )
+
+
+class AccountFactory(DjangoModelFactory):
+    """A factory for the Account model."""
+
+    email = Faker("email")
+    is_service_account = False
+
+    class Meta:
+        model = models.Account
+        django_get_or_create = ["email"]
+
     class Params:
         verified = Trait(
-            date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
-            # Create an Account with the same user.
-            verified_account=SubFactory(
-                AccountFactory,
-                user=SelfAttribute("..user"),
+            user=SubFactory(UserFactory),
+            verified_email_entry=SubFactory(
+                UserEmailEntryFactory,
                 email=SelfAttribute("..email"),
+                user=SelfAttribute("..user"),
+                date_verified=Faker(
+                    "date_time", tzinfo=timezone.get_current_timezone()
+                ),
             ),
         )
 

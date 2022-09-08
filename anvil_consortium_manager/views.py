@@ -344,8 +344,8 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
             email=email_entry.email,
             status=models.Account.ACTIVE_STATUS,
             is_service_account=False,
+            verified_email_entry=email_entry,
         )
-        account.full_clean()
         # Make sure an AnVIL account still exists.
         try:
             anvil_account_exists = account.anvil_exists()
@@ -361,12 +361,13 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
             )
             return super().get(request, *args, **kwargs)
 
-        account.save()
-
-        # Link the account to the email_entry.
-        email_entry.verified_account = account
+        # Mark the entry as verified.
         email_entry.date_verified = timezone.now()
         email_entry.save()
+
+        # Save the account
+        account.full_clean()
+        account.save()
 
         # Add a success message.
         messages.add_message(self.request, messages.ERROR, self.message_success)

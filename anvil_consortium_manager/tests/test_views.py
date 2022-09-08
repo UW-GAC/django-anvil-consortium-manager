@@ -6,7 +6,7 @@ import responses
 from django.conf import settings
 from django.contrib.auth.models import Permission, User
 from django.core import mail
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http.response import Http404
 from django.shortcuts import resolve_url
 from django.template.loader import render_to_string
@@ -1120,8 +1120,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             new_object.date_verification_email_sent, timestamp_lower_limit
         )
         self.assertLessEqual(new_object.date_verification_email_sent, timezone.now())
-        self.assertIsNone(new_object.verified_account)
         self.assertIsNone(new_object.date_verified)
+        # No account is linked.
+        with self.assertRaises(ObjectDoesNotExist):
+            new_object.verified_account
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -1178,10 +1180,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_get_user_already_linked_to_an_existing_verified_account(self):
         """View redirects with a message when the user already has an AnVIL account linked."""
-        email_entry = factories.UserEmailEntryFactory.create(
-            user=self.user, verified=True
-        )
-        # factories.AccountFactory.create(user=self.user)
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        email_entry = account.verified_email_entry
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -1202,9 +1202,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_user_already_linked_to_an_existing_verified_account(self):
         """View redirects with a message when the user already has an AnVIL account linked."""
-        email_entry = factories.UserEmailEntryFactory.create(
-            user=self.user, verified=True
-        )
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        email_entry = account.verified_email_entry
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -1252,7 +1251,8 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # An email is sent.
         self.assertEqual(len(mail.outbox), 1)
         # But it still does not have a verified account.
-        self.assertIsNone(email_entry.verified_account)
+        with self.assertRaises(ObjectDoesNotExist):
+            email_entry.verified_account
         # History is added.
         self.assertEqual(email_entry.history.count(), 2)
         self.assertEqual(email_entry.history.latest().history_type, "~")
@@ -1263,9 +1263,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """A different user already has already verified this email."""
         email = "test@example.com"
         other_user = User.objects.create_user(username="test2", password="test2")
-        other_email_entry = factories.UserEmailEntryFactory.create(
+        other_account = factories.AccountFactory.create(
             user=other_user, email=email, verified=True
         )
+        other_email_entry = other_account.verified_email_entry
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -1340,7 +1341,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
     def test_account_exists_with_email_but_not_linked_to_user(self):
         """An Account with this email exists but is not linked to a user."""
         email = "test@example.com"
-        User.objects.create_user(username="test2", password="test2")
         factories.AccountFactory.create(email=email)
         # No API call should be made, so do not add a mocked response.
         # Need a client because messages are added.
@@ -1359,7 +1359,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             str(messages[0]), views.AccountLink.message_account_already_exists
         )
 
-    def test_user_can_attempt_to_link_two_different_emails(self):
+    def test_user_can_enter_two_different_emails(self):
         """A user can attempt to link two different emails."""
         other_timestamp = timezone.now() - datetime.timedelta(days=30)
         other_email_entry = factories.UserEmailEntryFactory.create(
@@ -1387,20 +1387,15 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             new_object.date_verification_email_sent, timestamp_lower_limit
         )
         self.assertLessEqual(new_object.date_verification_email_sent, timezone.now())
-        self.assertIsNone(new_object.verified_account)
+        with self.assertRaises(ObjectDoesNotExist):
+            new_object.verified_account
         # An email is sent using the new email.
         self.assertEqual(len(mail.outbox), 1)
-        # The contents are correct.
-        body = render_to_string(
-            "anvil_consortium_manager/account_verification_email.html",
-            {
-                "user": self.user,
-                "domain": "testserver",
-                "uuid": new_object.uuid,
-                "token": account_verification_token.make_token(new_object),
-            },
+        # The contents have the correct link.
+        self.assertIn(str(new_object.uuid), mail.outbox[0].body)
+        self.assertIn(
+            account_verification_token.make_token(new_object), mail.outbox[0].body
         )
-        self.assertEqual(mail.outbox[0].body, body)
         # The timestamp on the other entry hasn't changed.
         other_email_entry.refresh_from_db()
         self.assertLess(
@@ -1444,20 +1439,15 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             new_object.date_verification_email_sent, timestamp_lower_limit
         )
         self.assertLessEqual(new_object.date_verification_email_sent, timezone.now())
-        self.assertIsNone(new_object.verified_account)
+        with self.assertRaises(ObjectDoesNotExist):
+            new_object.verified_account
         # An email is sent using the new object.
         self.assertEqual(len(mail.outbox), 1)
-        # The contents are correct.
-        body = render_to_string(
-            "anvil_consortium_manager/account_verification_email.html",
-            {
-                "user": self.user,
-                "domain": "testserver",
-                "uuid": new_object.uuid,
-                "token": account_verification_token.make_token(new_object),
-            },
+        # The contents have the correct link.
+        self.assertIn(str(new_object.uuid), mail.outbox[0].body)
+        self.assertIn(
+            account_verification_token.make_token(new_object), mail.outbox[0].body
         )
-        self.assertEqual(mail.outbox[0].body, body)
         # The other entry hasn't changed.
         other_email_entry.refresh_from_db()
         self.assertEqual(other_email_entry.email, email)
@@ -1505,10 +1495,13 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # An email is sent.
         self.assertEqual(len(mail.outbox), 1)
         # The email has the correct link generated from the lowercase email.
-        token = account_verification_token.make_token(email_entry)
-        self.assertIn(token, mail.outbox[0].body)
+        self.assertIn(str(email_entry.uuid), mail.outbox[0].body)
+        self.assertIn(
+            account_verification_token.make_token(email_entry), mail.outbox[0].body
+        )
         # But it still does not have a verified account.
-        self.assertIsNone(email_entry.verified_account)
+        with self.assertRaises(ObjectDoesNotExist):
+            email_entry.verified_account
         # History is added.
         self.assertEqual(email_entry.history.count(), 2)
         self.assertEqual(email_entry.history.latest().history_type, "~")
@@ -1593,6 +1586,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.email, email)
         self.assertEqual(new_object.user, self.user)
         self.assertFalse(new_object.is_service_account)
+        self.assertEqual(new_object.verified_email_entry, email_entry)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -1630,13 +1624,10 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     def test_this_user_already_verified_this_email(self):
         """The user has already verified their email."""
         email = "test@example.com"
-        account = factories.AccountFactory.create(user=self.user, email=email)
-        email_entry = factories.UserEmailEntryFactory.create(
-            user=self.user,
-            email=email,
-            verified_account=account,
-            verified=True,
+        account = factories.AccountFactory.create(
+            user=self.user, email=email, verified=True
         )
+        email_entry = account.verified_email_entry
         token = account_verification_token.make_token(email_entry)
         # No API calls are made, so do not add a mocked response.
         # Need a client because messages are added.
@@ -1660,14 +1651,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         """The user already verified a different email."""
         email = "test@example.com"
         existing_account = factories.AccountFactory.create(
-            user=self.user, email="foo@bar.com"
+            user=self.user, email="foo@bar.com", verified=True
         )
-        existing_email_entry = factories.UserEmailEntryFactory.create(
-            user=self.user,
-            email="foo@bar.com",
-            verified_account=existing_account,
-            verified=True,
-        )
+        existing_email_entry = existing_account.verified_email_entry
         email_entry = factories.UserEmailEntryFactory.create(
             user=self.user, email=email
         )
@@ -1721,12 +1707,12 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         email = "test@example.com"
         other_user = factories.UserFactory.create()
         # Create an email entry record for both users with the same email
-        other_account = factories.AccountFactory.create(user=other_user, email=email)
+        other_account = factories.AccountFactory.create(
+            user=other_user, email=email, verified=True
+        )
+        other_email_entry = other_account.verified_email_entry
         email_entry = factories.UserEmailEntryFactory.create(
             user=self.user, email=email
-        )
-        other_email_entry = factories.UserEmailEntryFactory.create(
-            user=other_user, email=email, verified=True
         )
         token = account_verification_token.make_token(email_entry)
         # No API calls are made, so do not add a mocked response.
@@ -1770,7 +1756,8 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # The email_entry object was not updated.
         email_entry.refresh_from_db()
         self.assertIsNone(email_entry.date_verified)
-        self.assertIsNone(email_entry.verified_account)
+        with self.assertRaises(ObjectDoesNotExist):
+            email_entry.verified_account
         # A message is added.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
@@ -1799,7 +1786,8 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # The email_entry object was not updated.
         email_entry.refresh_from_db()
         self.assertIsNone(email_entry.date_verified)
-        self.assertIsNone(email_entry.verified_account)
+        with self.assertRaises(ObjectDoesNotExist):
+            email_entry.verified_account
         # A message is added.
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])

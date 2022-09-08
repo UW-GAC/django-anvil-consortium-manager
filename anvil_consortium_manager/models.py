@@ -92,11 +92,6 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     date_verification_email_sent = models.DateTimeField()
     """Most recent date that a verification email was sent."""
 
-    verified_account = models.ForeignKey(
-        "Account", null=True, on_delete=models.SET_NULL
-    )
-    """A link to the Account created when an email was verified for a user."""
-
     date_verified = models.DateTimeField(null=True, blank=True)
     """The date that the email was verified by the user."""
 
@@ -140,6 +135,16 @@ class Account(TimeStampedModel, ActivatorModel):
         settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT
     )
     is_service_account = models.BooleanField()
+
+    verified_email_entry = models.OneToOneField(
+        UserEmailEntry,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="verified_account",
+    )
+    """The UserEmailEntry object used to verify the email, if the account was created by a user linking their email."""
+
     history = HistoricalRecords()
 
     def __str__(self):

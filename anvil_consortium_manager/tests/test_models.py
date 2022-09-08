@@ -2,7 +2,7 @@ import datetime
 from unittest import skip
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
@@ -227,21 +227,20 @@ class UserEmailEntryTest(TestCase):
             email="email@example.com",
             user=user,
             date_verification_email_sent=timezone.now() - datetime.timedelta(days=30),
+            date_verified=timezone.now(),
         )
-        instance.save()
-        account = factories.AccountFactory.create(email=instance.email, user=user)
-        instance.date_verified = timezone.now()
-        instance.verified_account = account
         instance.save()
         self.assertIsInstance(instance, UserEmailEntry)
 
     def test_verified_account_deleted(self):
         """A verified account linked to the entry is deleted."""
-        obj = factories.UserEmailEntryFactory.create(verified=True)
-        account = obj.verified_account
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
         account.delete()
+        # Make sure it still exists.
         obj.refresh_from_db()
-        self.assertIsNone(obj.verified_account)
+        with self.assertRaises(ObjectDoesNotExist):
+            obj.verified_account
 
     def test_user_deleted(self):
         """The user linked to the entry is deleted."""
@@ -251,11 +250,12 @@ class UserEmailEntryTest(TestCase):
         with self.assertRaises(UserEmailEntry.DoesNotExist):
             obj.refresh_from_db()
 
-    def test_user_deleted_with_verified_account(self):
-        """Cannot delete a user if it is attached to a verified account via a UserEmailEntry."""
-        obj = factories.UserEmailEntryFactory.create(verified=True)
+    def test_cannot_delete_if_verified_account(self):
+        """Cannot delete a UserEmailEntry object if it is linked to an Account."""
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
         with self.assertRaises(ProtectedError):
-            obj.user.delete()
+            obj.delete()
 
 
 class ManagedGroupTest(TestCase):
