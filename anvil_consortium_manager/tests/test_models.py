@@ -189,6 +189,97 @@ class AccountTest(TestCase):
         self.assertIsNone(account.user)
         self.assertEqual(account.status, account.INACTIVE_STATUS)
 
+    def test_clean_no_verified_email_entry_no_user(self):
+        """The clean method succeeds if there is no verified_email_entry and no user."""
+        account = factories.AccountFactory.build()
+        account.full_clean()
+
+    def test_clean_user_no_verified_email_entry(self):
+        """The clean method fails if there is a user but no verified_email_entry."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.build(user=user)
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("verified_email_entry", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["verified_email_entry"]), 1)
+        self.assertIn(
+            Account.ERROR_USER_WITHOUT_VERIFIED_EMAIL_ENTRY,
+            e.exception.error_dict["verified_email_entry"][0].message,
+        )
+
+    def test_clean_no_user_verified_email_entry(self):
+        """The clean method fails if there is no user but a verified_email_entry."""
+        email_entry = factories.UserEmailEntryFactory.create(
+            date_verified=timezone.now()
+        )
+        account = factories.AccountFactory.build(
+            email=email_entry.email, verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("user", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["user"]), 1)
+        self.assertIn(
+            Account.ERROR_VERIFIED_EMAIL_ENTRY_WITHOUT_USER,
+            e.exception.error_dict["user"][0].message,
+        )
+
+    def test_clean_unverified_verified_email_entry(self):
+        """The clean method fails if the verified_email_entry is actually unverified."""
+        email_entry = factories.UserEmailEntryFactory.create(date_verified=None)
+        account = factories.AccountFactory.build(
+            user=email_entry.user,
+            email=email_entry.email,
+            verified_email_entry=email_entry,
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("verified_email_entry", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["verified_email_entry"]), 1)
+        self.assertIn(
+            Account.ERROR_UNVERIFIED_VERIFIED_EMAIL_ENTRY,
+            e.exception.error_dict["verified_email_entry"][0].message,
+        )
+
+    def test_clean_account_verified_email_entry_email_mismatch(self):
+        """The clean method fails if the verified_email_entry and the account have different emails."""
+        email_entry = factories.UserEmailEntryFactory.create(
+            date_verified=timezone.now(), email="foo@bar.com"
+        )
+        account = factories.AccountFactory.build(
+            user=email_entry.user, email="bar@foo.com", verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("email", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["email"]), 1)
+        self.assertIn(
+            Account.ERROR_MISMATCHED_EMAIL, e.exception.error_dict["email"][0].message
+        )
+
+    def test_clean_account_verified_email_entry_user_mismatch(self):
+        """The clean method fails if the verified_email_entry and the account have different users."""
+        user_1 = factories.UserFactory.create()
+        user_2 = factories.UserFactory.create()
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=user_1, date_verified=timezone.now()
+        )
+        account = factories.AccountFactory.build(
+            user=user_2, email=email_entry.email, verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("user", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["user"]), 1)
+        self.assertIn(
+            Account.ERROR_MISMATCHED_USER, e.exception.error_dict["user"][0].message
+        )
+
 
 class UserEmailEntryTest(TestCase):
     """Tests for the UserEmailEntry model."""

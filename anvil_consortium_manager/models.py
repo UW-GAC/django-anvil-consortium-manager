@@ -125,6 +125,20 @@ class UserEmailEntry(TimeStampedModel, models.Model):
 class Account(TimeStampedModel, ActivatorModel):
     """A model to store information about AnVIL accounts."""
 
+    ERROR_USER_WITHOUT_VERIFIED_EMAIL_ENTRY = (
+        "Accounts with a user must have a verified_email_entry."
+    )
+    ERROR_VERIFIED_EMAIL_ENTRY_WITHOUT_USER = (
+        "Accounts with a verified_email_entry must have a user."
+    )
+    ERROR_UNVERIFIED_VERIFIED_EMAIL_ENTRY = (
+        "verified_email_entry must have date_verified."
+    )
+    ERROR_MISMATCHED_USER = "Account.user and verified_email_entry.user do not match."
+    ERROR_MISMATCHED_EMAIL = (
+        "Account.email and verified_email_entry.email do not match."
+    )
+
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
     # Use on_delete=PROTECT here because additional things need to happen when an account is deleted,
@@ -132,7 +146,7 @@ class Account(TimeStampedModel, ActivatorModel):
     # I think it's unlikely we will be deleting users frequently, and we can revisit this if necessary.
     # So table it for later.
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT
     )
     is_service_account = models.BooleanField()
 
@@ -149,6 +163,36 @@ class Account(TimeStampedModel, ActivatorModel):
 
     def __str__(self):
         return "{email}".format(email=self.email)
+
+    def clean(self):
+        """Additional custom cleaning steps.
+
+        * user and verified_email_entry: both or neither must be set.
+        * verified_email_entry must have a non-null date_verified value.
+        * user and verified_email_entry.user must match.
+        * email and verified_email_entry.email must match.
+        """
+
+        if self.user and not self.verified_email_entry:
+            raise ValidationError(
+                {"verified_email_entry": self.ERROR_USER_WITHOUT_VERIFIED_EMAIL_ENTRY}
+            )
+        elif self.verified_email_entry and not self.user:
+            raise ValidationError(
+                {"user": self.ERROR_VERIFIED_EMAIL_ENTRY_WITHOUT_USER}
+            )
+        elif self.verified_email_entry and self.user:
+            # Make sure the email entry is actually verified.
+            if not self.verified_email_entry.date_verified:
+                raise ValidationError(
+                    {"verified_email_entry": self.ERROR_UNVERIFIED_VERIFIED_EMAIL_ENTRY}
+                )
+            # Check that emails match.
+            if self.email != self.verified_email_entry.email:
+                raise ValidationError({"email": self.ERROR_MISMATCHED_EMAIL})
+            # Check that users match.
+            if self.user != self.verified_email_entry.user:
+                raise ValidationError({"user": self.ERROR_MISMATCHED_USER})
 
     def save(self, *args, **kwargs):
         self.email = self.email.lower()
