@@ -63,14 +63,14 @@
 
 <p>
   {% if show_deactivate_button %}
-    <a href="{% url 'anvil_consortium_manager:accounts:deactivate' pk=object.pk %}" class="btn btn-secondary" role="button">Deactivate account</a>
+    <a href="{% url 'anvil_consortium_manager:accounts:deactivate' uuid=object.uuid %}" class="btn btn-secondary" role="button">Deactivate account</a>
   {% endif %}
 
   {% if show_reactivate_button %}
-    <a href="{% url 'anvil_consortium_manager:accounts:reactivate' pk=object.pk %}" class="btn btn-secondary" role="button">Reactivate account</a>
+    <a href="{% url 'anvil_consortium_manager:accounts:reactivate' uuid=object.uuid %}" class="btn btn-secondary" role="button">Reactivate account</a>
   {% endif %}
 
-  <a href="{% url 'anvil_consortium_manager:accounts:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete from app</a>
+  <a href="{% url 'anvil_consortium_manager:accounts:delete' uuid=object.uuid %}" class="btn btn-danger" role="button">Delete from app</a>
 </p>
 
 {% endblock content %}

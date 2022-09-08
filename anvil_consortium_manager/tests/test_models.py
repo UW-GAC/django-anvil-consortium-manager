@@ -9,6 +9,7 @@ from django.db.utils import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
+from ..adapters.default import DefaultWorkspaceAdapter
 from ..models import (
     Account,
     BillingProject,
@@ -964,15 +965,21 @@ class WorkspaceTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         billing_project = factories.BillingProjectFactory.create()
-        instance = Workspace(billing_project=billing_project, name="my-name")
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
         instance.save()
         self.assertIsInstance(instance, Workspace)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        billing_project = factories.BillingProjectFactory.create(name="my-project")
-        instance = Workspace(billing_project=billing_project, name="my-name")
-        instance.save()
+        instance = factories.WorkspaceFactory.build(
+            billing_project__name="my-project",
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my-project/my-name")
 
@@ -1145,6 +1152,16 @@ class WorkspaceTest(TestCase):
         """get_anvil_url returns a string."""
         instance = factories.WorkspaceFactory.create()
         self.assertIsInstance(instance.get_anvil_url(), str)
+
+    def test_workspace_type_not_registered(self):
+        """A ValidationError is raised if the workspace_type is not a registered adapter type."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = factories.WorkspaceFactory.build(
+            billing_project=billing_project, workspace_type="foo"
+        )
+        with self.assertRaises(ValidationError) as e:
+            instance.clean_fields()
+        self.assertIn("not a registered adapter type", str(e.exception))
 
 
 class WorkspaceAuthorizationDomainTestCase(TestCase):
@@ -1551,7 +1568,10 @@ class WorkspaceGroupAccessTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         instance = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.READER,
+            can_compute=False,
         )
         self.assertIsInstance(instance, WorkspaceGroupAccess)
 
@@ -1577,6 +1597,43 @@ class WorkspaceGroupAccessTest(TestCase):
         """The get_absolute_url() method works."""
         instance = factories.WorkspaceGroupAccessFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
+
+    def test_clean_reader_can_compute(self):
+        """Clean method raises a ValidationError if a READER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupAccess(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.READER,
+            can_compute=True,
+        )
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_clean_writer_can_compute(self):
+        """Clean method succeeds if a WRITER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupAccess(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.WRITER,
+            can_compute=True,
+        )
+        instance.full_clean()
+
+    def test_clean_owner_can_compute(self):
+        """Clean method succeeds if an OWNER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupAccess(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupAccess.OWNER,
+            can_compute=True,
+        )
+        instance.full_clean()
 
     def test_history(self):
         """A simple history record is created when model is updated."""

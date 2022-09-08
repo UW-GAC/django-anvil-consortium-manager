@@ -6,26 +6,40 @@ app_name = "anvil_consortium_manager"
 
 billing_project_patterns = (
     [
-        path("<int:pk>", views.BillingProjectDetail.as_view(), name="detail"),
-        path("import/", views.BillingProjectImport.as_view(), name="import"),
         path("", views.BillingProjectList.as_view(), name="list"),
+        path("import/", views.BillingProjectImport.as_view(), name="import"),
+        path(
+            "autocomplete/",
+            views.BillingProjectAutocomplete.as_view(),
+            name="autocomplete",
+        ),
+        path("<slug:slug>/", views.BillingProjectDetail.as_view(), name="detail"),
     ],
     "billing_projects",
 )
 
 account_patterns = (
     [
-        path("<int:pk>", views.AccountDetail.as_view(), name="detail"),
+        path("<uuid:uuid>/", views.AccountDetail.as_view(), name="detail"),
         path("import/", views.AccountImport.as_view(), name="import"),
         path("all/", views.AccountList.as_view(), name="list"),
         path("active/", views.AccountActiveList.as_view(), name="list_active"),
         path("inactive/", views.AccountInactiveList.as_view(), name="list_inactive"),
-        path("<int:pk>/delete", views.AccountDelete.as_view(), name="delete"),
+        path("<uuid:uuid>/delete/", views.AccountDelete.as_view(), name="delete"),
         path(
-            "<int:pk>/deactivate", views.AccountDeactivate.as_view(), name="deactivate"
+            "<uuid:uuid>/deactivate/",
+            views.AccountDeactivate.as_view(),
+            name="deactivate",
         ),
         path(
-            "<int:pk>/reactivate", views.AccountReactivate.as_view(), name="reactivate"
+            "<uuid:uuid>/reactivate/",
+            views.AccountReactivate.as_view(),
+            name="reactivate",
+        ),
+        path(
+            "autocomplete/",
+            views.AccountAutocomplete.as_view(),
+            name="autocomplete",
         ),
         path("link/", views.AccountLink.as_view(), name="link"),
         path(
@@ -37,44 +51,128 @@ account_patterns = (
     "accounts",
 )
 
+member_group_patterns = (
+    [
+        path(
+            "<slug:child_group_slug>/",
+            views.GroupGroupMembershipDetail.as_view(),
+            name="detail",
+        ),
+        path(
+            "<slug:child_group_slug>/delete/",
+            views.GroupGroupMembershipDelete.as_view(),
+            name="delete",
+        ),
+    ],
+    "member_groups",
+)
+
+member_account_patterns = (
+    [
+        path(
+            "<uuid:account_uuid>/",
+            views.GroupAccountMembershipDetail.as_view(),
+            name="detail",
+        ),
+        path(
+            "<uuid:account_uuid>/delete/",
+            views.GroupAccountMembershipDelete.as_view(),
+            name="delete",
+        ),
+    ],
+    "member_accounts",
+)
+
 managed_group_patterns = (
     [
-        path("<int:pk>", views.ManagedGroupDetail.as_view(), name="detail"),
-        path("new/", views.ManagedGroupCreate.as_view(), name="new"),
         path("", views.ManagedGroupList.as_view(), name="list"),
-        path("<int:pk>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
+        path("new/", views.ManagedGroupCreate.as_view(), name="new"),
+        path(
+            "autocomplete/",
+            views.ManagedGroupAutocomplete.as_view(),
+            name="autocomplete",
+        ),
+        path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
+        path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
+        path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
+        path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
     ],
     "managed_groups",
 )
 
+workspace_access_patterns = (
+    [
+        path(
+            "<slug:group_slug>/",
+            views.WorkspaceGroupAccessDetail.as_view(),
+            name="detail",
+        ),
+        path(
+            "<slug:group_slug>/update/",
+            views.WorkspaceGroupAccessUpdate.as_view(),
+            name="update",
+        ),
+        path(
+            "<slug:group_slug>/delete/",
+            views.WorkspaceGroupAccessDelete.as_view(),
+            name="delete",
+        ),
+    ],
+    "access",
+)
+
 workspace_patterns = (
     [
-        path("<int:pk>", views.WorkspaceDetail.as_view(), name="detail"),
-        path("new/", views.WorkspaceCreate.as_view(), name="new"),
-        path("import/", views.WorkspaceImport.as_view(), name="import"),
-        path("", views.WorkspaceList.as_view(), name="list"),
-        path("<int:pk>/delete", views.WorkspaceDelete.as_view(), name="delete"),
+        path("", views.WorkspaceList.as_view(), name="list_all"),
+        path(
+            "autocomplete/",
+            views.WorkspaceAutocomplete.as_view(),
+            name="autocomplete",
+        ),
+        path(
+            "types/<str:workspace_type>/",
+            views.WorkspaceListByType.as_view(),
+            name="list",
+        ),
+        path(
+            "types/<str:workspace_type>/new/",
+            views.WorkspaceCreate.as_view(),
+            name="new",
+        ),
+        path(
+            "types/<str:workspace_type>/import/",
+            views.WorkspaceImport.as_view(),
+            name="import",
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
+            views.WorkspaceDelete.as_view(),
+            name="delete",
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/",
+            views.WorkspaceDetail.as_view(),
+            name="detail",
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/access/",
+            include(workspace_access_patterns),
+        ),
     ],
     "workspaces",
 )
 
 group_group_membership_patterns = (
     [
-        path("<int:pk>", views.GroupGroupMembershipDetail.as_view(), name="detail"),
-        path("new/", views.GroupGroupMembershipCreate.as_view(), name="new"),
         path("", views.GroupGroupMembershipList.as_view(), name="list"),
-        path(
-            "<int:pk>/delete",
-            views.GroupGroupMembershipDelete.as_view(),
-            name="delete",
-        ),
+        path("new/", views.GroupGroupMembershipCreate.as_view(), name="new"),
     ],
     "group_group_membership",
 )
 
 group_account_membership_patterns = (
     [
-        path("<int:pk>", views.GroupAccountMembershipDetail.as_view(), name="detail"),
+        # Note: these URLs will be removed and/or reworked in the future.
         path("new/", views.GroupAccountMembershipCreate.as_view(), name="new"),
         path("all/", views.GroupAccountMembershipList.as_view(), name="list"),
         path(
@@ -87,28 +185,15 @@ group_account_membership_patterns = (
             views.GroupAccountMembershipInactiveList.as_view(),
             name="list_inactive",
         ),
-        path(
-            "<int:pk>/delete",
-            views.GroupAccountMembershipDelete.as_view(),
-            name="delete",
-        ),
     ],
     "group_account_membership",
 )
 
 workspace_group_access_patterns = (
     [
-        path("<int:pk>", views.WorkspaceGroupAccessDetail.as_view(), name="detail"),
-        path("new/", views.WorkspaceGroupAccessCreate.as_view(), name="new"),
+        # Note: these URLs will be removed and/or reworked in the future.
         path("", views.WorkspaceGroupAccessList.as_view(), name="list"),
-        path(
-            "<int:pk>/delete", views.WorkspaceGroupAccessDelete.as_view(), name="delete"
-        ),
-        path(
-            "<int:pk>/update",
-            views.WorkspaceGroupAccessUpdate.as_view(),
-            name="update",
-        ),
+        path("new/", views.WorkspaceGroupAccessCreate.as_view(), name="new"),
     ],
     "workspace_group_access",
 )

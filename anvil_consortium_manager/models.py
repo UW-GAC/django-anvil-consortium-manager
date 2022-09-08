@@ -11,6 +11,7 @@ from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import exceptions
+from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 from .tokens import account_verification_token
 
@@ -47,7 +48,8 @@ class BillingProject(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:billing_projects:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:billing_projects:detail",
+            kwargs={"slug": self.name},
         )
 
     def anvil_exists(self):
@@ -168,6 +170,13 @@ class Account(TimeStampedModel, ActivatorModel):
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
+    """Email associated with this account on AnVIL."""
+
+    is_service_account = models.BooleanField()
+    """Indicator of whether this account is a service account or a user account."""
+
+    uuid = models.UUIDField(default=uuid.uuid4)
+    """UUID for use in urls."""
     # Use on_delete=PROTECT here because additional things need to happen when an account is deleted,
     # and we're not sure what that should be. Deactivate the account or and/or remove it from groups?
     # I think it's unlikely we will be deleting users frequently, and we can revisit this if necessary.
@@ -187,8 +196,14 @@ class Account(TimeStampedModel, ActivatorModel):
     """The UserEmailEntry object used to verify the email, if the account was created by a user linking their email."""
 
     history = HistoricalRecords()
+    """Django simple history record for this model."""
 
     def __str__(self):
+        """String method.
+
+        Returns:
+            A string representing the object.
+        """
         return "{email}".format(email=self.email)
 
     def clean(self):
@@ -222,12 +237,18 @@ class Account(TimeStampedModel, ActivatorModel):
                 raise ValidationError({"user": self.ERROR_MISMATCHED_USER})
 
     def save(self, *args, **kwargs):
+        """Save method to set the email address to lowercase before saving."""
         self.email = self.email.lower()
         return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
+        """Get the absolute url for this object.
+
+        Returns:
+            A string with the url to the detail page for this object.
+        """
         return reverse(
-            "anvil_consortium_manager:accounts:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:accounts:detail", kwargs={"uuid": self.uuid}
         )
 
     def deactivate(self):
@@ -246,7 +267,11 @@ class Account(TimeStampedModel, ActivatorModel):
             membership.anvil_create()
 
     def anvil_exists(self):
-        """Check if this account exists on AnVIL."""
+        """Check if this account exists on AnVIL.
+
+        Returns:
+            Boolean indicator of whether ``email`` is associated with an account on AnVIL.
+        """
         try:
             AnVILAPIClient().get_proxy_group(self.email)
         except AnVILAPIError404:
@@ -254,7 +279,7 @@ class Account(TimeStampedModel, ActivatorModel):
         return True
 
     def anvil_remove_from_groups(self):
-        """From user from all groups on AnVIL."""
+        """Remove this account from all groups on AnVIL."""
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
@@ -272,7 +297,7 @@ class ManagedGroup(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:managed_groups:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:managed_groups:detail", kwargs={"slug": self.name}
         )
 
     def get_email(self):
@@ -382,6 +407,11 @@ class Workspace(TimeStampedModel):
     authorization_domains = models.ManyToManyField(
         "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
     )
+
+    # If this doesn't work easily, we could switch to using generic relationships.
+    workspace_type = models.CharField(max_length=255)
+    """Workspace data type as indicated in an adapter."""
+
     history = HistoricalRecords()
 
     class Meta:
@@ -390,6 +420,18 @@ class Workspace(TimeStampedModel):
                 fields=["billing_project", "name"], name="unique_workspace"
             )
         ]
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+        # Check that workspace type is a registered adapter type.
+        if not exclude or "workspace_type" not in exclude:
+            registered_adapters = workspace_adapter_registry.get_registered_adapters()
+            if self.workspace_type not in registered_adapters:
+                raise ValidationError(
+                    {
+                        "workspace_type": "Value ``workspace_type`` is not a registered adapter type."
+                    }
+                )
 
     def clean(self):
         super().clean()
@@ -414,7 +456,11 @@ class Workspace(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:workspaces:detail", kwargs={"pk": self.pk}
+            "anvil_consortium_manager:workspaces:detail",
+            kwargs={
+                "billing_project_slug": self.billing_project.name,
+                "workspace_slug": self.name,
+            },
         )
 
     def get_full_name(self):
@@ -452,7 +498,7 @@ class Workspace(TimeStampedModel):
         AnVILAPIClient().delete_workspace(self.billing_project.name, self.name)
 
     @classmethod
-    def anvil_import(cls, billing_project_name, workspace_name):
+    def anvil_import(cls, billing_project_name, workspace_name, workspace_type):
         """Create a new instance for a workspace that already exists on AnVIL.
 
         Methods calling this should handle AnVIL API exceptions appropriately.
@@ -490,7 +536,7 @@ class Workspace(TimeStampedModel):
 
                 # Do not set the Billing yet, since we might be importing it or creating it later.
                 # This is only to validate the other fields.
-                workspace = cls(name=workspace_name)
+                workspace = cls(name=workspace_name, workspace_type=workspace_type)
                 workspace.clean_fields(exclude="billing_project")
                 # At this point, they should be valid objects.
 
@@ -515,12 +561,8 @@ class Workspace(TimeStampedModel):
                             billing_project_name
                         )
                     except AnVILAPIError404:
-                        # We are not users, but we want a record of it anyway.
-                        # We may want to modify BillingProject.anvil_import to throw a better exception here.
-                        billing_project = BillingProject(
-                            name=billing_project_name, has_app_as_user=False
-                        )
-                        billing_project.full_clean()
+                        # Use the temporary billing project we previously created above.
+                        billing_project = temporary_billing_project
                         billing_project.save()
 
                 # Finally, set the workspace's billing project to the existing or newly-added BillingProject.
@@ -552,6 +594,21 @@ class Workspace(TimeStampedModel):
             raise
 
         return workspace
+
+
+class BaseWorkspaceData(models.Model):
+    """Abstract base class to subclass when creating a custom WorkspaceData model."""
+
+    workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+
+class DefaultWorkspaceData(BaseWorkspaceData):
+    """Default empty WorkspaceData model."""
+
+    pass
 
 
 class WorkspaceAuthorizationDomain(TimeStampedModel):
@@ -596,6 +653,8 @@ class GroupGroupMembership(TimeStampedModel):
     history = HistoricalRecords()
 
     class Meta:
+        verbose_name = "group-group membership"
+
         constraints = [
             models.UniqueConstraint(
                 fields=["parent_group", "child_group"],
@@ -610,8 +669,11 @@ class GroupGroupMembership(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:group_group_membership:detail",
-            kwargs={"pk": self.pk},
+            "anvil_consortium_manager:managed_groups:member_groups:detail",
+            kwargs={
+                "parent_group_slug": self.parent_group.name,
+                "child_group_slug": self.child_group.name,
+            },
         )
 
     def clean(self):
@@ -667,6 +729,7 @@ class GroupAccountMembership(TimeStampedModel):
     history = HistoricalRecords()
 
     class Meta:
+        verbose_name = "group-account membership"
         constraints = [
             models.UniqueConstraint(
                 fields=["account", "group"], name="unique_group_account_membership"
@@ -682,8 +745,8 @@ class GroupAccountMembership(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse(
-            "anvil_consortium_manager:group_account_membership:detail",
-            kwargs={"pk": self.pk},
+            "anvil_consortium_manager:managed_groups:member_accounts:detail",
+            kwargs={"group_slug": self.group.name, "account_uuid": self.account.uuid},
         )
 
     def anvil_create(self):
@@ -703,21 +766,38 @@ class WorkspaceGroupAccess(TimeStampedModel):
     """A model to store which groups have access to a workspace."""
 
     OWNER = "OWNER"
+    """Constant indicating "OWNER" access."""
+
     WRITER = "WRITER"
+    """Constant indicating "WRITER" access."""
+
     READER = "READER"
+    """Constant indicating "READER" access."""
 
     ACCESS_CHOICES = [
         (OWNER, "Owner"),
         (WRITER, "Writer"),
         (READER, "Reader"),
     ]
+    """Allowed choices for the ``access`` field."""
 
     group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
+    """ManagedGroup that has access to the Workspace in ``workspace``."""
+
     workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
+    """Workspace that the ManagedGroup ``group`` has access to."""
+
     access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
+    """Access type that this ``ManagedGroup`` has to this ``Workspace``."""
+
+    can_compute = models.BooleanField(default=False)
+    """Indicator of whether the group has ``can_compute`` permission. "READERS" cannot be granted compute permission."""
+
     history = HistoricalRecords()
+    """Historical records from django-simple-history."""
 
     class Meta:
+        verbose_name_plural = "workspace group access"
         constraints = [
             models.UniqueConstraint(
                 fields=["group", "workspace"], name="unique_workspace_group_access"
@@ -725,40 +805,73 @@ class WorkspaceGroupAccess(TimeStampedModel):
         ]
 
     def __str__(self):
+        """String method for this object.
+
+        Returns:
+            str: a string description of the object."""
         return "{group} with {access} to {workspace}".format(
             group=self.group,
             access=self.access,
             workspace=self.workspace,
         )
 
+    def clean(self):
+        """Perform model cleaning steps.
+
+        This method checks that can_compute is not set to ``True`` for "READERS".
+        """
+
+        if self.can_compute & (self.access == self.READER):
+            raise ValidationError("READERs cannot be granted compute privileges.")
+
     def get_absolute_url(self):
+        """Get the absolute url for this object.
+
+        Returns:
+            str: The absolute url for the object."""
         return reverse(
-            "anvil_consortium_manager:workspace_group_access:detail",
-            kwargs={"pk": self.pk},
+            "anvil_consortium_manager:workspaces:access:detail",
+            kwargs={
+                "billing_project_slug": self.workspace.billing_project.name,
+                "workspace_slug": self.workspace.name,
+                "group_slug": self.group.name,
+            },
         )
 
     def anvil_create_or_update(self):
+        """Create or update the access to ``workspace`` for the ``group`` on AnVIL.
+
+        Raises:
+            exceptions.AnVILGroupNotFound: The group that the workspace is being shared with does not exist on AnVIL.
+        """
         acl_updates = [
             {
                 "email": self.group.get_email(),
                 "accessLevel": self.access,
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": self.can_compute,
             }
         ]
-        AnVILAPIClient().update_workspace_acl(
+        response = AnVILAPIClient().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )
+        if len(response.json()["usersNotFound"]) > 0:
+            raise exceptions.AnVILGroupNotFound(
+                "{} not found on AnVIL".format(self.group)
+            )
 
     def anvil_delete(self):
+        """Remove the access to ``workspace`` for the ``group`` on AnVIL."""
+
         acl_updates = [
             {
                 "email": self.group.get_email(),
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": self.can_compute,
             }
         ]
+        # It is ok if we try to remove access for a group that doesn't exist on AnVIL.
         AnVILAPIClient().update_workspace_acl(
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )

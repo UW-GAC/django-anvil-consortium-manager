@@ -39,6 +39,8 @@ ROOT_URLCONF = "anvil_consortium_manager.tests.settings.urls"
 # APPS
 # ------------------------------------------------------------------------------
 INSTALLED_APPS = [
+    "dal",
+    "dal_select2",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -52,6 +54,8 @@ INSTALLED_APPS = [
     "fontawesomefree",  # icons
     # Your stuff: custom apps go here
     "anvil_consortium_manager",
+    # Test app
+    "anvil_consortium_manager.tests.adapter_app",
 ]
 
 
@@ -89,6 +93,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "anvil_consortium_manager.context_processors.workspace_adapter",
             ],
             "debug": True,  # Required for coverage to work.
         },
@@ -119,3 +124,7 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap4.html"
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
 ANVIL_ACCOUNT_LINK_REDIRECT = "test_home"
 ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "account activation"
+
+ANVIL_WORKSPACE_ADAPTERS = [
+    "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+]

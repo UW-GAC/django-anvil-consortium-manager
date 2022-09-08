@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from .. import models, tables
+from ..adapters.default import DefaultWorkspaceAdapter
 from . import factories
 
 
@@ -98,6 +99,20 @@ class ManagedGroupTableTest(TestCase):
         self.assertEqual(table.rows[1].get_cell("number_accounts"), 1)
         self.assertEqual(table.rows[2].get_cell("number_accounts"), 2)
 
+    def test_number_of_groups_not_managed_by_app(self):
+        """Table displays a --- for number of groups if the group is not managed by the app."""
+        group = self.model_factory.create(is_managed_by_app=False)
+        factories.GroupGroupMembershipFactory.create_batch(2, parent_group=group)
+        table = self.table_class(self.model.objects.filter(pk=group.pk))
+        self.assertEqual(table.rows[0].get_cell("number_groups"), table.default)
+
+    def test_number_of_accounts_not_managed_by_app(self):
+        """Table displays a --- for number of accounts if the group is not managed by the app."""
+        group = self.model_factory.create(is_managed_by_app=False)
+        factories.GroupAccountMembershipFactory.create_batch(2, group=group)
+        table = self.table_class(self.model.objects.filter(pk=group.pk))
+        self.assertEqual(table.rows[0].get_cell("number_accounts"), table.default)
+
 
 class WorkspaceTableTest(TestCase):
     model = models.Workspace
@@ -129,6 +144,14 @@ class WorkspaceTableTest(TestCase):
         self.assertEqual(table.rows[0].get_cell("number_groups"), 0)
         self.assertEqual(table.rows[1].get_cell("number_groups"), 1)
         self.assertEqual(table.rows[2].get_cell("number_groups"), 2)
+
+    def test_workspace_type_display(self):
+        """workspace_type field shows the name of the workspace in the adapter."""
+        workspace_type = DefaultWorkspaceAdapter().get_type()
+        workspace_name = DefaultWorkspaceAdapter().get_name()
+        self.model_factory.create(workspace_type=workspace_type)
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(table.rows[0].get_cell("workspace_type"), workspace_name)
 
 
 class GroupGroupMembershipTableTest(TestCase):

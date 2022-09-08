@@ -23,8 +23,10 @@
     ================================================== -->
     {# Placed at the top of the document so pages load faster with defer #}
     {% block javascript %}
-      <!-- Bootstrap JS -->
-      <script defer src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.min.js" integrity="sha512-OvBgP9A2JBgiRad/mM36mkzXSXaJE9BEIENnVEmeZdITvwT09xnxLtT4twkCa8m/loMbPHsvPl0T8lRGVBwjlQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+      <!-- Bootstrap JS and its dependencies-->
+      <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
       <!-- Your stuff: Third-party javascript libraries go here -->
 
       <!-- place project specific Javascript in this file -->
@@ -33,11 +35,39 @@
       <!-- font awesome icons -->
       <script src="{% static 'fontawesomefree/js/all.min.js' %}"></script>
 
+      <!-- select2 bootstrap5 theme -->
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" />
+
     {% endblock javascript %}
 
   </head>
 
   <body>
+
+    <nav class="navbar navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'anvil_consortium_manager:index' %}">Demo site</a>
+
+        <!-- Login links -->
+        <ul class="navbar-nav  mb-2 ms-md-auto">
+          {% if request.user.is_authenticated %}
+            {# show logout #}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'logout' %}"><span class="fa-solid fa-right-from-bracket"></span> Logout {{ user.username }}</a>
+            </li>
+          {% else %}
+            {# show login #}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'login' %}"><span class="fa-solid fa-right-to-bracket"></span> Login</a>
+            </li>
+          {% endif %}
+        </ul>
+
+      </div>
+    </nav>
+
+    {% block extra_navbar %}
+    {% endblock extra_navbar %}
 
     <div class="container">
 

@@ -1,15 +1,17 @@
-{% block navbar %}
+  <nav id="nav-acm" class="navbar navbar-expand-lg navbar-light" aria-label="AnVIL Consortium Manager navbar">
+    <div class="container">
 
-<div class="mb-1">
-  <nav class="navbar navbar-expand-md navbar-light bg-light">
-    <div class="container-fluid">
-      <button class="navbar-toggler navbar-toggler-right" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <a class="navbar-brand" href="{% url 'anvil_consortium_manager:index' %}">ACM</a>
+
+      <button class="navbar-toggler navbar-toggler-right" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAnvilConsortiumManager" aria-controls="navbarAnvilConsortiumManager" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-      <a class="navbar-brand" href="{% url 'anvil_consortium_manager:index' %}">AnVIL Consortium Manager</a>
 
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav mr-auto">
+      <div class="collapse navbar-collapse" id="navbarAnvilConsortiumManager">
+
+        <ul class="navbar-nav">
+
+          {% block anvil_consortium_manager_nav_items %}
 
           <li class="nav-item">
               <a class="nav-link" href="{% url 'anvil_consortium_manager:status' %}">AnVIL status</a>
@@ -75,42 +77,31 @@
               Workspaces
             </a>
             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:list' %}">List workspaces</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:new' %}">Add a workspace</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:import' %}">Import a workspace from AnVIL</a>
-              </li>
+
+              {% for workspace_type, workspace_name in registered_workspaces.items %}
+                <li class="dropdown-item"><b>{{ workspace_name }}s</b>
+                <li>
+                  <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:list' workspace_type %}">List workspaces</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:new' workspace_type %}">Create a new workspace</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:import' workspace_type %}">Import a workspace from AnVIL</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+              {% endfor %}
+
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_access:list' %}">Workspace access</a>
               </li>
             </ul>
           </li>
-        </ul>
 
+          {% endblock anvil_consortium_manager_nav_items %}
 
-        <!-- Login links -->
-        <ul class="navbar-nav  mb-2 ms-md-auto">
-          {% if request.user.is_authenticated %}
-            {# show logout #}
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'logout' %}"><span class="fa-solid fa-right-from-bracket"></span> Logout {{ user.username }}</a>
-            </li>
-          {% else %}
-            {# show login #}
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'login' %}"><span class="fa-solid fa-right-to-bracket"></span> Login</a>
-            </li>
-          {% endif %}
         </ul>
 
       </div>
     </div>
   </nav>
-
-</div>
-
-{% endblock navbar %}

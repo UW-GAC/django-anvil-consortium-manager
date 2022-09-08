@@ -3,7 +3,8 @@ from django.utils import timezone
 from factory import Faker, SelfAttribute, Sequence, SubFactory, Trait
 from factory.django import DjangoModelFactory
 
-from anvil_consortium_manager import models
+from .. import models
+from ..adapters.default import DefaultWorkspaceAdapter
 
 
 class BillingProjectFactory(DjangoModelFactory):
@@ -91,6 +92,7 @@ class WorkspaceFactory(DjangoModelFactory):
 
     billing_project = SubFactory(BillingProjectFactory)
     name = Faker("slug")
+    workspace_type = DefaultWorkspaceAdapter().get_type()
 
     class Meta:
         model = models.Workspace
@@ -127,6 +129,7 @@ class WorkspaceGroupAccessFactory(DjangoModelFactory):
     workspace = SubFactory(WorkspaceFactory)
     group = SubFactory(ManagedGroupFactory)
     access = models.WorkspaceGroupAccess.READER
+    can_compute = False
 
     class Meta:
         model = models.WorkspaceGroupAccess
