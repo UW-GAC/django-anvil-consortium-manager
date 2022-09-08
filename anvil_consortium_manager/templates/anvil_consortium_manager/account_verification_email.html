@@ -3,5 +3,5 @@ Hi {{ user.username }},
 
 Please click on the link to verify your email for AnVIL Consortium Manager:
 
-http://{{ domain }}{% url 'anvil_consortium_manager:accounts:verify' uuid=uuid token=token %}
+{{ verification_link }}
 {% endautoescape %}

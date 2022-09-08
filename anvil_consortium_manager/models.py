@@ -131,13 +131,18 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             domain (str): The domain of the current site, used to create the link.
         """
         mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
+        url_subdirectory = "http://{domain}{url}".format(
+            domain=domain,
+            url=reverse(
+                "anvil_consortium_manager:accounts:verify",
+                args=[self.uuid, account_verification_token.make_token(self)],
+            ),
+        )
         message = render_to_string(
             "anvil_consortium_manager/account_verification_email.html",
             {
                 "user": self.user,
-                "domain": domain,
-                "uuid": self.uuid,
-                "token": account_verification_token.make_token(self),
+                "verification_link": url_subdirectory,
             },
         )
         send_mail(mail_subject, message, None, [self.email], fail_silently=False)

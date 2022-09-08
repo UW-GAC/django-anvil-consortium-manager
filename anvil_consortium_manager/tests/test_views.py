@@ -9,7 +9,6 @@ from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http.response import Http404
 from django.shortcuts import resolve_url
-from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -1166,17 +1165,12 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
         self.assertEqual(mail.outbox[0].subject, "account activation")
-        # The contents are correct.
-        body = render_to_string(
-            "anvil_consortium_manager/account_verification_email.html",
-            {
-                "user": self.user,
-                "domain": "testserver",
-                "uuid": email_entry.uuid,
-                "token": account_verification_token.make_token(email_entry),
-            },
+        url = "http://testserver" + reverse(
+            "anvil_consortium_manager:accounts:verify",
+            args=[email_entry.uuid, account_verification_token.make_token(email_entry)],
         )
-        self.assertEqual(mail.outbox[0].body, body)
+        # The body contains the correct url.
+        self.assertIn(url, mail.outbox[0].body)
 
     def test_get_user_already_linked_to_an_existing_verified_account(self):
         """View redirects with a message when the user already has an AnVIL account linked."""
