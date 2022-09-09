@@ -1,7 +1,14 @@
 {% autoescape off %}
 Hi {{ user.username }},
 
-Please click on the link to verify your email for AnVIL Consortium Manager:
+{% block before_link %}
+Please click on the link to verify your AnVIL account email:
+{% endblock before_link %}
 
 {{ verification_link }}
+
+{% block after_link %}
+If you did try not to link your AnVIL account in AnVIL Consortium Manager, you can ignore this email.
+{% endblock after_link %}
+
 {% endautoescape %}
