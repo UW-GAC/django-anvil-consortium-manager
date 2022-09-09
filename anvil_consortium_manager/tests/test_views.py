@@ -885,6 +885,14 @@ class AccountDetailTest(TestCase):
         self.assertIn("show_reactivate_button", context)
         self.assertTrue(context["show_reactivate_button"])
 
+    def test_template_verified_account(self):
+        """The template renders with a verified account."""
+        obj = factories.AccountFactory.create(verified=True)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.uuid))
+        self.assertEqual(response.status_code, 200)
+
     def test_view_status_code_with_existing_object_service_account(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.AccountFactory.create(is_service_account=True)

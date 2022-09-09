@@ -1,5 +1,3 @@
-from unittest import skip
-
 import responses
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -310,20 +308,6 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # API was called.
         responses.assert_call_count(add_to_group_url_1, 1)
         responses.assert_call_count(add_to_group_url_2, 1)
-
-    @skip("decided to table this, but keep the test if we want to revisit.")
-    def test_linked_user_deleted_removed_from_groups(self):
-        """The account is removed from all groups when the linked user is deleted."""
-        user = factories.UserFactory.create()
-        account = factories.AccountFactory.create(user=user)
-        membership = factories.GroupAccountMembershipFactory.create(account=self.object)
-        group = membership.group
-        remove_from_group_url = self.get_api_remove_from_group_url(group.name)
-        responses.add(responses.DELETE, remove_from_group_url, status=204)
-        user.delete()
-        account.refresh_from_db()
-        self.assertIsNone(account.user)
-        self.assertEqual(account.status, account.INACTIVE_STATUS)
 
 
 class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):

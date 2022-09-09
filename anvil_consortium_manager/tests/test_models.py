@@ -264,16 +264,6 @@ class AccountTest(TestCase):
         with self.assertRaises(ProtectedError):
             user.delete()
 
-    @skip("decided to table this, but keep the test if we want to revisit.")
-    def test_linked_user_deleted_deactivated(self):
-        """The account is deactivated when the linked user is deleted."""
-        user = factories.UserFactory.create()
-        account = factories.AccountFactory.create(user=user)
-        user.delete()
-        account.refresh_from_db()
-        self.assertIsNone(account.user)
-        self.assertEqual(account.status, account.INACTIVE_STATUS)
-
     def test_clean_no_verified_email_entry_no_user(self):
         """The clean method succeeds if there is no verified_email_entry and no user."""
         account = factories.AccountFactory.build()
