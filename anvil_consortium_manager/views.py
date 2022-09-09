@@ -417,7 +417,7 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
         account.save()
 
         # Add a success message.
-        messages.add_message(self.request, messages.ERROR, self.message_success)
+        messages.add_message(self.request, messages.SUCCESS, self.message_success)
 
         return super().get(request, *args, **kwargs)
 
