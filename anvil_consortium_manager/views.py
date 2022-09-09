@@ -254,7 +254,7 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
     """View where a user enter their AnVIL email to get an email verification link."""
 
     login_url = settings.LOGIN_URL
-    template_name = "anvil_consortium_manager/user_email_entry.html"
+    template_name = "anvil_consortium_manager/account_link.html"
     model = models.UserEmailEntry
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_user_already_linked = "You have already linked an AnVIL account."
