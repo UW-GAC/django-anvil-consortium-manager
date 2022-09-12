@@ -1,6 +1,6 @@
 # Change log
 
-## 0.2 (unreleased)
+## 0.2 (2022-09-12)
 
 - Add account linking functionality
 
