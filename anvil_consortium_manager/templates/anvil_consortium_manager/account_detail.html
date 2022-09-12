@@ -11,9 +11,17 @@
 
 
 {% if object.is_service_account %}
-  <span class="badge bg-info">Service account</span>
-{% else %}
-  <span class="badge bg-primary">User account</span>
+  <span class="badge bg-info">
+    <span class="fa-solid fa-robot me-1"></span>
+    Service account
+  </span>
+{% endif %}
+
+{% if object.verified_email_entry %}
+  <span class="badge bg-success">
+    <span class="fa-solid fa-user-check me-1"></span>
+    Verified by user
+  </span>
 {% endif %}
 
 {% if is_inactive %}
@@ -28,6 +36,8 @@
     <li>Status: {{ object.get_status_display }}</li>
     <li>Date added: {{ object.created }}</li>
     <li>Date modified: {{ object.modified }}</li>
+    <li>User: {% if object.verified_email_entry %}{{ object.verified_email_entry.user }}{% else %} &mdash; {% endif %}</li>
+    <li>Date verified by user: {% if object.verified_email_entry %}{{ object.verified_email_entry.date_verified }}{% else %} &mdash; {% endif %}</li>
   </ul>
 </div>
 

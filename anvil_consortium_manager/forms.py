@@ -40,6 +40,12 @@ class AccountImportForm(forms.ModelForm):
         return value
 
 
+class UserEmailEntryForm(forms.Form):
+    """Form for user to enter their email attempting to link their AnVIL account."""
+
+    email = forms.EmailField(label="Email")
+
+
 class ManagedGroupCreateForm(forms.ModelForm):
     """Form to create a ManagedGroup on AnVIL."""
 

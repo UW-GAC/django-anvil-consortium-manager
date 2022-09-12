@@ -1,15 +1,20 @@
 from dal import autocomplete
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.sites.shortcuts import get_current_site
 from django.db import transaction
 from django.forms import Form, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
     CreateView,
     DeleteView,
     DetailView,
     FormView,
+    RedirectView,
     TemplateView,
     UpdateView,
 )
@@ -19,6 +24,7 @@ from django_tables2 import SingleTableMixin, SingleTableView
 from . import __version__, anvil_api, auth, exceptions, forms, models, tables
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
+from .tokens import account_verification_token
 
 
 class SuccessMessageMixin:
@@ -242,6 +248,178 @@ class AccountImport(
             return self.render_to_response(self.get_context_data(form=form))
 
         return super().form_valid(form)
+
+
+class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
+    """View where a user enter their AnVIL email to get an email verification link."""
+
+    login_url = settings.LOGIN_URL
+    template_name = "anvil_consortium_manager/account_link.html"
+    model = models.UserEmailEntry
+    message_account_does_not_exist = "This account does not exist on AnVIL."
+    message_user_already_linked = "You have already linked an AnVIL account."
+    message_account_already_exists = (
+        "An AnVIL Account with this email already exists in this app."
+    )
+    form_class = forms.UserEmailEntryForm
+    success_msg = (
+        "To complete linking the account, check your email for a verification link."
+    )
+
+    def get(self, request, *args, **kwargs):
+        """Check if the user already has an account linked and redirect."""
+        try:
+            request.user.account
+        except models.Account.DoesNotExist:
+            return super().get(request, *args, **kwargs)
+        else:
+            # The user already has a linked account, so redirect with a message.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_user_already_linked
+            )
+            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+
+    def post(self, request, *args, **kwargs):
+        """Check if the user already has an account linked and redirect."""
+        try:
+            request.user.account
+        except models.Account.DoesNotExist:
+            return super().post(request, *args, **kwargs)
+        else:
+            # The user already has a linked account, so redirect with a message.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_user_already_linked
+            )
+            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+
+    def get_success_url(self):
+        return reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+
+    def form_valid(self, form):
+        """If the form is valid, check that the email exists on AnVIL and send verification email."""
+        email = form.cleaned_data.get("email")
+
+        try:
+            email_entry = models.UserEmailEntry.objects.get(
+                email__iexact=email, user=self.request.user
+            )
+        except models.UserEmailEntry.DoesNotExist:
+            email_entry = models.UserEmailEntry(email=email, user=self.request.user)
+
+        # Check if this email has an account already linked to a different user.
+        # Don't need to check the user, because a user who has already linked their account shouldn't get here.
+        if models.Account.objects.filter(email=email).count():
+            # The user already has a linked account, so redirect with a message.
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_already_exists
+            )
+            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+
+        # Check if it exists on AnVIL.
+        try:
+            anvil_account_exists = email_entry.anvil_account_exists()
+        except AnVILAPIError as e:
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+
+        if not anvil_account_exists:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_does_not_exist
+            )
+            # Re-render the page with a message.
+            return self.render_to_response(self.get_context_data(form=form))
+
+        email_entry.date_verification_email_sent = timezone.now()
+        email_entry.save()
+        email_entry.send_verification_email(get_current_site(self.request).domain)
+
+        return super().form_valid(form)
+
+
+class AccountLinkVerify(LoginRequiredMixin, RedirectView):
+    """View where a user can verify their email and create an Account object."""
+
+    message_already_linked = "You have already linked an AnVIL account."
+    message_link_invalid = "AnVIL account verification link is invalid."
+    message_account_already_exists = (
+        "An AnVIL Account with this email already exists in this app."
+    )
+    message_account_does_not_exist = "This account does not exist on AnVIL."
+    message_success = "Thank you for verifying your email."
+
+    def get_redirect_url(self, *args, **kwargs):
+        return reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+
+    def get(self, request, *args, **kwargs):
+        # Check if this user already has an account linked.
+        if models.Account.objects.filter(user=request.user).count():
+            messages.add_message(
+                self.request, messages.ERROR, self.message_already_linked
+            )
+            return super().get(request, *args, **kwargs)
+
+        uuid = kwargs.get("uuid")
+        token = kwargs.get("token")
+
+        try:
+            email_entry = models.UserEmailEntry.objects.get(uuid=uuid)
+        except models.UserEmailEntry.DoesNotExist:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_link_invalid
+            )
+            return super().get(request, *args, **kwargs)
+
+        # Check if the email is already linked to an account.
+        if models.Account.objects.filter(email=email_entry.email).count():
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_already_exists
+            )
+            return super().get(request, *args, **kwargs)
+
+        # Check that the token maches.
+        if not account_verification_token.check_token(email_entry, token):
+            messages.add_message(
+                self.request, messages.ERROR, self.message_link_invalid
+            )
+            return super().get(request, *args, **kwargs)
+
+        # Create an account for this user from this email.
+        account = models.Account(
+            user=self.request.user,
+            email=email_entry.email,
+            status=models.Account.ACTIVE_STATUS,
+            is_service_account=False,
+            verified_email_entry=email_entry,
+        )
+        # Make sure an AnVIL account still exists.
+        try:
+            anvil_account_exists = account.anvil_exists()
+        except AnVILAPIError as e:
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return super().get(request, *args, **kwargs)
+
+        if not anvil_account_exists:
+            messages.add_message(
+                self.request, messages.ERROR, self.message_account_does_not_exist
+            )
+            return super().get(request, *args, **kwargs)
+
+        # Mark the entry as verified.
+        email_entry.date_verified = timezone.now()
+        email_entry.save()
+
+        # Save the account
+        account.full_clean()
+        account.save()
+
+        # Add a success message.
+        messages.add_message(self.request, messages.SUCCESS, self.message_success)
+
+        return super().get(request, *args, **kwargs)
 
 
 class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):

@@ -1,6 +1,9 @@
+import datetime
 from unittest import skip
 
-from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+from django.core import mail
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
@@ -13,10 +16,12 @@ from ..models import (
     GroupAccountMembership,
     GroupGroupMembership,
     ManagedGroup,
+    UserEmailEntry,
     Workspace,
     WorkspaceAuthorizationDomain,
     WorkspaceGroupAccess,
 )
+from ..tokens import account_verification_token
 from . import factories
 
 
@@ -76,6 +81,88 @@ class BillingProjectTest(TestCase):
         instance = BillingProject(name=name.lower())
         with self.assertRaises(IntegrityError):
             instance.save()
+
+
+class UserEmailEntryTest(TestCase):
+    """Tests for the UserEmailEntry model."""
+
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
+    def test_save_unique_email_case_insensitive(self):
+        """Email uniqueness does not depend on case."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        instance2 = UserEmailEntry(
+            email="EMAIL@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_verified(self):
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now() - datetime.timedelta(days=30),
+            date_verified=timezone.now(),
+        )
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
+    def test_verified_account_deleted(self):
+        """A verified account linked to the entry is deleted."""
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
+        account.delete()
+        # Make sure it still exists.
+        obj.refresh_from_db()
+        with self.assertRaises(ObjectDoesNotExist):
+            obj.verified_account
+
+    def test_user_deleted(self):
+        """The user linked to the entry is deleted."""
+        user = factories.UserFactory.create()
+        obj = factories.UserEmailEntryFactory.create(user=user)
+        user.delete()
+        with self.assertRaises(UserEmailEntry.DoesNotExist):
+            obj.refresh_from_db()
+
+    def test_cannot_delete_if_verified_account(self):
+        """Cannot delete a UserEmailEntry object if it is linked to an Account."""
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
+        with self.assertRaises(ProtectedError):
+            obj.delete()
+
+    def test_send_verification_emaiL(self):
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_verification_email("www.test.com")
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "account activation")
+        # The contents are correct.
+        email_body = mail.outbox[0].body
+        self.assertIn("http://www.test.com", email_body)
+        self.assertIn(email_entry.user.username, email_body)
+        self.assertIn(account_verification_token.make_token(email_entry), email_body)
+        self.assertIn(str(email_entry.uuid), email_body)
 
 
 class AccountTest(TestCase):
@@ -158,6 +245,115 @@ class AccountTest(TestCase):
         instance2 = Account(email=email, is_service_account=False)
         with self.assertRaises(IntegrityError):
             instance2.save()
+
+    def test_user_has_unique_account(self):
+        """User links to more than one ANVIL account email fails"""
+        user = get_user_model().objects.create_user(username="testuser")
+        email = "email1@example.com"
+        email2 = "email2@example.com"
+        instance = Account(email=email, user=user, is_service_account=False)
+        instance.save()
+        instance2 = Account(email=email2, user=user, is_service_account=False)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_linked_user_deleted(self):
+        """Cannot delete a user if they have a linked account."""
+        user = factories.UserFactory.create()
+        factories.AccountFactory.create(user=user)
+        with self.assertRaises(ProtectedError):
+            user.delete()
+
+    def test_clean_no_verified_email_entry_no_user(self):
+        """The clean method succeeds if there is no verified_email_entry and no user."""
+        account = factories.AccountFactory.build()
+        account.full_clean()
+
+    def test_clean_user_no_verified_email_entry(self):
+        """The clean method fails if there is a user but no verified_email_entry."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.build(user=user)
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("verified_email_entry", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["verified_email_entry"]), 1)
+        self.assertIn(
+            Account.ERROR_USER_WITHOUT_VERIFIED_EMAIL_ENTRY,
+            e.exception.error_dict["verified_email_entry"][0].message,
+        )
+
+    def test_clean_no_user_verified_email_entry(self):
+        """The clean method fails if there is no user but a verified_email_entry."""
+        email_entry = factories.UserEmailEntryFactory.create(
+            date_verified=timezone.now()
+        )
+        account = factories.AccountFactory.build(
+            email=email_entry.email, verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("user", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["user"]), 1)
+        self.assertIn(
+            Account.ERROR_VERIFIED_EMAIL_ENTRY_WITHOUT_USER,
+            e.exception.error_dict["user"][0].message,
+        )
+
+    def test_clean_unverified_verified_email_entry(self):
+        """The clean method fails if the verified_email_entry is actually unverified."""
+        email_entry = factories.UserEmailEntryFactory.create(date_verified=None)
+        account = factories.AccountFactory.build(
+            user=email_entry.user,
+            email=email_entry.email,
+            verified_email_entry=email_entry,
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("verified_email_entry", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["verified_email_entry"]), 1)
+        self.assertIn(
+            Account.ERROR_UNVERIFIED_VERIFIED_EMAIL_ENTRY,
+            e.exception.error_dict["verified_email_entry"][0].message,
+        )
+
+    def test_clean_account_verified_email_entry_email_mismatch(self):
+        """The clean method fails if the verified_email_entry and the account have different emails."""
+        email_entry = factories.UserEmailEntryFactory.create(
+            date_verified=timezone.now(), email="foo@bar.com"
+        )
+        account = factories.AccountFactory.build(
+            user=email_entry.user, email="bar@foo.com", verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("email", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["email"]), 1)
+        self.assertIn(
+            Account.ERROR_MISMATCHED_EMAIL, e.exception.error_dict["email"][0].message
+        )
+
+    def test_clean_account_verified_email_entry_user_mismatch(self):
+        """The clean method fails if the verified_email_entry and the account have different users."""
+        user_1 = factories.UserFactory.create()
+        user_2 = factories.UserFactory.create()
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=user_1, date_verified=timezone.now()
+        )
+        account = factories.AccountFactory.build(
+            user=user_2, email=email_entry.email, verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("user", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["user"]), 1)
+        self.assertIn(
+            Account.ERROR_MISMATCHED_USER, e.exception.error_dict["user"][0].message
+        )
 
 
 class ManagedGroupTest(TestCase):

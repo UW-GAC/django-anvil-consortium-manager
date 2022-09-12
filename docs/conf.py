@@ -13,6 +13,7 @@
 import os
 import sys
 import django
+import re
 
 
 sys.path.insert(0, os.path.abspath('.'))
@@ -31,7 +32,7 @@ author = 'Adrienne Stilp'
 # The full version, including alpha/beta/rc tags
 with open("../anvil_consortium_manager/__init__.py", "rb") as f:
     release = str(re.search('__version__ = "(.+?)"', f.read().decode()).group(1))
-version = release.rpartition(".")[0]
+version = release
 
 
 # -- General configuration ---------------------------------------------------

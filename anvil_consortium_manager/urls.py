@@ -41,6 +41,12 @@ account_patterns = (
             views.AccountAutocomplete.as_view(),
             name="autocomplete",
         ),
+        path("link/", views.AccountLink.as_view(), name="link"),
+        path(
+            "verify/<uuid:uuid>/<token>/",
+            views.AccountLinkVerify.as_view(),
+            name="verify",
+        ),
     ],
     "accounts",
 )

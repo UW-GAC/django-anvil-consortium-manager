@@ -1,0 +1,15 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}User entry email{% endblock title %}
+
+{% block content %}
+<p>To link your AnVIL account, enter your email associated with your AnVIL account below.</p>
+<p>If you are having difficulty, please confirm that you can log into <a href="https://anvil.terra.bio/">AnVIL</a> with this email.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-success">Submit</button>
+  </form>
+
+{% endblock %}

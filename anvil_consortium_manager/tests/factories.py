@@ -1,4 +1,6 @@
-from factory import Faker, SubFactory
+from django.contrib.auth.models import User
+from django.utils import timezone
+from factory import Faker, SelfAttribute, Sequence, SubFactory, Trait
 from factory.django import DjangoModelFactory
 
 from .. import models
@@ -16,6 +18,41 @@ class BillingProjectFactory(DjangoModelFactory):
         django_get_or_create = ["name"]
 
 
+class UserFactory(DjangoModelFactory):
+    """A factory to create a user."""
+
+    username = Sequence(lambda n: "testuser%d" % n)
+    password = "password"
+
+    class Meta:
+        model = User
+        django_get_or_create = ["username"]
+
+
+class UserEmailEntryFactory(DjangoModelFactory):
+    """A factory for the UserEmailEntry model."""
+
+    email = Faker("email")
+    user = SubFactory(UserFactory)
+    date_verification_email_sent = Faker(
+        "date_time", tzinfo=timezone.get_current_timezone()
+    )
+
+    class Meta:
+        model = models.UserEmailEntry
+
+    # class Params:
+    #     verified = Trait(
+    #         date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
+    #         # Create an Account with the same user.
+    #         verified_account=SubFactory(
+    #             AccountFactory,
+    #             user=SelfAttribute("..user"),
+    #             email=SelfAttribute("..email"),
+    #         ),
+    #     )
+
+
 class AccountFactory(DjangoModelFactory):
     """A factory for the Account model."""
 
@@ -25,6 +62,19 @@ class AccountFactory(DjangoModelFactory):
     class Meta:
         model = models.Account
         django_get_or_create = ["email"]
+
+    class Params:
+        verified = Trait(
+            user=SubFactory(UserFactory),
+            verified_email_entry=SubFactory(
+                UserEmailEntryFactory,
+                email=SelfAttribute("..email"),
+                user=SelfAttribute("..user"),
+                date_verified=Faker(
+                    "date_time", tzinfo=timezone.get_current_timezone()
+                ),
+            ),
+        )
 
 
 class ManagedGroupFactory(DjangoModelFactory):

@@ -1,7 +1,10 @@
 import uuid
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.mail import send_mail
 from django.db import models, transaction
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
@@ -10,6 +13,7 @@ from simple_history.models import HistoricalRecords, HistoricForeignKey
 from . import exceptions
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
+from .tokens import account_verification_token
 
 
 class AnVILProjectManagerAccess(models.Model):
@@ -76,8 +80,93 @@ class BillingProject(TimeStampedModel):
         return billing_project
 
 
+class UserEmailEntry(TimeStampedModel, models.Model):
+    """A model to store emails that users could link to their AnVIL account after verification."""
+
+    uuid = models.UUIDField(default=uuid.uuid4)
+    """UUID for use in urls."""
+
+    email = models.EmailField()
+    """The email entered by the user."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE
+    )
+    """The user who created the record."""
+
+    date_verification_email_sent = models.DateTimeField()
+    """Most recent date that a verification email was sent."""
+
+    date_verified = models.DateTimeField(null=True, blank=True)
+    """The date that the email was verified by the user."""
+
+    history = HistoricalRecords()
+    """Django simple history."""
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["email", "user"], name="unique_user_email_entry"
+            )
+        ]
+        verbose_name_plural = "user email entries"
+
+    def __str__(self):
+        """String method."""
+        return "{email} for {user}".format(email=self.email, user=self.user)
+
+    def anvil_account_exists(self):
+        """Check if this account exists on AnVIL."""
+        try:
+            AnVILAPIClient().get_proxy_group(self.email)
+        except AnVILAPIError404:
+            return False
+        return True
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.lower()
+        return super().save(*args, **kwargs)
+
+    def send_verification_email(self, domain):
+        """Send a verification email to the email on record.
+
+        Args:
+            domain (str): The domain of the current site, used to create the link.
+        """
+        mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
+        url_subdirectory = "http://{domain}{url}".format(
+            domain=domain,
+            url=reverse(
+                "anvil_consortium_manager:accounts:verify",
+                args=[self.uuid, account_verification_token.make_token(self)],
+            ),
+        )
+        message = render_to_string(
+            "anvil_consortium_manager/account_verification_email.html",
+            {
+                "user": self.user,
+                "verification_link": url_subdirectory,
+            },
+        )
+        send_mail(mail_subject, message, None, [self.email], fail_silently=False)
+
+
 class Account(TimeStampedModel, ActivatorModel):
     """A model to store information about AnVIL accounts."""
+
+    ERROR_USER_WITHOUT_VERIFIED_EMAIL_ENTRY = (
+        "Accounts with a user must have a verified_email_entry."
+    )
+    ERROR_VERIFIED_EMAIL_ENTRY_WITHOUT_USER = (
+        "Accounts with a verified_email_entry must have a user."
+    )
+    ERROR_UNVERIFIED_VERIFIED_EMAIL_ENTRY = (
+        "verified_email_entry must have date_verified."
+    )
+    ERROR_MISMATCHED_USER = "Account.user and verified_email_entry.user do not match."
+    ERROR_MISMATCHED_EMAIL = (
+        "Account.email and verified_email_entry.email do not match."
+    )
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
@@ -88,6 +177,23 @@ class Account(TimeStampedModel, ActivatorModel):
 
     uuid = models.UUIDField(default=uuid.uuid4)
     """UUID for use in urls."""
+    # Use on_delete=PROTECT here because additional things need to happen when an account is deleted,
+    # and we're not sure what that should be. Deactivate the account or and/or remove it from groups?
+    # I think it's unlikely we will be deleting users frequently, and we can revisit this if necessary.
+    # So table it for later.
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT
+    )
+    is_service_account = models.BooleanField()
+
+    verified_email_entry = models.OneToOneField(
+        UserEmailEntry,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="verified_account",
+    )
+    """The UserEmailEntry object used to verify the email, if the account was created by a user linking their email."""
 
     history = HistoricalRecords()
     """Django simple history record for this model."""
@@ -99,6 +205,36 @@ class Account(TimeStampedModel, ActivatorModel):
             A string representing the object.
         """
         return "{email}".format(email=self.email)
+
+    def clean(self):
+        """Additional custom cleaning steps.
+
+        * user and verified_email_entry: both or neither must be set.
+        * verified_email_entry must have a non-null date_verified value.
+        * user and verified_email_entry.user must match.
+        * email and verified_email_entry.email must match.
+        """
+
+        if self.user and not self.verified_email_entry:
+            raise ValidationError(
+                {"verified_email_entry": self.ERROR_USER_WITHOUT_VERIFIED_EMAIL_ENTRY}
+            )
+        elif self.verified_email_entry and not self.user:
+            raise ValidationError(
+                {"user": self.ERROR_VERIFIED_EMAIL_ENTRY_WITHOUT_USER}
+            )
+        elif self.verified_email_entry and self.user:
+            # Make sure the email entry is actually verified.
+            if not self.verified_email_entry.date_verified:
+                raise ValidationError(
+                    {"verified_email_entry": self.ERROR_UNVERIFIED_VERIFIED_EMAIL_ENTRY}
+                )
+            # Check that emails match.
+            if self.email != self.verified_email_entry.email:
+                raise ValidationError({"email": self.ERROR_MISMATCHED_EMAIL})
+            # Check that users match.
+            if self.user != self.verified_email_entry.user:
+                raise ValidationError({"user": self.ERROR_MISMATCHED_USER})
 
     def save(self, *args, **kwargs):
         """Save method to set the email address to lowercase before saving."""

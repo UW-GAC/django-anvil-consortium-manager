@@ -49,6 +49,16 @@ Settings
 
 4. If you would like to use the templates provided with the app, add the ``"anvil_consortium_manager.context_processors.workspace_adapter"`` context processor to your settings file. This allows the templates to know about which types of workspace adapters that are registered (step 3), and then display links to the correct URLs.
 
+5. Add account linking settings to your settings file.
+
+  .. code-block:: python
+
+      # Specify the URL name that AccountLink and AccountLinkVerify redirect to.
+      ANVIL_ACCOUNT_LINK_REDIRECT = "home"
+      # Specify the subject for AnVIL account verification emails.
+      ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
+
+
 Permissions
 ~~~~~~~~~~~
 
