@@ -83,6 +83,24 @@ class BillingProject(TimeStampedModel):
         return billing_project
 
     @classmethod
+    def anvil_audit_not_in_anvil(cls):
+        """Check for any billing projects that do not exist on AnVIL but do exist in the app.
+
+        Only billing projects with have_app_as_user=True are checked, because the AnVIL API does not
+        differentiate between billing projects that don't exist and billing projects where the app is
+        not a user.
+
+        Returns:
+            A list of billing projects that do not exist in AnVIL.
+        """
+        # Check that all billing projects exist.
+        missing = []
+        for billing_project in cls.objects.filter(has_app_as_user=True).all():
+            if not billing_project.anvil_exists():
+                missing.append(billing_project)
+        return missing
+
+    @classmethod
     def anvil_audit(cls):
         """Verify data in the app against AnVIL.
 
@@ -96,13 +114,11 @@ class BillingProject(TimeStampedModel):
         Returns:
             None if there are no issues."""
         # Check that all billing projects exist.
-        missing = []
-        for billing_project in cls.objects.filter(has_app_as_user=True).all():
-            if not billing_project.anvil_exists():
-                missing.append("{} {}".format(billing_project.pk, billing_project.name))
-        if missing:
+        not_in_anvil = cls.anvil_audit_not_in_anvil()
+        if not_in_anvil:
+            tmp = ["{} {}".format(x.pk, x.name) for x in not_in_anvil]
             raise cls.DoesNotExistInAnVIL(
-                "Not a user of billing projects on AnVIL: {}".format(",".join(missing))
+                "Not a user of billing projects on AnVIL: {}".format(",".join(tmp))
             )
         # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
 
