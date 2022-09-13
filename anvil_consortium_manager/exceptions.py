@@ -27,3 +27,15 @@ class AnVILGroupDeletionError(Exception):
 
 class AnVILGroupNotFound(Exception):
     """Exception to be raised when a group is not found on AnVIL."""
+
+
+class AnVILAuditError(Exception):
+    """Base exception to be raised when an AnVIL audit fails."""
+
+
+class AnVILAuditDoesNotExistInAppError(AnVILAuditError):
+    """Exception to be raised when a record(s) exists on AnVIL but not in the app."""
+
+
+class AnVILAuditDoesNotExistInAnVILError(AnVILAuditError):
+    """Exception to be raised when a record(s) exists in the app but not on AnVIL."""

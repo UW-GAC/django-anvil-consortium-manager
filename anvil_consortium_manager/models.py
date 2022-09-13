@@ -43,6 +43,9 @@ class BillingProject(TimeStampedModel):
     has_app_as_user = models.BooleanField()
     history = HistoricalRecords()
 
+    DoesNotExistInAnVIL = exceptions.AnVILAuditDoesNotExistInAnVILError
+    """Exception to be raised if one or more billing projects exist in the app but not in AnVIL."""
+
     def __str__(self):
         return self.name
 
@@ -78,6 +81,30 @@ class BillingProject(TimeStampedModel):
         AnVILAPIClient().get_billing_project(billing_project_name)
         billing_project.save()
         return billing_project
+
+    @classmethod
+    def anvil_audit(cls):
+        """Verify data in the app against AnVIL.
+
+        Only billing projects with have_app_as_user=True are checked, because the AnVIL API does not
+        differentiate between billing projects that don't exist and billing projects where the app is
+        not a user.
+
+        Raises:
+            NotFoundInAnVIL: if any billing projects were not found in AnVIL.
+
+        Returns:
+            None if there are no issues."""
+        # Check that all billing projects exist.
+        missing = []
+        for billing_project in cls.objects.filter(has_app_as_user=True).all():
+            if not billing_project.anvil_exists():
+                missing.append("{} {}".format(billing_project.pk, billing_project.name))
+        if missing:
+            raise cls.DoesNotExistInAnVIL(
+                "Not a user of billing projects on AnVIL: {}".format(",".join(missing))
+            )
+        # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
 
 
 class UserEmailEntry(TimeStampedModel, models.Model):

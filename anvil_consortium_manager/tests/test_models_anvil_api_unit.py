@@ -118,6 +118,141 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         # Check that no objects were saved.
         self.assertEqual(models.BillingProject.objects.count(), 0)
 
+    def test_anvil_audit_no_billing_projects(self):
+        """anvil_audit works correct if there are no billing projects in the app."""
+        self.assertIsNone(models.BillingProject.anvil_audit())
+
+    def test_anvil_audit_one_billing_project_no_errors(self):
+        """anvil_audit works correct if there is one billing project in the app and it exists on AnVIL."""
+        billing_project_name = "test-billing-project"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name, has_app_as_user=True
+        )
+        api_url = self.get_api_url(billing_project_name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(),
+        )
+        self.assertIsNone(models.BillingProject.anvil_audit())
+        responses.assert_call_count(api_url, 1)
+
+    def test_anvil_audit_one_billing_project_not_on_anvil(self):
+        """anvil_audit raises exception if with one billing project in the app and but not on AnVIL."""
+        billing_project = factories.BillingProjectFactory.create(has_app_as_user=True)
+        api_url = self.get_api_url(billing_project.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        with self.assertRaises(models.BillingProject.DoesNotExistInAnVIL) as e:
+            models.BillingProject.anvil_audit()
+        self.assertIn(
+            "{} {}".format(billing_project.pk, billing_project.name), str(e.exception)
+        )
+        responses.assert_call_count(api_url, 1)
+
+    def test_anvil_audit_two_billing_projects_no_errors(self):
+        """anvil_audit returns None if there are two billing projects and it exists on AnVIL."""
+        billing_project_name_1 = "test-billing-project-1"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name_1, has_app_as_user=True
+        )
+        api_url_1 = self.get_api_url(billing_project_name_1)
+        responses.add(
+            responses.GET,
+            api_url_1,
+            status=200,
+            json=self.get_api_json_response(),
+        )
+        billing_project_name_2 = "test-billing-project-2"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name_2, has_app_as_user=True
+        )
+        api_url_2 = self.get_api_url(billing_project_name_2)
+        responses.add(
+            responses.GET,
+            api_url_2,
+            status=200,
+            json=self.get_api_json_response(),
+        )
+        self.assertIsNone(models.BillingProject.anvil_audit())
+        responses.assert_call_count(api_url_1, 1)
+        responses.assert_call_count(api_url_2, 1)
+
+    def test_anvil_audit_two_billing_projects_first_not_on_anvil(self):
+        """anvil_audit raises exception if two billing projects exist in the app but not on AnVIL."""
+        billing_project_name_1 = "test-billing-project-1"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name_1, has_app_as_user=True
+        )
+        api_url_1 = self.get_api_url(billing_project_name_1)
+        responses.add(
+            responses.GET,
+            api_url_1,
+            status=404,
+            json={"message": "other error"},
+        )
+        billing_project_name_2 = "test-billing-project-2"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name_2, has_app_as_user=True
+        )
+        api_url_2 = self.get_api_url(billing_project_name_2)
+        responses.add(
+            responses.GET,
+            api_url_2,
+            status=200,
+            json=self.get_api_json_response(),
+        )
+        with self.assertRaises(models.BillingProject.DoesNotExistInAnVIL) as e:
+            models.BillingProject.anvil_audit()
+        self.assertIn(billing_project_name_1, str(e.exception))
+        responses.assert_call_count(api_url_1, 1)
+        responses.assert_call_count(api_url_2, 1)
+
+    def test_anvil_audit_two_billing_projects_both_missing(self):
+        """anvil_audit raises exception if there are two billing projects that exist in the app but not in AnVIL."""
+        billing_project_name_1 = "test-billing-project-1"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name_1, has_app_as_user=True
+        )
+        api_url_1 = self.get_api_url(billing_project_name_1)
+        responses.add(
+            responses.GET,
+            api_url_1,
+            status=404,
+            json={"message": "other error"},
+        )
+        billing_project_name_2 = "test-billing-project-2"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name_2, has_app_as_user=True
+        )
+        api_url_2 = self.get_api_url(billing_project_name_2)
+        responses.add(
+            responses.GET,
+            api_url_2,
+            status=404,
+            json={"message": "other error"},
+        )
+        with self.assertRaises(models.BillingProject.DoesNotExistInAnVIL) as e:
+            models.BillingProject.anvil_audit()
+        self.assertIn(billing_project_name_1, str(e.exception))
+        self.assertIn(billing_project_name_2, str(e.exception))
+        responses.assert_call_count(api_url_1, 1)
+        responses.assert_call_count(api_url_2, 1)
+
+    def test_anvil_audit_ignore_not_has_app_has_user(self):
+        """anvil_audit does not check AnVIL about billing projects that do not have the app as a user."""
+        billing_project_name = "test-billing-project"
+        factories.BillingProjectFactory.create(
+            name=billing_project_name, has_app_as_user=False
+        )
+        # No API calls made.
+        self.assertIsNone(models.BillingProject.anvil_audit())
+
 
 class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the UserEmailEntry model that call the AnVIL API."""
