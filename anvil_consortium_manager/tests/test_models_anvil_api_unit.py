@@ -124,7 +124,7 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.assertIsNone(models.BillingProject.anvil_audit())
 
     def test_anvil_audit_one_billing_project_no_errors(self):
-        """anvil_audit works correct if there is one billing project in the app and it exists on AnVIL."""
+        """anvil_audit works correct if one billing project exists in the app and in AnVIL."""
         billing_project = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url = self.get_api_url(billing_project.name)
         responses.add(
@@ -139,7 +139,7 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         responses.assert_call_count(api_url, 2)
 
     def test_anvil_audit_one_billing_project_not_on_anvil(self):
-        """anvil_audit raises exception if with one billing project in the app and but not on AnVIL."""
+        """anvil_audit raises exception with one billing project exists in the app but not on AnVIL."""
         billing_project = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url = self.get_api_url(billing_project.name)
         responses.add(
@@ -160,7 +160,7 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         responses.assert_call_count(api_url, 2)
 
     def test_anvil_audit_two_billing_projects_no_errors(self):
-        """anvil_audit returns None if there are two billing projects and it exists on AnVIL."""
+        """anvil_audit returns None if there are two billing projects and both exist on AnVIL."""
         billing_project_1 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_1 = self.get_api_url(billing_project_1.name)
         responses.add(
@@ -185,7 +185,7 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         responses.assert_call_count(api_url_2, 2)
 
     def test_anvil_audit_two_billing_projects_first_not_on_anvil(self):
-        """anvil_audit raises exception if two billing projects exist in the app but not on AnVIL."""
+        """anvil_audit raises exception if two billing projects exist in the app but the first is not on AnVIL."""
         billing_project_1 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_1 = self.get_api_url(billing_project_1.name)
         responses.add(
