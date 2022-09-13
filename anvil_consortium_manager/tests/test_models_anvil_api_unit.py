@@ -444,6 +444,142 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(add_to_group_url_2, 1)
 
 
+class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the Accoun model class methods that call the AnVIL API."""
+
+    def get_api_url(self, email):
+        return self.entry_point + "/api/proxyGroup/" + email
+
+    def test_anvil_audit_no_accounts(self):
+        """anvil_audit works correct if there are no Accounts in the app."""
+        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
+        self.assertIsNone(models.Account.anvil_audit())
+
+    def test_anvil_audit_one_account_no_errors(self):
+        """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+        )
+        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
+        responses.assert_call_count(api_url, 1)
+        self.assertIsNone(models.Account.anvil_audit())
+        responses.assert_call_count(api_url, 2)
+
+    def test_anvil_audit_one_account_not_on_anvil(self):
+        """anvil_audit raises exception if one billing project exists in the app but not on AnVIL."""
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        not_in_anvil = models.Account.anvil_audit_not_in_anvil()
+        self.assertEqual(len(not_in_anvil), 1)
+        self.assertIn(account, not_in_anvil)
+        responses.assert_call_count(api_url, 1)
+        with self.assertRaises(models.Account.DoesNotExistInAnVIL) as e:
+            models.Account.anvil_audit()
+        self.assertIn("{} {}".format(account.pk, account.email), str(e.exception))
+        responses.assert_call_count(api_url, 2)
+
+    def test_anvil_audit_two_accounts_no_errors(self):
+        """anvil_audit returns None if if two accounts exist in both the app and AnVIL."""
+        account_1 = factories.AccountFactory.create()
+        api_url_1 = self.get_api_url(account_1.email)
+        responses.add(
+            responses.GET,
+            api_url_1,
+            status=200,
+        )
+        account_2 = factories.AccountFactory.create()
+        api_url_2 = self.get_api_url(account_2.email)
+        responses.add(
+            responses.GET,
+            api_url_2,
+            status=200,
+        )
+        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
+        responses.assert_call_count(api_url_1, 1)
+        responses.assert_call_count(api_url_2, 1)
+        self.assertIsNone(models.Account.anvil_audit())
+        responses.assert_call_count(api_url_1, 2)
+        responses.assert_call_count(api_url_2, 2)
+
+    def test_anvil_audit_two_accounts_first_not_on_anvil(self):
+        """anvil_audit raises exception if two accounts exist in the app but the first is not not on AnVIL."""
+        account_1 = factories.AccountFactory.create()
+        api_url_1 = self.get_api_url(account_1.email)
+        responses.add(
+            responses.GET,
+            api_url_1,
+            status=404,
+            json={"message": "other error"},
+        )
+        account_2 = factories.AccountFactory.create()
+        api_url_2 = self.get_api_url(account_2.email)
+        responses.add(
+            responses.GET,
+            api_url_2,
+            status=200,
+        )
+        not_in_anvil = models.Account.anvil_audit_not_in_anvil()
+        self.assertEqual(len(not_in_anvil), 1)
+        self.assertIn(account_1, not_in_anvil)
+        responses.assert_call_count(api_url_1, 1)
+        responses.assert_call_count(api_url_2, 1)
+        with self.assertRaises(models.Account.DoesNotExistInAnVIL) as e:
+            models.Account.anvil_audit()
+        self.assertIn(account_1.email, str(e.exception))
+        self.assertNotIn(account_2.email, str(e.exception))
+        responses.assert_call_count(api_url_1, 2)
+        responses.assert_call_count(api_url_2, 2)
+
+    def test_anvil_audit_two_accounts_both_missing(self):
+        """anvil_audit raises exception if there are two accounts that exist in the app but not in AnVIL."""
+        account_1 = factories.AccountFactory.create()
+        api_url_1 = self.get_api_url(account_1.email)
+        responses.add(
+            responses.GET,
+            api_url_1,
+            status=404,
+            json={"message": "other error"},
+        )
+        account_2 = factories.AccountFactory.create()
+        api_url_2 = self.get_api_url(account_2.email)
+        responses.add(
+            responses.GET,
+            api_url_2,
+            status=404,
+            json={"message": "other error"},
+        )
+        not_in_anvil = models.Account.anvil_audit_not_in_anvil()
+        self.assertEqual(len(not_in_anvil), 2)
+        self.assertIn(account_1, not_in_anvil)
+        self.assertIn(account_2, not_in_anvil)
+        responses.assert_call_count(api_url_1, 1)
+        responses.assert_call_count(api_url_2, 1)
+        with self.assertRaises(models.Account.DoesNotExistInAnVIL) as e:
+            models.Account.anvil_audit()
+        self.assertIn(account_1.email, str(e.exception))
+        self.assertIn(account_2.email, str(e.exception))
+        responses.assert_call_count(api_url_1, 2)
+        responses.assert_call_count(api_url_2, 2)
+
+    def test_anvil_audit_deactivated_account(self):
+        """anvil_audit does not check AnVIL about accounts that are deactivated."""
+        account = factories.AccountFactory.create()
+        account.deactivate()
+        # No API calls made.
+        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
+        self.assertIsNone(models.Account.anvil_audit())
+
+
 class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()

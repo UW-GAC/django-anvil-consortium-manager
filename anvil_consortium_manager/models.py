@@ -211,6 +211,9 @@ class Account(TimeStampedModel, ActivatorModel):
         "Account.email and verified_email_entry.email do not match."
     )
 
+    DoesNotExistInAnVIL = exceptions.AnVILAuditDoesNotExistInAnVILError
+    """Exception to be raised if one or more acounts exist in the app but not in AnVIL."""
+
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
     """Email associated with this account on AnVIL."""
@@ -326,6 +329,42 @@ class Account(TimeStampedModel, ActivatorModel):
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
+
+    @classmethod
+    def anvil_audit_not_in_anvil(cls):
+        """Check for any accounts that do not exist on AnVIL but do exist in the app.
+
+        Only accounts that have status=ACTIVE_STATUS are checked.
+
+        Returns:
+            A list of accounts that do not exist in AnVIL.
+        """
+        # Check that all accounts exist.
+        missing = []
+        for account in cls.objects.filter(status=cls.ACTIVE_STATUS).all():
+            if not account.anvil_exists():
+                missing.append(account)
+        return missing
+
+    @classmethod
+    def anvil_audit(cls):
+        """Verify data in the app against AnVIL.
+
+        Only accounts that have status=ACTIVE_STATUS are checked.
+
+        Raises:
+            NotFoundInAnVIL: if any Accounts were not found in AnVIL.
+
+        Returns:
+            None if there are no issues."""
+        # Check that all accounts exist.
+        not_in_anvil = cls.anvil_audit_not_in_anvil()
+        if not_in_anvil:
+            tmp = ["{} {}".format(x.pk, x.email) for x in not_in_anvil]
+            raise cls.DoesNotExistInAnVIL(
+                "Accounts not found on AnVIL: {}".format(",".join(tmp))
+            )
+        # Here we don't care if there are accounts in AnVIL that we haven't imported into the app.
 
 
 class ManagedGroup(TimeStampedModel):
