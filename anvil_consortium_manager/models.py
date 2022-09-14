@@ -467,6 +467,51 @@ class ManagedGroup(TimeStampedModel):
         group.save()
         return group
 
+    @classmethod
+    def anvil_audit(cls):
+        """Verify data in the app against AnVIL.
+
+        Group membership where the service account's role is different that implied by is_managed_by_app
+        are handled as missing records.
+
+        Returns:
+            A dictionary with keys describing various issues:
+            * not_in_anvil: a list of groups that don't exist in AnVIL.
+            * not_in_app: a list of groups that the service account is part of but don't exist in the app.
+        """
+        # Check the list of groups.
+        response = AnVILAPIClient().get_groups()
+        groups_on_anvil = response.json()
+        # Prepare variables to hold results.
+        not_in_anvil = []
+        different_role = []
+        for group in cls.objects.all():
+            try:
+                i = next(
+                    idx
+                    for idx, x in enumerate(groups_on_anvil)
+                    if x["groupName"] == group.name
+                )
+            except StopIteration:
+                not_in_anvil.append(group)
+            else:
+                # Check role.
+                group_details = groups_on_anvil.pop(i)
+                if group.is_managed_by_app and group_details["role"] == "Member":
+                    different_role.append(group)
+                elif not group.is_managed_by_app and group_details["role"] == "Admin":
+                    different_role.append(group)
+        # Create final results to return.
+        audit_results = {}
+        if not_in_anvil:
+            audit_results["not_in_anvil"] = not_in_anvil
+        if different_role:
+            audit_results["different_role"] = different_role
+        if groups_on_anvil:
+            # If any other groups remain in the response, they are not in the app and should be noted.
+            audit_results["not_in_app"] = [x["groupName"] for x in groups_on_anvil]
+        return audit_results
+
 
 class Workspace(TimeStampedModel):
     """A model to store information about AnVIL workspaces."""
