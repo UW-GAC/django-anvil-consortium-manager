@@ -43,9 +43,6 @@ class BillingProject(TimeStampedModel):
     has_app_as_user = models.BooleanField()
     history = HistoricalRecords()
 
-    DoesNotExistInAnVIL = exceptions.AnVILAuditDoesNotExistInAnVILError
-    """Exception to be raised if one or more billing projects exist in the app but not in AnVIL."""
-
     def __str__(self):
         return self.name
 
@@ -108,19 +105,17 @@ class BillingProject(TimeStampedModel):
         differentiate between billing projects that don't exist and billing projects where the app is
         not a user.
 
-        Raises:
-            NotFoundInAnVIL: if any billing projects were not found in AnVIL.
-
         Returns:
-            None if there are no issues."""
+            A dictionary with keys describing various issues:
+            * not_in_anvil: a list of billing projects that don't exist in AnVIL or the app is not a user.
+        """
+        audit_results = {}
         # Check that all billing projects exist.
         not_in_anvil = cls.anvil_audit_not_in_anvil()
         if not_in_anvil:
-            tmp = ["{} {}".format(x.pk, x.name) for x in not_in_anvil]
-            raise cls.DoesNotExistInAnVIL(
-                "Not a user of billing projects on AnVIL: {}".format(",".join(tmp))
-            )
+            audit_results["not_in_anvil"] = not_in_anvil
         # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
+        return audit_results
 
 
 class UserEmailEntry(TimeStampedModel, models.Model):
@@ -210,9 +205,6 @@ class Account(TimeStampedModel, ActivatorModel):
     ERROR_MISMATCHED_EMAIL = (
         "Account.email and verified_email_entry.email do not match."
     )
-
-    DoesNotExistInAnVIL = exceptions.AnVILAuditDoesNotExistInAnVILError
-    """Exception to be raised if one or more acounts exist in the app but not in AnVIL."""
 
     # TODO: Consider using CIEmailField if using postgres.
     email = models.EmailField(unique=True)
@@ -350,21 +342,21 @@ class Account(TimeStampedModel, ActivatorModel):
     def anvil_audit(cls):
         """Verify data in the app against AnVIL.
 
-        Only accounts that have status=ACTIVE_STATUS are checked.
-
-        Raises:
-            NotFoundInAnVIL: if any Accounts were not found in AnVIL.
+        Only billing projects with have_app_as_user=True are checked, because the AnVIL API does not
+        differentiate between billing projects that don't exist and billing projects where the app is
+        not a user.
 
         Returns:
-            None if there are no issues."""
-        # Check that all accounts exist.
+            A dictionary with keys describing various issues:
+            * not_in_anvil: a list of accounts that don't exist in AnVIL.
+        """
+        audit_results = {}
+        # Check that all billing projects exist.
         not_in_anvil = cls.anvil_audit_not_in_anvil()
         if not_in_anvil:
-            tmp = ["{} {}".format(x.pk, x.email) for x in not_in_anvil]
-            raise cls.DoesNotExistInAnVIL(
-                "Accounts not found on AnVIL: {}".format(",".join(tmp))
-            )
-        # Here we don't care if there are accounts in AnVIL that we haven't imported into the app.
+            audit_results["not_in_anvil"] = not_in_anvil
+        # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
+        return audit_results
 
 
 class ManagedGroup(TimeStampedModel):

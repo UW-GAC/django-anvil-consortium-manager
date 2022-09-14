@@ -120,8 +120,7 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
 
     def test_anvil_audit_no_billing_projects(self):
         """anvil_audit works correct if there are no billing projects in the app."""
-        self.assertEqual(len(models.BillingProject.anvil_audit_not_in_anvil()), 0)
-        self.assertIsNone(models.BillingProject.anvil_audit())
+        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
 
     def test_anvil_audit_one_billing_project_no_errors(self):
         """anvil_audit works correct if one billing project exists in the app and in AnVIL."""
@@ -133,10 +132,8 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             status=200,
             json=self.get_api_json_response(),
         )
-        self.assertEqual(len(models.BillingProject.anvil_audit_not_in_anvil()), 0)
+        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
         responses.assert_call_count(api_url, 1)
-        self.assertIsNone(models.BillingProject.anvil_audit())
-        responses.assert_call_count(api_url, 2)
 
     def test_anvil_audit_one_billing_project_not_on_anvil(self):
         """anvil_audit raises exception with one billing project exists in the app but not on AnVIL."""
@@ -148,16 +145,12 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             status=404,
             json={"message": "other error"},
         )
-        not_in_anvil = models.BillingProject.anvil_audit_not_in_anvil()
-        self.assertEqual(len(not_in_anvil), 1)
-        self.assertIn(billing_project, not_in_anvil)
+        audit = models.BillingProject.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 1)
+        self.assertIn(billing_project, audit["not_in_anvil"])
         responses.assert_call_count(api_url, 1)
-        with self.assertRaises(models.BillingProject.DoesNotExistInAnVIL) as e:
-            models.BillingProject.anvil_audit()
-        self.assertIn(
-            "{} {}".format(billing_project.pk, billing_project.name), str(e.exception)
-        )
-        responses.assert_call_count(api_url, 2)
 
     def test_anvil_audit_two_billing_projects_no_errors(self):
         """anvil_audit returns None if there are two billing projects and both exist on AnVIL."""
@@ -177,12 +170,9 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             status=200,
             json=self.get_api_json_response(),
         )
-        self.assertEqual(len(models.BillingProject.anvil_audit_not_in_anvil()), 0)
+        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
-        self.assertIsNone(models.BillingProject.anvil_audit())
-        responses.assert_call_count(api_url_1, 2)
-        responses.assert_call_count(api_url_2, 2)
 
     def test_anvil_audit_two_billing_projects_first_not_on_anvil(self):
         """anvil_audit raises exception if two billing projects exist in the app but the first is not on AnVIL."""
@@ -207,10 +197,10 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.assertIn(billing_project_1, not_in_anvil)
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
-        with self.assertRaises(models.BillingProject.DoesNotExistInAnVIL) as e:
-            models.BillingProject.anvil_audit()
-        self.assertIn(billing_project_1.name, str(e.exception))
-        self.assertNotIn(billing_project_2.name, str(e.exception))
+        audit = models.BillingProject.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(audit["not_in_anvil"], not_in_anvil)
         responses.assert_call_count(api_url_1, 2)
         responses.assert_call_count(api_url_2, 2)
 
@@ -232,25 +222,21 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             status=404,
             json={"message": "other error"},
         )
-        not_in_anvil = models.BillingProject.anvil_audit_not_in_anvil()
-        self.assertEqual(len(not_in_anvil), 2)
-        self.assertIn(billing_project_1, not_in_anvil)
-        self.assertIn(billing_project_2, not_in_anvil)
+        audit = models.BillingProject.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 2)
+        self.assertIn(billing_project_1, audit["not_in_anvil"])
+        self.assertIn(billing_project_2, audit["not_in_anvil"])
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
-        with self.assertRaises(models.BillingProject.DoesNotExistInAnVIL) as e:
-            models.BillingProject.anvil_audit()
-        self.assertIn(billing_project_1.name, str(e.exception))
-        self.assertIn(billing_project_2.name, str(e.exception))
-        responses.assert_call_count(api_url_1, 2)
-        responses.assert_call_count(api_url_2, 2)
 
     def test_anvil_audit_ignore_not_has_app_has_user(self):
         """anvil_audit does not check AnVIL about billing projects that do not have the app as a user."""
         factories.BillingProjectFactory.create(has_app_as_user=False)
         # No API calls made.
         self.assertEqual(len(models.BillingProject.anvil_audit_not_in_anvil()), 0)
-        self.assertIsNone(models.BillingProject.anvil_audit())
+        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
 
 
 class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
@@ -452,8 +438,7 @@ class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_audit_no_accounts(self):
         """anvil_audit works correct if there are no Accounts in the app."""
-        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
-        self.assertIsNone(models.Account.anvil_audit())
+        self.assertEqual(len(models.Account.anvil_audit()), 0)
 
     def test_anvil_audit_one_account_no_errors(self):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
@@ -464,10 +449,8 @@ class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
         )
-        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
+        self.assertEqual(len(models.Account.anvil_audit()), 0)
         responses.assert_call_count(api_url, 1)
-        self.assertIsNone(models.Account.anvil_audit())
-        responses.assert_call_count(api_url, 2)
 
     def test_anvil_audit_one_account_not_on_anvil(self):
         """anvil_audit raises exception if one billing project exists in the app but not on AnVIL."""
@@ -479,14 +462,12 @@ class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        not_in_anvil = models.Account.anvil_audit_not_in_anvil()
-        self.assertEqual(len(not_in_anvil), 1)
-        self.assertIn(account, not_in_anvil)
+        audit = models.Account.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 1)
+        self.assertIn(account, audit["not_in_anvil"])
         responses.assert_call_count(api_url, 1)
-        with self.assertRaises(models.Account.DoesNotExistInAnVIL) as e:
-            models.Account.anvil_audit()
-        self.assertIn("{} {}".format(account.pk, account.email), str(e.exception))
-        responses.assert_call_count(api_url, 2)
 
     def test_anvil_audit_two_accounts_no_errors(self):
         """anvil_audit returns None if if two accounts exist in both the app and AnVIL."""
@@ -504,12 +485,10 @@ class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url_2,
             status=200,
         )
-        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
+        audit = models.Account.anvil_audit()
+        self.assertEqual(len(audit), 0)
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
-        self.assertIsNone(models.Account.anvil_audit())
-        responses.assert_call_count(api_url_1, 2)
-        responses.assert_call_count(api_url_2, 2)
 
     def test_anvil_audit_two_accounts_first_not_on_anvil(self):
         """anvil_audit raises exception if two accounts exist in the app but the first is not not on AnVIL."""
@@ -528,17 +507,13 @@ class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url_2,
             status=200,
         )
-        not_in_anvil = models.Account.anvil_audit_not_in_anvil()
-        self.assertEqual(len(not_in_anvil), 1)
-        self.assertIn(account_1, not_in_anvil)
+        audit = models.Account.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 1)
+        self.assertIn(account_1, audit["not_in_anvil"])
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
-        with self.assertRaises(models.Account.DoesNotExistInAnVIL) as e:
-            models.Account.anvil_audit()
-        self.assertIn(account_1.email, str(e.exception))
-        self.assertNotIn(account_2.email, str(e.exception))
-        responses.assert_call_count(api_url_1, 2)
-        responses.assert_call_count(api_url_2, 2)
 
     def test_anvil_audit_two_accounts_both_missing(self):
         """anvil_audit raises exception if there are two accounts that exist in the app but not in AnVIL."""
@@ -558,26 +533,21 @@ class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        not_in_anvil = models.Account.anvil_audit_not_in_anvil()
-        self.assertEqual(len(not_in_anvil), 2)
-        self.assertIn(account_1, not_in_anvil)
-        self.assertIn(account_2, not_in_anvil)
+        audit = models.Account.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 2)
+        self.assertIn(account_1, audit["not_in_anvil"])
+        self.assertIn(account_2, audit["not_in_anvil"])
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
-        with self.assertRaises(models.Account.DoesNotExistInAnVIL) as e:
-            models.Account.anvil_audit()
-        self.assertIn(account_1.email, str(e.exception))
-        self.assertIn(account_2.email, str(e.exception))
-        responses.assert_call_count(api_url_1, 2)
-        responses.assert_call_count(api_url_2, 2)
 
     def test_anvil_audit_deactivated_account(self):
         """anvil_audit does not check AnVIL about accounts that are deactivated."""
         account = factories.AccountFactory.create()
         account.deactivate()
         # No API calls made.
-        self.assertEqual(len(models.Account.anvil_audit_not_in_anvil()), 0)
-        self.assertIsNone(models.Account.anvil_audit())
+        self.assertEqual(len(models.Account.anvil_audit()), 0)
 
 
 class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
