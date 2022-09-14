@@ -80,24 +80,6 @@ class BillingProject(TimeStampedModel):
         return billing_project
 
     @classmethod
-    def anvil_audit_not_in_anvil(cls):
-        """Check for any billing projects that do not exist on AnVIL but do exist in the app.
-
-        Only billing projects with have_app_as_user=True are checked, because the AnVIL API does not
-        differentiate between billing projects that don't exist and billing projects where the app is
-        not a user.
-
-        Returns:
-            A list of billing projects that do not exist in AnVIL.
-        """
-        # Check that all billing projects exist.
-        missing = []
-        for billing_project in cls.objects.filter(has_app_as_user=True).all():
-            if not billing_project.anvil_exists():
-                missing.append(billing_project)
-        return missing
-
-    @classmethod
     def anvil_audit(cls):
         """Verify data in the app against AnVIL.
 
@@ -109,9 +91,13 @@ class BillingProject(TimeStampedModel):
             A dictionary with keys describing various issues:
             * not_in_anvil: a list of billing projects that don't exist in AnVIL or the app is not a user.
         """
-        audit_results = {}
         # Check that all billing projects exist.
-        not_in_anvil = cls.anvil_audit_not_in_anvil()
+        not_in_anvil = []
+        for billing_project in cls.objects.filter(has_app_as_user=True).all():
+            if not billing_project.anvil_exists():
+                not_in_anvil.append(billing_project)
+        # Create results to return.
+        audit_results = {}
         if not_in_anvil:
             audit_results["not_in_anvil"] = not_in_anvil
         # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
@@ -332,11 +318,6 @@ class Account(TimeStampedModel, ActivatorModel):
             A list of accounts that do not exist in AnVIL.
         """
         # Check that all accounts exist.
-        missing = []
-        for account in cls.objects.filter(status=cls.ACTIVE_STATUS).all():
-            if not account.anvil_exists():
-                missing.append(account)
-        return missing
 
     @classmethod
     def anvil_audit(cls):
@@ -350,9 +331,13 @@ class Account(TimeStampedModel, ActivatorModel):
             A dictionary with keys describing various issues:
             * not_in_anvil: a list of accounts that don't exist in AnVIL.
         """
+        # Check that all accounts exist on AnVIL.
+        not_in_anvil = []
+        for account in cls.objects.filter(status=cls.ACTIVE_STATUS).all():
+            if not account.anvil_exists():
+                not_in_anvil.append(account)
+        # Prepare results to return.
         audit_results = {}
-        # Check that all billing projects exist.
-        not_in_anvil = cls.anvil_audit_not_in_anvil()
         if not_in_anvil:
             audit_results["not_in_anvil"] = not_in_anvil
         # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
