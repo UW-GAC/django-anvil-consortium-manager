@@ -699,6 +699,61 @@ class Workspace(TimeStampedModel):
 
         return workspace
 
+    @classmethod
+    def anvil_audit(cls):
+        """Verify data in the app against AnVIL.
+
+        This method checks if any workspaces where the service account is an owner exist in AnVIL.
+
+        Returns:
+            A dictionary with keys describing various issues:
+            * not_in_anvil: a list of groups that don't exist in AnVIL.
+            * not_owner_on_anvil: a list of workspaces where the service account is not an owner on AnVIL.
+            * not_in_app: a list of groups that the service account is part of but don't exist in the app.
+        """
+        # Check the list of groups.
+        response = AnVILAPIClient().list_workspaces(
+            fields="workspace.namespace,workspace.name,accessLevel"
+        )
+        workspaces_on_anvil = response.json()
+        # Prepare variables to hold results.
+        not_in_anvil = []
+        not_owner_on_anvil = []
+        for workspace in cls.objects.all():
+            try:
+                i = next(
+                    idx
+                    for idx, x in enumerate(workspaces_on_anvil)
+                    if (
+                        x["workspace"]["name"] == workspace.name
+                        and x["workspace"]["namespace"]
+                        == workspace.billing_project.name
+                    )
+                )
+            except StopIteration:
+                not_in_anvil.append(workspace)
+            else:
+                # Check role.
+                workspace_details = workspaces_on_anvil.pop(i)
+                if workspace_details["access"] != "OWNER":
+                    not_owner_on_anvil.append(workspace)
+        # Check for remaining workspaces on AnVIL where we are OWNER.
+        not_in_app = [
+            "{}/{}".format(x["workspace"]["namespace"], x["workspace"]["name"])
+            for x in workspaces_on_anvil
+            if x["access"] == "OWNER"
+        ]
+        # Create final results to return.
+        audit_results = {}
+        if not_in_anvil:
+            audit_results["not_in_anvil"] = not_in_anvil
+        if not_owner_on_anvil:
+            audit_results["not_owner_on_anvil"] = not_owner_on_anvil
+        if not_in_app:
+            # If any other groups remain in the response, they are not in the app and should be noted.
+            audit_results["not_in_app"] = not_in_app
+        return audit_results
+
 
 class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""

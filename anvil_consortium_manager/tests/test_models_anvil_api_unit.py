@@ -1973,6 +1973,288 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(group_url, 1)
 
 
+class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the Workspace.anvil_audit method."""
+
+    def get_api_url(self):
+        return self.entry_point + "/api/workspaces"
+
+    def get_api_workspace_json(self, billing_project_name, workspace_name, access):
+        """Return the json dictionary for a single workspace on AnVIL."""
+        return {
+            "access": access,
+            "workspace": {"name": workspace_name, "namespace": billing_project_name},
+        }
+
+    def test_anvil_audit_no_workspaces(self):
+        """anvil_audit works correct if there are no Workspaces in the app."""
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        # This does not work with query parameters. I would need to construct the full url to check.
+        # responses.assert_call_count(api_url, 1)
+
+    def test_anvil_audit_one_workspace_no_errors(self):
+        """anvil_audit works correct if there is one workspace in the app and it exists on AnVIL."""
+        workspace = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name, workspace.name, "OWNER"
+                )
+            ],
+        )
+        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+
+    def test_anvil_audit_one_workspace_not_on_anvil(self):
+        """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
+        group = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 1)
+        self.assertIn(group, audit["not_in_anvil"])
+
+    def test_anvil_audit_one_workspace_owner_in_app_reader_on_anvil(self):
+        """anvil_audit raises exception if one workspace exists in the app but the access on AnVIL is READER."""
+        workspace = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name, workspace.name, "READER"
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_owner_on_anvil", audit)
+        self.assertEqual(len(audit["not_owner_on_anvil"]), 1)
+        self.assertIn(workspace, audit["not_owner_on_anvil"])
+
+    def test_anvil_audit_one_workspace_owner_in_app_writer_on_anvil(self):
+        """anvil_audit raises exception if one workspace exists in the app but the access on AnVIL is WRITER."""
+        workspace = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name, workspace.name, "WRITER"
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_owner_on_anvil", audit)
+        self.assertEqual(len(audit["not_owner_on_anvil"]), 1)
+        self.assertIn(workspace, audit["not_owner_on_anvil"])
+
+    def test_anvil_audit_two_workspaces_no_errors(self):
+        """anvil_audit returns None if if two workspaces exist in both the app and AnVIL."""
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace_1.billing_project.name, workspace_1.name, "OWNER"
+                ),
+                self.get_api_workspace_json(
+                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
+                ),
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 0)
+
+    def test_anvil_audit_two_groups_json_response_order_does_not_matter(self):
+        """Order of groups in the json response does not matter."""
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
+                ),
+                self.get_api_workspace_json(
+                    workspace_1.billing_project.name, workspace_1.name, "OWNER"
+                ),
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 0)
+
+    def test_anvil_audit_two_workspaces_first_not_on_anvil(self):
+        """anvil_audit raises exception if two workspaces exist in the app but the first is not not on AnVIL."""
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
+                ),
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 1)
+        self.assertIn(workspace_1, audit["not_in_anvil"])
+        self.assertNotIn(workspace_2, audit["not_in_anvil"])
+
+    def test_anvil_audit_two_workspaces_first_different_access(self):
+        """anvil_audit when if two workspaces exist in the app but access to the first is different on AnVIL."""
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace_1.billing_project.name, workspace_1.name, "READER"
+                ),
+                self.get_api_workspace_json(
+                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
+                ),
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_owner_on_anvil", audit)
+        self.assertEqual(len(audit["not_owner_on_anvil"]), 1)
+        self.assertIn(workspace_1, audit["not_owner_on_anvil"])
+        self.assertNotIn(workspace_2, audit["not_owner_on_anvil"])
+
+    def test_anvil_audit_two_workspaces_both_missing(self):
+        """anvil_audit when there are two workspaces that exist in the app but not in AnVIL."""
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 2)
+        self.assertIn(workspace_1, audit["not_in_anvil"])
+        self.assertIn(workspace_2, audit["not_in_anvil"])
+
+    def test_anvil_audit_one_workspace_missing_in_app(self):
+        """anvil_audit returns not_in_app info if a workspace exists on AnVIL but not in the app."""
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "OWNER")],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_app", audit)
+        self.assertEqual(len(audit["not_in_app"]), 1)
+        self.assertIn("test-bp/test-ws", audit["not_in_app"])
+
+    def test_anvil_audit_two_workspaces_missing_in_app(self):
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json("test-bp-1", "test-ws-1", "OWNER"),
+                self.get_api_workspace_json("test-bp-2", "test-ws-2", "OWNER"),
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("not_in_app", audit)
+        self.assertEqual(len(audit["not_in_app"]), 2)
+        self.assertIn("test-bp-1/test-ws-1", audit["not_in_app"])
+        self.assertIn("test-bp-2/test-ws-2", audit["not_in_app"])
+
+    def test_different_billing_project(self):
+        """A workspace is reported as missing if it has the same name but a different billing project in app."""
+        workspace = factories.WorkspaceFactory.create(
+            billing_project__name="test-bp-app", name="test-ws"
+        )
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("test-bp-anvil", "test-ws", "OWNER")],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 2)
+        self.assertIn("not_in_app", audit)
+        self.assertEqual(len(audit["not_in_app"]), 1)
+        self.assertIn("test-bp-anvil/test-ws", audit["not_in_app"])
+        self.assertIn("not_in_anvil", audit)
+        self.assertEqual(len(audit["not_in_anvil"]), 1)
+        self.assertIn(workspace, audit["not_in_anvil"])
+
+    def test_ignores_workspaces_where_app_is_reader_on_anvil(self):
+        """Audit ignores workspaces on AnVIL where app is a READER on AnVIL."""
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "READER")],
+        )
+        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+
+    def test_ignores_workspaces_where_app_is_writer_on_anvil(self):
+        """Audit ignores workspaces on AnVIL where app is a WRITER on AnVIL."""
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "WRITER")],
+        )
+        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+
+
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
