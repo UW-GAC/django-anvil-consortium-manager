@@ -28,8 +28,8 @@ class BillingProjectAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
-class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for class methods of the BillingProject model that make AnVIL API calls."""
+class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the BillingProject.anvil_import method."""
 
     def get_api_url(self, billing_project_name):
         return self.entry_point + "/api/billing/v2/" + billing_project_name
@@ -117,6 +117,18 @@ class BillingProjectClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             models.BillingProject.anvil_import("test billing project")
         # Check that no objects were saved.
         self.assertEqual(models.BillingProject.objects.count(), 0)
+
+
+class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the BillingProject.anvil_audit method."""
+
+    def get_api_url(self, billing_project_name):
+        return self.entry_point + "/api/billing/v2/" + billing_project_name
+
+    def get_api_json_response(self):
+        return {
+            "roles": ["User"],
+        }
 
     def test_anvil_audit_no_billing_projects(self):
         """anvil_audit works correct if there are no billing projects in the app."""
@@ -425,8 +437,8 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(add_to_group_url_2, 1)
 
 
-class AccountClassMethodsAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the Accoun model class methods that call the AnVIL API."""
+class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the Account.anvil_audit method."""
 
     def get_api_url(self, email):
         return self.entry_point + "/api/proxyGroup/" + email
@@ -669,15 +681,15 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
-class ManagedGroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for class methods of the Group model that make AnVIL API calls."""
+class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests forthe ManagedGroup.anvil_import method."""
 
     def get_api_url(self):
         """Return the API url being called by the method."""
         return self.entry_point + "/api/groups"
 
     def get_api_json_response(self, group_details):
-        """Return json data about groups in the API format. Include groups that aren't being tested."""
+        """Return json data about groups in the API format."""
         json_data = []
         for group_name, role in group_details:
             json_data.append(
@@ -781,6 +793,27 @@ class ManagedGroupClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             models.ManagedGroup.anvil_import(group_name)
         # No object was saved.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
+
+
+class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests forthe ManagedGroup.anvil_audit method."""
+
+    def get_api_url(self):
+        """Return the API url being called by the method."""
+        return self.entry_point + "/api/groups"
+
+    def get_api_json_response(self, group_details):
+        """Return json data about groups in the API format."""
+        json_data = []
+        for group_name, role in group_details:
+            json_data.append(
+                {
+                    "groupEmail": group_name + "@firecloud.org",
+                    "groupName": group_name,
+                    "role": role,
+                }
+            )
+        return json_data
 
     def test_anvil_audit_no_groups(self):
         """anvil_audit works correct if there are no ManagedGroups in the app."""
@@ -1261,8 +1294,8 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url_workspace, 1)
 
 
-class WorkspaceClassMethodsAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests of class methods for the Workspace model."""
+class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the Workspace.anvil_import method."""
 
     def get_billing_project_api_url(self, billing_project_name):
         return self.entry_point + "/api/billing/v2/" + billing_project_name
