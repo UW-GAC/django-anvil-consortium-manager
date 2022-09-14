@@ -1979,11 +1979,17 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def get_api_url(self):
         return self.entry_point + "/api/workspaces"
 
-    def get_api_workspace_json(self, billing_project_name, workspace_name, access):
+    def get_api_workspace_json(
+        self, billing_project_name, workspace_name, access, auth_domains=[]
+    ):
         """Return the json dictionary for a single workspace on AnVIL."""
         return {
             "access": access,
-            "workspace": {"name": workspace_name, "namespace": billing_project_name},
+            "workspace": {
+                "name": workspace_name,
+                "namespace": billing_project_name,
+                "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
+            },
         }
 
     def test_anvil_audit_no_workspaces(self):
@@ -2253,6 +2259,283 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_workspace_json("test-bp", "test-ws", "WRITER")],
         )
         self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+
+    def test_one_workspace_one_auth_domain(self):
+        """anvil_audit works properly when there is one workspace with one auth domain."""
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    auth_domain.workspace.billing_project.name,
+                    auth_domain.workspace.name,
+                    "OWNER",
+                    auth_domains=[auth_domain.group.name],
+                )
+            ],
+        )
+        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+
+    def test_one_workspace_two_auth_domains(self):
+        """anvil_audit works properly when there is one workspace with two auth domains."""
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace
+        )
+        auth_domain_2 = factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace
+        )
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    auth_domains=[auth_domain_1.group.name, auth_domain_2.group.name],
+                )
+            ],
+        )
+        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+
+    def test_one_workspace_two_auth_domains_order_does_not_matter(self):
+        """anvil_audit works properly when there is one workspace with two auth domains."""
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace, group__name="aa"
+        )
+        auth_domain_2 = factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace, group__name="zz"
+        )
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    auth_domains=[auth_domain_2.group.name, auth_domain_1.group.name],
+                )
+            ],
+        )
+        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+
+    def test_one_workspace_no_auth_domain_in_app_one_auth_domain_on_anvil(self):
+        """anvil_audit works properly when there is one workspace with no auth domain in the app but one on AnVIL."""
+        workspace = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    auth_domains=["auth-anvil"],
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 1)
+        self.assertIn(workspace, audit["different_auth_domains"])
+
+    def test_one_workspace_one_auth_domain_in_app_no_auth_domain_on_anvil(self):
+        """anvil_audit works properly when there is one workspace with one auth domain in the app but none on AnVIL."""
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    auth_domain.workspace.billing_project.name,
+                    auth_domain.workspace.name,
+                    "OWNER",
+                    auth_domains=[],
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 1)
+        self.assertIn(auth_domain.workspace, audit["different_auth_domains"])
+
+    def test_one_workspace_no_auth_domain_in_app_two_auth_domains_on_anvil(self):
+        """anvil_audit works properly when there is one workspace with no auth domain in the app but two on AnVIL."""
+        workspace = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    auth_domains=["auth-domain"],
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 1)
+        self.assertIn(workspace, audit["different_auth_domains"])
+
+    def test_one_workspace_two_auth_domains_in_app_no_auth_domain_on_anvil(self):
+        """anvil_audit works properly when there is one workspace with two auth domains in the app but none on AnVIL."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    auth_domains=[],
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 1)
+        self.assertIn(workspace, audit["different_auth_domains"])
+
+    def test_one_workspace_two_auth_domains_in_app_one_auth_domain_on_anvil(self):
+        """anvil_audit works properly when there is one workspace with two auth domains in the app but one on AnVIL."""
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace
+        )
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    auth_domains=[auth_domain_1.group.name],
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 1)
+        self.assertIn(workspace, audit["different_auth_domains"])
+
+    def test_one_workspace_different_auth_domains(self):
+        """anvil_audit works properly when the app and AnVIL have different auth domains for the same workspace."""
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(
+            group__name="app"
+        )
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    auth_domain.workspace.billing_project.name,
+                    auth_domain.workspace.name,
+                    "OWNER",
+                    auth_domains=["anvil"],
+                )
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 1)
+        self.assertIn(auth_domain.workspace, audit["different_auth_domains"])
+
+    def test_two_workspaces_first_auth_domains_do_not_match(self):
+        """anvil_audit works properly when there are two workspaces in the app and the first has auth domain issues."""
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace_1.billing_project.name,
+                    workspace_1.name,
+                    "OWNER",
+                    auth_domains=["anvil"],
+                ),
+                self.get_api_workspace_json(
+                    workspace_2.billing_project.name,
+                    workspace_2.name,
+                    "OWNER",
+                    auth_domains=[],
+                ),
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 1)
+        self.assertIn(workspace_1, audit["different_auth_domains"])
+        self.assertNotIn(workspace_2, audit["different_auth_domains"])
+
+    def test_two_workspaces_auth_domains_do_not_match_for_both(self):
+        """anvil_audit works properly when there are two workspaces in the app and the first has auth domain issues."""
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace_1.billing_project.name,
+                    workspace_1.name,
+                    "OWNER",
+                    auth_domains=["anvil-1"],
+                ),
+                self.get_api_workspace_json(
+                    workspace_2.billing_project.name,
+                    workspace_2.name,
+                    "OWNER",
+                    auth_domains=["anvil-2"],
+                ),
+            ],
+        )
+        audit = models.Workspace.anvil_audit()
+        self.assertEqual(len(audit), 1)
+        self.assertIn("different_auth_domains", audit)
+        self.assertEqual(len(audit["different_auth_domains"]), 2)
+        self.assertIn(workspace_1, audit["different_auth_domains"])
+        self.assertIn(workspace_2, audit["different_auth_domains"])
 
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):

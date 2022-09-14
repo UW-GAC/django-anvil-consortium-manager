@@ -709,16 +709,18 @@ class Workspace(TimeStampedModel):
             A dictionary with keys describing various issues:
             * not_in_anvil: a list of groups that don't exist in AnVIL.
             * not_owner_on_anvil: a list of workspaces where the service account is not an owner on AnVIL.
+            * different_auth_domains: a list of workspaces where the auth domains in the app dont match those on AnVIL.
             * not_in_app: a list of groups that the service account is part of but don't exist in the app.
         """
-        # Check the list of groups.
+        # Check the list of workspaces.
         response = AnVILAPIClient().list_workspaces(
-            fields="workspace.namespace,workspace.name,accessLevel"
+            fields="workspace.namespace,workspace.name,workspace.authorizationDomain,accessLevel"
         )
         workspaces_on_anvil = response.json()
         # Prepare variables to hold results.
         not_in_anvil = []
         not_owner_on_anvil = []
+        different_auth_domains = []
         for workspace in cls.objects.all():
             try:
                 i = next(
@@ -737,6 +739,17 @@ class Workspace(TimeStampedModel):
                 workspace_details = workspaces_on_anvil.pop(i)
                 if workspace_details["access"] != "OWNER":
                     not_owner_on_anvil.append(workspace)
+                # Check auth domains.
+                auth_domains_on_anvil = [
+                    x["membersGroupName"]
+                    for x in workspace_details["workspace"]["authorizationDomain"]
+                ]
+                auth_domains_in_app = workspace.authorization_domains.all().values_list(
+                    "name", flat=True
+                )
+                if set(auth_domains_on_anvil) != set(auth_domains_in_app):
+                    different_auth_domains.append(workspace)
+
         # Check for remaining workspaces on AnVIL where we are OWNER.
         not_in_app = [
             "{}/{}".format(x["workspace"]["namespace"], x["workspace"]["name"])
@@ -749,6 +762,8 @@ class Workspace(TimeStampedModel):
             audit_results["not_in_anvil"] = not_in_anvil
         if not_owner_on_anvil:
             audit_results["not_owner_on_anvil"] = not_owner_on_anvil
+        if different_auth_domains:
+            audit_results["different_auth_domains"] = different_auth_domains
         if not_in_app:
             # If any other groups remain in the response, they are not in the app and should be noted.
             audit_results["not_in_app"] = not_in_app
