@@ -1,11 +1,14 @@
 import responses
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from faker import Faker
 
 from .. import anvil_api, anvil_audit, exceptions, models
 from ..adapters.default import DefaultWorkspaceAdapter
 from . import factories
 from .utils import AnVILAPIMockTestMixin
+
+fake = Faker()
 
 
 class BillingProjectAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
@@ -1131,6 +1134,813 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             set(["test-group-admin", "test-group-member"]),
         )
         responses.assert_call_count(api_url, 1)
+
+    def test_fails_membership_audit(self):
+        self.fail()
+
+
+class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests forthe ManagedGroup.anvil_audit method."""
+
+    def setUp(self):
+        super().setUp()
+        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
+        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
+            fake.email()
+        )
+
+    def get_api_url(self, group_name):
+        """Return the API url being called by the method."""
+        return self.entry_point + "/api/groups/" + group_name
+
+    def get_api_json_response(self, admins=[], members=[]):
+        """Return json data about groups in the API format."""
+        json_data = {
+            "adminsEmails": [
+                anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
+            ]
+            + admins,
+            # "groupEmail": group_name + "@firecloud.org",
+            "membersEmails": members,
+        }
+        return json_data
+
+    def test_no_members(self):
+        """anvil_audit works correctly if this group has no members."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_account_members(self):
+        """anvil_audit works correctly if this group has one account member."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[membership.account.email]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_account_members(self):
+        """anvil_audit works correctly if this group has two account members."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupAccountMembershipFactory.create(group=group)
+        membership_2 = factories.GroupAccountMembershipFactory.create(group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                members=[membership_1.account.email, membership_2.account.email]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(
+            audit_results.get_verified(), set([membership_1, membership_2])
+        )
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_account_members_not_in_anvil(self):
+        """anvil_audit works correctly if this group has one account member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {membership: [audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_account_members_not_in_anvil(self):
+        """anvil_audit works correctly if this group has two account member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupAccountMembershipFactory.create(group=group)
+        membership_2 = factories.GroupAccountMembershipFactory.create(group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                membership_1: [audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL],
+                membership_2: [audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_account_members_not_in_app(self):
+        """anvil_audit works correctly if this group has one account member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=["test-member@example.com"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(), set(["MEMBER: test-member@example.com"])
+        )
+
+    def test_two_account_members_not_in_app(self):
+        """anvil_audit works correctly if this group has two account member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                members=["test-member-1@example.com", "test-member-2@example.com"]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            set(
+                [
+                    "MEMBER: test-member-1@example.com",
+                    "MEMBER: test-member-2@example.com",
+                ]
+            ),
+        )
+
+    def test_one_account_members_case_insensitive(self):
+        """anvil_audit works correctly if this group has one account member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group, account__email="test-member@example.com"
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=["Test-Member@example.com"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set([]))
+
+    def test_one_account_admin(self):
+        """anvil_audit works correctly if this group has one account admin."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group, role=models.GroupAccountMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(admins=[membership.account.email]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_account_admin(self):
+        """anvil_audit works correctly if this group has two account members."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupAccountMembershipFactory.create(
+            group=group, role=models.GroupAccountMembership.ADMIN
+        )
+        membership_2 = factories.GroupAccountMembershipFactory.create(
+            group=group, role=models.GroupAccountMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                admins=[membership_1.account.email, membership_2.account.email]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(
+            audit_results.get_verified(), set([membership_1, membership_2])
+        )
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_account_admin_not_in_anvil(self):
+        """anvil_audit works correctly if this group has one account member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group, role=models.GroupAccountMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {membership: [audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_account_admins_not_in_anvil(self):
+        """anvil_audit works correctly if this group has two account member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupAccountMembershipFactory.create(
+            group=group, role=models.GroupAccountMembership.ADMIN
+        )
+        membership_2 = factories.GroupAccountMembershipFactory.create(
+            group=group, role=models.GroupAccountMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                membership_1: [audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL],
+                membership_2: [audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_account_admin_not_in_app(self):
+        """anvil_audit works correctly if this group has one account member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(admins=["test-admin@example.com"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(), set(["ADMIN: test-admin@example.com"])
+        )
+
+    def test_two_account_admin_not_in_app(self):
+        """anvil_audit works correctly if this group has two account admin not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                admins=["test-admin-1@example.com", "test-admin-2@example.com"]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            set(["ADMIN: test-admin-1@example.com", "ADMIN: test-admin-2@example.com"]),
+        )
+
+    def test_one_account_admin_case_insensitive(self):
+        """anvil_audit works correctly if this group has one account member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group,
+            account__email="test-admin@example.com",
+            role=models.GroupAccountMembership.ADMIN,
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(admins=["Test-Admin@example.com"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set([]))
+
+    def test_account_different_role_member_in_app_admin_in_anvil(self):
+        """anvil_audit works correctly if an account has a different role in AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group, role=models.GroupAccountMembership.MEMBER
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(admins=[membership.account.email]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {membership: [audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(
+            audit_results.get_not_in_app(), set(["ADMIN: " + membership.account.email])
+        )
+
+    def test_one_group_members(self):
+        """anvil_audit works correctly if this group has one group member."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(parent_group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                members=[membership.child_group.get_email()]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_group_members(self):
+        """anvil_audit works correctly if this group has two account members."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupGroupMembershipFactory.create(parent_group=group)
+        membership_2 = factories.GroupGroupMembershipFactory.create(parent_group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                members=[
+                    membership_1.child_group.get_email(),
+                    membership_2.child_group.get_email(),
+                ]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(
+            audit_results.get_verified(), set([membership_1, membership_2])
+        )
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_group_members_not_in_anvil(self):
+        """anvil_audit works correctly if this group has one group member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(parent_group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {membership: [audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_group_members_not_in_anvil(self):
+        """anvil_audit works correctly if this group has two group member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupGroupMembershipFactory.create(parent_group=group)
+        membership_2 = factories.GroupGroupMembershipFactory.create(parent_group=group)
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                membership_1: [audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL],
+                membership_2: [audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_group_members_not_in_app(self):
+        """anvil_audit works correctly if this group has one group member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=["test-member@firecloud.org"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(), set(["MEMBER: test-member@firecloud.org"])
+        )
+
+    def test_two_group_members_not_in_app(self):
+        """anvil_audit works correctly if this group has two group member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                members=["test-member-1@firecloud.org", "test-member-2@firecloud.org"]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            set(
+                [
+                    "MEMBER: test-member-1@firecloud.org",
+                    "MEMBER: test-member-2@firecloud.org",
+                ]
+            ),
+        )
+
+    def test_one_group_members_case_insensitive(self):
+        """anvil_audit works correctly if this group has one group member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, child_group__name="test-member"
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=["Test-Member@firecloud.org"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set([]))
+
+    def test_one_group_admin(self):
+        """anvil_audit works correctly if this group has one group admin."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                admins=[membership.child_group.get_email()]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_group_admin(self):
+        """anvil_audit works correctly if this group has two group admin."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.ADMIN
+        )
+        membership_2 = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                admins=[
+                    membership_1.child_group.get_email(),
+                    membership_2.child_group.get_email(),
+                ]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(
+            audit_results.get_verified(), set([membership_1, membership_2])
+        )
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_group_admin_not_in_anvil(self):
+        """anvil_audit works correctly if this group has one group member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {membership: [audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_group_admins_not_in_anvil(self):
+        """anvil_audit works correctly if this group has two group member not in anvil."""
+        group = factories.ManagedGroupFactory.create()
+        membership_1 = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.ADMIN
+        )
+        membership_2 = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.ADMIN
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                membership_1: [audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL],
+                membership_2: [audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_group_admin_not_in_app(self):
+        """anvil_audit works correctly if this group has one group member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(admins=["test-admin@firecloud.org"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(), set(["ADMIN: test-admin@firecloud.org"])
+        )
+
+    def test_two_group_admin_not_in_app(self):
+        """anvil_audit works correctly if this group has two group admin not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                admins=["test-admin-1@firecloud.org", "test-admin-2@firecloud.org"]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            set(
+                [
+                    "ADMIN: test-admin-1@firecloud.org",
+                    "ADMIN: test-admin-2@firecloud.org",
+                ]
+            ),
+        )
+
+    def test_one_group_admin_case_insensitive(self):
+        """anvil_audit works correctly if this group has one group member not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group,
+            child_group__name="test-admin",
+            role=models.GroupGroupMembership.ADMIN,
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(admins=["Test-Admin@firecloud.org"]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set([]))
+
+    def test_group_different_role_member_in_app_admin_in_anvil(self):
+        """anvil_audit works correctly if an group has a different role in AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.MEMBER
+        )
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(
+                admins=[membership.child_group.get_email()]
+            ),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {membership: [audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            set(["ADMIN: " + membership.child_group.get_email()]),
+        )
 
 
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):

@@ -4,8 +4,6 @@
 class AnVILAuditResults:
     """Base class to store audit results from AnVIL."""
 
-    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
-
     def __init__(self):
         self.verified = set()
         self.errors = {}
@@ -48,19 +46,34 @@ class AnVILAuditResults:
 class BillingProjectAuditResults(AnVILAuditResults):
     """Class to hold audit results for BillingProjects."""
 
+    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+
 
 class AccountAuditResults(AnVILAuditResults):
     """Class to hold audit results for Accounts."""
+
+    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
 
 
 class ManagedGroupAuditResults(AnVILAuditResults):
     """Class to hold audit results for ManagedGroups."""
 
-    ERROR_DIFFERENT_ROLE = "App has a different role in this group."
+    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    ERROR_DIFFERENT_ROLE = "App has a different role in this group"
+
+
+class ManagedGroupMembershipAuditResults(AnVILAuditResults):
+    """Class to hold audit results for the membership of a single ManagedGroup."""
+
+    ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL = "Account not an admin in AnVIL"
+    ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL = "Account not a member in AnVIL"
+    ERROR_GROUP_ADMIN_NOT_IN_ANVIL = "Group not an admin in AnVIL"
+    ERROR_GROUP_MEMBER_NOT_IN_ANVIL = "Group not a member in AnVIL"
 
 
 class WorkspaceAuditResults(AnVILAuditResults):
     """Class to hold audit results for Workspaces."""
 
+    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     ERROR_NOT_OWNER_ON_ANVIL = "Not an owner on AnVIL"
     ERROR_DIFFERENT_AUTH_DOMAINS = "Has different auth domains on AnVIL"

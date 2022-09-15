@@ -446,12 +446,80 @@ class ManagedGroup(TimeStampedModel):
         group.save()
         return group
 
+    def anvil_audit_membership(self):
+        """Audit the membership for a single group against AnVIL."""
+        api_client = AnVILAPIClient()
+        audit_results = anvil_audit.ManagedGroupMembershipAuditResults()
+        response = api_client.get_group(self.name)
+        # Convert to case-insensitive emails.
+        members_in_anvil = [x.lower() for x in response.json()["membersEmails"]]
+        admins_in_anvil = [x.lower() for x in response.json()["adminsEmails"]]
+        # Remove the service account as admin.
+        admins_in_anvil.remove(
+            api_client.auth_session.credentials.service_account_email.lower()
+        )
+        # Check group-account membership.
+        for membership in self.groupaccountmembership_set.all():
+            if membership.role == GroupAccountMembership.ADMIN:
+                try:
+                    admins_in_anvil.remove(membership.account.email)
+                except ValueError:
+                    # This email is not in the list of members.
+                    audit_results.add_error(
+                        membership, audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL
+                    )
+                else:
+                    audit_results.add_verified(membership)
+            elif membership.role == GroupAccountMembership.MEMBER:
+                try:
+                    members_in_anvil.remove(membership.account.email)
+                except ValueError:
+                    # This email is not in the list of members.
+                    audit_results.add_error(
+                        membership, audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL
+                    )
+                else:
+                    audit_results.add_verified(membership)
+
+        # Check group-group membership.
+        for membership in self.child_memberships.all():
+            if membership.role == GroupGroupMembership.ADMIN:
+                try:
+                    admins_in_anvil.remove(membership.child_group.get_email())
+                except ValueError:
+                    # This email is not in the list of members.
+                    audit_results.add_error(
+                        membership, audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL
+                    )
+                else:
+                    audit_results.add_verified(membership)
+            elif membership.role == GroupGroupMembership.MEMBER:
+                try:
+                    members_in_anvil.remove(membership.child_group.get_email())
+                except ValueError:
+                    # This email is not in the list of members.
+                    audit_results.add_error(
+                        membership, audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL
+                    )
+                else:
+                    audit_results.add_verified(membership)
+
+        # Add any admin that the app doesn't know about.
+        for member in admins_in_anvil:
+            audit_results.add_not_in_app(
+                "{}: {}".format(GroupAccountMembership.ADMIN, member)
+            )
+        # Add any members that the app doesn't know about.
+        for member in members_in_anvil:
+            audit_results.add_not_in_app(
+                "{}: {}".format(GroupAccountMembership.MEMBER, member)
+            )
+
+        return audit_results
+
     @classmethod
     def anvil_audit(cls):
         """Verify data in the app against AnVIL.
-
-        Group membership where the service account's role is different that implied by is_managed_by_app
-        are handled as missing records.
 
         Returns:
             An instance of ManagedGroupAuditResults
@@ -472,10 +540,14 @@ class ManagedGroup(TimeStampedModel):
             else:
                 # Check role.
                 group_details = groups_on_anvil.pop(i)
-                if group.is_managed_by_app and group_details["role"] == "Member":
-                    audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
+                if group.is_managed_by_app:
+                    if group_details["role"] == "Member":
+                        audit_results.add_error(
+                            group, audit_results.ERROR_DIFFERENT_ROLE
+                        )
                 elif not group.is_managed_by_app and group_details["role"] == "Admin":
                     audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
+
             try:
                 audit_results.add_verified(group)
             except ValueError:
