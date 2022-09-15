@@ -3671,6 +3671,10 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
 
+    def test_fails_access_audit(self):
+        """anvil_audit works properly when one workspace fails its access audit."""
+        self.fail("write this test.")
+
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):

@@ -754,6 +754,10 @@ class Workspace(TimeStampedModel):
 
         return workspace
 
+    def anvil_audit_access(self):
+        """Method to audit access for a given workspace."""
+        raise NotImplementedError()
+
     @classmethod
     def anvil_audit(cls):
         """Verify data in the app against AnVIL.
