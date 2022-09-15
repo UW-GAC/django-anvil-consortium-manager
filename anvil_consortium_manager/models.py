@@ -10,7 +10,7 @@ from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
-from . import exceptions
+from . import anvil_audit, exceptions
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError404
 from .tokens import account_verification_token
@@ -88,19 +88,17 @@ class BillingProject(TimeStampedModel):
         not a user.
 
         Returns:
-            A dictionary with keys describing various issues:
-            * not_in_anvil: a list of billing projects that don't exist in AnVIL or the app is not a user.
+            An instance of BillingProjectAuditResults
         """
         # Check that all billing projects exist.
-        not_in_anvil = []
+        audit_results = anvil_audit.BillingProjectAuditResults()
         for billing_project in cls.objects.filter(has_app_as_user=True).all():
             if not billing_project.anvil_exists():
-                not_in_anvil.append(billing_project)
-        # Create results to return.
-        audit_results = {}
-        if not_in_anvil:
-            audit_results["not_in_anvil"] = not_in_anvil
-        # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
+                audit_results.add_error(
+                    billing_project, audit_results.ERROR_NOT_IN_ANVIL
+                )
+            else:
+                audit_results.add_verified(billing_project)
         return audit_results
 
 
@@ -328,19 +326,15 @@ class Account(TimeStampedModel, ActivatorModel):
         not a user.
 
         Returns:
-            A dictionary with keys describing various issues:
-            * not_in_anvil: a list of accounts that don't exist in AnVIL.
+            An instance of AccountAuditResults
         """
         # Check that all accounts exist on AnVIL.
-        not_in_anvil = []
+        audit_results = anvil_audit.AccountAuditResults()
         for account in cls.objects.filter(status=cls.ACTIVE_STATUS).all():
             if not account.anvil_exists():
-                not_in_anvil.append(account)
-        # Prepare results to return.
-        audit_results = {}
-        if not_in_anvil:
-            audit_results["not_in_anvil"] = not_in_anvil
-        # Here we don't care if there are billing projects in AnVIL that we haven't imported into the app.
+                audit_results.add_error(account, audit_results.ERROR_NOT_IN_ANVIL)
+            else:
+                audit_results.add_verified(account)
         return audit_results
 
 
@@ -460,16 +454,12 @@ class ManagedGroup(TimeStampedModel):
         are handled as missing records.
 
         Returns:
-            A dictionary with keys describing various issues:
-            * not_in_anvil: a list of groups that don't exist in AnVIL.
-            * not_in_app: a list of groups that the service account is part of but don't exist in the app.
+            An instance of ManagedGroupAuditResults
         """
+        audit_results = anvil_audit.ManagedGroupAuditResults()
         # Check the list of groups.
         response = AnVILAPIClient().get_groups()
         groups_on_anvil = response.json()
-        # Prepare variables to hold results.
-        not_in_anvil = []
-        different_role = []
         for group in cls.objects.all():
             try:
                 i = next(
@@ -478,23 +468,22 @@ class ManagedGroup(TimeStampedModel):
                     if x["groupName"] == group.name
                 )
             except StopIteration:
-                not_in_anvil.append(group)
+                audit_results.add_error(group, audit_results.ERROR_NOT_IN_ANVIL)
             else:
                 # Check role.
                 group_details = groups_on_anvil.pop(i)
                 if group.is_managed_by_app and group_details["role"] == "Member":
-                    different_role.append(group)
+                    audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
                 elif not group.is_managed_by_app and group_details["role"] == "Admin":
-                    different_role.append(group)
-        # Create final results to return.
-        audit_results = {}
-        if not_in_anvil:
-            audit_results["not_in_anvil"] = not_in_anvil
-        if different_role:
-            audit_results["different_role"] = different_role
-        if groups_on_anvil:
-            # If any other groups remain in the response, they are not in the app and should be noted.
-            audit_results["not_in_app"] = [x["groupName"] for x in groups_on_anvil]
+                    audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
+            try:
+                audit_results.add_verified(group)
+            except ValueError:
+                # ValueError is raised when the group already has errors reported, so
+                # ignore this exception -- we don't want to add it to the verified list.
+                pass
+        for group_details in groups_on_anvil:
+            audit_results.add_not_in_app(group_details["groupName"])
         return audit_results
 
 
@@ -706,21 +695,14 @@ class Workspace(TimeStampedModel):
         This method checks if any workspaces where the service account is an owner exist in AnVIL.
 
         Returns:
-            A dictionary with keys describing various issues:
-            * not_in_anvil: a list of groups that don't exist in AnVIL.
-            * not_owner_on_anvil: a list of workspaces where the service account is not an owner on AnVIL.
-            * different_auth_domains: a list of workspaces where the auth domains in the app dont match those on AnVIL.
-            * not_in_app: a list of groups that the service account is part of but don't exist in the app.
+            An instance of WorkspaceAuditResults
         """
+        audit_results = anvil_audit.WorkspaceAuditResults()
         # Check the list of workspaces.
         response = AnVILAPIClient().list_workspaces(
             fields="workspace.namespace,workspace.name,workspace.authorizationDomain,accessLevel"
         )
         workspaces_on_anvil = response.json()
-        # Prepare variables to hold results.
-        not_in_anvil = []
-        not_owner_on_anvil = []
-        different_auth_domains = []
         for workspace in cls.objects.all():
             try:
                 i = next(
@@ -733,12 +715,14 @@ class Workspace(TimeStampedModel):
                     )
                 )
             except StopIteration:
-                not_in_anvil.append(workspace)
+                audit_results.add_error(workspace, audit_results.ERROR_NOT_IN_ANVIL)
             else:
                 # Check role.
                 workspace_details = workspaces_on_anvil.pop(i)
                 if workspace_details["access"] != "OWNER":
-                    not_owner_on_anvil.append(workspace)
+                    audit_results.add_error(
+                        workspace, audit_results.ERROR_NOT_OWNER_ON_ANVIL
+                    )
                 # Check auth domains.
                 auth_domains_on_anvil = [
                     x["membersGroupName"]
@@ -748,7 +732,15 @@ class Workspace(TimeStampedModel):
                     "name", flat=True
                 )
                 if set(auth_domains_on_anvil) != set(auth_domains_in_app):
-                    different_auth_domains.append(workspace)
+                    audit_results.add_error(
+                        workspace, audit_results.ERROR_DIFFERENT_AUTH_DOMAINS
+                    )
+                try:
+                    audit_results.add_verified(workspace)
+                except ValueError:
+                    # ValueError is raised when the workspace already has errors reported, so
+                    # ignore this exception -- we don't want to add it to the verified list.
+                    pass
 
         # Check for remaining workspaces on AnVIL where we are OWNER.
         not_in_app = [
@@ -756,17 +748,8 @@ class Workspace(TimeStampedModel):
             for x in workspaces_on_anvil
             if x["access"] == "OWNER"
         ]
-        # Create final results to return.
-        audit_results = {}
-        if not_in_anvil:
-            audit_results["not_in_anvil"] = not_in_anvil
-        if not_owner_on_anvil:
-            audit_results["not_owner_on_anvil"] = not_owner_on_anvil
-        if different_auth_domains:
-            audit_results["different_auth_domains"] = different_auth_domains
-        if not_in_app:
-            # If any other groups remain in the response, they are not in the app and should be noted.
-            audit_results["not_in_app"] = not_in_app
+        for workspace_name in not_in_app:
+            audit_results.add_not_in_app(workspace_name)
         return audit_results
 
 

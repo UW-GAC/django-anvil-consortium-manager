@@ -2,7 +2,7 @@ import responses
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from .. import anvil_api, exceptions, models
+from .. import anvil_api, anvil_audit, exceptions, models
 from ..adapters.default import DefaultWorkspaceAdapter
 from . import factories
 from .utils import AnVILAPIMockTestMixin
@@ -132,7 +132,11 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_audit_no_billing_projects(self):
         """anvil_audit works correct if there are no billing projects in the app."""
-        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_billing_project_no_errors(self):
         """anvil_audit works correct if one billing project exists in the app and in AnVIL."""
@@ -144,7 +148,11 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(),
         )
-        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertEqual(audit_results.get_verified(), {billing_project})
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_billing_project_not_on_anvil(self):
@@ -157,11 +165,14 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit = models.BillingProject.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(billing_project, audit["not_in_anvil"])
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {billing_project: [audit_results.ERROR_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_two_billing_projects_no_errors(self):
@@ -182,7 +193,13 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(),
         )
-        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertEqual(
+            audit_results.get_verified(), {billing_project_1, billing_project_2}
+        )
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
 
@@ -204,11 +221,14 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(),
         )
-        audit = models.BillingProject.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(billing_project_1, audit["not_in_anvil"])
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertEqual(audit_results.get_verified(), {billing_project_2})
+        self.assertEqual(
+            audit_results.get_errors(),
+            {billing_project_1: [audit_results.ERROR_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
 
@@ -230,12 +250,17 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit = models.BillingProject.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 2)
-        self.assertIn(billing_project_1, audit["not_in_anvil"])
-        self.assertIn(billing_project_2, audit["not_in_anvil"])
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                billing_project_1: [audit_results.ERROR_NOT_IN_ANVIL],
+                billing_project_2: [audit_results.ERROR_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
 
@@ -243,7 +268,11 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit does not check AnVIL about billing projects that do not have the app as a user."""
         factories.BillingProjectFactory.create(has_app_as_user=False)
         # No API calls made.
-        self.assertEqual(len(models.BillingProject.anvil_audit()), 0)
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
 
 class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
@@ -445,7 +474,11 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_audit_no_accounts(self):
         """anvil_audit works correct if there are no Accounts in the app."""
-        self.assertEqual(len(models.Account.anvil_audit()), 0)
+        audit_results = models.Account.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.AccountAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_account_no_errors(self):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
@@ -456,7 +489,10 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
         )
-        self.assertEqual(len(models.Account.anvil_audit()), 0)
+        audit_results = models.Account.anvil_audit()
+        self.assertEqual(audit_results.get_verified(), {account})
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_account_not_on_anvil(self):
@@ -469,11 +505,12 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit = models.Account.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(account, audit["not_in_anvil"])
+        audit_results = models.Account.anvil_audit()
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(), {account: [audit_results.ERROR_NOT_IN_ANVIL]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_two_accounts_no_errors(self):
@@ -492,8 +529,10 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url_2,
             status=200,
         )
-        audit = models.Account.anvil_audit()
-        self.assertEqual(len(audit), 0)
+        audit_results = models.Account.anvil_audit()
+        self.assertEqual(audit_results.get_verified(), set([account_1, account_2]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
 
@@ -514,11 +553,12 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url_2,
             status=200,
         )
-        audit = models.Account.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(account_1, audit["not_in_anvil"])
+        audit_results = models.Account.anvil_audit()
+        self.assertEqual(audit_results.get_verified(), set([account_2]))
+        self.assertEqual(
+            audit_results.get_errors(), {account_1: [audit_results.ERROR_NOT_IN_ANVIL]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
 
@@ -540,12 +580,16 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit = models.Account.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 2)
-        self.assertIn(account_1, audit["not_in_anvil"])
-        self.assertIn(account_2, audit["not_in_anvil"])
+        audit_results = models.Account.anvil_audit()
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                account_1: [audit_results.ERROR_NOT_IN_ANVIL],
+                account_2: [audit_results.ERROR_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url_1, 1)
         responses.assert_call_count(api_url_2, 1)
 
@@ -554,7 +598,10 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         account = factories.AccountFactory.create()
         account.deactivate()
         # No API calls made.
-        self.assertEqual(len(models.Account.anvil_audit()), 0)
+        audit_results = models.Account.anvil_audit()
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
 
 class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
@@ -824,8 +871,11 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        self.assertEqual(len(models.ManagedGroup.anvil_audit()), 0)
-        responses.assert_call_count(api_url, 1)
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_group_managed_by_app_no_errors(self):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
@@ -837,7 +887,11 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([(group.name, "Admin")]),
         )
-        self.assertEqual(len(models.ManagedGroup.anvil_audit()), 0)
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([group]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_group_not_managed_by_app_no_errors(self):
@@ -850,7 +904,12 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([(group.name, "Member")]),
         )
-        self.assertEqual(len(models.ManagedGroup.anvil_audit()), 0)
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([group]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+        responses.assert_call_count(api_url, 1)
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_group_not_on_anvil(self):
@@ -863,11 +922,13 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(group, audit["not_in_anvil"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(), {group: [audit_results.ERROR_NOT_IN_ANVIL]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_group_admin_in_app_member_on_anvil(self):
@@ -880,11 +941,13 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([(group.name, "Member")]),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_role", audit)
-        self.assertEqual(len(audit["different_role"]), 1)
-        self.assertIn(group, audit["different_role"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(), {group: [audit_results.ERROR_DIFFERENT_ROLE]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_group_member_in_app_admin_on_anvil(self):
@@ -897,11 +960,13 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([(group.name, "Admin")]),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_role", audit)
-        self.assertEqual(len(audit["different_role"]), 1)
-        self.assertIn(group, audit["different_role"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(), {group: [audit_results.ERROR_DIFFERENT_ROLE]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_two_groups_no_errors(self):
@@ -917,8 +982,12 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 [(group_1.name, "Admin"), (group_2.name, "Member")]
             ),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 0)
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([group_1, group_2]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+        responses.assert_call_count(api_url, 1)
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_two_groups_json_response_order_does_not_matter(self):
@@ -934,8 +1003,12 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 [(group_2.name, "Member"), (group_1.name, "Admin")]
             ),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 0)
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([group_1, group_2]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+        responses.assert_call_count(api_url, 1)
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_two_groups_first_not_on_anvil(self):
@@ -949,12 +1022,13 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([(group_2.name, "Admin")]),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(group_1, audit["not_in_anvil"])
-        self.assertNotIn(group_2, audit["not_in_anvil"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([group_2]))
+        self.assertEqual(
+            audit_results.get_errors(), {group_1: [audit_results.ERROR_NOT_IN_ANVIL]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_two_accounts_both_missing(self):
@@ -968,12 +1042,17 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([]),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 2)
-        self.assertIn(group_1, audit["not_in_anvil"])
-        self.assertIn(group_2, audit["not_in_anvil"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                group_1: [audit_results.ERROR_NOT_IN_ANVIL],
+                group_2: [audit_results.ERROR_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_group_member_missing_in_app(self):
@@ -984,11 +1063,11 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([("test-group", "Member")]),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_app", audit)
-        self.assertEqual(len(audit["not_in_app"]), 1)
-        self.assertIn("test-group", audit["not_in_app"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set(["test-group"]))
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_one_group_admin_missing_in_app(self):
@@ -999,11 +1078,11 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response([("test-group", "Admin")]),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_app", audit)
-        self.assertEqual(len(audit["not_in_app"]), 1)
-        self.assertIn("test-group", audit["not_in_app"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set(["test-group"]))
         responses.assert_call_count(api_url, 1)
 
     def test_anvil_audit_two_groups_missing_in_app(self):
@@ -1016,12 +1095,14 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 [("test-group-admin", "Admin"), ("test-group-member", "Member")]
             ),
         )
-        audit = models.ManagedGroup.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_app", audit)
-        self.assertEqual(len(audit["not_in_app"]), 2)
-        self.assertIn("test-group-admin", audit["not_in_app"])
-        self.assertIn("test-group-member", audit["not_in_app"])
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            set(["test-group-admin", "test-group-member"]),
+        )
         responses.assert_call_count(api_url, 1)
 
 
@@ -2001,7 +2082,11 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
         # This does not work with query parameters. I would need to construct the full url to check.
         # responses.assert_call_count(api_url, 1)
 
@@ -2019,11 +2104,15 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([workspace]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_workspace_not_on_anvil(self):
         """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
-        group = factories.WorkspaceFactory.create()
+        workspace = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
         responses.add(
             responses.GET,
@@ -2031,11 +2120,13 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(group, audit["not_in_anvil"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(), {workspace: [audit_results.ERROR_NOT_IN_ANVIL]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_workspace_owner_in_app_reader_on_anvil(self):
         """anvil_audit raises exception if one workspace exists in the app but the access on AnVIL is READER."""
@@ -2051,11 +2142,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_owner_on_anvil", audit)
-        self.assertEqual(len(audit["not_owner_on_anvil"]), 1)
-        self.assertIn(workspace, audit["not_owner_on_anvil"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_NOT_OWNER_ON_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_workspace_owner_in_app_writer_on_anvil(self):
         """anvil_audit raises exception if one workspace exists in the app but the access on AnVIL is WRITER."""
@@ -2071,11 +2165,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_owner_on_anvil", audit)
-        self.assertEqual(len(audit["not_owner_on_anvil"]), 1)
-        self.assertIn(workspace, audit["not_owner_on_anvil"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_NOT_OWNER_ON_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_two_workspaces_no_errors(self):
         """anvil_audit returns None if if two workspaces exist in both the app and AnVIL."""
@@ -2095,8 +2192,11 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([workspace_1, workspace_2]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_two_groups_json_response_order_does_not_matter(self):
         """Order of groups in the json response does not matter."""
@@ -2116,8 +2216,11 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([workspace_1, workspace_2]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_two_workspaces_first_not_on_anvil(self):
         """anvil_audit raises exception if two workspaces exist in the app but the first is not not on AnVIL."""
@@ -2134,12 +2237,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(workspace_1, audit["not_in_anvil"])
-        self.assertNotIn(workspace_2, audit["not_in_anvil"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([workspace_2]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace_1: [audit_results.ERROR_NOT_IN_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_two_workspaces_first_different_access(self):
         """anvil_audit when if two workspaces exist in the app but access to the first is different on AnVIL."""
@@ -2159,12 +2264,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_owner_on_anvil", audit)
-        self.assertEqual(len(audit["not_owner_on_anvil"]), 1)
-        self.assertIn(workspace_1, audit["not_owner_on_anvil"])
-        self.assertNotIn(workspace_2, audit["not_owner_on_anvil"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([workspace_2]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace_1: [audit_results.ERROR_NOT_OWNER_ON_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_two_workspaces_both_missing(self):
         """anvil_audit when there are two workspaces that exist in the app but not in AnVIL."""
@@ -2177,12 +2284,17 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 2)
-        self.assertIn(workspace_1, audit["not_in_anvil"])
-        self.assertIn(workspace_2, audit["not_in_anvil"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                workspace_1: [audit_results.ERROR_NOT_IN_ANVIL],
+                workspace_2: [audit_results.ERROR_NOT_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_workspace_missing_in_app(self):
         """anvil_audit returns not_in_app info if a workspace exists on AnVIL but not in the app."""
@@ -2193,11 +2305,11 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp", "test-ws", "OWNER")],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_app", audit)
-        self.assertEqual(len(audit["not_in_app"]), 1)
-        self.assertIn("test-bp/test-ws", audit["not_in_app"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), {"test-bp/test-ws"})
 
     def test_anvil_audit_two_workspaces_missing_in_app(self):
         api_url = self.get_api_url()
@@ -2210,12 +2322,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 self.get_api_workspace_json("test-bp-2", "test-ws-2", "OWNER"),
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("not_in_app", audit)
-        self.assertEqual(len(audit["not_in_app"]), 2)
-        self.assertIn("test-bp-1/test-ws-1", audit["not_in_app"])
-        self.assertIn("test-bp-2/test-ws-2", audit["not_in_app"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            {"test-bp-1/test-ws-1", "test-bp-2/test-ws-2"},
+        )
 
     def test_different_billing_project(self):
         """A workspace is reported as missing if it has the same name but a different billing project in app."""
@@ -2229,14 +2343,13 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp-anvil", "test-ws", "OWNER")],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 2)
-        self.assertIn("not_in_app", audit)
-        self.assertEqual(len(audit["not_in_app"]), 1)
-        self.assertIn("test-bp-anvil/test-ws", audit["not_in_app"])
-        self.assertIn("not_in_anvil", audit)
-        self.assertEqual(len(audit["not_in_anvil"]), 1)
-        self.assertIn(workspace, audit["not_in_anvil"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(), {workspace: [audit_results.ERROR_NOT_IN_ANVIL]}
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set(["test-bp-anvil/test-ws"]))
 
     def test_ignores_workspaces_where_app_is_reader_on_anvil(self):
         """Audit ignores workspaces on AnVIL where app is a READER on AnVIL."""
@@ -2247,7 +2360,11 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp", "test-ws", "READER")],
         )
-        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_ignores_workspaces_where_app_is_writer_on_anvil(self):
         """Audit ignores workspaces on AnVIL where app is a WRITER on AnVIL."""
@@ -2258,7 +2375,11 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp", "test-ws", "WRITER")],
         )
-        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_one_auth_domain(self):
         """anvil_audit works properly when there is one workspace with one auth domain."""
@@ -2277,7 +2398,11 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([auth_domain.workspace]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_two_auth_domains(self):
         """anvil_audit works properly when there is one workspace with two auth domains."""
@@ -2302,7 +2427,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(
+            audit_results.get_verified(),
+            set([auth_domain_1.workspace, auth_domain_2.workspace]),
+        )
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_two_auth_domains_order_does_not_matter(self):
         """anvil_audit works properly when there is one workspace with two auth domains."""
@@ -2327,7 +2459,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        self.assertEqual(len(models.Workspace.anvil_audit()), 0)
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(
+            audit_results.get_verified(),
+            set([auth_domain_1.workspace, auth_domain_2.workspace]),
+        )
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_no_auth_domain_in_app_one_auth_domain_on_anvil(self):
         """anvil_audit works properly when there is one workspace with no auth domain in the app but one on AnVIL."""
@@ -2346,11 +2485,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 1)
-        self.assertIn(workspace, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_one_auth_domain_in_app_no_auth_domain_on_anvil(self):
         """anvil_audit works properly when there is one workspace with one auth domain in the app but none on AnVIL."""
@@ -2369,11 +2511,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 1)
-        self.assertIn(auth_domain.workspace, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {auth_domain.workspace: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_no_auth_domain_in_app_two_auth_domains_on_anvil(self):
         """anvil_audit works properly when there is one workspace with no auth domain in the app but two on AnVIL."""
@@ -2392,11 +2537,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 1)
-        self.assertIn(workspace, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_two_auth_domains_in_app_no_auth_domain_on_anvil(self):
         """anvil_audit works properly when there is one workspace with two auth domains in the app but none on AnVIL."""
@@ -2417,11 +2565,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 1)
-        self.assertIn(workspace, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_two_auth_domains_in_app_one_auth_domain_on_anvil(self):
         """anvil_audit works properly when there is one workspace with two auth domains in the app but one on AnVIL."""
@@ -2444,11 +2595,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 1)
-        self.assertIn(workspace, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_workspace_different_auth_domains(self):
         """anvil_audit works properly when the app and AnVIL have different auth domains for the same workspace."""
@@ -2469,11 +2623,14 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 1)
-        self.assertIn(auth_domain.workspace, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {auth_domain.workspace: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_two_workspaces_first_auth_domains_do_not_match(self):
         """anvil_audit works properly when there are two workspaces in the app and the first has auth domain issues."""
@@ -2499,15 +2656,17 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 1)
-        self.assertIn(workspace_1, audit["different_auth_domains"])
-        self.assertNotIn(workspace_2, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set([workspace_2]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace_1: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_two_workspaces_auth_domains_do_not_match_for_both(self):
-        """anvil_audit works properly when there are two workspaces in the app and the first has auth domain issues."""
+        """anvil_audit works properly when there are two workspaces in the app and both have auth domain issues."""
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
@@ -2530,12 +2689,46 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
-        audit = models.Workspace.anvil_audit()
-        self.assertEqual(len(audit), 1)
-        self.assertIn("different_auth_domains", audit)
-        self.assertEqual(len(audit["different_auth_domains"]), 2)
-        self.assertIn(workspace_1, audit["different_auth_domains"])
-        self.assertIn(workspace_2, audit["different_auth_domains"])
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                workspace_1: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS],
+                workspace_2: [audit_results.ERROR_DIFFERENT_AUTH_DOMAINS],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_workspace_with_two_errors(self):
+        """One workspace has two errors: different auth domains and not owner."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name, workspace.name, "READER"
+                )
+            ],
+        )
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                workspace: [
+                    audit_results.ERROR_NOT_OWNER_ON_ANVIL,
+                    audit_results.ERROR_DIFFERENT_AUTH_DOMAINS,
+                ]
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
