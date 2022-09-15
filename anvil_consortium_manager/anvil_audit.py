@@ -40,6 +40,10 @@ class AnVILAuditResults:
         """Return a list of records that are on AnVIL but not in the app."""
         return self.not_in_app
 
+    def ok(self):
+        """Check if the audit results are ok."""
+        return not self.errors and not self.not_in_app
+
 
 class BillingProjectAuditResults(AnVILAuditResults):
     """Class to hold audit results for BillingProjects."""

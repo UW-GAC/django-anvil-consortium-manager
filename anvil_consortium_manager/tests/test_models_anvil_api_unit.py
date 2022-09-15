@@ -134,6 +134,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there are no billing projects in the app."""
         audit_results = models.BillingProject.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -150,6 +151,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.BillingProject.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), {billing_project})
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -167,6 +169,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.BillingProject.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -195,6 +198,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.BillingProject.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(
             audit_results.get_verified(), {billing_project_1, billing_project_2}
         )
@@ -223,6 +227,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.BillingProject.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), {billing_project_2})
         self.assertEqual(
             audit_results.get_errors(),
@@ -252,6 +257,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.BillingProject.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -270,6 +276,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # No API calls made.
         audit_results = models.BillingProject.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.BillingProjectAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -476,6 +483,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there are no Accounts in the app."""
         audit_results = models.Account.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.AccountAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -490,6 +498,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
         )
         audit_results = models.Account.anvil_audit()
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), {account})
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -506,6 +515,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         audit_results = models.Account.anvil_audit()
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(), {account: [audit_results.ERROR_NOT_IN_ANVIL]}
@@ -530,6 +540,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
         )
         audit_results = models.Account.anvil_audit()
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([account_1, account_2]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -555,6 +566,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Account.anvil_audit()
         self.assertEqual(audit_results.get_verified(), set([account_2]))
+        self.assertFalse(audit_results.ok())
         self.assertEqual(
             audit_results.get_errors(), {account_1: [audit_results.ERROR_NOT_IN_ANVIL]}
         )
@@ -581,6 +593,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         audit_results = models.Account.anvil_audit()
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -599,6 +612,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         account.deactivate()
         # No API calls made.
         audit_results = models.Account.anvil_audit()
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -873,6 +887,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -889,6 +904,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([group]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -906,6 +922,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([group]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -924,6 +941,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(), {group: [audit_results.ERROR_NOT_IN_ANVIL]}
@@ -943,6 +961,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(), {group: [audit_results.ERROR_DIFFERENT_ROLE]}
@@ -962,6 +981,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(), {group: [audit_results.ERROR_DIFFERENT_ROLE]}
@@ -984,6 +1004,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([group_1, group_2]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -1005,6 +1026,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([group_1, group_2]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -1024,6 +1046,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([group_2]))
         self.assertEqual(
             audit_results.get_errors(), {group_1: [audit_results.ERROR_NOT_IN_ANVIL]}
@@ -1044,6 +1067,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
@@ -1065,6 +1089,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set(["test-group"]))
@@ -1080,6 +1105,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set(["test-group"]))
@@ -1097,6 +1123,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(
@@ -2084,6 +2111,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -2106,6 +2134,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([workspace]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -2122,6 +2151,8 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(), {workspace: [audit_results.ERROR_NOT_IN_ANVIL]}
@@ -2144,6 +2175,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2167,6 +2199,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2194,6 +2227,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([workspace_1, workspace_2]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -2218,6 +2252,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([workspace_1, workspace_2]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -2239,6 +2274,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([workspace_2]))
         self.assertEqual(
             audit_results.get_errors(),
@@ -2266,6 +2302,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([workspace_2]))
         self.assertEqual(
             audit_results.get_errors(),
@@ -2286,6 +2323,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2307,6 +2345,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), {"test-bp/test-ws"})
@@ -2324,6 +2363,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(
@@ -2345,6 +2385,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(), {workspace: [audit_results.ERROR_NOT_IN_ANVIL]}
@@ -2362,6 +2403,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -2377,6 +2419,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -2400,6 +2443,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([auth_domain.workspace]))
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -2487,6 +2531,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2513,6 +2558,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2539,6 +2585,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2567,6 +2614,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2597,6 +2645,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2625,6 +2674,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2658,6 +2708,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([workspace_2]))
         self.assertEqual(
             audit_results.get_errors(),
@@ -2691,6 +2742,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
@@ -2718,6 +2770,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
             audit_results.get_errors(),
