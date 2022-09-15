@@ -60,6 +60,7 @@ class ManagedGroupAuditResults(AnVILAuditResults):
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     ERROR_DIFFERENT_ROLE = "App has a different role in this group"
+    ERROR_GROUP_MEMBERSHIP = "Group membership does not match in AnVIL"
 
 
 class ManagedGroupMembershipAuditResults(AnVILAuditResults):

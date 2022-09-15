@@ -545,6 +545,11 @@ class ManagedGroup(TimeStampedModel):
                         audit_results.add_error(
                             group, audit_results.ERROR_DIFFERENT_ROLE
                         )
+                    elif group_details["role"] == "Admin":
+                        if not group.anvil_audit_membership().ok():
+                            audit_results.add_error(
+                                group, audit_results.ERROR_GROUP_MEMBERSHIP
+                            )
                 elif not group.is_managed_by_app and group_details["role"] == "Admin":
                     audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
 
