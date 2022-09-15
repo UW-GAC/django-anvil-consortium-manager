@@ -307,17 +307,6 @@ class Account(TimeStampedModel, ActivatorModel):
             membership.anvil_delete()
 
     @classmethod
-    def anvil_audit_not_in_anvil(cls):
-        """Check for any accounts that do not exist on AnVIL but do exist in the app.
-
-        Only accounts that have status=ACTIVE_STATUS are checked.
-
-        Returns:
-            A list of accounts that do not exist in AnVIL.
-        """
-        # Check that all accounts exist.
-
-    @classmethod
     def anvil_audit(cls):
         """Verify data in the app against AnVIL.
 
