@@ -99,7 +99,7 @@ class AnVILAuditResults(ABC):
 
 
 class BillingProjectAuditResults(AnVILAuditResults):
-    """Class to hold audit results for BillingProjects."""
+    """Class to hold audit results for :class:`~anviL_consortium_manager.models.BillingProject`s."""
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     # Set up allowed errors.
@@ -107,7 +107,7 @@ class BillingProjectAuditResults(AnVILAuditResults):
 
 
 class AccountAuditResults(AnVILAuditResults):
-    """Class to hold audit results for Accounts."""
+    """Class to hold audit results for :class:`~anviL_consortium_manager.models.Accounts`."""
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     # Set up allowed errors.
@@ -115,7 +115,7 @@ class AccountAuditResults(AnVILAuditResults):
 
 
 class ManagedGroupAuditResults(AnVILAuditResults):
-    """Class to hold audit results for ManagedGroups."""
+    """Class to hold audit results for :class:`~anviL_consortium_manager.models.ManagedGroup`s."""
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     ERROR_DIFFERENT_ROLE = "App has a different role in this group"
@@ -129,7 +129,9 @@ class ManagedGroupAuditResults(AnVILAuditResults):
 
 
 class ManagedGroupMembershipAuditResults(AnVILAuditResults):
-    """Class to hold audit results for the membership of a single ManagedGroup."""
+    """Class to hold audit results for the membership of a model instance of
+    :class:`~anviL_consortium_manager.models.ManagedGroup`.
+    """
 
     ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL = "Account not an admin in AnVIL"
     ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL = "Account not a member in AnVIL"
@@ -145,7 +147,7 @@ class ManagedGroupMembershipAuditResults(AnVILAuditResults):
 
 
 class WorkspaceAuditResults(AnVILAuditResults):
-    """Class to hold audit results for Workspaces."""
+    """Class to hold audit results for :class:`~anviL_consortium_manager.models.Workspace`s."""
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     ERROR_NOT_OWNER_ON_ANVIL = "Not an owner on AnVIL"
