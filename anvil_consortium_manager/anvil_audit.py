@@ -37,6 +37,13 @@ class AnVILAuditResults(ABC):
         """
         if error not in self.allowed_errors:
             raise ValueError("'{}' is not an allowed error.".format(error))
+        if model_instance in self.verified:
+            # Should this just remove it from verified and add the error instead?
+            raise ValueError(
+                "Cannot add error for model_instance {} that is already verified.".format(
+                    model_instance
+                )
+            )
         if model_instance in self.errors:
             self.errors[model_instance].append(error)
         else:
