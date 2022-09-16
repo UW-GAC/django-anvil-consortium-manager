@@ -17,38 +17,77 @@ class AnVILAuditResults(ABC):
         self.not_in_app = set()
 
     def add_not_in_app(self, record):
-        """Add a record that is on ANVIL but is not in the app."""
+        """Add a record that is on ANVIL but is not in the app.
+
+        Args:
+            record (str): An identifier for the record that is not in the app.
+                For example, for ManagedGroups, this will be the name of the group on AnVIL.
+        """
         self.not_in_app.add(record)
 
-    def add_error(self, record, error):
-        """Add a record from the app that has an error in the audit."""
+    def add_error(self, model_instance, error):
+        """Add an error for a Django model instance.
+
+        Args:
+            model_instance (obj): The Django model instance that had a detected error.
+            error (str): The error that was detected.
+
+        Raises:
+            ValueError: If the `error` is not in the `allowed_errors` attribute of the class.
+        """
         if error not in self.allowed_errors:
             raise ValueError("'{}' is not an allowed error.".format(error))
-        if record in self.errors:
-            self.errors[record].append(error)
+        if model_instance in self.errors:
+            self.errors[model_instance].append(error)
         else:
-            self.errors[record] = [error]
+            self.errors[model_instance] = [error]
 
-    def add_verified(self, record):
-        """Add a record that has been verified against AnVIL."""
-        if record in self.errors:
-            raise ValueError("{} has reported errors.".format(record))
-        self.verified.add(record)
+    def add_verified(self, model_instance):
+        """Add a Django model instance that has been verified against AnVIL.
+
+        Args:
+            model_instance (obj): The Django model instance that was verified.
+
+        Raises:
+            ValueError: If the Django model instance being added has an error recorded in the `errors` attribute.
+        """
+        if model_instance in self.errors:
+            raise ValueError("{} has reported errors.".format(model_instance))
+        self.verified.add(model_instance)
 
     def get_verified(self):
-        """Return a set of the verified records."""
+        """Return a set of the verified records.
+
+        Returns:
+            set: The set of Django model instances that were verified against AnVIL.
+        """
         return self.verified
 
     def get_errors(self):
-        """Return the a dictionary of records and the errors that they had."""
+        """Return the errors that were recorded in the audit.
+
+        Returns:
+            dict: A dictionary of errors.
+
+            The keys of the dictionary are the Django model instances that had errors.
+            The value for a given element is a list of the errors that were detected for that instance.
+        """
         return self.errors
 
     def get_not_in_app(self):
-        """Return a list of records that are on AnVIL but not in the app."""
+        """Return records that are on AnVIL but not in the app.
+
+        Returns:
+            set: The records that exist on AnVIL but not in the app.
+        """
         return self.not_in_app
 
     def ok(self):
-        """Check if the audit results are ok."""
+        """Check if the audit results are ok.
+
+        Returns:
+            bool: An indicator of whether all audited records were successfully verified.
+        """
         return not self.errors and not self.not_in_app
 
 
