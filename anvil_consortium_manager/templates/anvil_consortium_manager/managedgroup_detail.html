@@ -74,6 +74,22 @@
     <div class="accordion" id="accordionMembers">
 
       <div class="accordion-item">
+        <h2 class="accordion-header" id="headingParents">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseParents" aria-expanded="false" aria-controls="collapseParents">
+            <span class="fa-solid fa-code-fork mx-2" data-fa-transform="flip-v"></span>
+            View group Parents
+            <span class="badge mx-2 bg-secondary pill"> {{ parent_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseParents" class="accordion-collapse collapse" aria-labelledby="headingParents">
+          <div class="accordion-body">
+            {% render_table parent_table %}
+          </div>
+        </div>
+      </div>
+
+
+      <div class="accordion-item">
         <h2 class="accordion-header" id="headingMembersOne">
           <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersOne" aria-expanded="false" aria-controls="collapseMembersOne">
             <span class="fa-solid fa-code-fork mx-2" data-fa-transform="flip-v"></span>
