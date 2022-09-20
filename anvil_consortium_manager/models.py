@@ -756,7 +756,51 @@ class Workspace(TimeStampedModel):
 
     def anvil_audit_access(self):
         """Method to audit access for a given workspace."""
-        raise NotImplementedError()
+        """Audit the membership for a single group against AnVIL."""
+        api_client = AnVILAPIClient()
+        audit_results = anvil_audit.WorkspaceGroupAccessAuditResults()
+        response = api_client.get_workspace_acl(self.billing_project.name, self.name)
+        acl_in_anvil = {k.lower(): v for k, v in response.json()["acl"].items()}
+        # Remove the service account.
+        acl_in_anvil.pop(
+            api_client.auth_session.credentials.service_account_email.lower()
+        )
+        for access in self.workspacegroupaccess_set.all():
+            # import ipdb; ipdb.set_trace()
+            try:
+                access_details = acl_in_anvil.pop(access.group.get_email())
+            except KeyError:
+                audit_results.add_error(access, audit_results.ERROR_NO_ACCESS_IN_ANVIL)
+            else:
+                # Check access level.
+                if access.access != access_details["accessLevel"]:
+                    audit_results.add_error(
+                        access, audit_results.ERROR_DIFFERENT_ACCESS
+                    )
+                # Check can_compute value.
+                if access.can_compute != access_details["canCompute"]:
+                    audit_results.add_error(
+                        access, audit_results.ERROR_DIFFERENT_CAN_COMPUTE
+                    )
+                # Check can_share value -- the app never grants this, so it should always be false.
+                if access_details["canShare"]:
+                    audit_results.add_error(
+                        access, audit_results.ERROR_DIFFERENT_CAN_SHARE
+                    )
+            try:
+                audit_results.add_verified(access)
+            except ValueError:
+                # This means that the access instance already has errors reported, so do nothing.
+                pass
+
+        # Add any access that the app doesn't know about.
+        # import ipdb; ipdb.set_trace()
+        for key in acl_in_anvil:
+            audit_results.add_not_in_app(
+                "{}: {}".format(acl_in_anvil[key]["accessLevel"], key)
+            )
+
+        return audit_results
 
     @classmethod
     def anvil_audit(cls):

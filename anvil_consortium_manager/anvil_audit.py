@@ -158,3 +158,19 @@ class WorkspaceAuditResults(AnVILAuditResults):
         ERROR_NOT_OWNER_ON_ANVIL,
         ERROR_DIFFERENT_AUTH_DOMAINS,
     )
+
+
+class WorkspaceGroupAccessAuditResults(AnVILAuditResults):
+    """Class to hold audit results for group access to :class:`~anviL_consortium_manager.models.Workspace`s."""
+
+    ERROR_NO_ACCESS_IN_ANVIL = "No access in AnVIL"
+    ERROR_DIFFERENT_ACCESS = "Different access level in AnVIL"
+    ERROR_DIFFERENT_CAN_SHARE = "can_share value does not match in AnVIL"
+    ERROR_DIFFERENT_CAN_COMPUTE = "can_compute value does not match in AnVIL"
+    # Set up allowed errors.
+    allowed_errors = (
+        ERROR_NO_ACCESS_IN_ANVIL,
+        ERROR_DIFFERENT_ACCESS,
+        ERROR_DIFFERENT_CAN_SHARE,
+        ERROR_DIFFERENT_CAN_COMPUTE,
+    )
