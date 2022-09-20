@@ -817,6 +817,9 @@ class Workspace(TimeStampedModel):
             fields="workspace.namespace,workspace.name,workspace.authorizationDomain,accessLevel"
         )
         workspaces_on_anvil = response.json()
+        import ipdb
+
+        ipdb.set_trace()
         for workspace in cls.objects.all():
             try:
                 i = next(
@@ -833,7 +836,7 @@ class Workspace(TimeStampedModel):
             else:
                 # Check role.
                 workspace_details = workspaces_on_anvil.pop(i)
-                if workspace_details["access"] != "OWNER":
+                if workspace_details["accessLevel"] != "OWNER":
                     audit_results.add_error(
                         workspace, audit_results.ERROR_NOT_OWNER_ON_ANVIL
                     )
@@ -865,7 +868,7 @@ class Workspace(TimeStampedModel):
         not_in_app = [
             "{}/{}".format(x["workspace"]["namespace"], x["workspace"]["name"])
             for x in workspaces_on_anvil
-            if x["access"] == "OWNER"
+            if x["accessLevel"] == "OWNER"
         ]
         for workspace_name in not_in_app:
             audit_results.add_not_in_app(workspace_name)

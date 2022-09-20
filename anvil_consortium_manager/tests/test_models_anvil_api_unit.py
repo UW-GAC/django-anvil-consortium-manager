@@ -2987,7 +2987,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     ):
         """Return the json dictionary for a single workspace on AnVIL."""
         return {
-            "access": access,
+            "accessLevel": access,
             "workspace": {
                 "name": workspace_name,
                 "namespace": billing_project_name,
