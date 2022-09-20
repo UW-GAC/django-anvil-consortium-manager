@@ -152,11 +152,13 @@ class WorkspaceAuditResults(AnVILAuditResults):
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     ERROR_NOT_OWNER_ON_ANVIL = "Not an owner on AnVIL"
     ERROR_DIFFERENT_AUTH_DOMAINS = "Has different auth domains on AnVIL"
+    ERROR_WORKSPACE_ACCESS = "Workspace access does not match on AnVIL"
     # Set up allowed errors.
     allowed_errors = (
         ERROR_NOT_IN_ANVIL,
         ERROR_NOT_OWNER_ON_ANVIL,
         ERROR_DIFFERENT_AUTH_DOMAINS,
+        ERROR_WORKSPACE_ACCESS,
     )
 
 

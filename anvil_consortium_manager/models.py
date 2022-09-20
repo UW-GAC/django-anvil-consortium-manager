@@ -837,6 +837,11 @@ class Workspace(TimeStampedModel):
                     audit_results.add_error(
                         workspace, audit_results.ERROR_NOT_OWNER_ON_ANVIL
                     )
+                elif not workspace.anvil_audit_access().ok():
+                    # Since we're the owner, check workspace access.
+                    audit_results.add_error(
+                        workspace, audit_results.ERROR_WORKSPACE_ACCESS
+                    )
                 # Check auth domains.
                 auth_domains_on_anvil = [
                     x["membersGroupName"]

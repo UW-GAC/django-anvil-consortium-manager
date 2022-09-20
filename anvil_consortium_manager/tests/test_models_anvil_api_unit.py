@@ -2972,6 +2972,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the Workspace.anvil_audit method."""
 
+    def setUp(self):
+        super().setUp()
+        self.service_account_email = fake.email()
+        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
+            self.service_account_email
+        )
+
     def get_api_url(self):
         return self.entry_point + "/api/workspaces"
 
@@ -2986,6 +2993,29 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 "namespace": billing_project_name,
                 "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
             },
+        }
+
+    def get_api_workspace_acl_url(self, billing_project_name, workspace_name):
+        return (
+            self.entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl"
+        )
+
+    def get_api_workspace_acl_response(self):
+        """Return a json for the workspace/acl method where no one else can access."""
+        return {
+            "acl": {
+                self.service_account_email: {
+                    "accessLevel": "OWNER",
+                    "canCompute": True,
+                    "canShare": True,
+                    "pending": False,
+                }
+            }
         }
 
     def test_anvil_audit_no_workspaces(self):
@@ -3019,6 +3049,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     workspace.billing_project.name, workspace.name, "OWNER"
                 )
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3113,6 +3153,26 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(
+            workspace_1.billing_project.name, workspace_1.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_1,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace access.
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(
+            workspace_2.billing_project.name, workspace_2.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_2,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertTrue(audit_results.ok())
@@ -3138,6 +3198,26 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(
+            workspace_1.billing_project.name, workspace_1.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_1,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace access.
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(
+            workspace_2.billing_project.name, workspace_2.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_2,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertTrue(audit_results.ok())
@@ -3159,6 +3239,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     workspace_2.billing_project.name, workspace_2.name, "OWNER"
                 ),
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(
+            workspace_2.billing_project.name, workspace_2.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_2,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3188,6 +3278,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(
+            workspace_2.billing_project.name, workspace_2.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_2,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertFalse(audit_results.ok())
@@ -3198,7 +3298,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
 
-    def test_anvil_audit_two_workspaces_both_missing(self):
+    def test_anvil_audit_two_workspaces_both_missing_in_anvil(self):
         """anvil_audit when there are two workspaces that exist in the app but not in AnVIL."""
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
@@ -3329,6 +3429,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertTrue(audit_results.ok())
@@ -3358,6 +3468,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     auth_domains=[auth_domain_1.group.name, auth_domain_2.group.name],
                 )
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3391,6 +3511,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertEqual(
@@ -3416,6 +3546,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     auth_domains=["auth-anvil"],
                 )
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3444,6 +3584,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertFalse(audit_results.ok())
@@ -3470,6 +3620,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     auth_domains=["auth-domain"],
                 )
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3499,6 +3659,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     auth_domains=[],
                 )
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3531,6 +3701,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertFalse(audit_results.ok())
@@ -3559,6 +3739,16 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     auth_domains=["anvil"],
                 )
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3594,6 +3784,26 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ),
             ],
         )
+        # Response to check workspace access.
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(
+            workspace_1.billing_project.name, workspace_1.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_1,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace access.
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(
+            workspace_2.billing_project.name, workspace_2.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_2,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
         self.assertFalse(audit_results.ok())
@@ -3627,6 +3837,26 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     auth_domains=["anvil-2"],
                 ),
             ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(
+            workspace_1.billing_project.name, workspace_1.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_1,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace access.
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(
+            workspace_2.billing_project.name, workspace_2.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url_2,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         audit_results = models.Workspace.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
@@ -3673,7 +3903,41 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_fails_access_audit(self):
         """anvil_audit works properly when one workspace fails its access audit."""
-        self.fail("write this test.")
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
+        # Response for the main call about workspaces.
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                )
+            ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        responses.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        audit_results = models.Workspace.anvil_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_WORKSPACE_ACCESS]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+        responses.assert_call_count(workspace_acl_url, 1)
 
 
 class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
