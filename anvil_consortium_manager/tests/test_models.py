@@ -1497,7 +1497,6 @@ class GroupAccountMembershipTest(TestCase):
         account.save()
         # Check the history at timestamp to make sure the account shows active.
         record = obj.history.as_of(time)
-        # import ipdb; ipdb.set_trace()
         self.assertEqual(
             account.history.as_of(time).status, record.account.ACTIVE_STATUS
         )

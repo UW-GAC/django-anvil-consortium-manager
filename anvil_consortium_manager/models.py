@@ -766,7 +766,6 @@ class Workspace(TimeStampedModel):
             api_client.auth_session.credentials.service_account_email.lower()
         )
         for access in self.workspacegroupaccess_set.all():
-            # import ipdb; ipdb.set_trace()
             try:
                 access_details = acl_in_anvil.pop(access.group.get_email())
             except KeyError:
@@ -794,7 +793,6 @@ class Workspace(TimeStampedModel):
                 pass
 
         # Add any access that the app doesn't know about.
-        # import ipdb; ipdb.set_trace()
         for key in acl_in_anvil:
             audit_results.add_not_in_app(
                 "{}: {}".format(acl_in_anvil[key]["accessLevel"], key)
@@ -817,9 +815,6 @@ class Workspace(TimeStampedModel):
             fields="workspace.namespace,workspace.name,workspace.authorizationDomain,accessLevel"
         )
         workspaces_on_anvil = response.json()
-        import ipdb
-
-        ipdb.set_trace()
         for workspace in cls.objects.all():
             try:
                 i = next(

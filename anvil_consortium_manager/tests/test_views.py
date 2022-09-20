@@ -1353,7 +1353,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(), {"email": "foo@bar.com"}, follow=True
         )
-        # import ipdb; ipdb.set_trace()
         self.assertRedirects(response, "/test_home/")
         # No new user entry is created.
         self.assertEqual(models.UserEmailEntry.objects.count(), 1)
