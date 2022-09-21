@@ -3504,6 +3504,46 @@ class ManagedGroupDetailTest(TestCase):
             len(response.context_data["workspace_authorization_domain_table"].rows), 0
         )
 
+    def test_parent_table(self):
+        """The parent table exists."""
+        obj = factories.ManagedGroupFactory.create()
+        request = self.factory.get(self.get_url(obj.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=obj.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["parent_table"], tables.GroupGroupMembershipTable
+        )
+
+    def test_parent_table_none(self):
+        """No groups are shown if the group is not a part of any other groups."""
+        group = factories.ManagedGroupFactory.create()
+        request = self.factory.get(self.get_url(group.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=group.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 0)
+
+    def test_parent_table_one(self):
+        """One group is shown if the group is a part of that group."""
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(child_group=group)
+        request = self.factory.get(self.get_url(group.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=group.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 1)
+
+    def test_parent_table_two(self):
+        """Two groups are shown if the group is a part of both groups."""
+        group = factories.ManagedGroupFactory.create(name="group")
+        factories.GroupGroupMembershipFactory.create_batch(2, child_group=group)
+        request = self.factory.get(self.get_url(group.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=group.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 2)
+
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
