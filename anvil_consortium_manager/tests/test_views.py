@@ -3437,6 +3437,29 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
+    def test_group_table_show_only_direct_members(self):
+        """Only shows direct child groups and not grandchildren"""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        grandchild = factories.ManagedGroupFactory.create()
+        parent_child_membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        child_grandchild_membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=child, child_group=grandchild
+        )
+        request = self.factory.get(self.get_url(parent.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=parent.name)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+        self.assertIn(
+            parent_child_membership, response.context_data["group_table"].data
+        )
+        self.assertNotIn(
+            child_grandchild_membership, response.context_data["group_table"].data
+        )
+
     def test_workspace_auth_domain_table(self):
         """The auth_domain table exists."""
         obj = factories.ManagedGroupFactory.create()
@@ -3502,6 +3525,69 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertEqual(
             len(response.context_data["workspace_authorization_domain_table"].rows), 0
+        )
+
+    def test_parent_table(self):
+        """The parent table exists."""
+        obj = factories.ManagedGroupFactory.create()
+        request = self.factory.get(self.get_url(obj.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=obj.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["parent_table"], tables.GroupGroupMembershipTable
+        )
+
+    def test_parent_table_none(self):
+        """No groups are shown if the group is not a part of any other groups."""
+        group = factories.ManagedGroupFactory.create()
+        request = self.factory.get(self.get_url(group.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=group.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 0)
+
+    def test_parent_table_one(self):
+        """One group is shown if the group is a part of that group."""
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(child_group=group)
+        request = self.factory.get(self.get_url(group.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=group.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 1)
+
+    def test_parent_table_two(self):
+        """Two groups are shown if the group is a part of both groups."""
+        group = factories.ManagedGroupFactory.create(name="group")
+        factories.GroupGroupMembershipFactory.create_batch(2, child_group=group)
+        request = self.factory.get(self.get_url(group.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=group.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 2)
+
+    def test_parent_table_shows_only_direct_parents(self):
+        """Only show only the direct parent groups"""
+        grandparent = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        grandparent_parent_membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        parent_child_membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        request = self.factory.get(self.get_url(child.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=child.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 1)
+        self.assertIn(
+            parent_child_membership, response.context_data["parent_table"].data
+        )
+        self.assertNotIn(
+            grandparent_parent_membership, response.context_data["parent_table"].data
         )
 
 

@@ -648,6 +648,9 @@ class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
         context["group_table"] = tables.GroupGroupMembershipTable(
             self.object.child_memberships.all(), exclude="parent_group"
         )
+        context["parent_table"] = tables.GroupGroupMembershipTable(
+            self.object.parent_memberships.all(), exclude="child_group"
+        )
         return context
 
 

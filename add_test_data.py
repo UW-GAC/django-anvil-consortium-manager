@@ -14,6 +14,9 @@ factories.GroupGroupMembershipFactory.create(
 factories.GroupGroupMembershipFactory.create(
     parent_group=groups[0], child_group=groups[2]
 )
+factories.GroupGroupMembershipFactory.create(
+    parent_group=groups[3], child_group=groups[2]
+)
 
 # Add accounts to groups.
 factories.GroupAccountMembershipFactory.create(group=groups[1], account=accounts[0])
