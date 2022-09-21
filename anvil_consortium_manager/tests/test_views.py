@@ -3437,6 +3437,23 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
+    def test_group_table_show_only_direct_members(self):
+        """Only shows direct child groups and not grandchildren"""
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        grandchild = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=child, child_group=grandchild
+        )
+        request = self.factory.get(self.get_url(parent.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=parent.name)
+        self.assertIn("group_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_table"].rows), 1)
+
     def test_workspace_auth_domain_table(self):
         """The auth_domain table exists."""
         obj = factories.ManagedGroupFactory.create()
@@ -3543,6 +3560,23 @@ class ManagedGroupDetailTest(TestCase):
         response = self.get_view()(request, slug=group.name)
         self.assertIn("parent_table", response.context_data)
         self.assertEqual(len(response.context_data["parent_table"].rows), 2)
+
+    def test_parent_table_shows_only_direct_parents(self):
+        """Only show only the direct parent groups"""
+        grandparent = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        request = self.factory.get(self.get_url(child.name))
+        request.user = self.user
+        response = self.get_view()(request, slug=child.name)
+        self.assertIn("parent_table", response.context_data)
+        self.assertEqual(len(response.context_data["parent_table"].rows), 1)
 
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
