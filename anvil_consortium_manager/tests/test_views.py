@@ -3442,10 +3442,10 @@ class ManagedGroupDetailTest(TestCase):
         parent = factories.ManagedGroupFactory.create()
         child = factories.ManagedGroupFactory.create()
         grandchild = factories.ManagedGroupFactory.create()
-        factories.GroupGroupMembershipFactory.create(
+        parent_child_membership = factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
-        factories.GroupGroupMembershipFactory.create(
+        child_grandchild_membership = factories.GroupGroupMembershipFactory.create(
             parent_group=child, child_group=grandchild
         )
         request = self.factory.get(self.get_url(parent.name))
@@ -3453,6 +3453,12 @@ class ManagedGroupDetailTest(TestCase):
         response = self.get_view()(request, slug=parent.name)
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 1)
+        self.assertIn(
+            parent_child_membership, response.context_data["group_table"].data
+        )
+        self.assertNotIn(
+            child_grandchild_membership, response.context_data["group_table"].data
+        )
 
     def test_workspace_auth_domain_table(self):
         """The auth_domain table exists."""
@@ -3566,10 +3572,10 @@ class ManagedGroupDetailTest(TestCase):
         grandparent = factories.ManagedGroupFactory.create()
         parent = factories.ManagedGroupFactory.create()
         child = factories.ManagedGroupFactory.create()
-        factories.GroupGroupMembershipFactory.create(
+        grandparent_parent_membership = factories.GroupGroupMembershipFactory.create(
             parent_group=grandparent, child_group=parent
         )
-        factories.GroupGroupMembershipFactory.create(
+        parent_child_membership = factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
         request = self.factory.get(self.get_url(child.name))
@@ -3577,6 +3583,12 @@ class ManagedGroupDetailTest(TestCase):
         response = self.get_view()(request, slug=child.name)
         self.assertIn("parent_table", response.context_data)
         self.assertEqual(len(response.context_data["parent_table"].rows), 1)
+        self.assertIn(
+            parent_child_membership, response.context_data["parent_table"].data
+        )
+        self.assertNotIn(
+            grandparent_parent_membership, response.context_data["parent_table"].data
+        )
 
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
