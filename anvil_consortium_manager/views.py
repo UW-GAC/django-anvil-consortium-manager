@@ -621,6 +621,19 @@ class AccountAudit(auth.AnVILConsortiumManagerViewRequired, TemplateView):
 
     template_name = "anvil_consortium_manager/account_audit.html"
 
+    def get(self, request, *args, **kwargs):
+        self.run_audit()
+        return super().get(request, *args, **kwargs)
+
+    def run_audit(self):
+        self.audit_results = models.Account.anvil_audit()
+
+    def get_context_data(self, *args, **kwargs):
+        """Add audit results to the context data."""
+        if "audit_results" not in kwargs:
+            kwargs["audit_results"] = self.audit_results
+        return super().get_context_data(*args, **kwargs)
+
 
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup

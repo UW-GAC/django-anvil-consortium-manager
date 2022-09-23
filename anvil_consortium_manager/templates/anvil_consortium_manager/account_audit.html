@@ -9,4 +9,16 @@
 <h1>Audit Accounts against AnVIL</h1>
 <p>account auditing template!</p>
 
+<h2>Ok?</h2>
+{{ audit_results.ok }}
+
+<h2>Verified</h2>
+{{ audit_results.get_verified }}
+
+<h2>Errors</h2>
+{{ audit_results.get_errors }}
+
+<h2>Not in app</h2>
+{{ audit_results.get_not_in_app }}
+
 {% endblock content %}
