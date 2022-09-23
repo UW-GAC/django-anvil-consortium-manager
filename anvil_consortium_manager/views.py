@@ -616,6 +616,12 @@ class AccountAutocomplete(
         return qs
 
 
+class AccountAudit(auth.AnVILConsortiumManagerViewRequired, TemplateView):
+    """View to run an audit on Accounts and display the results."""
+
+    template_name = "anvil_consortium_manager/account_audit.html"
+
+
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup
     slug_field = "name"

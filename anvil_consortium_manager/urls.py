@@ -47,6 +47,7 @@ account_patterns = (
             views.AccountLinkVerify.as_view(),
             name="verify",
         ),
+        path("audit/", views.AccountAudit.as_view(), name="audit"),
     ],
     "accounts",
 )
