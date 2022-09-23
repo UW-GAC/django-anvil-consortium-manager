@@ -83,12 +83,12 @@ class BillingProject(TimeStampedModel):
     def anvil_audit(cls):
         """Verify data in the app against AnVIL.
 
-        Only billing projects with have_app_as_user=True are checked, because the AnVIL API does not
+        Only billing projects with ``have_app_as_user=True`` are checked, because the AnVIL API does not
         differentiate between billing projects that don't exist and billing projects where the app is
         not a user.
 
         Returns:
-            An instance of BillingProjectAuditResults
+            An instance of :class:`~anvil_consortium_manager.anvil_audit.BillingProjectAuditResults`.
         """
         # Check that all billing projects exist.
         audit_results = anvil_audit.BillingProjectAuditResults()
@@ -315,7 +315,7 @@ class Account(TimeStampedModel, ActivatorModel):
         not a user.
 
         Returns:
-            An instance of AccountAuditResults
+            An instance of :class:`~anvil_consortium_manager.anvil_audit.AccountAuditResults`
         """
         # Check that all accounts exist on AnVIL.
         audit_results = anvil_audit.AccountAuditResults()
@@ -436,7 +436,11 @@ class ManagedGroup(TimeStampedModel):
         return group
 
     def anvil_audit_membership(self):
-        """Audit the membership for a single group against AnVIL."""
+        """Audit the membership for a single group against AnVIL.
+
+        Returns:
+            An instance of :class:`~anvil_consortium_manager.anvil_audit.ManagedGroupMembershipAuditResults`.
+        """
         api_client = AnVILAPIClient()
         audit_results = anvil_audit.ManagedGroupMembershipAuditResults()
         response = api_client.get_group(self.name)
@@ -511,7 +515,7 @@ class ManagedGroup(TimeStampedModel):
         """Verify data in the app against AnVIL.
 
         Returns:
-            An instance of ManagedGroupAuditResults
+            An instance of :class:`~anvil_consortium_manager.anvil_audit.ManagedGroupAuditResults`.
         """
         audit_results = anvil_audit.ManagedGroupAuditResults()
         # Check the list of groups.
@@ -755,8 +759,11 @@ class Workspace(TimeStampedModel):
         return workspace
 
     def anvil_audit_access(self):
-        """Method to audit access for a given workspace."""
-        """Audit the membership for a single group against AnVIL."""
+        """Audit the access for a single Workspace against AnVIL.
+
+        Returns:
+            An instance of :class:`~anvil_consortium_manager.anvil_audit.WorkspaceGroupAccessAuditResults`.
+        """
         api_client = AnVILAPIClient()
         audit_results = anvil_audit.WorkspaceGroupAccessAuditResults()
         response = api_client.get_workspace_acl(self.billing_project.name, self.name)
@@ -807,7 +814,7 @@ class Workspace(TimeStampedModel):
         This method checks if any workspaces where the service account is an owner exist in AnVIL.
 
         Returns:
-            An instance of WorkspaceAuditResults
+            An instance of :class:`~anvil_consortium_manager.anvil_audit.WorkspaceAuditResults`.
         """
         audit_results = anvil_audit.WorkspaceAuditResults()
         # Check the list of workspaces.

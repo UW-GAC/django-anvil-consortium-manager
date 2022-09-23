@@ -15,6 +15,7 @@ Welcome to django-anvil-consortium-manager's documentation!
    views
    anvil_api
    advanced
+   auditing
 
 .. toctree::
    :maxdepth: 6

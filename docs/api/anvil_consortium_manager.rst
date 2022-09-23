@@ -17,6 +17,7 @@ Submodules
 
    anvil_consortium_manager.admin
    anvil_consortium_manager.anvil_api
+   anvil_consortium_manager.anvil_audit
    anvil_consortium_manager.apps
    anvil_consortium_manager.auth
    anvil_consortium_manager.context_processors

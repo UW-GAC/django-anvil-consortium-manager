@@ -99,27 +99,52 @@ class AnVILAuditResults(ABC):
 
 
 class BillingProjectAuditResults(AnVILAuditResults):
-    """Class to hold audit results for :class:`~anviL_consortium_manager.models.BillingProject`s."""
+    """Class to hold audit results for :class:`~anvil_consortium_manager.models.BillingProject`.
+
+    The elements of the set returned by ``get_verified()``
+    and the keys of the dictionary returned by ``get_errors()``
+    should all be :class:`~anvil_consortium_manager.models.BillingProject` model instances.
+    """
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    """Error when a BillingProject in the app does not exist in AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = ERROR_NOT_IN_ANVIL
 
 
 class AccountAuditResults(AnVILAuditResults):
-    """Class to hold audit results for :class:`~anviL_consortium_manager.models.Accounts`."""
+    """Class to hold audit results for :class:`~anviL_consortium_manager.models.Account`.
+
+    The elements of the set returned by ``get_verified()``
+    and the keys of the dictionary returned by ``get_errors()``
+    should all be :class:`~anvil_consortium_manager.models.Account` model instances.
+    """
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    """Error when the Account does not exist in AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = ERROR_NOT_IN_ANVIL
 
 
 class ManagedGroupAuditResults(AnVILAuditResults):
-    """Class to hold audit results for :class:`~anviL_consortium_manager.models.ManagedGroup`s."""
+    """Class to hold audit results for :class:`~anviL_consortium_manager.models.ManagedGroup`s.
+
+    The elements of the set returned by ``get_verified()``
+    and the keys of the dictionary returned by ``get_errors()``
+    should are be :class:`~anvil_consortium_manager.models.ManagedGroup` model instances.
+    """
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    """Error when a ManagedGroup in the app does not exist in AnVIL."""
+
     ERROR_DIFFERENT_ROLE = "App has a different role in this group"
+    """Error when the service account running the app has a different role on AnVIL."""
+
     ERROR_GROUP_MEMBERSHIP = "Group membership does not match in AnVIL"
+    """Error when a ManagedGroup has a different record of membership in the app compared to on AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = (
         ERROR_NOT_IN_ANVIL,
@@ -131,12 +156,24 @@ class ManagedGroupAuditResults(AnVILAuditResults):
 class ManagedGroupMembershipAuditResults(AnVILAuditResults):
     """Class to hold audit results for the membership of a model instance of
     :class:`~anviL_consortium_manager.models.ManagedGroup`.
+
+    The elements of the set returned by ``get_verified()``
+    and the keys of the dictionary returned by ``get_errors()``
+    should all be :class:`~anvil_consortium_manager.models.ManagedGroupMembership` model instances.
     """
 
     ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL = "Account not an admin in AnVIL"
+    """Error when an Account is an admin of a ManagedGroup on the app, but not in AnVIL."""
+
     ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL = "Account not a member in AnVIL"
+    """Error when an Account is a member of a ManagedGroup on the app, but not in AnVIL."""
+
     ERROR_GROUP_ADMIN_NOT_IN_ANVIL = "Group not an admin in AnVIL"
+    """Error when a ManagedGroup is an admin of another ManagedGroup on the app, but not in AnVIL."""
+
     ERROR_GROUP_MEMBER_NOT_IN_ANVIL = "Group not a member in AnVIL"
+    """Error when an ManagedGroup is a member of another ManagedGroup on the app, but not in AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = (
         ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL,
@@ -147,12 +184,25 @@ class ManagedGroupMembershipAuditResults(AnVILAuditResults):
 
 
 class WorkspaceAuditResults(AnVILAuditResults):
-    """Class to hold audit results for :class:`~anviL_consortium_manager.models.Workspace`s."""
+    """Class to hold audit results for :class:`~anviL_consortium_manager.models.Workspace`.
+
+    The elements of the set returned by ``get_verified()``
+    and the keys of the dictionary returned by ``get_errors()``
+    should all be :class:`~anvil_consortium_manager.models.Workspace` model instances.
+    """
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    """Error when a Workspace in the app does not exist on AnVIL."""
+
     ERROR_NOT_OWNER_ON_ANVIL = "Not an owner on AnVIL"
+    """Error when the service account running the app is not an owner of the Workspace on AnVIL."""
+
     ERROR_DIFFERENT_AUTH_DOMAINS = "Has different auth domains on AnVIL"
+    """Error when the Workspace has different auth domains in the app and on AnVIL."""
+
     ERROR_WORKSPACE_ACCESS = "Workspace access does not match on AnVIL"
+    """Error when a Workspace is shared with different ManagedGroups in the app and on AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = (
         ERROR_NOT_IN_ANVIL,
@@ -163,12 +213,25 @@ class WorkspaceAuditResults(AnVILAuditResults):
 
 
 class WorkspaceGroupAccessAuditResults(AnVILAuditResults):
-    """Class to hold audit results for group access to :class:`~anviL_consortium_manager.models.Workspace`s."""
+    """Class to hold audit results for group access to :class:`~anviL_consortium_manager.models.Workspace`s.
+
+    The elements of the set returned by ``get_verified()``
+    and the keys of the dictionary returned by ``get_errors()``
+    should all be :class:`~anvil_consortium_manager.models.WorkspaceGroupAccess` model instances.
+    """
 
     ERROR_NO_ACCESS_IN_ANVIL = "No access in AnVIL"
+    """Error when a ManagedGroup has access to a workspace in the app but not on AnVIL."""
+
     ERROR_DIFFERENT_ACCESS = "Different access level in AnVIL"
+    """Error when a ManagedGroup has a different access level for workspace in the app and on AnVIL."""
+
     ERROR_DIFFERENT_CAN_SHARE = "can_share value does not match in AnVIL"
+    """Error when the can_share value for a ManagedGroup does not match what's on AnVIL."""
+
     ERROR_DIFFERENT_CAN_COMPUTE = "can_compute value does not match in AnVIL"
+    """Error when the can_compute value for a ManagedGroup does not match what's on AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = (
         ERROR_NO_ACCESS_IN_ANVIL,
