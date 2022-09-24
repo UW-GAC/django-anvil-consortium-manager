@@ -3239,6 +3239,9 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:accounts:audit", args=args)
 
+    def get_api_url(self, email):
+        return self.entry_point + "/api/proxyGroup/" + email
+
     def get_view(self):
         """Return the view being tested."""
         return views.AccountAudit.as_view()
@@ -3267,6 +3270,92 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_verified", response.context_data)
+        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+
+    def test_audit_verified_one_verified(self):
+        """audit_verified with one verified record."""
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_verified", response.context_data)
+        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_errors", response.context_data)
+        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+
+    def test_audit_errors_one_verified(self):
+        """audit_errors with one verified record."""
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_errors", response.context_data)
+        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_not_in_app", response.context_data)
+        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
 
 
 class ManagedGroupDetailTest(TestCase):

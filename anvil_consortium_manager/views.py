@@ -630,8 +630,18 @@ class AccountAudit(auth.AnVILConsortiumManagerViewRequired, TemplateView):
 
     def get_context_data(self, *args, **kwargs):
         """Add audit results to the context data."""
-        if "audit_results" not in kwargs:
-            kwargs["audit_results"] = self.audit_results
+        # Catchall
+        if "audit_timestamp" not in kwargs:
+            kwargs["audit_timestamp"] = timezone.now()
+        if "audit_ok" not in kwargs:
+            kwargs["audit_ok"] = self.audit_results.ok()
+        if "audit_verified" not in kwargs:
+            kwargs["audit_verified"] = self.audit_results.get_verified()
+        if "audit_errors" not in kwargs:
+            kwargs["audit_errors"] = self.audit_results.get_errors()
+        if "audit_not_in_app" not in kwargs:
+            kwargs["audit_not_in_app"] = self.audit_results.get_not_in_app()
+
         return super().get_context_data(*args, **kwargs)
 
 
