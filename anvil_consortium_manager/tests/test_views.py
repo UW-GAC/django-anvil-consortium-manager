@@ -866,6 +866,12 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_template(self):
+        """Template loads successfully."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
     def test_audit_verified(self):
         """audit_verified is in the context data."""
         request = self.factory.get(self.get_url())
@@ -3418,6 +3424,12 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_template(self):
+        """Template loads successfully."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
     def test_audit_verified(self):
         """audit_verified is in the context data."""
         request = self.factory.get(self.get_url())
@@ -4718,6 +4730,19 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_template(self):
+        """Template loads successfully."""
+        api_url = self.get_api_groups_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
     def test_audit_verified(self):
         """audit_verified is in the context data."""
         api_url = self.get_api_groups_url()
@@ -4936,6 +4961,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, slug="foo")
+
+    def test_template(self):
+        """Template loads successfully."""
+        # Group membership API call.
+        responses.add(
+            responses.GET,
+            self.get_api_group_members_url(self.group.name),
+            status=200,
+            json=self.get_api_group_members_json_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertEqual(response.status_code, 200)
 
     def test_audit_verified(self):
         """audit_verified is in the context data."""
@@ -8136,6 +8174,19 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_template(self):
+        """Template loads successfully."""
+        api_url = self.get_api_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
     def test_audit_verified(self):
         """audit_verified is in the context data."""
         api_url = self.get_api_url()
@@ -8379,6 +8430,20 @@ class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
+
+    def test_template(self):
+        """Template loads successfully."""
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        self.assertEqual(response.status_code, 200)
 
     def test_audit_verified(self):
         """audit_verified is in the context data."""
