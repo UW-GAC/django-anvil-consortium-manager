@@ -1,5 +1,9 @@
 # Change log
 
+## 0.3 (devel)
+
+- Add methods and views to audit information against AnVIL.
+
 ## 0.2 (2022-09-12)
 
 - Add account linking functionality
