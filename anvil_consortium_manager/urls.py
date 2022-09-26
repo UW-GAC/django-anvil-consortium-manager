@@ -96,6 +96,11 @@ managed_group_patterns = (
         ),
         path("audit/", views.ManagedGroupAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
+        path(
+            "<slug:slug>/audit/",
+            views.ManagedGroupMembershipAudit.as_view(),
+            name="audit_membership",
+        ),
         path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),

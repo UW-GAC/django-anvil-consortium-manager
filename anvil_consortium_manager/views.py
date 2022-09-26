@@ -864,6 +864,39 @@ class ManagedGroupAudit(
         self.audit_results = models.ManagedGroup.anvil_audit()
 
 
+class ManagedGroupMembershipAudit(
+    auth.AnVILConsortiumManagerViewRequired,
+    SingleObjectMixin,
+    AnVILAuditMixin,
+    TemplateView,
+):
+    """View to run an audit on ManagedGroups and display the results."""
+
+    model = models.ManagedGroup
+    slug_field = "name"
+    template_name = "anvil_consortium_manager/managed_group_membership_audit.html"
+    message_not_managed_by_app = (
+        "Cannot audit membership because group is not managed by this app."
+    )
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
+
+    def run_audit(self):
+        self.audit_results = self.object.anvil_audit_membership()
+
+
 class WorkspaceAdapterMixin:
     """Class for handling workspace adapters."""
 
