@@ -13,6 +13,7 @@ billing_project_patterns = (
             views.BillingProjectAutocomplete.as_view(),
             name="autocomplete",
         ),
+        path("audit/", views.BillingProjectAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.BillingProjectDetail.as_view(), name="detail"),
     ],
     "billing_projects",

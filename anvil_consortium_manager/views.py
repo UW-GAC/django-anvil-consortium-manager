@@ -187,6 +187,17 @@ class BillingProjectAutocomplete(
         return qs
 
 
+class BillingProjectAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
+    """View to run an audit on Workspaces and display the results."""
+
+    template_name = "anvil_consortium_manager/billing_project_audit.html"
+
+    def run_audit(self):
+        self.audit_results = models.BillingProject.anvil_audit()
+
+
 class SingleAccountMixin(object):
     """Retrieve an account using the uuid field."""
 

@@ -810,6 +810,150 @@ class BillingProjectAutocompleteTest(TestCase):
         self.assertEqual(json.loads(response.content.decode("utf-8"))["results"], [])
 
 
+class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the BillingProjectAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:billing_projects:audit", args=args)
+
+    def get_api_url(self, billing_project_name):
+        return self.entry_point + "/api/billing/v2/" + billing_project_name
+
+    def get_api_json_response(self):
+        return {
+            "roles": ["User"],
+        }
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.BillingProjectAudit.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_verified", response.context_data)
+        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        billing_project = factories.BillingProjectFactory.create()
+        api_url = self.get_api_url(billing_project.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(),
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_verified", response.context_data)
+        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_errors", response.context_data)
+        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        billing_project = factories.BillingProjectFactory.create()
+        api_url = self.get_api_url(billing_project.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_errors", response.context_data)
+        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_not_in_app", response.context_data)
+        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        billing_project = factories.BillingProjectFactory.create()
+        api_url = self.get_api_url(billing_project.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        billing_project = factories.BillingProjectFactory.create()
+        api_url = self.get_api_url(billing_project.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        response = self.get_view()(request)
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+
 class AccountDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
