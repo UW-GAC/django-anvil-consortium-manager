@@ -528,30 +528,35 @@ class ManagedGroup(TimeStampedModel):
         audit_results = anvil_audit.ManagedGroupAuditResults()
         # Check the list of groups.
         response = AnVILAPIClient().get_groups()
-        groups_on_anvil = response.json()
+        # Change from list of group dictionaries to dictionary of roles. That way we can handle being both
+        # a member and an admin of a group.
+        groups_on_anvil = {}
+        for group_details in response.json():
+            group_name = group_details["groupName"]
+            role = group_details["role"]
+            try:
+                groups_on_anvil[group_name] = groups_on_anvil[group_name] + [role]
+            except KeyError:
+                groups_on_anvil[group_name] = [role]
+        # Audit groups that exist in the app.
         for group in cls.objects.all():
             try:
-                i = next(
-                    idx
-                    for idx, x in enumerate(groups_on_anvil)
-                    if x["groupName"] == group.name
-                )
-            except StopIteration:
+                group_roles = groups_on_anvil.pop(group.name)
+            except KeyError:
                 audit_results.add_error(group, audit_results.ERROR_NOT_IN_ANVIL)
             else:
                 # Check role.
-                group_details = groups_on_anvil.pop(i)
                 if group.is_managed_by_app:
-                    if group_details["role"] == "Member":
+                    if "Admin" not in group_roles:
                         audit_results.add_error(
                             group, audit_results.ERROR_DIFFERENT_ROLE
                         )
-                    elif group_details["role"] == "Admin":
+                    else:
                         if not group.anvil_audit_membership().ok():
                             audit_results.add_error(
                                 group, audit_results.ERROR_GROUP_MEMBERSHIP
                             )
-                elif not group.is_managed_by_app and group_details["role"] == "Admin":
+                elif not group.is_managed_by_app and "Admin" in group_roles:
                     audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
 
             try:
@@ -560,8 +565,9 @@ class ManagedGroup(TimeStampedModel):
                 # ValueError is raised when the group already has errors reported, so
                 # ignore this exception -- we don't want to add it to the verified list.
                 pass
-        for group_details in groups_on_anvil:
-            audit_results.add_not_in_app(group_details["groupName"])
+        # Check for groups that exist on AnVIL but not the app.
+        for group_name in groups_on_anvil:
+            audit_results.add_not_in_app(group_name)
         return audit_results
 
 
