@@ -1299,6 +1299,49 @@ class WorkspaceAudit(
         self.audit_results = models.Workspace.anvil_audit()
 
 
+class WorkspaceAccessAudit(
+    auth.AnVILConsortiumManagerViewRequired,
+    SingleObjectMixin,
+    AnVILAuditMixin,
+    TemplateView,
+):
+    """View to run an audit on access to a specific Workspace and display the results."""
+
+    model = models.Workspace
+    template_name = "anvil_consortium_manager/workspace_access_audit.html"
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(
+            billing_project__name=billing_project_slug, name=workspace_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
+
+    def run_audit(self):
+        self.audit_results = self.object.anvil_audit_access()
+
+
 class WorkspaceAutocomplete(
     auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
 ):

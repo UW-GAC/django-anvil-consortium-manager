@@ -3,7 +3,7 @@
 
 {% block main_header %}
 <h1>Managed group membership audit results</h1>
-<h3><b>Group: <a href="{{ object.get_absolute_url }}">{{ object.name }}</a></b></h3>
+<h3>for <a href="{{ object.get_absolute_url }}">{{ object.name }}</a></h3>
 {% endblock main_header %}
 
 {% block audit_explanation %}
@@ -13,7 +13,7 @@
 </p>
 
 <ol>
-  <li>Each account members of this group in the app is also a "member" in AnVIL.</li>
+  <li>Each account member of this group in the app is also a "member" in AnVIL.</li>
   <li>Each account admin of this group in the app is also an "admin" in AnVIL.</li>
   <li>Each group that is a member of this group in the app is also a "member" in AnVIL.</li>
   <li>Each group that is an admin of this group in the app is also an "admin" in AnVIL.</li>

@@ -8284,6 +8284,303 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
+class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceAccessAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
+        self.service_account_email = fake.email()
+        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
+            self.service_account_email
+        )
+        # Set this variable here because it will include the service account.
+        # Tests can update it with the update_api_response method.
+        self.api_response = {"acl": {}}
+        self.update_api_response(
+            self.service_account_email, "OWNER", can_compute=True, can_share=True
+        )
+        # Create a workspace for use in tests.
+        self.workspace = factories.WorkspaceFactory.create()
+        self.api_url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + self.workspace.billing_project.name
+            + "/"
+            + self.workspace.name
+            + "/acl"
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:audit_access", args=args)
+
+    def update_api_response(self, email, access, can_compute=False, can_share=False):
+        """Return a paired down json for a single ACL, including the service account."""
+        self.api_response["acl"].update(
+            {
+                email: {
+                    "accessLevel": access,
+                    "canCompute": can_compute,
+                    "canShare": can_share,
+                    "pending": False,
+                }
+            }
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceAccessAudit.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Group membership API call.
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        # Group membership API call.
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_verified", response.context_data)
+        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        access = factories.WorkspaceGroupAccessFactory.create(workspace=self.workspace)
+        self.update_api_response(access.group.get_email(), "READER")
+        # Group membership API call.
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_verified", response.context_data)
+        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        # Group membership API call.
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_errors", response.context_data)
+        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one error record."""
+        access = factories.WorkspaceGroupAccessFactory.create(workspace=self.workspace)
+        # Different access recorded.
+        self.update_api_response(access.group.get_email(), "WRITER")
+        # Group membership API call.
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_errors", response.context_data)
+        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_not_in_app is in the context data."""
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+            # Admin insetad of member.
+            # json=self.get_api_group_members_json_response(),
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_not_in_app", response.context_data)
+        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_not_in_app with one record not in app."""
+        self.update_api_response("foo@bar.com", "READER")
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_not_in_app", response.context_data)
+        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+            # Admin insetad of member.
+            # json=self.get_api_group_members_json_response(),
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is False."""
+        self.update_api_response("foo@bar.com", "READER")
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+            # Not in app
+            # json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+        )
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+        )
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+    def test_workspace_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid workspace slug."""
+        billing_project = factories.BillingProjectFactory.create()
+        request = self.factory.get(
+            self.get_url(billing_project.name, self.workspace.name)
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=billing_project.name,
+                workspace_slug=self.workspace.name,
+            )
+
+    def test_billing_project_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid billing project slug."""
+        request = self.factory.get(self.get_url("foo", self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request, billing_project_slug="foo", workspace_slug=self.workspace.name
+            )
+
+
 class GroupGroupMembershipDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""

@@ -164,6 +164,11 @@ workspace_patterns = (
             name="detail",
         ),
         path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/audit/",
+            views.WorkspaceAccessAudit.as_view(),
+            name="audit_access",
+        ),
+        path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/access/",
             include(workspace_access_patterns),
         ),
