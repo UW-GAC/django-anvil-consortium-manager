@@ -93,6 +93,7 @@ managed_group_patterns = (
             views.ManagedGroupAutocomplete.as_view(),
             name="autocomplete",
         ),
+        path("audit/", views.ManagedGroupAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
         path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),

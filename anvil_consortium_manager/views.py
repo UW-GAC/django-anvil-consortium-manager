@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.forms import Form, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
@@ -48,6 +49,33 @@ class SuccessMessageMixin:
         # Should this be self.request or request?
         self.add_success_message()
         return super().delete(request, *args, **kwargs)
+
+
+class AnVILAuditMixin:
+    """Mixin to display AnVIL audit results."""
+
+    def run_audit(self):
+        raise ImproperlyConfigured("The 'run_audit' method must be implemented.")
+
+    def get(self, request, *args, **kwargs):
+        self.run_audit()
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        """Add audit results to the context data."""
+        # Catchall
+        if "audit_timestamp" not in kwargs:
+            kwargs["audit_timestamp"] = timezone.now()
+        if "audit_ok" not in kwargs:
+            kwargs["audit_ok"] = self.audit_results.ok()
+        if "audit_verified" not in kwargs:
+            kwargs["audit_verified"] = self.audit_results.get_verified()
+        if "audit_errors" not in kwargs:
+            kwargs["audit_errors"] = self.audit_results.get_errors()
+        if "audit_not_in_app" not in kwargs:
+            kwargs["audit_not_in_app"] = self.audit_results.get_not_in_app()
+
+        return super().get_context_data(*args, **kwargs)
 
 
 class Index(auth.AnVILConsortiumManagerViewRequired, TemplateView):
@@ -616,33 +644,15 @@ class AccountAutocomplete(
         return qs
 
 
-class AccountAudit(auth.AnVILConsortiumManagerViewRequired, TemplateView):
+class AccountAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
     """View to run an audit on Accounts and display the results."""
 
     template_name = "anvil_consortium_manager/account_audit.html"
 
-    def get(self, request, *args, **kwargs):
-        self.run_audit()
-        return super().get(request, *args, **kwargs)
-
     def run_audit(self):
         self.audit_results = models.Account.anvil_audit()
-
-    def get_context_data(self, *args, **kwargs):
-        """Add audit results to the context data."""
-        # Catchall
-        if "audit_timestamp" not in kwargs:
-            kwargs["audit_timestamp"] = timezone.now()
-        if "audit_ok" not in kwargs:
-            kwargs["audit_ok"] = self.audit_results.ok()
-        if "audit_verified" not in kwargs:
-            kwargs["audit_verified"] = self.audit_results.get_verified()
-        if "audit_errors" not in kwargs:
-            kwargs["audit_errors"] = self.audit_results.get_errors()
-        if "audit_not_in_app" not in kwargs:
-            kwargs["audit_not_in_app"] = self.audit_results.get_not_in_app()
-
-        return super().get_context_data(*args, **kwargs)
 
 
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
@@ -830,6 +840,17 @@ class ManagedGroupAutocomplete(
             qs = qs.filter(name__icontains=self.q)
 
         return qs
+
+
+class ManagedGroupAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
+    """View to run an audit on Accounts and display the results."""
+
+    template_name = "anvil_consortium_manager/managed_group_audit.html"
+
+    def run_audit(self):
+        self.audit_results = models.ManagedGroup.anvil_audit()
 
 
 class WorkspaceAdapterMixin:
