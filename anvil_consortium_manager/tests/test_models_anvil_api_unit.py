@@ -1223,8 +1223,9 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
     def setUp(self):
         super().setUp()
         # Set the auth session service account email here, since the anvil_audit_membership function will need it.
+        self.service_account_email = fake.email()
         anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            fake.email()
+            self.service_account_email
         )
 
     def get_api_url(self, group_name):
@@ -1234,10 +1235,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
     def get_api_json_response(self, admins=[], members=[]):
         """Return json data about groups in the API format."""
         json_data = {
-            "adminsEmails": [
-                anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
-            ]
-            + admins,
+            "adminsEmails": [self.service_account_email] + admins,
             # "groupEmail": group_name + "@firecloud.org",
             "membersEmails": members,
         }
@@ -1411,7 +1409,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has one account member not in the app."""
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(
-            group=group, account__email="test-member@example.com"
+            group=group, account__email="tEsT-mEmBeR@example.com"
         )
         api_url = self.get_api_url(group.name)
         responses.add(
@@ -1586,7 +1584,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(
             group=group,
-            account__email="test-admin@example.com",
+            account__email="tEsT-aDmIn@example.com",
             role=models.GroupAccountMembership.ADMIN,
         )
         api_url = self.get_api_url(group.name)
@@ -1786,7 +1784,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has one group member not in the app."""
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupGroupMembershipFactory.create(
-            parent_group=group, child_group__name="test-member"
+            parent_group=group, child_group__name="tEsT-mEmBeR"
         )
         api_url = self.get_api_url(group.name)
         responses.add(
@@ -1971,7 +1969,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupGroupMembershipFactory.create(
             parent_group=group,
-            child_group__name="test-admin",
+            child_group__name="tEsT-aDmIn",
             role=models.GroupGroupMembership.ADMIN,
         )
         api_url = self.get_api_url(group.name)
@@ -2019,6 +2017,25 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             audit_results.get_not_in_app(),
             set(["ADMIN: " + membership.child_group.get_email()]),
         )
+
+    def test_service_account_is_both_admin_and_member(self):
+        """No errors are reported when the service account is both a member and an admin of a group."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(group.name)
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(members=[self.service_account_email]),
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
 
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
@@ -3953,9 +3970,6 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
         self.api_response = {"acl": {}}
-        self.update_api_response(
-            self.service_account_email, "OWNER", can_compute=True, can_share=True
-        )
         # Create a workspace for use in tests.
         self.workspace = factories.WorkspaceFactory.create()
         self.api_url = (
@@ -4125,7 +4139,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
     def test_one_group_members_case_insensitive(self):
         """anvil_audit works correctly if this workspace has one group member not in the app."""
         access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, group__name="test-member"
+            workspace=self.workspace, group__name="tEsT-mEmBeR"
         )
         self.update_api_response("Test-Member@firecloud.org", "READER")
         responses.add(
@@ -4266,7 +4280,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         """anvil_audit works correctly if this workspace has one group member not in the app."""
         access = factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace,
-            group__name="test-writer",
+            group__name="tEsT-wRiTeR",
             access=models.WorkspaceGroupAccess.WRITER,
         )
         self.update_api_response("Test-Writer@firecloud.org", "WRITER")
@@ -4343,6 +4357,24 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             audit_results.get_errors(),
             {access: [audit_results.ERROR_DIFFERENT_CAN_SHARE]},
         )
+
+    def test_removes_service_account(self):
+        """Removes the service account from acl if it exists."""
+        self.update_api_response(
+            self.service_account_email, "OWNER", can_compute=True, can_share=True
+        )
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+        responses.assert_call_count(self.api_url, 1)
 
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):

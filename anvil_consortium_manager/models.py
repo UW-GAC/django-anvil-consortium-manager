@@ -451,11 +451,19 @@ class ManagedGroup(TimeStampedModel):
         admins_in_anvil.remove(
             api_client.auth_session.credentials.service_account_email.lower()
         )
+        # Sometimes the service account is also listed as a member. Remove that too.
+        try:
+            members_in_anvil.remove(
+                api_client.auth_session.credentials.service_account_email.lower()
+            )
+        except ValueError:
+            # Not listed as a member -- this is ok.
+            pass
         # Check group-account membership.
         for membership in self.groupaccountmembership_set.all():
             if membership.role == GroupAccountMembership.ADMIN:
                 try:
-                    admins_in_anvil.remove(membership.account.email)
+                    admins_in_anvil.remove(membership.account.email.lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
@@ -465,7 +473,7 @@ class ManagedGroup(TimeStampedModel):
                     audit_results.add_verified(membership)
             elif membership.role == GroupAccountMembership.MEMBER:
                 try:
-                    members_in_anvil.remove(membership.account.email)
+                    members_in_anvil.remove(membership.account.email.lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
@@ -478,7 +486,7 @@ class ManagedGroup(TimeStampedModel):
         for membership in self.child_memberships.all():
             if membership.role == GroupGroupMembership.ADMIN:
                 try:
-                    admins_in_anvil.remove(membership.child_group.get_email())
+                    admins_in_anvil.remove(membership.child_group.get_email().lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
@@ -488,7 +496,7 @@ class ManagedGroup(TimeStampedModel):
                     audit_results.add_verified(membership)
             elif membership.role == GroupGroupMembership.MEMBER:
                 try:
-                    members_in_anvil.remove(membership.child_group.get_email())
+                    members_in_anvil.remove(membership.child_group.get_email().lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
@@ -769,12 +777,16 @@ class Workspace(TimeStampedModel):
         response = api_client.get_workspace_acl(self.billing_project.name, self.name)
         acl_in_anvil = {k.lower(): v for k, v in response.json()["acl"].items()}
         # Remove the service account.
-        acl_in_anvil.pop(
-            api_client.auth_session.credentials.service_account_email.lower()
-        )
+        try:
+            acl_in_anvil.pop(
+                api_client.auth_session.credentials.service_account_email.lower()
+            )
+        except KeyError:
+            # In some cases, the workspace is shared with a group we are part of instead of directly with us.
+            pass
         for access in self.workspacegroupaccess_set.all():
             try:
-                access_details = acl_in_anvil.pop(access.group.get_email())
+                access_details = acl_in_anvil.pop(access.group.get_email().lower())
             except KeyError:
                 audit_results.add_error(access, audit_results.ERROR_NO_ACCESS_IN_ANVIL)
             else:

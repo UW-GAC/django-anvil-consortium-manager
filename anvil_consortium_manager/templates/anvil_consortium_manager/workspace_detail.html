@@ -60,6 +60,9 @@
 
 
 <p>
+  <a href="{% url 'anvil_consortium_manager:workspaces:audit_access' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Audit membership</a>
+</p>
+<p>
   <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
 
