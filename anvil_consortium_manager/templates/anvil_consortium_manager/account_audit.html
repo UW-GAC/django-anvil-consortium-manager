@@ -5,5 +5,23 @@
 <h1>Account audit results</h1>
 {% endblock main_header %}
 
+{% block audit_explanation %}
+<p>
+  An account is considered to be "Verified" if the following are true:
+</p>
+
+<ol>
+  <li>The account exists on AnVIL.</li>
+</ol>
+
+<p>
+  Otherwise, one or more errors will be reported for that managed group in the "Errors" table.
+</p>
+
+<p>
+  The audit does not check for accounts that exist on AnVIL but not in the app.
+</p>
+{% endblock audit_explanation %}
+
 {% block not_in_app %}
 {% endblock not_in_app %}
