@@ -817,7 +817,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
+        # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
             Permission.objects.get(
@@ -3374,7 +3374,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
+        # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
             Permission.objects.get(
@@ -4637,7 +4637,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
+        # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
             Permission.objects.get(
@@ -8044,7 +8044,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
+        # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
             Permission.objects.get(
