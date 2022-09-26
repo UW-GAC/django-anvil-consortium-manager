@@ -146,6 +146,7 @@ workspace_patterns = (
             views.WorkspaceImport.as_view(),
             name="import",
         ),
+        path("audit/", views.WorkspaceAudit.as_view(), name="audit"),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
             views.WorkspaceDelete.as_view(),

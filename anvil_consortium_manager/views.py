@@ -845,7 +845,7 @@ class ManagedGroupAutocomplete(
 class ManagedGroupAudit(
     auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
 ):
-    """View to run an audit on Accounts and display the results."""
+    """View to run an audit on ManagedGroups and display the results."""
 
     template_name = "anvil_consortium_manager/managed_group_audit.html"
 
@@ -1242,6 +1242,17 @@ class WorkspaceDelete(
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
         return super().delete(request, *args, **kwargs)
+
+
+class WorkspaceAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
+    """View to run an audit on Workspaces and display the results."""
+
+    template_name = "anvil_consortium_manager/workspace_audit.html"
+
+    def run_audit(self):
+        self.audit_results = models.Workspace.anvil_audit()
 
 
 class WorkspaceAutocomplete(
