@@ -54,7 +54,7 @@ The :meth:`~anvil_consortium_manager.models.ManagedGroup.anvil_audit_membership`
 The :meth:`~anvil_consortium_manager.models.ManagedGroup.anvil_audit_membership` method runs the following checks for a single :class:`~anvil_consortium_manager.models.ManagedGroup` instance:
 
     1. All account members of this :class:`~anvil_consortium_manager.models.ManagedGroup` in the app are also members in AnVIL.
-    2. All account admin of this :class:`~anvil_consortium_manager.models.ManagedGroup` in the app are also admi in AnVIL.
+    2. All account admin of this :class:`~anvil_consortium_manager.models.ManagedGroup` in the app are also admin in AnVIL.
     3. All group members of this :class:`~anvil_consortium_manager.models.ManagedGroup` in the app are also members in AnVIL.
     4. All group admin of this :class:`~anvil_consortium_manager.models.ManagedGroup` in the app are also admin in AnVIL.
     5. All admin in AnVIL are also recorded in the app.
@@ -69,7 +69,7 @@ As for ManagedGroups, the :class:`~anvil_consortium_manager.models.Workspace` mo
 The :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit` method runs the following checks:
 
     1. All :class:`~anvil_consortium_manager.models.Workspace` model instances in the app also exist on AnVIL.
-    2. The service account running the app is an owner of all the :class:`~anvil_consortium_manager.models.Workspace` model instances on AnVIL.
+    2. The service account running the app is an owner on AnVIL of all the :class:`~anvil_consortium_manager.models.Workspace` model instances.
     3. The :class:`~anvil_consortium_manager.models.Workspace` has the same authorization domains in the app as on AnVIL.
     4. The access to each :class:`~anvil_consortium_manager.models.Workspace` in the app matches the access on AnVIL (using :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit_access` method for each Workspace).
     5. No workspaces that have the app service account as an owner exist on AnVIL.
@@ -77,7 +77,7 @@ The :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit` method runs t
 The :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit_membership` method runs the following checks for a single :class:`~anvil_consortium_manager.models.Workspace` instance:
 
     1. All groups that have access in the app also have access in AnVIL.
-    2. Each :class:`~anvil_consortium_manager.models.ManagedGroup` that have access in the app has the same access in AnVIL.
+    2. Each :class:`~anvil_consortium_manager.models.ManagedGroup` that has access in the app has the same access in AnVIL.
     3. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupAccess.can_compute` value is the same in the app an on AnVIL.
     4. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupAccess.can_share` value is the same in the app an on AnVIL.
     5. No groups or accounts on AnVIL have access to the workspace that are not recorded in the app.
