@@ -1,6 +1,6 @@
 # Change log
 
-## 0.3 (devel)
+## 0.3 (2022-09-27)
 
 - Show groups that a group is part of on the ManagedGroup detail page.
 - Add methods and views to audit information against AnVIL.
