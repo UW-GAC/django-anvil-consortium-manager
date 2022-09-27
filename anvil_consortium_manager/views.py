@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.forms import Form, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
@@ -48,6 +49,33 @@ class SuccessMessageMixin:
         # Should this be self.request or request?
         self.add_success_message()
         return super().delete(request, *args, **kwargs)
+
+
+class AnVILAuditMixin:
+    """Mixin to display AnVIL audit results."""
+
+    def run_audit(self):
+        raise ImproperlyConfigured("The 'run_audit' method must be implemented.")
+
+    def get(self, request, *args, **kwargs):
+        self.run_audit()
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        """Add audit results to the context data."""
+        # Catchall
+        if "audit_timestamp" not in kwargs:
+            kwargs["audit_timestamp"] = timezone.now()
+        if "audit_ok" not in kwargs:
+            kwargs["audit_ok"] = self.audit_results.ok()
+        if "audit_verified" not in kwargs:
+            kwargs["audit_verified"] = self.audit_results.get_verified()
+        if "audit_errors" not in kwargs:
+            kwargs["audit_errors"] = self.audit_results.get_errors()
+        if "audit_not_in_app" not in kwargs:
+            kwargs["audit_not_in_app"] = self.audit_results.get_not_in_app()
+
+        return super().get_context_data(*args, **kwargs)
 
 
 class Index(auth.AnVILConsortiumManagerViewRequired, TemplateView):
@@ -157,6 +185,17 @@ class BillingProjectAutocomplete(
             qs = qs.filter(name__icontains=self.q)
 
         return qs
+
+
+class BillingProjectAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
+    """View to run an audit on Workspaces and display the results."""
+
+    template_name = "anvil_consortium_manager/billing_project_audit.html"
+
+    def run_audit(self):
+        self.audit_results = models.BillingProject.anvil_audit()
 
 
 class SingleAccountMixin(object):
@@ -616,6 +655,17 @@ class AccountAutocomplete(
         return qs
 
 
+class AccountAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
+    """View to run an audit on Accounts and display the results."""
+
+    template_name = "anvil_consortium_manager/account_audit.html"
+
+    def run_audit(self):
+        self.audit_results = models.Account.anvil_audit()
+
+
 class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.ManagedGroup
     slug_field = "name"
@@ -804,6 +854,50 @@ class ManagedGroupAutocomplete(
             qs = qs.filter(name__icontains=self.q)
 
         return qs
+
+
+class ManagedGroupAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
+    """View to run an audit on ManagedGroups and display the results."""
+
+    template_name = "anvil_consortium_manager/managedgroup_audit.html"
+
+    def run_audit(self):
+        self.audit_results = models.ManagedGroup.anvil_audit()
+
+
+class ManagedGroupMembershipAudit(
+    auth.AnVILConsortiumManagerViewRequired,
+    SingleObjectMixin,
+    AnVILAuditMixin,
+    TemplateView,
+):
+    """View to run an audit on ManagedGroups and display the results."""
+
+    model = models.ManagedGroup
+    slug_field = "name"
+    template_name = "anvil_consortium_manager/managedgroup_membership_audit.html"
+    message_not_managed_by_app = (
+        "Cannot audit membership because group is not managed by this app."
+    )
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
+
+    def run_audit(self):
+        self.audit_results = self.object.anvil_audit_membership()
 
 
 class WorkspaceAdapterMixin:
@@ -1195,6 +1289,60 @@ class WorkspaceDelete(
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
         return super().delete(request, *args, **kwargs)
+
+
+class WorkspaceAudit(
+    auth.AnVILConsortiumManagerViewRequired, AnVILAuditMixin, TemplateView
+):
+    """View to run an audit on Workspaces and display the results."""
+
+    template_name = "anvil_consortium_manager/workspace_audit.html"
+
+    def run_audit(self):
+        self.audit_results = models.Workspace.anvil_audit()
+
+
+class WorkspaceAccessAudit(
+    auth.AnVILConsortiumManagerViewRequired,
+    SingleObjectMixin,
+    AnVILAuditMixin,
+    TemplateView,
+):
+    """View to run an audit on access to a specific Workspace and display the results."""
+
+    model = models.Workspace
+    template_name = "anvil_consortium_manager/workspace_access_audit.html"
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(
+            billing_project__name=billing_project_slug, name=workspace_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
+
+    def run_audit(self):
+        self.audit_results = self.object.anvil_audit_access()
 
 
 class WorkspaceAutocomplete(

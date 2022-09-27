@@ -13,6 +13,7 @@ billing_project_patterns = (
             views.BillingProjectAutocomplete.as_view(),
             name="autocomplete",
         ),
+        path("audit/", views.BillingProjectAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.BillingProjectDetail.as_view(), name="detail"),
     ],
     "billing_projects",
@@ -47,6 +48,7 @@ account_patterns = (
             views.AccountLinkVerify.as_view(),
             name="verify",
         ),
+        path("audit/", views.AccountAudit.as_view(), name="audit"),
     ],
     "accounts",
 )
@@ -92,7 +94,13 @@ managed_group_patterns = (
             views.ManagedGroupAutocomplete.as_view(),
             name="autocomplete",
         ),
+        path("audit/", views.ManagedGroupAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
+        path(
+            "<slug:slug>/audit/",
+            views.ManagedGroupMembershipAudit.as_view(),
+            name="audit_membership",
+        ),
         path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
@@ -144,6 +152,7 @@ workspace_patterns = (
             views.WorkspaceImport.as_view(),
             name="import",
         ),
+        path("audit/", views.WorkspaceAudit.as_view(), name="audit"),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
             views.WorkspaceDelete.as_view(),
@@ -153,6 +162,11 @@ workspace_patterns = (
             "<slug:billing_project_slug>/<slug:workspace_slug>/",
             views.WorkspaceDetail.as_view(),
             name="detail",
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/audit/",
+            views.WorkspaceAccessAudit.as_view(),
+            name="audit_access",
         ),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/access/",

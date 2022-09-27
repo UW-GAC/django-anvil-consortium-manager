@@ -1,0 +1,30 @@
+{% extends "anvil_consortium_manager/audit.html" %}
+{% block title %}Audit Managed Group membership{% endblock %}
+
+{% block main_header %}
+<h1>Managed group membership audit results</h1>
+<h3>for <a href="{{ object.get_absolute_url }}">{{ object.name }}</a></h3>
+{% endblock main_header %}
+
+{% block audit_explanation %}
+
+<p>
+  Each membership record for a managed group is considered to be "Verified" if the following are true:
+</p>
+
+<ol>
+  <li>Each account member of this group in the app is also a "member" in AnVIL.</li>
+  <li>Each account admin of this group in the app is also an "admin" in AnVIL.</li>
+  <li>Each group that is a member of this group in the app is also a "member" in AnVIL.</li>
+  <li>Each group that is an admin of this group in the app is also an "admin" in AnVIL.</li>
+</ol>
+
+<p>
+  Otherwise, one or more errors will be reported for that membership in the "Errors" table.
+</p>
+
+<p>
+  The audit also checks for any "members" or "admin" of the group on AnVIL that are not recorded in the app.
+  If any exist, they will be reported in the "Not in app" section.
+</p>
+{% endblock audit_explanation %}

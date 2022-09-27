@@ -1,0 +1,154 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+{% load tz %}
+{% load render_table from django_tables2 %}
+
+{% block title %}
+{% endblock %}
+
+
+{% block content %}
+
+{% block main_header %}
+{% endblock main_header %}
+
+{% if audit_ok %}
+<div class="alert alert-success" role="alert">
+  AnVIL audit did not detect any errors as of {{audit_timestamp|localtime}}.
+</div>
+{% else %}
+<div class="alert alert-danger" role="alert">
+  AnVIL audit detected errors as of {{audit_timestamp|localtime}}.
+</div>
+{% endif %}
+
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  {% block audit_explanation %}
+  {% endblock audit_explanation %}
+</div>
+
+{% block verified_table %}
+<div class="my-3">
+  <div class="accordion" id="accordionVerified">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingVerifiedOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVerifiedOne" aria-expanded="falase" aria-controls="collapseVerifiedOne">
+          <span class="fa-solid fa-circle-check mx-2"></span>
+          Verified
+          <span class="badge mx-2 {% if audit_verified %}bg-success{% else %}bg-secondary{% endif %} pill"> {{ audit_verified|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseVerifiedOne" class="accordion-collapse collapse" aria-labelledby="headingVerifiedOne" data-bs-parent="#accordionVerified">
+        <div class="accordion-body">
+
+          <p>This table shows the number of records in the app that were verified against AnVIL.</p>
+
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Model instance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for obj in audit_verified %}
+                  <tr>
+                    <td><a href="{{obj.get_absolute_url}}">{{ obj }}</a></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock verified_table %}
+
+{% block errors_table %}
+<div class="my-3">
+  <div class="accordion" id="accordionErrors">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingErrorsOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseErrorsOne" aria-expanded="false" aria-controls="collapseErrorsOne">
+          <span class="fa-solid fa-triangle-exclamation mx-2"></span>
+          Errors
+
+          <span class="badge mx-2 {% if audit_errors %}bg-danger{% else %}bg-secondary{% endif %} pill"> {{ audit_errors|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseErrorsOne" class="accordion-collapse collapse" aria-labelledby="headingErrorsOne" data-bs-parent="#accordionErrors">
+        <div class="accordion-body">
+
+          <p>This table shows the number of records that had errors when verifying information in the app against AnVIL.</p>
+
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Model instance</th>
+                  <th>Errors</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for obj, errors in audit_errors.items %}
+                  <tr>
+                    <td><a href="{{obj.get_absolute_url}}">{{ obj }}</a></td>
+                    <td>{{ errors|join:", " }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock errors_table %}
+
+{% block not_in_app %}
+<div class="my-3">
+  <div class="accordion" id="accordionNotInApp">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingNotInAppOne">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNotInAppOne" aria-expanded="false" aria-controls="collapseNotInAppOne">
+          <span class="fa-solid fa-circle-question mx-2"></span>
+          Not in app
+          <span class="badge mx-2 {% if audit_not_in_app %}bg-warning{% else %}bg-secondary{% endif %} pill"> {{ audit_not_in_app|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseNotInAppOne" class="accordion-collapse collapse" aria-labelledby="headingNotInAppOne" data-bs-parent="#accordionNotInApp">
+        <div class="accordion-body">
+
+          <p>This table shows identifiers for the records that exist in AnVIL but not in the app.</p>
+
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Record</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for obj in audit_not_in_app %}
+                  <tr>
+                    <td>{{ obj }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock not_in_app %}
+
+
+{% endblock content %}
