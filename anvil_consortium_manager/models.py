@@ -807,10 +807,13 @@ class Workspace(TimeStampedModel):
                         access, audit_results.ERROR_DIFFERENT_CAN_COMPUTE
                     )
                 # Check can_share value -- the app never grants this, so it should always be false.
-                if access_details["canShare"]:
+                # Can share should be True for owners and false for others.
+                can_share = access.access == "OWNER"
+                if access_details["canShare"] != can_share:
                     audit_results.add_error(
                         access, audit_results.ERROR_DIFFERENT_CAN_SHARE
                     )
+
             try:
                 audit_results.add_verified(access)
             except ValueError:

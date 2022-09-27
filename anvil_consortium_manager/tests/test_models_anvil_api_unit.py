@@ -4172,7 +4172,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
 
-    def test_two_group_admin(self):
+    def test_two_group_writers(self):
         """anvil_audit works correctly if this workspace has two group writers."""
         access_1 = factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
@@ -4194,9 +4194,11 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
 
-    def test_one_group_admin_not_in_anvil(self):
-        """anvil_audit works correctly if this workspace has one group member not in anvil."""
-        self.update_api_response("test-writer@firecloud.org", "WRITER")
+    def test_one_group_writer_not_in_anvil(self):
+        """anvil_audit works correctly if this workspace has one group writer not in anvil."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        )
         responses.add(
             responses.GET,
             self.api_url,
@@ -4206,15 +4208,22 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         audit_results = self.workspace.anvil_audit_access()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
-        self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(
-            audit_results.get_not_in_app(), set(["WRITER: test-writer@firecloud.org"])
+            audit_results.get_errors(),
+            {
+                access: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+            },
         )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
-    def test_two_group_admins_not_in_anvil(self):
-        """anvil_audit works correctly if this workspace has two group member not in anvil."""
-        self.update_api_response("test-writer-1@firecloud.org", "WRITER")
-        self.update_api_response("test-writer-2@firecloud.org", "WRITER")
+    def test_two_group_writers_not_in_anvil(self):
+        """anvil_audit works correctly if this workspace has two group writers not in anvil."""
+        access_1 = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        )
+        access_2 = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        )
         responses.add(
             responses.GET,
             self.api_url,
@@ -4224,16 +4233,14 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         audit_results = self.workspace.anvil_audit_access()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
-        self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(
-            audit_results.get_not_in_app(),
-            set(
-                [
-                    "WRITER: test-writer-1@firecloud.org",
-                    "WRITER: test-writer-2@firecloud.org",
-                ]
-            ),
+            audit_results.get_errors(),
+            {
+                access_1: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+                access_2: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+            },
         )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_one_group_writer_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group writer not in the app."""
@@ -4296,6 +4303,155 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set([]))
 
+    def test_one_group_owner(self):
+        """anvil_audit works correctly if this workspace has one group owner."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        )
+        self.update_api_response(access.group.get_email(), "OWNER", can_share=True)
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([access]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_group_owners(self):
+        """anvil_audit works correctly if this workspace has two group owners."""
+        access_1 = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        )
+        access_2 = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        )
+        self.update_api_response(access_1.group.get_email(), "OWNER", can_share=True)
+        self.update_api_response(access_2.group.get_email(), "OWNER", can_share=True)
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([access_1, access_2]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_group_owner_not_in_anvil(self):
+        """anvil_audit works correctly if this workspace has one group owners not in anvil."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        )
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                access: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_two_group_owners_not_in_anvil(self):
+        """anvil_audit works correctly if this workspace has two group owners not in anvil."""
+        access_1 = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        )
+        access_2 = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        )
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                access_1: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+                access_2: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+            },
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_one_group_owner_not_in_app(self):
+        """anvil_audit works correctly if this workspace has one group owner not in the app."""
+        self.update_api_response("test-writer@firecloud.org", "OWNER")
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(), set(["OWNER: test-writer@firecloud.org"])
+        )
+
+    def test_two_group_owners_not_in_app(self):
+        """anvil_audit works correctly if this workspace has two group owners not in the app."""
+        self.update_api_response("test-writer-1@firecloud.org", "OWNER")
+        self.update_api_response("test-writer-2@firecloud.org", "OWNER")
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(
+            audit_results.get_not_in_app(),
+            set(
+                [
+                    "OWNER: test-writer-1@firecloud.org",
+                    "OWNER: test-writer-2@firecloud.org",
+                ]
+            ),
+        )
+
+    def test_one_group_owner_case_insensitive(self):
+        """anvil_audit works correctly with different cases for owner emails."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace,
+            group__name="tEsT-oWnEr",
+            access=models.WorkspaceGroupAccess.OWNER,
+        )
+        self.update_api_response("Test-Owner@firecloud.org", "OWNER", can_share=True)
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([access]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set([]))
+
     def test_group_different_access_reader_in_app_writer_in_anvil(self):
         """anvil_audit works correctly if a group has different access to a workspace in AnVIL."""
         access = factories.WorkspaceGroupAccessFactory.create(
@@ -4314,6 +4470,34 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(
             audit_results.get_errors(),
             {access: [audit_results.ERROR_DIFFERENT_ACCESS]},
+        )
+
+    def test_group_different_access_reader_in_app_owner_in_anvil(self):
+        """anvil_audit works correctly if a group has different access to a workspace in AnVIL."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupAccess.READER
+        )
+        self.update_api_response(
+            access.group.get_email(), "OWNER", can_compute=True, can_share=True
+        )
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {
+                access: [
+                    audit_results.ERROR_DIFFERENT_ACCESS,
+                    audit_results.ERROR_DIFFERENT_CAN_COMPUTE,
+                    audit_results.ERROR_DIFFERENT_CAN_SHARE,
+                ]
+            },
         )
 
     def test_group_different_can_compute(self):
@@ -4375,6 +4559,78 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(self.api_url, 1)
+
+    def test_group_owner_can_share_true(self):
+        """Owners must have can_share=True."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace,
+            access=models.WorkspaceGroupAccess.OWNER,
+            can_compute=True,
+        )
+        self.update_api_response(
+            access.group.get_email(), "OWNER", can_compute=True, can_share=True
+        )
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([access]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_group_writer_can_share_false(self):
+        """Writers must have can_share=False."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace,
+            access=models.WorkspaceGroupAccess.WRITER,
+            can_compute=True,
+        )
+        self.update_api_response(
+            access.group.get_email(), "WRITER", can_compute=True, can_share=True
+        )
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {access: [audit_results.ERROR_DIFFERENT_CAN_SHARE]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_group_reader_can_share_false(self):
+        """Readers must have can_share=False."""
+        access = factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace,
+            access=models.WorkspaceGroupAccess.READER,
+            can_compute=False,
+        )
+        self.update_api_response(
+            access.group.get_email(), "READER", can_compute=False, can_share=True
+        )
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = self.workspace.anvil_audit_access()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {access: [audit_results.ERROR_DIFFERENT_CAN_SHARE]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
 
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
