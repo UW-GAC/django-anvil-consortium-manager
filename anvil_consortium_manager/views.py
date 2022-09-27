@@ -861,7 +861,7 @@ class ManagedGroupAudit(
 ):
     """View to run an audit on ManagedGroups and display the results."""
 
-    template_name = "anvil_consortium_manager/managed_group_audit.html"
+    template_name = "anvil_consortium_manager/managedgroup_audit.html"
 
     def run_audit(self):
         self.audit_results = models.ManagedGroup.anvil_audit()
@@ -877,7 +877,7 @@ class ManagedGroupMembershipAudit(
 
     model = models.ManagedGroup
     slug_field = "name"
-    template_name = "anvil_consortium_manager/managed_group_membership_audit.html"
+    template_name = "anvil_consortium_manager/managedgroup_membership_audit.html"
     message_not_managed_by_app = (
         "Cannot audit membership because group is not managed by this app."
     )
