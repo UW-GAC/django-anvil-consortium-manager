@@ -1,5 +1,11 @@
 # Change log
 
+## 0.3.1 (unreleased)
+
+### Bug fixes:
+
+- Add javascript to `workspace_import.html` template, allowing autocomplete widgets to work properly.
+
 ## 0.3 (2022-09-27)
 
 - Show groups that a group is part of on the ManagedGroup detail page.
