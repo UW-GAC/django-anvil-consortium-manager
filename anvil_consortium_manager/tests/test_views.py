@@ -31,6 +31,8 @@ fake = Faker()
 
 
 class IndexTest(TestCase):
+    """Tests for the index page."""
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -82,6 +84,127 @@ class IndexTest(TestCase):
         response = self.get_view()(request)
         self.assertIn("app_version", response.context_data)
         self.assertEqual(response.context_data["app_version"], __version__)
+
+
+class ViewEditUrlTest(TestCase):
+    """Test that urls appear correctly based on user permissions."""
+
+    view_urls = (
+        reverse("anvil_consortium_manager:index"),
+        reverse("anvil_consortium_manager:accounts:list"),
+        reverse("anvil_consortium_manager:accounts:audit"),
+        reverse("anvil_consortium_manager:billing_projects:list"),
+        reverse("anvil_consortium_manager:billing_projects:audit"),
+        reverse("anvil_consortium_manager:group_account_membership:list"),
+        reverse("anvil_consortium_manager:group_group_membership:list"),
+        reverse("anvil_consortium_manager:managed_groups:list"),
+        reverse("anvil_consortium_manager:managed_groups:audit"),
+        reverse("anvil_consortium_manager:status"),
+        reverse("anvil_consortium_manager:workspace_group_access:list"),
+        reverse("anvil_consortium_manager:workspaces:list_all"),
+        reverse("anvil_consortium_manager:workspaces:audit"),
+        reverse(
+            "anvil_consortium_manager:workspaces:list",
+            kwargs={"workspace_type": "workspace"},
+        ),
+    )
+
+    # other_urls = (
+    #     reverse("anvil_consortium_manager:accounts:list_active"),
+    #     reverse("anvil_consortium_manager:accounts:list_inactive"),
+    #     reverse("anvil_consortium_manager:accounts:deactivate"),
+    #     reverse("anvil_consortium_manager:accounts:delete"),
+    #     reverse("anvil_consortium_manager:accounts:reactivate"),
+    #     reverse("anvil_consortium_manager:managed_groups:delete"),
+    #     reverse("anvil_consortium_manager:workspaces:access:delete"),
+    #     reverse("anvil_consortium_manager:managed_groups:member_accounts:delete"),
+    #     reverse("anvil_consortium_manager:managed_groups:member_groups:delete"),
+    #     reverse("anvil_consortium_manager:workspaces:access:update"),
+    #     reverse("anvil_consortium_manager:workspaces:delete"),
+    #     reverse("anvil_consortium_manager:managed_groups:audit_membership"),
+    #     reverse("anvil_consortium_manager:workspaces:audit_access"),
+    # )
+
+    edit_urls = (
+        reverse("anvil_consortium_manager:accounts:import"),
+        reverse("anvil_consortium_manager:billing_projects:import"),
+        reverse("anvil_consortium_manager:group_account_membership:new"),
+        reverse("anvil_consortium_manager:group_group_membership:new"),
+        reverse("anvil_consortium_manager:managed_groups:new"),
+        reverse("anvil_consortium_manager:workspace_group_access:new"),
+        reverse(
+            "anvil_consortium_manager:workspaces:import",
+            kwargs={"workspace_type": "workspace"},
+        ),
+        reverse(
+            "anvil_consortium_manager:workspaces:new",
+            kwargs={"workspace_type": "workspace"},
+        ),
+    )
+
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with view permission.
+        self.view_user = User.objects.create_user(username="test_view", password="view")
+        self.view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        # Create a user with view permission.
+        self.edit_user = User.objects.create_user(username="test_edit", password="test")
+        self.edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+
+    def test_view_navbar(self):
+        """Links to edit required do not appear in the index when user only has view permission."""
+        self.client.force_login(self.view_user)
+        # Test with the BillingProjectList page for now, since we're testing the navbar only.
+        response = self.client.get(
+            reverse("anvil_consortium_manager:billing_projects:list")
+        )
+        for url in self.edit_urls:
+            self.assertNotContains(response, url)
+        for url in self.view_urls:
+            self.assertContains(response, url)
+
+    def test_edit_navbar(self):
+        """Links to edit required do not appear in the index when user only has view permission."""
+        self.client.force_login(self.edit_user)
+        # Test with the BillingProjectList page for now, since we're testing the navbar only.
+        response = self.client.get(
+            reverse("anvil_consortium_manager:billing_projects:list")
+        )
+        for url in self.edit_urls:
+            self.assertContains(response, url)
+        for url in self.view_urls:
+            self.assertContains(response, url)
+
+    def test_view_index(self):
+        """Links to edit required do not appear in the index when user only has view permission."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(reverse("anvil_consortium_manager:index"))
+        for url in self.edit_urls:
+            self.assertNotContains(response, url)
+        for url in self.view_urls:
+            self.assertContains(response, url)
+
+    def test_edit_index(self):
+        """Links to edit required do not appear in the index when user only has view permission."""
+        self.client.force_login(self.edit_user)
+        response = self.client.get(reverse("anvil_consortium_manager:index"))
+        # import ipdb; ipdb.set_trace()
+        for url in self.edit_urls:
+            self.assertContains(response, url)
+        for url in self.view_urls:
+            self.assertContains(response, url)
 
 
 class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
