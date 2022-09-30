@@ -4054,6 +4054,51 @@ class ManagedGroupDetailTest(TestCase):
             grandparent_parent_membership, response.context_data["parent_table"].data
         )
 
+    def test_edit_permission(self):
+        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.ManagedGroupFactory.create()
+        response = self.client.get(self.get_url(obj.name))
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:delete",
+                kwargs={"slug": obj.name},
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(view_user)
+        obj = factories.ManagedGroupFactory.create()
+        response = self.client.get(self.get_url(obj.name))
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:delete",
+                kwargs={"slug": obj.name},
+            ),
+        )
+
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
@@ -5594,6 +5639,57 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertEqual(
             len(response.context_data["authorization_domain_table"].rows), 0
+        )
+
+    def test_edit_permission(self):
+        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(view_user)
+        obj = factories.WorkspaceFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
         )
 
 
@@ -8967,6 +9063,57 @@ class GroupGroupMembershipDetailTest(TestCase):
                 request, parent_group_slug="parent", child_group_slug="child"
             )
 
+    def test_edit_permission(self):
+        """Links to delete url appears if the user has edit permission."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.GroupGroupMembershipFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:delete",
+                kwargs={
+                    "parent_group_slug": obj.parent_group.name,
+                    "child_group_slug": obj.child_group.name,
+                },
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links to delete url appears if the user has edit permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(view_user)
+        obj = factories.GroupGroupMembershipFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:delete",
+                kwargs={
+                    "parent_group_slug": obj.parent_group.name,
+                    "child_group_slug": obj.child_group.name,
+                },
+            ),
+        )
+
 
 class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
@@ -9996,6 +10143,57 @@ class GroupAccountMembershipDetailTest(TestCase):
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, group_slug="foo1", account_uuid=uuid)
+
+    def test_edit_permission(self):
+        """Links to delete url appears if the user has edit permission."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.GroupAccountMembershipFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:delete",
+                kwargs={
+                    "group_slug": obj.group.name,
+                    "account_uuid": obj.account.uuid,
+                },
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links to delete url appears if the user has edit permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(view_user)
+        obj = factories.GroupAccountMembershipFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:delete",
+                kwargs={
+                    "group_slug": obj.group.name,
+                    "account_uuid": obj.account.uuid,
+                },
+            ),
+        )
 
 
 class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -11165,6 +11363,59 @@ class WorkspaceGroupAccessDetailTest(TestCase):
                 workspace_slug="workspace",
                 group_slug="group",
             )
+
+    def test_edit_permission(self):
+        """Links to delete url appears if the user has edit permission."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:access:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links to delete url appears if the user has edit permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(view_user)
+        obj = factories.WorkspaceGroupAccessFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:access:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
 
 
 class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
