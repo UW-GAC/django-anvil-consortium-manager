@@ -244,6 +244,12 @@ class AccountDetail(
         context = super().get_context_data(**kwargs)
         # Add an indicator of whether the account is inactive.
         context["is_inactive"] = self.object.status == models.Account.INACTIVE_STATUS
+        edit_permission_codename = (
+            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        )
+        context["show_edit_links"] = self.request.user.has_perm(
+            "anvil_consortium_manager." + edit_permission_codename
+        )
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
         return context

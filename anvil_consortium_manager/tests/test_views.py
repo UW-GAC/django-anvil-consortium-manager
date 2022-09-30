@@ -1236,6 +1236,51 @@ class AccountDetailTest(TestCase):
         self.assertIn("group_table", response.context_data)
         self.assertEqual(len(response.context_data["group_table"].rows), 0)
 
+    def test_edit_permission(self):
+        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        account = factories.AccountFactory.create()
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:accounts:delete",
+                kwargs={"uuid": account.uuid},
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(view_user)
+        account = factories.AccountFactory.create()
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:accounts:delete",
+                kwargs={"uuid": account.uuid},
+            ),
+        )
+
 
 class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
