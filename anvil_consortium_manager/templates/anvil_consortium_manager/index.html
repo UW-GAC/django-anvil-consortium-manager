@@ -39,10 +39,12 @@
               <a href="{% url 'anvil_consortium_manager:billing_projects:list' %}" class="icon-link">List billing projects</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:billing_projects:import' %}" class="icon-link">Import a billing project</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% endif %}
           </ul>
         </div>
       </div>
@@ -51,17 +53,21 @@
         <div class="card shadow-sm">
           <h5 class="card-header"><span class="fa-solid fa-user mx-2"></span>Accounts</h5>
           <div class="card-body">
-            <p>View or import accounts from AnVIL.</p>
+            <p>
+              View {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}or import{% endif %} accounts from AnVIL.
+            </p>
           </div>
           <ul class="list-group list-group-flush">
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:accounts:list' %}" class="icon-link">List accounts</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:accounts:import' %}" class="icon-link">Import an account</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% endif %}
           </ul>
         </div>
       </div>
@@ -70,13 +76,17 @@
         <div class="card shadow-sm">
           <h5 class="card-header"><span class="fa-solid fa-user-group mx-2"></span>Managed groups</h5>
           <div class="card-body">
-            <p>Interact with Managed Groups on AnVIL. You can add accounts to a group so a the access for set of related accounts can be managed together.</p>
+            <p>
+              Interact with Managed Groups on AnVIL.
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}You can add accounts to a group so a the access for set of related accounts can be managed together.{% endif %}
+            </p>
           </div>
           <ul class="list-group list-group-flush">
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:managed_groups:list' %}" class="icon-link">List groups</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:managed_groups:new' %}" class="icon-link">Add a group</a>
               <span class="fa-solid fa-angle-right"></span>
@@ -89,6 +99,7 @@
               <a href="{% url 'anvil_consortium_manager:group_group_membership:new' %}" class="icon-link">Add a group to a group</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% endif %}
           </ul>
         </div>
       </div>
@@ -99,7 +110,10 @@
         <div class="card shadow-sm">
           <h5 class="card-header"><span class="fa-solid fa-computer mx-2"></span>{{ workspace_name }}s</h5>
           <div class="card-body">
-            <p>Interact with <b>{{ workspace_name }}s</b> on AnVIL. You can create or import workspaces and then share them with a group.</p>
+            <p>
+              Interact with {{ workspace_name }}s on AnVIL.
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}You can create or import workspaces and then share them with a group.{% endif%}
+            </p>
           </div>
 
           <ul class="list-group list-group-flush">
@@ -107,6 +121,7 @@
               <a href="{% url 'anvil_consortium_manager:workspaces:list' workspace_type %}" class="icon-link">List workspaces</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:workspaces:new' workspace_type %}" class="icon-link">Add a workspace</a>
               <span class="fa-solid fa-angle-right"></span>
@@ -115,6 +130,7 @@
               <a href="{% url 'anvil_consortium_manager:workspaces:import' workspace_type  %}" class="icon-link">Import a workspace from AnVIL</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            {% endif %}
           </ul>
 
         </div>

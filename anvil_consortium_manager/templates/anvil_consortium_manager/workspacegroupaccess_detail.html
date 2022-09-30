@@ -18,9 +18,11 @@
   </ul>
 </div>
 
+{% if show_edit_links %}
 <p>
   <a href="{% url 'anvil_consortium_manager:workspaces:access:update' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-secondary" role="button">Update Access</a>
   <a href="{% url 'anvil_consortium_manager:workspaces:access:delete' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
+{% endif %}
 
 {% endblock content %}

@@ -25,15 +25,21 @@
               Billing Projects
             </a>
             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
+
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:billing_projects:list' %}">List billing projects</a>
               </li>
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:billing_projects:import' %}">Import a billing project</a>
-              </li>
+
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
+                <li>
+                  <a class="dropdown-item" href="{% url 'anvil_consortium_manager:billing_projects:import' %}">Import a billing project</a>
+                </li>
+              {% endif %}
+
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:billing_projects:audit' %}">Audit billing projects</a>
               </li>
+
             </ul>
           </li>
 
@@ -42,12 +48,17 @@
               Accounts
             </a>
             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
+
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:accounts:list' %}">List accounts</a>
               </li>
+
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:accounts:import' %}">Import an account</a>
               </li>
+              {% endif %}
+
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:accounts:audit' %}">Audit accounts</a>
               </li>
@@ -62,21 +73,25 @@
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:list' %}">List groups</a>
               </li>
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:new' %}">Add a group</a>
               </li>
+              {% endif %}
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_account_membership:list' %}">Group-account membership</a>
               </li>
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_group_membership:list' %}">Group-group membership</a>
               </li>
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_account_membership:new' %}">Add an account to a group</a>
               </li>
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_group_membership:new' %}">Add a group to a group</a>
               </li>
+              {% endif %}
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:audit' %}">Audit groups</a>
               </li>
@@ -95,18 +110,25 @@
                 <li>
                   <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:list' workspace_type %}">List workspaces</a>
                 </li>
+                {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
                 <li>
                   <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:new' workspace_type %}">Create a new workspace</a>
                 </li>
                 <li>
                   <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:import' workspace_type %}">Import a workspace from AnVIL</a>
                 </li>
+                {% endif %}
                 <li><hr class="dropdown-divider"></li>
               {% endfor %}
 
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_access:list' %}">Workspace access</a>
               </li>
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
+              <li>
+                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_access:new' %}">Give a group access to a workspace</a>
+              </li>
+              {% endif %}
 
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:audit' %}">Audit workspaces</a>

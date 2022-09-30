@@ -16,8 +16,10 @@
   </ul>
 </div>
 
+{% if show_edit_links %}
 <p>
   <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:delete' group_slug=object.group.name account_uuid=object.account.uuid %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
+{% endif %}
 
 {% endblock content %}

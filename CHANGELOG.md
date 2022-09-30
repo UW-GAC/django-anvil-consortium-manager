@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Only show links to views requiring edit permission if the user has that permission.
+
 ## 0.3 (2022-09-27)
 
 - Show groups that a group is part of on the ManagedGroup detail page.
