@@ -11,3 +11,4 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     list_table_class = tables.TestWorkspaceDataTable
     workspace_data_model = models.TestWorkspaceData
     workspace_data_form_class = forms.TestWorkspaceDataForm
+    workspace_detail_template_name = "test_path/workspace_detail.html"
