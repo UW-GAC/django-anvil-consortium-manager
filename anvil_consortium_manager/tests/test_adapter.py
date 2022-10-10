@@ -226,6 +226,39 @@ class WorkspaceAdapterTest(TestCase):
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_name()
 
+    def test_get_workspace_detail_template_name_default(self):
+        """get_workspace_detail_template_name returns the correct template using the default adapter."""
+        self.assertEqual(
+            DefaultWorkspaceAdapter().get_workspace_detail_template_name(),
+            "anvil_consortium_manager/workspace_detail.html",
+        )
+
+    def test_get_workspace_detail_template_name_custom(self):
+        """get_workspace_detail_template_name returns the corret template when using a custom adapter"""
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            name = None
+            type = None
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+            workspace_detail_template_name = "custom/workspace_detail.html"
+
+        self.assertEqual(TestAdapter().get_workspace_detail_template_name(), "custom/workspace_detail.html")
+
+    def test_get_workspace_detail_template_name_none(self):
+        """get_workspace_detail_template_name raises ImproperlyConfigured when workspace_detail_template_name is not set"""
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            name = None
+            type = None
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+            workspace_detail_template_name = None
+
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_workspace_detail_template_name()
 
 class WorkspaceAdapterRegistryTest(TestCase):
     """Tests for the WorkspaceAdapterRegstry model."""
