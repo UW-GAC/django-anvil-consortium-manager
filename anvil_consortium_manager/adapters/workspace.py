@@ -87,7 +87,7 @@ class BaseWorkspaceAdapter(ABC):
         return self.workspace_data_form_class
 
     def get_workspace_detail_template_name(self):
-        """Return the workspace detail template path specified in the adapter."""
+        """Return the workspace detail template name specified in the adapter."""
         if not self.workspace_detail_template_name:
             raise ImproperlyConfigured("Set `workspace_detail_template_name`.")
         return self.workspace_detail_template_name

@@ -11,3 +11,5 @@ class ExampleWorkspaceAdapter(BaseWorkspaceAdapter):
     list_table_class = tables.ExampleWorkspaceDataTable
     workspace_data_model = models.ExampleWorkspaceData
     workspace_data_form_class = forms.ExampleWorkspaceDataForm
+    workspace_detail_template_name = "example/workspace_detail.html"
+
