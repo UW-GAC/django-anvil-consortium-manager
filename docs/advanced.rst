@@ -60,6 +60,7 @@ Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapte
 * ``workspace_data_model``: the model used to store additional data about a workspace, subclassed from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`
 * ``workspace_data_form_class``: the form to use to create an instance of the ``workspace_data_model``
 * ``list_table_class``: the table to use to display the list of workspaces
+* ``workspace_detail_template_name``: the template to use to render the detail of the workspace
 
 Here is example of the custom adapter for ``my_app`` with the model, form and table defined above.
 
@@ -76,6 +77,7 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
         workspace_data_model = models.CustomWorkspaceData
         workspace_data_form_class = forms.CustomWorkspaceDataForm
         list_table_class = tables.CustomWorkspaceTable
+        workspace_detail_template_name = "my_app/custom_workspace_detail.html"
 
 Finally, to tell the app to use this adapter, set ``ANVIL_WORKSPACE_ADAPTERS`` in your settings file, e.g.: ``ANVIL_WORKSPACE_ADAPTERS = ["my_app.adapters.CustomWorkspaceAdapter"]``. You can even define multiple adapters for different types of workspaces, e.g.:
 
