@@ -5692,6 +5692,14 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
 
+    def test_render_custom_template_name(self):
+        """Rendering a correct template when custom template name is specified."""
+        workspace = factories.WorkspaceFactory.create(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertTemplateUsed(response, "test_workspace_detail.html")
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
