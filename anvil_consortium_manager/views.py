@@ -981,11 +981,11 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
         )
         return context
 
-    def get_template(self):
+    def get_template_names(self):
         """Return the workspace detail template name specified in the adapter."""
         self.adapter = workspace_adapter_registry.get_adapter(self.object.workspace_type)
         template_name = self.adapter.get_workspace_detail_template_name()
-        return template_name
+        return [template_name]
 
 
 class WorkspaceCreate(
