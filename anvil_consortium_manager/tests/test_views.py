@@ -5701,6 +5701,7 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(workspace.get_absolute_url())
         self.assertTemplateUsed(response, "test_workspace_detail.html")
 
+
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 201

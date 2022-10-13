@@ -12,4 +12,3 @@ class ExampleWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_model = models.ExampleWorkspaceData
     workspace_data_form_class = forms.ExampleWorkspaceDataForm
     workspace_detail_template_name = "example/workspace_detail.html"
-

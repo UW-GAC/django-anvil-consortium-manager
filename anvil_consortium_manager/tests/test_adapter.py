@@ -244,7 +244,10 @@ class WorkspaceAdapterTest(TestCase):
             workspace_data_form_class = None
             workspace_detail_template_name = "custom/workspace_detail.html"
 
-        self.assertEqual(TestAdapter().get_workspace_detail_template_name(), "custom/workspace_detail.html")
+        self.assertEqual(
+            TestAdapter().get_workspace_detail_template_name(),
+            "custom/workspace_detail.html",
+        )
 
     def test_get_workspace_detail_template_name_none(self):
         """get_workspace_detail_template_name raises ImproperlyConfigured when workspace_detail_template_name is not set"""
@@ -259,6 +262,7 @@ class WorkspaceAdapterTest(TestCase):
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_detail_template_name()
+
 
 class WorkspaceAdapterRegistryTest(TestCase):
     """Tests for the WorkspaceAdapterRegstry model."""
