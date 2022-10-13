@@ -250,7 +250,7 @@ class WorkspaceAdapterTest(TestCase):
         )
 
     def test_get_workspace_detail_template_name_none(self):
-        """get_workspace_detail_template_name raises ImproperlyConfigured when workspace_detail_template_name is not set"""
+        """get_workspace_detail_template_name raises ImproperlyConfigured when it is not set"""
 
         class TestAdapter(BaseWorkspaceAdapter):
             name = None
