@@ -906,6 +906,9 @@ class BaseWorkspaceData(models.Model):
     class Meta:
         abstract = True
 
+    def get_absolute_url(self):
+        return self.workspace.get_absolute_url()
+
 
 class DefaultWorkspaceData(BaseWorkspaceData):
     """Default empty WorkspaceData model."""
