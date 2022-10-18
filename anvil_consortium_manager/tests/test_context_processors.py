@@ -36,6 +36,7 @@ class WorkspaceAdapterTest(TestCase):
             workspace_data_model = None
             workspace_data_form_class = None
             list_table_class = None
+            workspace_detail_template_name = None
 
         workspace_adapter_registry.register(Adapter)
         context = context_processors.workspace_adapter(HttpRequest())
@@ -55,6 +56,7 @@ class WorkspaceAdapterTest(TestCase):
             workspace_data_model = None
             workspace_data_form_class = None
             list_table_class = None
+            workspace_detail_template_name = None
 
         class Adapter2(BaseWorkspaceAdapter):
             type = "test2"
@@ -62,6 +64,7 @@ class WorkspaceAdapterTest(TestCase):
             workspace_data_model = None
             workspace_data_form_class = None
             list_table_class = None
+            workspace_detail_template_name = None
 
         workspace_adapter_registry.register(Adapter1)
         workspace_adapter_registry.register(Adapter2)

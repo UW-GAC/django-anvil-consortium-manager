@@ -34,6 +34,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = tables.TestWorkspaceDataTable
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         self.assertEqual(
             TestAdapter().get_list_table_class(), tables.TestWorkspaceDataTable
@@ -48,6 +49,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class()
@@ -68,6 +70,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = forms.TestWorkspaceDataForm
+            workspace_detail_template_name = None
 
         self.assertEqual(
             TestAdapter().get_workspace_data_form_class(), forms.TestWorkspaceDataForm
@@ -82,6 +85,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_form_class()
@@ -100,6 +104,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = TestFormClass
+            workspace_detail_template_name = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_form_class()
@@ -119,6 +124,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         self.assertEqual(
             TestAdapter().get_workspace_data_model(), models.TestWorkspaceData
@@ -133,6 +139,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = forms.TestWorkspaceDataForm  # use a random class.
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()
@@ -146,6 +153,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()
@@ -166,6 +174,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         self.assertEqual(TestAdapter().get_type(), "test_adapter")
 
@@ -178,6 +187,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_type()
@@ -198,6 +208,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         self.assertEqual(TestAdapter().get_name(), "Test")
 
@@ -210,9 +221,48 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_name()
+
+    def test_get_workspace_detail_template_name_default(self):
+        """get_workspace_detail_template_name returns the correct template using the default adapter."""
+        self.assertEqual(
+            DefaultWorkspaceAdapter().get_workspace_detail_template_name(),
+            "anvil_consortium_manager/workspace_detail.html",
+        )
+
+    def test_get_workspace_detail_template_name_custom(self):
+        """get_workspace_detail_template_name returns the corret template when using a custom adapter"""
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            name = None
+            type = None
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+            # Note: this file does not actually need to exist at this point.
+            workspace_detail_template_name = "custom/workspace_detail.html"
+
+        self.assertEqual(
+            TestAdapter().get_workspace_detail_template_name(),
+            "custom/workspace_detail.html",
+        )
+
+    def test_get_workspace_detail_template_name_none(self):
+        """get_workspace_detail_template_name raises ImproperlyConfigured when it is not set"""
+
+        class TestAdapter(BaseWorkspaceAdapter):
+            name = None
+            type = None
+            list_table_class = None
+            workspace_data_model = None
+            workspace_data_form_class = None
+            workspace_detail_template_name = None
+
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_workspace_detail_template_name()
 
 
 class WorkspaceAdapterRegistryTest(TestCase):
@@ -236,6 +286,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         class Adapter2(BaseWorkspaceAdapter):
             name = None
@@ -243,6 +294,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(Adapter1)
         registry.register(Adapter2)
@@ -262,6 +314,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(TestAdapter)
         with self.assertRaises(AdapterAlreadyRegisteredError):
@@ -280,6 +333,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         class Adapter2(BaseWorkspaceAdapter):
             name = None
@@ -287,6 +341,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(Adapter1)
         with self.assertRaises(AdapterAlreadyRegisteredError):
@@ -322,6 +377,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         with self.assertRaises(AdapterNotRegisteredError):
             registry.unregister(TestAdapter)
@@ -337,6 +393,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         class Adapter2(BaseWorkspaceAdapter):
             name = None
@@ -344,6 +401,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(Adapter1)
         with self.assertRaises(AdapterNotRegisteredError):
@@ -377,6 +435,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(Adapter)
         self.assertEqual(registry.get_registered_adapters(), {"adapter": Adapter})
@@ -392,6 +451,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         class Adapter2(BaseWorkspaceAdapter):
             name = None
@@ -399,6 +459,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(Adapter1)
         registry.register(Adapter2)
@@ -422,6 +483,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(Adapter)
         self.assertEqual(registry.get_registered_names(), {"adapter": "Adapter"})
@@ -437,6 +499,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         class Adapter2(BaseWorkspaceAdapter):
             name = "Adapter 2"
@@ -444,6 +507,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            workspace_detail_template_name = None
 
         registry.register(Adapter1)
         registry.register(Adapter2)
