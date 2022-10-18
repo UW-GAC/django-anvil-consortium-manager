@@ -5437,6 +5437,14 @@ class WorkspaceDetailTest(TestCase):
             )
         )
 
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceDetail.as_view()
@@ -5694,6 +5702,11 @@ class WorkspaceDetailTest(TestCase):
 
     def test_render_custom_template_name(self):
         """Rendering a correct template when custom template name is specified."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory.create(
             workspace_type=TestWorkspaceAdapter().get_type()
         )
