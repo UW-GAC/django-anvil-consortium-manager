@@ -3,6 +3,7 @@
 ## Devel
 
 - Only show links to views requiring edit permission if the user has that permission.
+- Add a get_absolute_url method for `WorkspaceData` which returns the absolute url of the associated workspace.
 - Add a required "workspace_detail_template_name" field for workspace adapters.
 
 ## 0.3 (2022-09-27)

@@ -13,6 +13,7 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from ..models import (
     Account,
     BillingProject,
+    DefaultWorkspaceData,
     GroupAccountMembership,
     GroupGroupMembership,
     ManagedGroup,
@@ -1152,6 +1153,18 @@ class WorkspaceTest(TestCase):
         with self.assertRaises(ValidationError) as e:
             instance.clean_fields()
         self.assertIn("not a registered adapter type", str(e.exception))
+
+
+class WorkspaceDataTest(TestCase):
+    """Tests for the WorkspaceData models (default and base)."""
+
+    def test_get_absolute_url(self):
+        """get_absolute_url returns the url of the workspace."""
+        workspace = factories.WorkspaceFactory.create()
+        workspace_data = DefaultWorkspaceData(workspace=workspace)
+        self.assertEqual(
+            workspace_data.get_absolute_url(), workspace.get_absolute_url()
+        )
 
 
 class WorkspaceAuthorizationDomainTestCase(TestCase):
