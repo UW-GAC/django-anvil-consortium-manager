@@ -11,4 +11,4 @@ class ExampleWorkspaceAdapter(BaseWorkspaceAdapter):
     list_table_class = tables.ExampleWorkspaceDataTable
     workspace_data_model = models.ExampleWorkspaceData
     workspace_data_form_class = forms.ExampleWorkspaceDataForm
-    workspace_detail_template_name = "anvil_consortium_manager/workspace_detail.html"
+    workspace_detail_template_name = "app/example_workspace_detail.html"
