@@ -242,6 +242,7 @@ class WorkspaceAdapterTest(TestCase):
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
+            # Note: this file does not actually need to exist at this point.
             workspace_detail_template_name = "custom/workspace_detail.html"
 
         self.assertEqual(
