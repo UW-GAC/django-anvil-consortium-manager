@@ -651,6 +651,23 @@ class Workspace(TimeStampedModel):
             billing_project=self.billing_project.name, group=self.name
         )
 
+    def is_in_authorization_domain(self, group):
+        """Check if a group (or a group that it is part of) is in the auth domain of this workspace."""
+        return False
+
+    def is_shared(self, group):
+        """Check if this workspace is shared with a group (or a group that it is part of)."""
+        return False
+
+    def has_access(self, group):
+        """Check if a group has access to a workspace.
+
+        Both criteria need to be met for a group to have access to a workspace:
+        1. The workspace must be shared with the group (or a group that it is in).
+        2. The group (or a group that it is in) must be in all auth domains for the workspace.
+        """
+        return False
+
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""
         try:
