@@ -937,7 +937,7 @@ class ManagedGroupTest(TestCase):
         group = factories.ManagedGroupFactory.create(name="other-group")
         self.assertEqual(group.get_all_children().count(), 0)
 
-    def test_cannot_delete_group_used_as_auth_domain(self):
+    def test_cannot_delete_group_used_as_is_in_authorization_domain(self):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
@@ -1007,7 +1007,7 @@ class WorkspaceTest(TestCase):
             Workspace.history.all()[1].billing_project_id, billing_project_pk
         )
 
-    def test_workspace_on_delete_auth_domain(self):
+    def test_workspace_on_delete_is_in_authorization_domain(self):
         """Workspace can be deleted if it has an authorization domain."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
@@ -1091,45 +1091,49 @@ class WorkspaceTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance.save()
 
-    def test_one_auth_domain(self):
+    def test_one_is_in_authorization_domain(self):
         """Can create a workspace with one authorization domain."""
-        auth_domain = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
         instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 1)
-        self.assertIn(auth_domain, instance.authorization_domains.all())
+        self.assertIn(is_in_authorization_domain, instance.authorization_domains.all())
 
-    def test_two_auth_domains(self):
+    def test_two_is_in_authorization_domains(self):
         """Can create a workspace with two authorization domains."""
-        auth_domain_1 = factories.ManagedGroupFactory.create()
-        auth_domain_2 = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain_1 = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain_2 = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
         instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 2)
-        self.assertIn(auth_domain_1, instance.authorization_domains.all())
-        self.assertIn(auth_domain_2, instance.authorization_domains.all())
+        self.assertIn(
+            is_in_authorization_domain_1, instance.authorization_domains.all()
+        )
+        self.assertIn(
+            is_in_authorization_domain_2, instance.authorization_domains.all()
+        )
 
-    def test_auth_domain_unique(self):
+    def test_is_in_authorization_domain_unique(self):
         """Adding the same auth domain twice does nothing."""
-        auth_domain = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.add(auth_domain)
-        instance.authorization_domains.add(auth_domain)
+        instance.authorization_domains.add(is_in_authorization_domain)
+        instance.authorization_domains.add(is_in_authorization_domain)
         self.assertEqual(len(instance.authorization_domains.all()), 1)
-        self.assertIn(auth_domain, instance.authorization_domains.all())
+        self.assertIn(is_in_authorization_domain, instance.authorization_domains.all())
 
-    def test_can_delete_workspace_with_auth_domain(self):
-        auth_domain = factories.ManagedGroupFactory.create()
+    def test_can_delete_workspace_with_is_in_authorization_domain(self):
+        is_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.add(auth_domain)
+        instance.authorization_domains.add(is_in_authorization_domain)
         instance.save()
         # Now try to delete it.
         instance.refresh_from_db()
@@ -1137,7 +1141,7 @@ class WorkspaceTest(TestCase):
         self.assertEqual(len(Workspace.objects.all()), 0)
         self.assertEqual(len(WorkspaceAuthorizationDomain.objects.all()), 0)
         # The group has not been deleted.
-        self.assertIn(auth_domain, ManagedGroup.objects.all())
+        self.assertIn(is_in_authorization_domain, ManagedGroup.objects.all())
 
     def test_get_anvil_url(self):
         """get_anvil_url returns a string."""
@@ -1153,6 +1157,103 @@ class WorkspaceTest(TestCase):
         with self.assertRaises(ValidationError) as e:
             instance.clean_fields()
         self.assertIn("not a registered adapter type", str(e.exception))
+
+
+class WorkspaceAccessTest(TestCase):
+    """Tests for the is_in_authorization_domain, is_shared, and has_access Workspace methods."""
+
+    def setUp(self):
+        super().setUp()
+        self.workspace = factories.WorkspaceFactory.create()
+        self.auth_domain = factories.ManagedGroupFactory.create()
+        self.group = factories.ManagedGroupFactory.create()
+
+    def test_is_in_authorization_domain_no_auth_domain(self):
+        """is_in_authorization_domain returns False when group is not in the auth domain."""
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_in_authorization_domain_not_in_domain(self):
+        """is_in_authorization_domain returns False when group is not in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_in_authorization_domain_in_domain(self):
+        """is_in_authorization_domain returns True when group is in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_in_authorization_domain_parent_group_in_domain(self):
+        """is_in_authorization_domain returns True when the parent group is in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=parent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_in_authorization_domain_grandparent_group_in_domain(self):
+        """is_in_authorization_domain returns True when a grandparent group is in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        grandparent_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=grandparent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group,
+            child_group=parent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_in_auth_domain_two_auth_domains_in_both(self):
+        """is_in_authorization_domain returns True when a workspace has two auth domains and the group is in both."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain_2)
+        # Add the group to both auth domains.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=self.group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=auth_domain_2,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_in_auth_domain_two_auth_domains_in_one(self):
+        """is_in_authorization_domain returns True when a workspace has two auth domains and the group is in one."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain_2)
+        # Add the group to one auth domains.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=auth_domain_2,
+            child_group=self.group,
+        )
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_in_auth_domain_two_auth_domains_in_none(self):
+        """is_in_authorization_domain returns True when a workspace has two auth domains and a group is in neither."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain_2)
+        # Do not add the group to either auth domain.
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
 
 
 class WorkspaceDataTest(TestCase):

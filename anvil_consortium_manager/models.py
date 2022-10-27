@@ -653,7 +653,12 @@ class Workspace(TimeStampedModel):
 
     def is_in_authorization_domain(self, group):
         """Check if a group (or a group that it is part of) is in the auth domain of this workspace."""
-        return False
+        in_auth_domain = True
+        for auth_domain in self.authorization_domains.all():
+            in_auth_domain = (in_auth_domain) and (
+                group in auth_domain.get_all_children()
+            )
+        return in_auth_domain
 
     def is_shared(self, group):
         """Check if this workspace is shared with a group (or a group that it is part of)."""
