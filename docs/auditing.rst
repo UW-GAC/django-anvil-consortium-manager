@@ -78,6 +78,6 @@ The :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit_membership` me
 
     1. All groups that have access in the app also have access in AnVIL.
     2. Each :class:`~anvil_consortium_manager.models.ManagedGroup` that has access in the app has the same access in AnVIL.
-    3. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupSharing.can_compute` value is the same in the app and on AnVIL.
-    4. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupSharing.can_share` value is the same in the app and on AnVIL.
+    3. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupAccess.can_compute` value is the same in the app and on AnVIL.
+    4. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupAccess.can_share` value is the same in the app and on AnVIL.
     5. No groups or accounts on AnVIL have access to the workspace that are not recorded in the app.

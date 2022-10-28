@@ -138,8 +138,8 @@ class WorkspaceTableTest(TestCase):
         self.model_factory.create()
         instance_1 = self.model_factory.create()
         instance_2 = self.model_factory.create()
-        factories.WorkspaceGroupSharingFactory.create_batch(1, workspace=instance_1)
-        factories.WorkspaceGroupSharingFactory.create_batch(2, workspace=instance_2)
+        factories.WorkspaceGroupAccessFactory.create_batch(1, workspace=instance_1)
+        factories.WorkspaceGroupAccessFactory.create_batch(2, workspace=instance_2)
         table = self.table_class(self.model.objects.all())
         self.assertEqual(table.rows[0].get_cell("number_groups"), 0)
         self.assertEqual(table.rows[1].get_cell("number_groups"), 1)
@@ -201,10 +201,10 @@ class GroupAccountMembershipTableTest(TestCase):
         self.assertEqual(len(table.rows), 1)
 
 
-class WorkspaceGroupSharingTable(TestCase):
-    model = models.WorkspaceGroupSharing
-    model_factory = factories.WorkspaceGroupSharingFactory
-    table_class = tables.WorkspaceGroupSharingTable
+class WorkspaceGroupAccessTable(TestCase):
+    model = models.WorkspaceGroupAccess
+    model_factory = factories.WorkspaceGroupAccessFactory
+    table_class = tables.WorkspaceGroupAccessTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

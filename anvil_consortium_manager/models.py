@@ -680,7 +680,7 @@ class Workspace(TimeStampedModel):
     def is_shared(self, group):
         """Check if this workspace is shared with a group (or a group that it is part of)."""
         parents = group.get_all_parents()
-        is_shared = self.workspacegroupsharing_set.filter(
+        is_shared = self.workspacegroupaccess_set.filter(
             models.Q(group=group) | models.Q(group__in=parents)
         ).exists()
         return is_shared
@@ -815,14 +815,14 @@ class Workspace(TimeStampedModel):
 
         return workspace
 
-    def anvil_audit_sharing(self):
-        """Audit the sharing for a single Workspace against AnVIL.
+    def anvil_audit_access(self):
+        """Audit the access for a single Workspace against AnVIL.
 
         Returns:
-            An instance of :class:`~anvil_consortium_manager.anvil_audit.WorkspaceGroupSharingAuditResults`.
+            An instance of :class:`~anvil_consortium_manager.anvil_audit.WorkspaceGroupAccessAuditResults`.
         """
         api_client = AnVILAPIClient()
-        audit_results = anvil_audit.WorkspaceGroupSharingAuditResults()
+        audit_results = anvil_audit.WorkspaceGroupAccessAuditResults()
         response = api_client.get_workspace_acl(self.billing_project.name, self.name)
         acl_in_anvil = {k.lower(): v for k, v in response.json()["acl"].items()}
         # Remove the service account.
@@ -833,11 +833,11 @@ class Workspace(TimeStampedModel):
         except KeyError:
             # In some cases, the workspace is shared with a group we are part of instead of directly with us.
             pass
-        for access in self.workspacegroupsharing_set.all():
+        for access in self.workspacegroupaccess_set.all():
             try:
                 access_details = acl_in_anvil.pop(access.group.get_email().lower())
             except KeyError:
-                audit_results.add_error(access, audit_results.ERROR_NOT_SHARED_IN_ANVIL)
+                audit_results.add_error(access, audit_results.ERROR_NO_ACCESS_IN_ANVIL)
             else:
                 # Check access level.
                 if access.access != access_details["accessLevel"]:
@@ -906,10 +906,10 @@ class Workspace(TimeStampedModel):
                     audit_results.add_error(
                         workspace, audit_results.ERROR_NOT_OWNER_ON_ANVIL
                     )
-                elif not workspace.anvil_audit_sharing().ok():
+                elif not workspace.anvil_audit_access().ok():
                     # Since we're the owner, check workspace access.
                     audit_results.add_error(
-                        workspace, audit_results.ERROR_WORKSPACE_SHARING
+                        workspace, audit_results.ERROR_WORKSPACE_ACCESS
                     )
                 # Check auth domains.
                 auth_domains_on_anvil = [
@@ -1110,8 +1110,8 @@ class GroupAccountMembership(TimeStampedModel):
         )
 
 
-class WorkspaceGroupSharing(TimeStampedModel):
-    """A model to store which workspaces have been shared with which groups."""
+class WorkspaceGroupAccess(TimeStampedModel):
+    """A model to store which groups have access to a workspace."""
 
     OWNER = "OWNER"
     """Constant indicating "OWNER" access."""
@@ -1148,7 +1148,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         verbose_name_plural = "workspace group access"
         constraints = [
             models.UniqueConstraint(
-                fields=["group", "workspace"], name="unique_workspace_group_sharing"
+                fields=["group", "workspace"], name="unique_workspace_group_access"
             )
         ]
 
@@ -1178,7 +1178,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         Returns:
             str: The absolute url for the object."""
         return reverse(
-            "anvil_consortium_manager:workspaces:sharing:detail",
+            "anvil_consortium_manager:workspaces:access:detail",
             kwargs={
                 "billing_project_slug": self.workspace.billing_project.name,
                 "workspace_slug": self.workspace.name,

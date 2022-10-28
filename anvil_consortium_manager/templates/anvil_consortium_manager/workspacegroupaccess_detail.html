@@ -1,0 +1,28 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% block title %}Workspace group access: {{ object }}{% endblock %}
+
+{% block content %}
+
+
+<h2>Workspace Group Access details</h2>
+<div class="my-3 p-3 bg-light border rounded shadow-sm">
+  <ul>
+    <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>
+    <li>Workspace: <a href="{{object.workspace.get_absolute_url}}"> {{ object.workspace}} </a></li>
+    <li>Access: {{ object.access }}</li>
+    <li>Can compute: {{ object.can_compute }}</li>
+    <li>Date added: {{ object.created }}</li>
+    <li>Date modified: {{ object.modified }}</li>
+  </ul>
+</div>
+
+{% if show_edit_links %}
+<p>
+  <a href="{% url 'anvil_consortium_manager:workspaces:access:update' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-secondary" role="button">Update Access</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:access:delete' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+</p>
+{% endif %}
+
+{% endblock content %}

@@ -129,9 +129,9 @@ class GroupAccountMembershipAdmin(SimpleHistoryAdmin):
         return obj.account.get_status_display()
 
 
-@admin.register(models.WorkspaceGroupSharing)
-class WorkspaceGroupSharingAdmin(SimpleHistoryAdmin):
-    """Admin class for the WorkspaceGroupSharing model."""
+@admin.register(models.WorkspaceGroupAccess)
+class WorkspaceGroupAccessAdmin(SimpleHistoryAdmin):
+    """Admin class for the WorkspaceGroupAccess model."""
 
     list_display = (
         "pk",

@@ -182,11 +182,11 @@ class GroupAccountMembershipForm(forms.ModelForm):
         }
 
 
-class WorkspaceGroupSharingForm(forms.ModelForm):
-    """Form for the WorkspaceGroupSharing model."""
+class WorkspaceGroupAccessForm(forms.ModelForm):
+    """Form for the WorkspaceGroupAccess model."""
 
     class Meta:
-        model = models.WorkspaceGroupSharing
+        model = models.WorkspaceGroupAccess
         fields = ("workspace", "group", "access", "can_compute")
 
         widgets = {
@@ -200,8 +200,8 @@ class WorkspaceGroupSharingForm(forms.ModelForm):
             ),
         }
         help_texts = {
-            "workspace": "Select the workspace to share with.",
-            "group": "Select the group that this workspace should be shared with.",
+            "workspace": "Select the workspace to grant access to.",
+            "group": "Select the group that should have access to this workspace.",
             "access": """Select the access level that this group should have.
                          A "Reader" can see data int the workspace.
                          A "Writer" can add or remove data in the workspace.

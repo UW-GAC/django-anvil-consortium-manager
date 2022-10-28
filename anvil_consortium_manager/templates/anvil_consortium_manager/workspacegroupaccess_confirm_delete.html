@@ -1,7 +1,7 @@
 {% extends "anvil_consortium_manager/base.html" %}
 {% load static %}
 
-{% block title %}Remove Workspace Group Sharing: {{ object }}{% endblock %}
+{% block title %}Remove Workspace Group Access: {{ object }}{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -10,11 +10,11 @@
     <div class="col-sm-12">
 
 
-      <h2>Remove Workspace Group Sharing</h2>
+      <h2>Remove Workspace Group Access</h2>
 
       <h2>{{ object }}</h2>
 
-      <p>Are you sure you want to stop sharing <a href="{{ object.workspace.get_absolute_url }}">{{ object.workspace }}</a> with <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a> on AnVIL?</p>
+      <p>Are you sure you want to remove access to <a href="{{ object.workspace.get_absolute_url }}">{{ object.workspace }}</a> for <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a> on AnVIL?</p>
 
       <form method="POST">{% csrf_token %}
           {{ form }}

@@ -122,11 +122,11 @@
               {% endfor %}
 
               <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_sharing:list' %}">Workspace sharing</a>
+                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_access:list' %}">Workspace access</a>
               </li>
               {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
               <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_sharing:new' %}">Share a workspace with a group</a>
+                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspace_group_access:new' %}">Give a group access to a workspace</a>
               </li>
               {% endif %}
 

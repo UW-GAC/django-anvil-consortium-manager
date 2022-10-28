@@ -26,5 +26,5 @@ factories.GroupAccountMembershipFactory.create(group=groups[2], account=accounts
 factories.GroupAccountMembershipFactory.create(group=groups[2], account=accounts[3])
 
 # Share workspaces with a group
-factories.WorkspaceGroupSharingFactory.create(workspace=workspaces[0], group=groups[1])
-factories.WorkspaceGroupSharingFactory.create(workspace=workspaces[1], group=groups[2])
+factories.WorkspaceGroupAccessFactory.create(workspace=workspaces[0], group=groups[1])
+factories.WorkspaceGroupAccessFactory.create(workspace=workspaces[1], group=groups[2])

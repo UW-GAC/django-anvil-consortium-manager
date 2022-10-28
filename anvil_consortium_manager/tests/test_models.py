@@ -20,7 +20,7 @@ from ..models import (
     UserEmailEntry,
     Workspace,
     WorkspaceAuthorizationDomain,
-    WorkspaceGroupSharing,
+    WorkspaceGroupAccess,
 )
 from ..tokens import account_verification_token
 from . import factories
@@ -475,15 +475,15 @@ class ManagedGroupTest(TestCase):
         """Group cannot be deleted if it has access to a workspace.
 
         This is a behavior enforced by AnVIL."""
-        access = factories.WorkspaceGroupSharingFactory.create()
+        access = factories.WorkspaceGroupAccessFactory.create()
         with self.assertRaises(ProtectedError):
             access.group.delete()
         # The group still exists.
         self.assertEqual(ManagedGroup.objects.count(), 1)
         ManagedGroup.objects.get(pk=access.group.pk)
         # The access still exists.
-        self.assertEqual(WorkspaceGroupSharing.objects.count(), 1)
-        WorkspaceGroupSharing.objects.get(pk=access.pk)
+        self.assertEqual(WorkspaceGroupAccess.objects.count(), 1)
+        WorkspaceGroupAccess.objects.get(pk=access.pk)
 
     def test_get_direct_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
@@ -1021,11 +1021,11 @@ class WorkspaceTest(TestCase):
         """Workspace can be deleted if a group has access to it."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupSharingFactory(group=group, workspace=workspace)
+        factories.WorkspaceGroupAccessFactory(group=group, workspace=workspace)
         workspace.delete()
         self.assertEqual(Workspace.objects.count(), 0)
         # Also deletes the relationship.
-        self.assertEqual(WorkspaceGroupSharing.objects.count(), 0)
+        self.assertEqual(WorkspaceGroupAccess.objects.count(), 0)
 
     def test_name_validation_case_insensitivity(self):
         """Cannot validate two models with the same case-insensitive name in the same billing project."""
@@ -1159,7 +1159,7 @@ class WorkspaceTest(TestCase):
         self.assertIn("not a registered adapter type", str(e.exception))
 
 
-class WorkspaceGroupSharingMethodsTest(TestCase):
+class WorkspaceGroupAccessMethodsTest(TestCase):
     """Tests for the is_in_authorization_domain, is_shared, and has_access Workspace and ManagedGroup methods."""
 
     def setUp(self):
@@ -1286,7 +1286,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
 
     def test_is_shared_is_shared(self):
         """Returns True when the workspace is shared with the group."""
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=self.group
         )
         self.assertTrue(self.workspace.is_shared(self.group))
@@ -1300,7 +1300,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
             parent_group=parent_group, child_group=self.group
         )
         # Share with the parent.
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=parent_group
         )
         self.assertTrue(self.workspace.is_shared(self.group))
@@ -1318,7 +1318,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
             parent_group=parent_group, child_group=self.group
         )
         # Share with the grandparent.
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=grandparent_group
         )
         self.assertTrue(self.workspace.is_shared(self.group))
@@ -1331,7 +1331,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
             parent_group=self.group, child_group=child_group
         )
         # Share with the child.
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=child_group
         )
         self.assertFalse(self.workspace.is_shared(self.group))
@@ -1339,7 +1339,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
 
     def test_has_access_shared_no_auth_domain(self):
         """Returns True when the group is shared and there is no auth domain."""
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=self.group
         )
         self.assertTrue(self.workspace.has_access(self.group))
@@ -1356,7 +1356,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=self.auth_domain, child_group=self.group
         )
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=self.group
         )
         self.assertTrue(self.workspace.has_access(self.group))
@@ -1365,7 +1365,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
     def test_has_access_shared_not_in_auth_domain(self):
         """Returns False when the group is shared but not in the auth domain."""
         self.workspace.authorization_domains.add(self.auth_domain)
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=self.group
         )
         self.assertFalse(self.workspace.has_access(self.group))
@@ -1383,7 +1383,7 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
     def test_has_access_not_shared_not_in_auth_domain(self):
         """Returns False when the group is not shared and not in the auth domain."""
         self.workspace.authorization_domains.add(self.auth_domain)
-        factories.WorkspaceGroupSharingFactory.create(
+        factories.WorkspaceGroupAccessFactory.create(
             workspace=self.workspace, group=self.group
         )
         self.assertFalse(self.workspace.has_access(self.group))
@@ -1799,18 +1799,18 @@ class GroupAccountMembershipTest(TestCase):
             instance_2.save()
 
 
-class WorkspaceGroupSharingTest(TestCase):
+class WorkspaceGroupAccessTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        instance = WorkspaceGroupSharing(
+        instance = WorkspaceGroupAccess(
             group=group,
             workspace=workspace,
-            access=WorkspaceGroupSharing.READER,
+            access=WorkspaceGroupAccess.READER,
             can_compute=False,
         )
-        self.assertIsInstance(instance, WorkspaceGroupSharing)
+        self.assertIsInstance(instance, WorkspaceGroupAccess)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -1822,8 +1822,8 @@ class WorkspaceGroupSharingTest(TestCase):
         workspace = factories.WorkspaceFactory(
             billing_project=billing_project, name=workspace_name
         )
-        instance = WorkspaceGroupSharing(
-            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
+        instance = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
@@ -1832,17 +1832,17 @@ class WorkspaceGroupSharingTest(TestCase):
 
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
-        instance = factories.WorkspaceGroupSharingFactory()
+        instance = factories.WorkspaceGroupAccessFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_clean_reader_can_compute(self):
         """Clean method raises a ValidationError if a READER has can_compute=True"""
         workspace = factories.WorkspaceFactory.create()
         group = factories.ManagedGroupFactory.create()
-        instance = WorkspaceGroupSharing(
+        instance = WorkspaceGroupAccess(
             group=group,
             workspace=workspace,
-            access=WorkspaceGroupSharing.READER,
+            access=WorkspaceGroupAccess.READER,
             can_compute=True,
         )
         with self.assertRaises(ValidationError):
@@ -1852,10 +1852,10 @@ class WorkspaceGroupSharingTest(TestCase):
         """Clean method succeeds if a WRITER has can_compute=True"""
         workspace = factories.WorkspaceFactory.create()
         group = factories.ManagedGroupFactory.create()
-        instance = WorkspaceGroupSharing(
+        instance = WorkspaceGroupAccess(
             group=group,
             workspace=workspace,
-            access=WorkspaceGroupSharing.WRITER,
+            access=WorkspaceGroupAccess.WRITER,
             can_compute=True,
         )
         instance.full_clean()
@@ -1864,62 +1864,62 @@ class WorkspaceGroupSharingTest(TestCase):
         """Clean method succeeds if an OWNER has can_compute=True"""
         workspace = factories.WorkspaceFactory.create()
         group = factories.ManagedGroupFactory.create()
-        instance = WorkspaceGroupSharing(
+        instance = WorkspaceGroupAccess(
             group=group,
             workspace=workspace,
-            access=WorkspaceGroupSharing.OWNER,
+            access=WorkspaceGroupAccess.OWNER,
             can_compute=True,
         )
         instance.full_clean()
 
     def test_history(self):
         """A simple history record is created when model is updated."""
-        obj = factories.WorkspaceGroupSharingFactory.create(
-            access=WorkspaceGroupSharing.READER
+        obj = factories.WorkspaceGroupAccessFactory.create(
+            access=WorkspaceGroupAccess.READER
         )
         # History was created.
         self.assertEqual(obj.history.count(), 1)
         # A new entry was created after update.
-        obj.access = WorkspaceGroupSharing.WRITER
+        obj.access = WorkspaceGroupAccess.WRITER
         obj.save()
         self.assertEqual(obj.history.count(), 2)
         # An entry is created upon deletion.
         obj.delete()
-        self.assertEqual(WorkspaceGroupSharing.history.count(), 3)
+        self.assertEqual(WorkspaceGroupAccess.history.count(), 3)
 
     def test_history_foreign_key_workspace(self):
         """History is retained when a workspace foreign key object is deleted."""
-        obj = factories.WorkspaceGroupSharingFactory.create()
+        obj = factories.WorkspaceGroupAccessFactory.create()
         # History was created.
-        self.assertEqual(WorkspaceGroupSharing.history.count(), 1)
+        self.assertEqual(WorkspaceGroupAccess.history.count(), 1)
         # Entries are retained when the foreign key is deleted.
         workspace_pk = obj.workspace.pk
         obj.workspace.delete()
-        self.assertEqual(WorkspaceGroupSharing.history.count(), 2)
+        self.assertEqual(WorkspaceGroupAccess.history.count(), 2)
         # Make sure you can access it.
         self.assertEqual(
-            WorkspaceGroupSharing.history.earliest().workspace_id, workspace_pk
+            WorkspaceGroupAccess.history.earliest().workspace_id, workspace_pk
         )
 
     def test_history_foreign_key_group(self):
         """History is retained when a group foreign key object is deleted."""
-        obj = factories.WorkspaceGroupSharingFactory.create()
+        obj = factories.WorkspaceGroupAccessFactory.create()
         # Entries are retained when the foreign key is deleted.
         group_pk = obj.group.pk
         obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
         obj.group.delete()
-        self.assertEqual(WorkspaceGroupSharing.history.count(), 2)
+        self.assertEqual(WorkspaceGroupAccess.history.count(), 2)
         # Make sure you can access it.
-        self.assertEqual(WorkspaceGroupSharing.history.earliest().group_id, group_pk)
+        self.assertEqual(WorkspaceGroupAccess.history.earliest().group_id, group_pk)
 
     def test_same_group_in_two_workspaces(self):
         """The same group can have access to two workspaces."""
         group = factories.ManagedGroupFactory()
         workspace_1 = factories.WorkspaceFactory(name="workspace-1")
         workspace_2 = factories.WorkspaceFactory(name="workspace-2")
-        instance = WorkspaceGroupSharing(group=group, workspace=workspace_1)
+        instance = WorkspaceGroupAccess(group=group, workspace=workspace_1)
         instance.save()
-        instance = WorkspaceGroupSharing(group=group, workspace=workspace_2)
+        instance = WorkspaceGroupAccess(group=group, workspace=workspace_2)
         instance.save()
 
     def test_two_groups_and_same_workspace(self):
@@ -1927,21 +1927,21 @@ class WorkspaceGroupSharingTest(TestCase):
         group_1 = factories.ManagedGroupFactory(name="group-1")
         group_2 = factories.ManagedGroupFactory(name="group-2")
         workspace = factories.WorkspaceFactory()
-        instance = WorkspaceGroupSharing(group=group_1, workspace=workspace)
+        instance = WorkspaceGroupAccess(group=group_1, workspace=workspace)
         instance.save()
-        instance = WorkspaceGroupSharing(group=group_2, workspace=workspace)
+        instance = WorkspaceGroupAccess(group=group_2, workspace=workspace)
         instance.save()
 
     def test_cannot_have_duplicated_account_and_group_with_same_access(self):
         """Cannot have the same account in the same group with the same access levels twice."""
         group = factories.ManagedGroupFactory()
         workspace = factories.WorkspaceFactory()
-        instance_1 = WorkspaceGroupSharing(
-            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
+        instance_1 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         instance_1.save()
-        instance_2 = WorkspaceGroupSharing(
-            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
+        instance_2 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
@@ -1952,12 +1952,12 @@ class WorkspaceGroupSharingTest(TestCase):
         """Cannot have the same account in the same group with different access levels twice."""
         group = factories.ManagedGroupFactory()
         workspace = factories.WorkspaceFactory()
-        instance_1 = WorkspaceGroupSharing(
-            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
+        instance_1 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
         )
         instance_1.save()
-        instance_2 = WorkspaceGroupSharing(
-            group=group, workspace=workspace, access=WorkspaceGroupSharing.WRITER
+        instance_2 = WorkspaceGroupAccess(
+            group=group, workspace=workspace, access=WorkspaceGroupAccess.WRITER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
