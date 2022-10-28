@@ -675,7 +675,7 @@ class Workspace(TimeStampedModel):
         1. The workspace must be shared with the group (or a group that it is in).
         2. The group (or a group that it is in) must be in all auth domains for the workspace.
         """
-        return False
+        return self.is_shared(group) and self.is_in_authorization_domain(group)
 
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""
