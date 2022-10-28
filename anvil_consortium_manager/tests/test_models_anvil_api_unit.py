@@ -3921,7 +3921,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_fails_access_audit(self):
         """anvil_audit works properly when one workspace fails its access audit."""
         workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
         # Response for the main call about workspaces.
         api_url = self.get_api_url()
         responses.add(
@@ -4004,7 +4004,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
         )
         audit_results = self.workspace.anvil_audit_access()
         self.assertIsInstance(
-            audit_results, anvil_audit.WorkspaceGroupAccessAuditResults
+            audit_results, anvil_audit.WorkspaceGroupSharingAuditResults
         )
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
@@ -4014,7 +4014,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_reader(self):
         """anvil_audit works correctly if this group has one group member."""
-        access = factories.WorkspaceGroupAccessFactory.create(workspace=self.workspace)
+        access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.update_api_response(access.group.get_email(), access.access)
         responses.add(
             responses.GET,
@@ -4031,10 +4031,10 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_two_group_readers(self):
         """anvil_audit works correctly if this workspace has two group readers."""
-        access_1 = factories.WorkspaceGroupAccessFactory.create(
+        access_1 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace
         )
-        access_2 = factories.WorkspaceGroupAccessFactory.create(
+        access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace
         )
         self.update_api_response(access_1.group.get_email(), "READER")
@@ -4053,7 +4053,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_reader_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has one group reader not in anvil."""
-        access = factories.WorkspaceGroupAccessFactory.create(workspace=self.workspace)
+        access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         responses.add(
             responses.GET,
             self.api_url,
@@ -4071,10 +4071,10 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_two_group_readers_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group readers not in anvil."""
-        access_1 = factories.WorkspaceGroupAccessFactory.create(
+        access_1 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace
         )
-        access_2 = factories.WorkspaceGroupAccessFactory.create(
+        access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace
         )
         responses.add(
@@ -4138,7 +4138,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_members_case_insensitive(self):
         """anvil_audit works correctly if this workspace has one group member not in the app."""
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, group__name="tEsT-mEmBeR"
         )
         self.update_api_response("Test-Member@firecloud.org", "READER")
@@ -4156,8 +4156,8 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_writer(self):
         """anvil_audit works correctly if this workspace has one group writer."""
-        access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        access = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         self.update_api_response(access.group.get_email(), "WRITER")
         responses.add(
@@ -4174,11 +4174,11 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_two_group_writers(self):
         """anvil_audit works correctly if this workspace has two group writers."""
-        access_1 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        access_1 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
-        access_2 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        access_2 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         self.update_api_response(access_1.group.get_email(), "WRITER")
         self.update_api_response(access_2.group.get_email(), "WRITER")
@@ -4196,8 +4196,8 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_writer_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has one group writer not in anvil."""
-        access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        access = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         responses.add(
             responses.GET,
@@ -4218,11 +4218,11 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_two_group_writers_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group writers not in anvil."""
-        access_1 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        access_1 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
-        access_2 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        access_2 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         responses.add(
             responses.GET,
@@ -4285,10 +4285,10 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_admin_case_insensitive(self):
         """anvil_audit works correctly if this workspace has one group member not in the app."""
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
             group__name="tEsT-wRiTeR",
-            access=models.WorkspaceGroupAccess.WRITER,
+            access=models.WorkspaceGroupSharing.WRITER,
         )
         self.update_api_response("Test-Writer@firecloud.org", "WRITER")
         responses.add(
@@ -4305,8 +4305,8 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_owner(self):
         """anvil_audit works correctly if this workspace has one group owner."""
-        access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        access = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
         self.update_api_response(access.group.get_email(), "OWNER", can_share=True)
         responses.add(
@@ -4323,11 +4323,11 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_two_group_owners(self):
         """anvil_audit works correctly if this workspace has two group owners."""
-        access_1 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        access_1 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
-        access_2 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        access_2 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
         self.update_api_response(access_1.group.get_email(), "OWNER", can_share=True)
         self.update_api_response(access_2.group.get_email(), "OWNER", can_share=True)
@@ -4345,8 +4345,8 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_owner_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has one group owners not in anvil."""
-        access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        access = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
         responses.add(
             responses.GET,
@@ -4367,11 +4367,11 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_two_group_owners_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group owners not in anvil."""
-        access_1 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        access_1 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
-        access_2 = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.OWNER
+        access_2 = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
         responses.add(
             responses.GET,
@@ -4434,10 +4434,10 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_one_group_owner_case_insensitive(self):
         """anvil_audit works correctly with different cases for owner emails."""
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
             group__name="tEsT-oWnEr",
-            access=models.WorkspaceGroupAccess.OWNER,
+            access=models.WorkspaceGroupSharing.OWNER,
         )
         self.update_api_response("Test-Owner@firecloud.org", "OWNER", can_share=True)
         responses.add(
@@ -4454,8 +4454,8 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_group_different_access_reader_in_app_writer_in_anvil(self):
         """anvil_audit works correctly if a group has different access to a workspace in AnVIL."""
-        access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.READER
+        access = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.READER
         )
         self.update_api_response(access.group.get_email(), "WRITER")
         responses.add(
@@ -4474,8 +4474,8 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_group_different_access_reader_in_app_owner_in_anvil(self):
         """anvil_audit works correctly if a group has different access to a workspace in AnVIL."""
-        access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.READER
+        access = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.READER
         )
         self.update_api_response(
             access.group.get_email(), "OWNER", can_compute=True, can_share=True
@@ -4502,9 +4502,9 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_group_different_can_compute(self):
         """anvil_audit works correctly if can_compute is different between the app and AnVIL."""
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
-            access=models.WorkspaceGroupAccess.WRITER,
+            access=models.WorkspaceGroupSharing.WRITER,
             can_compute=True,
         )
         self.update_api_response(access.group.get_email(), "WRITER", can_compute=False)
@@ -4524,8 +4524,8 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_group_different_can_share(self):
         """anvil_audit works correctly if can_share is True in AnVIL."""
-        access = factories.WorkspaceGroupAccessFactory.create(
-            workspace=self.workspace, access=models.WorkspaceGroupAccess.WRITER
+        access = factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         self.update_api_response(access.group.get_email(), "WRITER", can_share=True)
         responses.add(
@@ -4562,9 +4562,9 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_group_owner_can_share_true(self):
         """Owners must have can_share=True."""
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
-            access=models.WorkspaceGroupAccess.OWNER,
+            access=models.WorkspaceGroupSharing.OWNER,
             can_compute=True,
         )
         self.update_api_response(
@@ -4584,9 +4584,9 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_group_writer_can_share_false(self):
         """Writers must have can_share=False."""
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
-            access=models.WorkspaceGroupAccess.WRITER,
+            access=models.WorkspaceGroupSharing.WRITER,
             can_compute=True,
         )
         self.update_api_response(
@@ -4609,9 +4609,9 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_group_reader_can_share_false(self):
         """Readers must have can_share=False."""
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
-            access=models.WorkspaceGroupAccess.READER,
+            access=models.WorkspaceGroupSharing.READER,
             can_compute=False,
         )
         self.update_api_response(
@@ -4812,7 +4812,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url, 1)
 
 
-class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         billing_project = factories.BillingProjectFactory.create(
@@ -4822,8 +4822,8 @@ class WorkspaceGroupAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             billing_project=billing_project, name="test-workspace"
         )
         group = factories.ManagedGroupFactory.create(name="test-group")
-        self.object = factories.WorkspaceGroupAccessFactory(
-            workspace=workspace, group=group, access=models.WorkspaceGroupAccess.READER
+        self.object = factories.WorkspaceGroupSharingFactory(
+            workspace=workspace, group=group, access=models.WorkspaceGroupSharing.READER
         )
         self.url = (
             self.entry_point

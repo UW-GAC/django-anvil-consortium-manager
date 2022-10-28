@@ -212,12 +212,12 @@ class WorkspaceAuditResults(AnVILAuditResults):
     )
 
 
-class WorkspaceGroupAccessAuditResults(AnVILAuditResults):
+class WorkspaceGroupSharingAuditResults(AnVILAuditResults):
     """Class to hold audit results for group access to :class:`~anviL_consortium_manager.models.Workspace`s.
 
     The elements of the set returned by ``get_verified()``
     and the keys of the dictionary returned by ``get_errors()``
-    should all be :class:`~anvil_consortium_manager.models.WorkspaceGroupAccess` model instances.
+    should all be :class:`~anvil_consortium_manager.models.WorkspaceGroupSharing` model instances.
     """
 
     ERROR_NO_ACCESS_IN_ANVIL = "No access in AnVIL"

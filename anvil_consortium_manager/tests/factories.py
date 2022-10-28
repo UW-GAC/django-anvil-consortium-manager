@@ -133,14 +133,14 @@ class GroupAccountMembershipFactory(DjangoModelFactory):
         django_get_or_create = ["account", "group"]
 
 
-class WorkspaceGroupAccessFactory(DjangoModelFactory):
+class WorkspaceGroupSharingFactory(DjangoModelFactory):
     """A factory for the WorkspaceGroup model."""
 
     workspace = SubFactory(WorkspaceFactory)
     group = SubFactory(ManagedGroupFactory)
-    access = models.WorkspaceGroupAccess.READER
+    access = models.WorkspaceGroupSharing.READER
     can_compute = False
 
     class Meta:
-        model = models.WorkspaceGroupAccess
+        model = models.WorkspaceGroupSharing
         django_get_or_create = ["workspace", "group"]
