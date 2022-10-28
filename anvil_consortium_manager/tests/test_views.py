@@ -116,10 +116,10 @@ class ViewEditUrlTest(TestCase):
     #     reverse("anvil_consortium_manager:accounts:delete"),
     #     reverse("anvil_consortium_manager:accounts:reactivate"),
     #     reverse("anvil_consortium_manager:managed_groups:delete"),
-    #     reverse("anvil_consortium_manager:workspaces:access:delete"),
+    #     reverse("anvil_consortium_manager:workspaces:sharing:delete"),
     #     reverse("anvil_consortium_manager:managed_groups:member_accounts:delete"),
     #     reverse("anvil_consortium_manager:managed_groups:member_groups:delete"),
-    #     reverse("anvil_consortium_manager:workspaces:access:update"),
+    #     reverse("anvil_consortium_manager:workspaces:sharing:update"),
     #     reverse("anvil_consortium_manager:workspaces:delete"),
     #     reverse("anvil_consortium_manager:managed_groups:audit_membership"),
     #     reverse("anvil_consortium_manager:workspaces:audit_access"),
@@ -8747,7 +8747,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:audit_access", args=args)
+        return reverse("anvil_consortium_manager:workspaces:audit_sharing", args=args)
 
     def update_api_response(self, email, access, can_compute=False, can_share=False):
         """Return a paired down json for a single ACL, including the service account."""
@@ -11324,7 +11324,7 @@ class WorkspaceGroupSharingDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:access:detail", args=args)
+        return reverse("anvil_consortium_manager:workspaces:sharing:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -11407,7 +11407,7 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:access:delete",
+                "anvil_consortium_manager:workspaces:sharing:delete",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -11432,7 +11432,7 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         self.assertNotContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:access:delete",
+                "anvil_consortium_manager:workspaces:sharing:delete",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -12279,7 +12279,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:access:update", args=args)
+        return reverse("anvil_consortium_manager:workspaces:sharing:update", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -12952,7 +12952,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:access:delete", args=args)
+        return reverse("anvil_consortium_manager:workspaces:sharing:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""

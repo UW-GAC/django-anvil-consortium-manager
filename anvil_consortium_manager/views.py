@@ -1366,7 +1366,7 @@ class WorkspaceSharingAudit(
         return super().get(request, *args, **kwargs)
 
     def run_audit(self):
-        self.audit_results = self.object.anvil_audit_access()
+        self.audit_results = self.object.anvil_audit_sharing()
 
 
 class WorkspaceAutocomplete(
