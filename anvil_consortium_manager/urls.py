@@ -108,25 +108,25 @@ managed_group_patterns = (
     "managed_groups",
 )
 
-workspace_access_patterns = (
+workspace_sharing_patterns = (
     [
         path(
             "<slug:group_slug>/",
-            views.WorkspaceGroupAccessDetail.as_view(),
+            views.WorkspaceGroupSharingDetail.as_view(),
             name="detail",
         ),
         path(
             "<slug:group_slug>/update/",
-            views.WorkspaceGroupAccessUpdate.as_view(),
+            views.WorkspaceGroupSharingUpdate.as_view(),
             name="update",
         ),
         path(
             "<slug:group_slug>/delete/",
-            views.WorkspaceGroupAccessDelete.as_view(),
+            views.WorkspaceGroupSharingDelete.as_view(),
             name="delete",
         ),
     ],
-    "access",
+    "sharing",
 )
 
 workspace_patterns = (
@@ -169,8 +169,8 @@ workspace_patterns = (
             name="audit_access",
         ),
         path(
-            "<slug:billing_project_slug>/<slug:workspace_slug>/access/",
-            include(workspace_access_patterns),
+            "<slug:billing_project_slug>/<slug:workspace_slug>/sharing/",
+            include(workspace_sharing_patterns),
         ),
     ],
     "workspaces",
@@ -203,13 +203,13 @@ group_account_membership_patterns = (
     "group_account_membership",
 )
 
-workspace_group_access_patterns = (
+workspace_group_sharing_patterns = (
     [
         # Note: these URLs will be removed and/or reworked in the future.
-        path("", views.WorkspaceGroupAccessList.as_view(), name="list"),
-        path("new/", views.WorkspaceGroupAccessCreate.as_view(), name="new"),
+        path("", views.WorkspaceGroupSharingList.as_view(), name="list"),
+        path("new/", views.WorkspaceGroupSharingCreate.as_view(), name="new"),
     ],
-    "workspace_group_access",
+    "workspace_group_sharing",
 )
 
 urlpatterns = [
@@ -221,5 +221,5 @@ urlpatterns = [
     path("workspaces/", include(workspace_patterns)),
     path("group_group_membership/", include(group_group_membership_patterns)),
     path("group_account_membership/", include(group_account_membership_patterns)),
-    path("workspace_group_access/", include(workspace_group_access_patterns)),
+    path("workspace_group_sharing/", include(workspace_group_sharing_patterns)),
 ]

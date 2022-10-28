@@ -75,7 +75,7 @@ class WorkspaceTable(tables.Table):
         verbose_name="Number of groups with access",
         empty_values=(),
         orderable=False,
-        accessor="workspacegroupaccess_set__count",
+        accessor="workspacegroupsharing_set__count",
     )
 
     class Meta:
@@ -129,8 +129,8 @@ class GroupAccountMembershipTable(tables.Table):
         return "See details"
 
 
-class WorkspaceGroupAccessTable(tables.Table):
-    """Class to render a WorkspaceGroupAccess table."""
+class WorkspaceGroupSharingTable(tables.Table):
+    """Class to render a WorkspaceGroupSharing table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
     workspace = tables.Column(linkify=True)
@@ -138,7 +138,7 @@ class WorkspaceGroupAccessTable(tables.Table):
     access = tables.Column()
 
     class Meta:
-        model = models.WorkspaceGroupAccess
+        model = models.WorkspaceGroupSharing
         fields = ("pk", "workspace", "group", "access", "can_compute")
 
     def render_pk(self, record):

@@ -182,11 +182,11 @@ class GroupAccountMembershipForm(forms.ModelForm):
         }
 
 
-class WorkspaceGroupAccessForm(forms.ModelForm):
-    """Form for the WorkspaceGroupAccess model."""
+class WorkspaceGroupSharingForm(forms.ModelForm):
+    """Form for the WorkspaceGroupSharing model."""
 
     class Meta:
-        model = models.WorkspaceGroupAccess
+        model = models.WorkspaceGroupSharing
         fields = ("workspace", "group", "access", "can_compute")
 
         widgets = {
