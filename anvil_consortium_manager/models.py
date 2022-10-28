@@ -815,8 +815,8 @@ class Workspace(TimeStampedModel):
 
         return workspace
 
-    def anvil_audit_access(self):
-        """Audit the access for a single Workspace against AnVIL.
+    def anvil_audit_sharing(self):
+        """Audit the sharing for a single Workspace against AnVIL.
 
         Returns:
             An instance of :class:`~anvil_consortium_manager.anvil_audit.WorkspaceGroupSharingAuditResults`.
@@ -837,7 +837,7 @@ class Workspace(TimeStampedModel):
             try:
                 access_details = acl_in_anvil.pop(access.group.get_email().lower())
             except KeyError:
-                audit_results.add_error(access, audit_results.ERROR_NO_ACCESS_IN_ANVIL)
+                audit_results.add_error(access, audit_results.ERROR_NOT_SHARED_IN_ANVIL)
             else:
                 # Check access level.
                 if access.access != access_details["accessLevel"]:
@@ -906,10 +906,10 @@ class Workspace(TimeStampedModel):
                     audit_results.add_error(
                         workspace, audit_results.ERROR_NOT_OWNER_ON_ANVIL
                     )
-                elif not workspace.anvil_audit_access().ok():
+                elif not workspace.anvil_audit_sharing().ok():
                     # Since we're the owner, check workspace access.
                     audit_results.add_error(
-                        workspace, audit_results.ERROR_WORKSPACE_ACCESS
+                        workspace, audit_results.ERROR_WORKSPACE_SHARING
                     )
                 # Check auth domains.
                 auth_domains_on_anvil = [
@@ -1178,7 +1178,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         Returns:
             str: The absolute url for the object."""
         return reverse(
-            "anvil_consortium_manager:workspaces:access:detail",
+            "anvil_consortium_manager:workspaces:sharing:detail",
             kwargs={
                 "billing_project_slug": self.workspace.billing_project.name,
                 "workspace_slug": self.workspace.name,

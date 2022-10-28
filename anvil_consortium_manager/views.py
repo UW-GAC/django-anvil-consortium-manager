@@ -966,7 +966,7 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["group_access_table"] = tables.WorkspaceGroupSharingTable(
+        context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
             self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )
         context["authorization_domain_table"] = tables.ManagedGroupTable(
@@ -1326,7 +1326,7 @@ class WorkspaceAudit(
         self.audit_results = models.Workspace.anvil_audit()
 
 
-class WorkspaceAccessAudit(
+class WorkspaceSharingAudit(
     auth.AnVILConsortiumManagerViewRequired,
     SingleObjectMixin,
     AnVILAuditMixin,
@@ -1335,7 +1335,7 @@ class WorkspaceAccessAudit(
     """View to run an audit on access to a specific Workspace and display the results."""
 
     model = models.Workspace
-    template_name = "anvil_consortium_manager/workspace_access_audit.html"
+    template_name = "anvil_consortium_manager/workspace_sharing_audit.html"
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""

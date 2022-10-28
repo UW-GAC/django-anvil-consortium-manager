@@ -1,12 +1,12 @@
 {% extends "anvil_consortium_manager/base.html" %}
 {% load static %}
 
-{% block title %}Workspace group access: {{ object }}{% endblock %}
+{% block title %}Workspace group sharing: {{ object }}{% endblock %}
 
 {% block content %}
 
 
-<h2>Workspace Group Access details</h2>
+<h2>Workspace Group Sharing details</h2>
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   <ul>
     <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>
@@ -20,8 +20,8 @@
 
 {% if show_edit_links %}
 <p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:access:update' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-secondary" role="button">Update Access</a>
-  <a href="{% url 'anvil_consortium_manager:workspaces:access:delete' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:sharing:update' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-secondary" role="button">Update</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:sharing:delete' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
 {% endif %}
 

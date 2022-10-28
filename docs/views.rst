@@ -32,4 +32,4 @@ You can audit information in the app against AnVIL using the following views:
     - Managed Groups: :class:`anvil_consortium_manager.views.ManagedGroupAudit`
     - Membership of a specific managed group: :class:`anvil_consortium_manager.views.ManagedGroupMembershipAudit`
     - Workspaces: :class:`anvil_consortium_manager.views.WorkspaceAudit`
-    - Access to a specific workspace: :class:`anvil_consortium_manager.views.WorkspaceAccessAudit`
+    - Access to a specific workspace: :class:`anvil_consortium_manager.views.WorkspaceSharingAudit`

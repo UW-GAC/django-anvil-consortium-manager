@@ -3918,8 +3918,8 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
 
-    def test_fails_access_audit(self):
-        """anvil_audit works properly when one workspace fails its access audit."""
+    def test_fails_sharing_audit(self):
+        """anvil_audit works properly when one workspace fails its sharing audit."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
         # Response for the main call about workspaces.
@@ -3951,13 +3951,13 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
-            {workspace: [audit_results.ERROR_WORKSPACE_ACCESS]},
+            {workspace: [audit_results.ERROR_WORKSPACE_SHARING]},
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
         responses.assert_call_count(workspace_acl_url, 1)
 
 
-class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
+class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests forthe Workspace.anvil_audit method."""
 
     def setUp(self):
@@ -4002,7 +4002,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertIsInstance(
             audit_results, anvil_audit.WorkspaceGroupSharingAuditResults
         )
@@ -4022,7 +4022,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4045,7 +4045,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access_1, access_2]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4060,12 +4060,12 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
-            {access: [audit_results.ERROR_NO_ACCESS_IN_ANVIL]},
+            {access: [audit_results.ERROR_NOT_SHARED_IN_ANVIL]},
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
 
@@ -4083,14 +4083,14 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
             {
-                access_1: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
-                access_2: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+                access_1: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
+                access_2: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
             },
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -4104,7 +4104,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4122,7 +4122,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4148,7 +4148,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4166,7 +4166,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4188,7 +4188,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access_1, access_2]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4205,13 +4205,13 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
             {
-                access: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+                access: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
             },
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -4230,14 +4230,14 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
             {
-                access_1: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
-                access_2: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+                access_1: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
+                access_2: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
             },
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -4251,7 +4251,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4269,7 +4269,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4297,7 +4297,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4315,7 +4315,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4337,7 +4337,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access_1, access_2]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4354,13 +4354,13 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
             {
-                access: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+                access: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
             },
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -4379,14 +4379,14 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
             audit_results.get_errors(),
             {
-                access_1: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
-                access_2: [audit_results.ERROR_NO_ACCESS_IN_ANVIL],
+                access_1: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
+                access_2: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
             },
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
@@ -4400,7 +4400,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4418,7 +4418,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4446,7 +4446,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4464,7 +4464,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
@@ -4486,7 +4486,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
@@ -4514,7 +4514,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
@@ -4534,7 +4534,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(
@@ -4553,7 +4553,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4576,7 +4576,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([access]))
         self.assertEqual(audit_results.get_errors(), {})
@@ -4598,7 +4598,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
@@ -4623,7 +4623,7 @@ class WorkspaceAnVILAuditAccessAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.api_response,
         )
-        audit_results = self.workspace.anvil_audit_access()
+        audit_results = self.workspace.anvil_audit_sharing()
         self.assertFalse(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set())
         self.assertEqual(
