@@ -72,7 +72,7 @@ class WorkspaceTable(tables.Table):
     billing_project = tables.Column(linkify=True)
     workspace_type = tables.Column()
     number_groups = tables.Column(
-        verbose_name="Number of groups with access",
+        verbose_name="Number of groups shared with",
         empty_values=(),
         orderable=False,
         accessor="workspacegroupsharing_set__count",

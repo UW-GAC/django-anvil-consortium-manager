@@ -5491,7 +5491,7 @@ class WorkspaceDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo1", workspace_slug="foo2")
 
-    def test_group_access_table(self):
+    def test_group_sharing_table(self):
         """The workspace group access table exists."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.get(obj.get_absolute_url())
@@ -5501,13 +5501,13 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=obj.billing_project.name,
             workspace_slug=obj.name,
         )
-        self.assertIn("group_access_table", response.context_data)
+        self.assertIn("group_sharing_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["group_access_table"],
+            response.context_data["group_sharing_table"],
             tables.WorkspaceGroupSharingTable,
         )
 
-    def test_group_access_table_none(self):
+    def test_group_sharing_table_none(self):
         """No groups are shown if the workspace has not been shared with any groups."""
         workspace = factories.WorkspaceFactory.create()
         request = self.factory.get(workspace.get_absolute_url())
@@ -5517,10 +5517,10 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 0)
 
-    def test_group_access_table_one(self):
+    def test_group_sharing_table_one(self):
         """One group is shown if the workspace has been shared with one group."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
@@ -5531,10 +5531,10 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 1)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 1)
 
-    def test_group_access_table_two(self):
+    def test_group_sharing_table_two(self):
         """Two groups are shown if the workspace has been shared with two groups."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupSharingFactory.create_batch(2, workspace=workspace)
@@ -5545,8 +5545,8 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 2)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 2)
 
     def test_shows_workspace_group_sharing_for_only_that_workspace(self):
         """Only shows groups that this workspace has been shared with."""
@@ -5560,8 +5560,8 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 0)
 
     def test_auth_domain_table(self):
         """The workspace auth domain table exists."""
@@ -8709,8 +8709,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
-class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the WorkspaceAccessAudit view."""
+class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceSharingAudit view."""
 
     def setUp(self):
         """Set up test class."""
@@ -8764,7 +8764,7 @@ class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceAccessAudit.as_view()
+        return views.WorkspaceSharingAudit.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."

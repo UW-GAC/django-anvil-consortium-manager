@@ -200,7 +200,7 @@ class WorkspaceAuditResults(AnVILAuditResults):
     ERROR_DIFFERENT_AUTH_DOMAINS = "Has different auth domains on AnVIL"
     """Error when the Workspace has different auth domains in the app and on AnVIL."""
 
-    ERROR_WORKSPACE_ACCESS = "Workspace access does not match on AnVIL"
+    ERROR_WORKSPACE_SHARING = "Workspace sharing does not match on AnVIL"
     """Error when a Workspace is shared with different ManagedGroups in the app and on AnVIL."""
 
     # Set up allowed errors.
@@ -208,19 +208,19 @@ class WorkspaceAuditResults(AnVILAuditResults):
         ERROR_NOT_IN_ANVIL,
         ERROR_NOT_OWNER_ON_ANVIL,
         ERROR_DIFFERENT_AUTH_DOMAINS,
-        ERROR_WORKSPACE_ACCESS,
+        ERROR_WORKSPACE_SHARING,
     )
 
 
 class WorkspaceGroupSharingAuditResults(AnVILAuditResults):
-    """Class to hold audit results for group access to :class:`~anviL_consortium_manager.models.Workspace`s.
+    """Class to hold audit results for group sharing to :class:`~anviL_consortium_manager.models.Workspace`s.
 
     The elements of the set returned by ``get_verified()``
     and the keys of the dictionary returned by ``get_errors()``
     should all be :class:`~anvil_consortium_manager.models.WorkspaceGroupSharing` model instances.
     """
 
-    ERROR_NO_ACCESS_IN_ANVIL = "No access in AnVIL"
+    ERROR_NOT_SHARED_IN_ANVIL = "Not shared in AnVIL"
     """Error when a ManagedGroup has access to a workspace in the app but not on AnVIL."""
 
     ERROR_DIFFERENT_ACCESS = "Different access level in AnVIL"
@@ -234,7 +234,7 @@ class WorkspaceGroupSharingAuditResults(AnVILAuditResults):
 
     # Set up allowed errors.
     allowed_errors = (
-        ERROR_NO_ACCESS_IN_ANVIL,
+        ERROR_NOT_SHARED_IN_ANVIL,
         ERROR_DIFFERENT_ACCESS,
         ERROR_DIFFERENT_CAN_SHARE,
         ERROR_DIFFERENT_CAN_COMPUTE,
