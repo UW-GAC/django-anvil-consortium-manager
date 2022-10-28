@@ -662,7 +662,11 @@ class Workspace(TimeStampedModel):
 
     def is_shared(self, group):
         """Check if this workspace is shared with a group (or a group that it is part of)."""
-        return False
+        parents = group.get_all_parents()
+        is_shared = self.workspacegroupaccess_set.filter(
+            models.Q(group=group) | models.Q(group__in=parents)
+        ).exists()
+        return is_shared
 
     def has_access(self, group):
         """Check if a group has access to a workspace.

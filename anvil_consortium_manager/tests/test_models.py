@@ -1255,6 +1255,74 @@ class WorkspaceAccessTest(TestCase):
         # Do not add the group to either auth domain.
         self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
 
+    def test_is_in_auth_domain_child(self):
+        """is_in_auth_domain returns False when a child group is in the auth domain but not the group."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        child_group = factories.ManagedGroupFactory.create()
+        # Add the child group to the auth domain.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain, child_group=child_group
+        )
+        # Add the child group to the group.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.group, child_group=child_group
+        )
+        # Do not add the group itself to the auth domain.
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+
+    def test_is_shared_not_shared(self):
+        """Returns False when the workspace is not shared with the group."""
+        self.assertFalse(self.workspace.is_shared(self.group))
+
+    def test_is_shared_is_shared(self):
+        """Returns True when the workspace is shared with the group."""
+        factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, group=self.group
+        )
+        self.assertTrue(self.workspace.is_shared(self.group))
+
+    def test_is_shared_shared_with_parent(self):
+        """Returns False when the workspace is shared with a parent group."""
+        # Create the parent group structure.
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=self.group
+        )
+        # Share with the parent.
+        factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, group=parent_group
+        )
+        self.assertTrue(self.workspace.is_shared(self.group))
+
+    def test_is_shared_shared_with_grandparent(self):
+        """Returns False when the workspace is shared with the grandparent group."""
+        # Create the grandparent group structure.
+        grandparent_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group, child_group=parent_group
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=self.group
+        )
+        # Share with the grandparent.
+        factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, group=grandparent_group
+        )
+        self.assertTrue(self.workspace.is_shared(self.group))
+
+    def test_is_shared_shared_with_child(self):
+        """Returns False when the workspace is shared with a child group but not the group itself."""
+        child_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.group, child_group=child_group
+        )
+        # Share with the child.
+        factories.WorkspaceGroupAccessFactory.create(
+            workspace=self.workspace, group=child_group
+        )
+        self.assertFalse(self.workspace.is_shared(self.group))
+
 
 class WorkspaceDataTest(TestCase):
     """Tests for the WorkspaceData models (default and base)."""
