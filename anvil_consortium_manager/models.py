@@ -570,6 +570,23 @@ class ManagedGroup(TimeStampedModel):
             audit_results.add_not_in_app(group_name)
         return audit_results
 
+    def is_in_authorization_domain(self, workspace):
+        """Check if this group (or a group that it is part of) is in the auth domain of a workspace."""
+        return workspace.is_in_authorization_domain(self)
+
+    def is_shared(self, workspace):
+        """Check if a workspace is shared with this group (or a group that it is part of)."""
+        return workspace.is_shared(self)
+
+    def has_access(self, workspace):
+        """Check if this group has access to a workspace.
+
+        Both criteria need to be met for a group to have access to a workspace:
+        1. The workspace must be shared with the group (or a group that it is in).
+        2. The group (or a group that it is in) must be in all auth domains for the workspace.
+        """
+        return workspace.has_access(self)
+
 
 class Workspace(TimeStampedModel):
     """A model to store information about AnVIL workspaces."""

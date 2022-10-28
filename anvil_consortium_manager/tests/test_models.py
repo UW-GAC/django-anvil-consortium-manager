@@ -1159,8 +1159,8 @@ class WorkspaceTest(TestCase):
         self.assertIn("not a registered adapter type", str(e.exception))
 
 
-class WorkspaceAccessTest(TestCase):
-    """Tests for the is_in_authorization_domain, is_shared, and has_access Workspace methods."""
+class WorkspaceGroupAccessMethodsTest(TestCase):
+    """Tests for the is_in_authorization_domain, is_shared, and has_access Workspace and ManagedGroup methods."""
 
     def setUp(self):
         super().setUp()
@@ -1171,11 +1171,13 @@ class WorkspaceAccessTest(TestCase):
     def test_is_in_authorization_domain_no_auth_domain(self):
         """is_in_authorization_domain returns False when group is not in the auth domain."""
         self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_authorization_domain_not_in_domain(self):
         """is_in_authorization_domain returns False when group is not in the auth domain."""
         self.workspace.authorization_domains.add(self.auth_domain)
         self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_authorization_domain_in_domain(self):
         """is_in_authorization_domain returns True when group is in the auth domain."""
@@ -1185,6 +1187,7 @@ class WorkspaceAccessTest(TestCase):
             child_group=self.group,
         )
         self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_authorization_domain_parent_group_in_domain(self):
         """is_in_authorization_domain returns True when the parent group is in the auth domain."""
@@ -1199,6 +1202,7 @@ class WorkspaceAccessTest(TestCase):
             child_group=self.group,
         )
         self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_authorization_domain_grandparent_group_in_domain(self):
         """is_in_authorization_domain returns True when a grandparent group is in the auth domain."""
@@ -1218,6 +1222,7 @@ class WorkspaceAccessTest(TestCase):
             child_group=self.group,
         )
         self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_auth_domain_two_auth_domains_in_both(self):
         """is_in_authorization_domain returns True when a workspace has two auth domains and the group is in both."""
@@ -1234,6 +1239,7 @@ class WorkspaceAccessTest(TestCase):
             child_group=self.group,
         )
         self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_auth_domain_two_auth_domains_in_one(self):
         """is_in_authorization_domain returns True when a workspace has two auth domains and the group is in one."""
@@ -1246,6 +1252,7 @@ class WorkspaceAccessTest(TestCase):
             child_group=self.group,
         )
         self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_auth_domain_two_auth_domains_in_none(self):
         """is_in_authorization_domain returns True when a workspace has two auth domains and a group is in neither."""
@@ -1254,6 +1261,7 @@ class WorkspaceAccessTest(TestCase):
         self.workspace.authorization_domains.add(auth_domain_2)
         # Do not add the group to either auth domain.
         self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_in_auth_domain_child(self):
         """is_in_auth_domain returns False when a child group is in the auth domain but not the group."""
@@ -1269,10 +1277,12 @@ class WorkspaceAccessTest(TestCase):
         )
         # Do not add the group itself to the auth domain.
         self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
 
     def test_is_shared_not_shared(self):
         """Returns False when the workspace is not shared with the group."""
         self.assertFalse(self.workspace.is_shared(self.group))
+        self.assertFalse(self.group.is_shared(self.workspace))
 
     def test_is_shared_is_shared(self):
         """Returns True when the workspace is shared with the group."""
@@ -1280,6 +1290,7 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=self.group
         )
         self.assertTrue(self.workspace.is_shared(self.group))
+        self.assertTrue(self.group.is_shared(self.workspace))
 
     def test_is_shared_shared_with_parent(self):
         """Returns False when the workspace is shared with a parent group."""
@@ -1293,6 +1304,7 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=parent_group
         )
         self.assertTrue(self.workspace.is_shared(self.group))
+        self.assertTrue(self.group.is_shared(self.workspace))
 
     def test_is_shared_shared_with_grandparent(self):
         """Returns False when the workspace is shared with the grandparent group."""
@@ -1310,6 +1322,7 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=grandparent_group
         )
         self.assertTrue(self.workspace.is_shared(self.group))
+        self.assertTrue(self.group.is_shared(self.workspace))
 
     def test_is_shared_shared_with_child(self):
         """Returns False when the workspace is shared with a child group but not the group itself."""
@@ -1322,6 +1335,7 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=child_group
         )
         self.assertFalse(self.workspace.is_shared(self.group))
+        self.assertFalse(self.group.is_shared(self.workspace))
 
     def test_has_access_shared_no_auth_domain(self):
         """Returns True when the group is shared and there is no auth domain."""
@@ -1329,10 +1343,12 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=self.group
         )
         self.assertTrue(self.workspace.has_access(self.group))
+        self.assertTrue(self.group.has_access(self.workspace))
 
     def test_has_access_not_shared_no_auth_domain(self):
         """Returns False when the group is not shared and there is no auth domain."""
         self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
 
     def test_has_access_shared_in_auth_domain(self):
         """Returns True when the group is shared and in the auth domain."""
@@ -1344,6 +1360,7 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=self.group
         )
         self.assertTrue(self.workspace.has_access(self.group))
+        self.assertTrue(self.group.has_access(self.workspace))
 
     def test_has_access_shared_not_in_auth_domain(self):
         """Returns False when the group is shared but not in the auth domain."""
@@ -1352,6 +1369,7 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=self.group
         )
         self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
 
     def test_has_access_not_shared_in_auth_domain(self):
         """Returns False when the group is not shared but in the auth domain."""
@@ -1360,6 +1378,7 @@ class WorkspaceAccessTest(TestCase):
             parent_group=self.auth_domain, child_group=self.group
         )
         self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
 
     def test_has_access_not_shared_not_in_auth_domain(self):
         """Returns False when the group is not shared and not in the auth domain."""
@@ -1368,6 +1387,7 @@ class WorkspaceAccessTest(TestCase):
             workspace=self.workspace, group=self.group
         )
         self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
 
 
 class WorkspaceDataTest(TestCase):
