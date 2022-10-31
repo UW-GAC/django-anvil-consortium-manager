@@ -951,6 +951,168 @@ class ManagedGroupTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         self.assertIsInstance(group.get_anvil_url(), str)
 
+    def test_get_all_workspaces_no_workspaces(self):
+        """get_all_workspaces returns an empty list if the group has access to no workspaces with no auth domain."""
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceFactory.create()
+        self.assertEqual(len(group.get_all_workspaces()), 0)
+
+    def test_get_all_workspaces_one_workspace(self):
+        """get_all_workspaces returns the correct workspace with no auth domain."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace, group=group)
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 1)
+        self.assertIn(workspace, result)
+
+    def test_get_all_workspaces_two_workspaces(self):
+        """get_all_workspaces returns the correct two workspaces with no auth domain."""
+        group = factories.ManagedGroupFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_1, group=group)
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_2, group=group)
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 2)
+        self.assertIn(workspace_1, result)
+        self.assertIn(workspace_2, result)
+
+    def test_get_all_workspaces_checks_auth_domain_one(self):
+        """get_all_workspaces only returns workspaces where the group is in the auth domain."""
+        group = factories.ManagedGroupFactory.create()
+        # Create two workspaces each with their own auth domains.
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_1.authorization_domains.add(auth_domain_1)
+        workspace_2 = factories.WorkspaceFactory.create()
+        workspace_2.authorization_domains.add(auth_domain_2)
+        # Share both workspaces with the group.
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_1, group=group)
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_2, group=group)
+        # Add the group to only the second workspace's auth domain.
+        factories.GroupGroupMembershipFactory(
+            parent_group=auth_domain_2, child_group=group
+        )
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 1)
+        self.assertIn(workspace_2, result)
+
+    def test_get_all_workspaces_checks_auth_domain_two(self):
+        """get_all_workspaces only returns workspaces where the group is in both auth domains."""
+        group = factories.ManagedGroupFactory.create()
+        # Create a workspaces with two auth domains.
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(auth_domain_1)
+        workspace.authorization_domains.add(auth_domain_2)
+        # Share the workspace with the group.
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace, group=group)
+        # Add the group to only the second auth domain.
+        factories.GroupGroupMembershipFactory(
+            parent_group=auth_domain_2, child_group=group
+        )
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 0)
+
+    def test_get_all_workspaces_shared_with_parent(self):
+        """get_all_workspaces returns the correct workspace if it is shared with a parent group."""
+        parent_group = factories.ManagedGroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        # Set up the parent group structure.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=group
+        )
+        # Share with the parent.
+        factories.WorkspaceGroupAccessFactory.create(
+            workspace=workspace, group=parent_group
+        )
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 1)
+        self.assertIn(workspace, result)
+
+    def test_get_all_workspaces_shared_with_child(self):
+        """get_all_workspaces returns no workspace if it is shared with a child group."""
+        child_group = factories.ManagedGroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        # Set up the parent group structure.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=group, child_group=child_group
+        )
+        # Share with the parent.
+        factories.WorkspaceGroupAccessFactory.create(
+            workspace=workspace, group=child_group
+        )
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 0)
+        self.assertNotIn(workspace, result)
+
+    def test_get_all_workspaces_auth_group_parent(self):
+        """get_all_workspaces returns the correct workspace if a parent group is in the auth domain."""
+        parent_group = factories.ManagedGroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        # Set up the parent group structure.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=group
+        )
+        # Create two workspaces each with their own auth domains.
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_1.authorization_domains.add(auth_domain_1)
+        workspace_2 = factories.WorkspaceFactory.create()
+        workspace_2.authorization_domains.add(auth_domain_2)
+        # Share both workspaces with the group.
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_1, group=group)
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_2, group=group)
+        # Add the parent group to only the second workspace's auth domain.
+        factories.GroupGroupMembershipFactory(
+            parent_group=auth_domain_2, child_group=parent_group
+        )
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 1)
+        self.assertIn(workspace_2, result)
+
+    def test_get_all_workspaces_auth_group_child(self):
+        """get_all_workspaces returns no workspace if a child group is in the auth domain."""
+        child_group = factories.ManagedGroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        # Set up the parent group structure.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=group, child_group=child_group
+        )
+        # Create two workspaces each with their own auth domains.
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_1.authorization_domains.add(auth_domain_1)
+        workspace_2 = factories.WorkspaceFactory.create()
+        workspace_2.authorization_domains.add(auth_domain_2)
+        # Share both workspaces with the group.
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_1, group=group)
+        factories.WorkspaceGroupAccessFactory.create(workspace=workspace_2, group=group)
+        # Add the child group to only the second workspace's auth domain.
+        factories.GroupGroupMembershipFactory(
+            parent_group=auth_domain_2, child_group=child_group
+        )
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 0)
+
+    def test_ignores_other_workspace_group_access(self):
+        """Ignores workspaces shared with other groups."""
+        group = factories.ManagedGroupFactory.create()
+        other_group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupAccessFactory.create(
+            workspace=workspace, group=other_group
+        )
+        result = group.get_all_workspaces()
+        self.assertEqual(len(result), 0)
+
 
 class WorkspaceTest(TestCase):
     def test_model_saving(self):

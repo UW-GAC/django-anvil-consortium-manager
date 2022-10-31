@@ -587,6 +587,23 @@ class ManagedGroup(TimeStampedModel):
         """
         return workspace.has_access(self)
 
+    def get_all_workspaces(self):
+        """Get a list of all workspaces that are accessible by this group.
+
+        This method returns a list of all workspaces that 1) have been shared with the group
+        (or its parent) and 2) has the group (or its parent) in its auth domain."""
+        parents = self.get_all_parents()
+        workspace_group_access = WorkspaceGroupAccess.objects.filter(
+            models.Q(group=self) | models.Q(group__in=parents)
+        )
+        # For each record, check the auth domain.
+        workspaces = [
+            x.workspace
+            for x in workspace_group_access
+            if x.workspace.is_in_authorization_domain(self)
+        ]
+        return workspaces
+
 
 class Workspace(TimeStampedModel):
     """A model to store information about AnVIL workspaces."""
