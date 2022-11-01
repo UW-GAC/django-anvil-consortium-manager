@@ -1145,7 +1145,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
     """Historical records from django-simple-history."""
 
     class Meta:
-        verbose_name_plural = "workspace group access"
+        verbose_name_plural = "workspace group sharing"
         constraints = [
             models.UniqueConstraint(
                 fields=["group", "workspace"], name="unique_workspace_group_sharing"
