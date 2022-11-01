@@ -1,4 +1,5 @@
 import datetime
+import time
 from unittest import skip
 
 from django.contrib.auth import get_user_model
@@ -1739,14 +1740,17 @@ class GroupAccountMembershipTest(TestCase):
             account=account, group=group, role=GroupAccountMembership.MEMBER
         )
         # Timestamp
-        time = timezone.now()
+        current_time = timezone.now()
+        # Sleep a tiny bit so are history records are sure to not have the same timestamp
+        time.sleep(.1)
         # Mark the account as inactive.
         account.status = account.INACTIVE_STATUS
         account.save()
         # Check the history at timestamp to make sure the account shows active.
-        record = obj.history.as_of(time)
+        record = obj.history.as_of(current_time)
+        
         self.assertEqual(
-            account.history.as_of(time).status, record.account.ACTIVE_STATUS
+            account.history.as_of(current_time).status, record.account.ACTIVE_STATUS
         )
         self.assertEqual(record.account.status, record.account.ACTIVE_STATUS)
 
