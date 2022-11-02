@@ -1148,7 +1148,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         verbose_name_plural = "workspace group sharing"
         constraints = [
             models.UniqueConstraint(
-                fields=["group", "workspace"], name="unique_workspace_group_sharing"
+                fields=["group", "workspace"], name="unique_workspace_group_access"
             )
         ]
 
