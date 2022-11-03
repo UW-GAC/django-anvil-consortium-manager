@@ -1146,6 +1146,9 @@ class WorkspaceGroupSharing(TimeStampedModel):
 
     class Meta:
         verbose_name_plural = "workspace group sharing"
+        # NOTE - we intentionally have left the name of the constraint
+        # as group_access instead of updating to group_sharing to get around
+        # django bug: #31335 - when the fix for this is patched in we can update
         constraints = [
             models.UniqueConstraint(
                 fields=["group", "workspace"], name="unique_workspace_group_access"
