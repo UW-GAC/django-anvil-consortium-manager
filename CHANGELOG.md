@@ -6,6 +6,8 @@
 - Add a get_absolute_url method for `WorkspaceData` which returns the absolute url of the associated workspace.
 - Add a required "workspace_detail_template_name" field for workspace adapters.
 - Add Workspace and ManagedGroup methods to check whether a group has access to a workspace.
+- Rename the `WorkspaceGroupAccess` model to `WorkspaceGroupSharing`, which is more consistent with AnVIL terminology.
+- Reword "access" to "sharing" in WorkspaceGroupSharing-related views and templates.
 
 ## 0.3 (2022-09-27)
 
