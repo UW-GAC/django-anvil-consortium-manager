@@ -686,8 +686,8 @@ class ManagedGroupDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
                 "billing_project",
             ),
         )
-        context["workspace_table"] = tables.WorkspaceGroupAccessTable(
-            self.object.workspacegroupaccess_set.all(), exclude="group"
+        context["workspace_table"] = tables.WorkspaceGroupSharingTable(
+            self.object.workspacegroupsharing_set.all(), exclude="group"
         )
         context["active_account_table"] = tables.GroupAccountMembershipTable(
             self.object.groupaccountmembership_set.filter(
@@ -795,7 +795,7 @@ class ManagedGroupDelete(
                 self.request, messages.ERROR, self.message_is_member_of_another_group
             )
             return HttpResponseRedirect(self.object.get_absolute_url())
-        if self.object.workspacegroupaccess_set.count() > 0:
+        if self.object.workspacegroupsharing_set.count() > 0:
             messages.add_message(
                 self.request, messages.ERROR, self.message_has_access_to_workspace
             )
@@ -830,7 +830,7 @@ class ManagedGroupDelete(
                 self.request, messages.ERROR, self.message_is_member_of_another_group
             )
             return HttpResponseRedirect(self.object.get_absolute_url())
-        if self.object.workspacegroupaccess_set.count() > 0:
+        if self.object.workspacegroupsharing_set.count() > 0:
             messages.add_message(
                 self.request, messages.ERROR, self.message_has_access_to_workspace
             )
@@ -966,8 +966,8 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["group_access_table"] = tables.WorkspaceGroupAccessTable(
-            self.object.workspacegroupaccess_set.all(), exclude="workspace"
+        context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
+            self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )
         context["authorization_domain_table"] = tables.ManagedGroupTable(
             self.object.authorization_domains.all(),
@@ -1326,7 +1326,7 @@ class WorkspaceAudit(
         self.audit_results = models.Workspace.anvil_audit()
 
 
-class WorkspaceAccessAudit(
+class WorkspaceSharingAudit(
     auth.AnVILConsortiumManagerViewRequired,
     SingleObjectMixin,
     AnVILAuditMixin,
@@ -1335,7 +1335,7 @@ class WorkspaceAccessAudit(
     """View to run an audit on access to a specific Workspace and display the results."""
 
     model = models.Workspace
-    template_name = "anvil_consortium_manager/workspace_access_audit.html"
+    template_name = "anvil_consortium_manager/workspace_sharing_audit.html"
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1366,7 +1366,7 @@ class WorkspaceAccessAudit(
         return super().get(request, *args, **kwargs)
 
     def run_audit(self):
-        self.audit_results = self.object.anvil_audit_access()
+        self.audit_results = self.object.anvil_audit_sharing()
 
 
 class WorkspaceAutocomplete(
@@ -1702,8 +1702,8 @@ class GroupAccountMembershipDelete(
         return super().delete(request, *args, **kwargs)
 
 
-class WorkspaceGroupAccessDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
-    model = models.WorkspaceGroupAccess
+class WorkspaceGroupSharingDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
+    model = models.WorkspaceGroupSharing
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1742,22 +1742,22 @@ class WorkspaceGroupAccessDetail(auth.AnVILConsortiumManagerViewRequired, Detail
         return context
 
 
-class WorkspaceGroupAccessCreate(
+class WorkspaceGroupSharingCreate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
 ):
-    """View to create a new WorkspaceGroupAccess object and share the Workspace with a Group on AnVIL."""
+    """View to create a new WorkspaceGroupSharing object and share the Workspace with a Group on AnVIL."""
 
-    model = models.WorkspaceGroupAccess
-    form_class = forms.WorkspaceGroupAccessForm
+    model = models.WorkspaceGroupSharing
+    form_class = forms.WorkspaceGroupSharingForm
     success_msg = "Successfully shared Workspace with Group."
-    """Message to display when the WorkspaceGroupAccess object was successfully created in the app and on AnVIL."""
+    """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
     def get_success_url(self):
         """URL to redirect to upon success."""
-        return reverse("anvil_consortium_manager:workspace_group_access:list")
+        return reverse("anvil_consortium_manager:workspace_group_sharing:list")
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -1781,19 +1781,19 @@ class WorkspaceGroupAccessCreate(
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessUpdate(
+class WorkspaceGroupSharingUpdate(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView
 ):
-    """View to update a WorkspaceGroupAccess object and update access for the ManagedGroup to the Workspace on AnVIL."""
+    """View to update a WorkspaceGroupSharing object and on AnVIL."""
 
-    model = models.WorkspaceGroupAccess
+    model = models.WorkspaceGroupSharing
     fields = (
         "access",
         "can_compute",
     )
-    template_name = "anvil_consortium_manager/workspacegroupaccess_update.html"
+    template_name = "anvil_consortium_manager/workspacegroupsharing_update.html"
     success_msg = "Successfully updated Workspace sharing."
-    """Message to display when the WorkspaceGroupAccess object was successfully updated."""
+    """Message to display when the WorkspaceGroupSharing object was successfully updated."""
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1838,17 +1838,17 @@ class WorkspaceGroupAccessUpdate(
         return super().form_valid(form)
 
 
-class WorkspaceGroupAccessList(
+class WorkspaceGroupSharingList(
     auth.AnVILConsortiumManagerViewRequired, SingleTableView
 ):
-    model = models.WorkspaceGroupAccess
-    table_class = tables.WorkspaceGroupAccessTable
+    model = models.WorkspaceGroupSharing
+    table_class = tables.WorkspaceGroupSharingTable
 
 
-class WorkspaceGroupAccessDelete(
+class WorkspaceGroupSharingDelete(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
 ):
-    model = models.WorkspaceGroupAccess
+    model = models.WorkspaceGroupSharing
     success_msg = "Successfully removed workspace sharing on AnVIL."
 
     def get_object(self, queryset=None):
@@ -1878,7 +1878,7 @@ class WorkspaceGroupAccessDelete(
         return obj
 
     def get_success_url(self):
-        return reverse("anvil_consortium_manager:workspace_group_access:list")
+        return reverse("anvil_consortium_manager:workspace_group_sharing:list")
 
     def delete(self, request, *args, **kwargs):
         """

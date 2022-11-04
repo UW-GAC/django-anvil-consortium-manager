@@ -45,13 +45,13 @@
       <h2 class="accordion-header" id="headingGroupsOne">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
           <span class="fa-solid fa-user-group mx-2"></span>
-          View groups that have access
-          <span class="badge mx-2 bg-secondary pill"> {{ group_access_table.rows|length }}</span>
+          View groups that this workspace is shared with
+          <span class="badge mx-2 bg-secondary pill"> {{ group_sharing_table.rows|length }}</span>
         </button>
       </h2>
       <div id="collapseGroupsOne" class="accordion-collapse collapse" aria-labelledby="headingGroupsOne" data-bs-parent="#accordionGroups">
         <div class="accordion-body">
-          {% render_table group_access_table %}
+          {% render_table group_sharing_table %}
         </div>
       </div>
     </div>
@@ -60,7 +60,7 @@
 
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:audit_access' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Audit membership</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:audit_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Audit sharing</a>
 </p>
 {% if show_edit_links %}
 <p>

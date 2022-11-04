@@ -100,7 +100,7 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:managed_groups:list"),
         reverse("anvil_consortium_manager:managed_groups:audit"),
         reverse("anvil_consortium_manager:status"),
-        reverse("anvil_consortium_manager:workspace_group_access:list"),
+        reverse("anvil_consortium_manager:workspace_group_sharing:list"),
         reverse("anvil_consortium_manager:workspaces:list_all"),
         reverse("anvil_consortium_manager:workspaces:audit"),
         reverse(
@@ -116,10 +116,10 @@ class ViewEditUrlTest(TestCase):
     #     reverse("anvil_consortium_manager:accounts:delete"),
     #     reverse("anvil_consortium_manager:accounts:reactivate"),
     #     reverse("anvil_consortium_manager:managed_groups:delete"),
-    #     reverse("anvil_consortium_manager:workspaces:access:delete"),
+    #     reverse("anvil_consortium_manager:workspaces:sharing:delete"),
     #     reverse("anvil_consortium_manager:managed_groups:member_accounts:delete"),
     #     reverse("anvil_consortium_manager:managed_groups:member_groups:delete"),
-    #     reverse("anvil_consortium_manager:workspaces:access:update"),
+    #     reverse("anvil_consortium_manager:workspaces:sharing:update"),
     #     reverse("anvil_consortium_manager:workspaces:delete"),
     #     reverse("anvil_consortium_manager:managed_groups:audit_membership"),
     #     reverse("anvil_consortium_manager:workspaces:audit_access"),
@@ -131,7 +131,7 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:group_account_membership:new"),
         reverse("anvil_consortium_manager:group_group_membership:new"),
         reverse("anvil_consortium_manager:managed_groups:new"),
-        reverse("anvil_consortium_manager:workspace_group_access:new"),
+        reverse("anvil_consortium_manager:workspace_group_sharing:new"),
         reverse(
             "anvil_consortium_manager:workspaces:import",
             kwargs={"workspace_type": "workspace"},
@@ -3755,7 +3755,7 @@ class ManagedGroupDetailTest(TestCase):
         response = self.get_view()(request, slug=obj.name)
         self.assertIn("workspace_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["workspace_table"], tables.WorkspaceGroupAccessTable
+            response.context_data["workspace_table"], tables.WorkspaceGroupSharingTable
         )
 
     def test_workspace_table_none(self):
@@ -3770,7 +3770,7 @@ class ManagedGroupDetailTest(TestCase):
     def test_workspace_table_one(self):
         """One workspace is shown if the group have access to one workspace."""
         group = factories.ManagedGroupFactory.create()
-        factories.WorkspaceGroupAccessFactory.create(group=group)
+        factories.WorkspaceGroupSharingFactory.create(group=group)
         request = self.factory.get(self.get_url(group.name))
         request.user = self.user
         response = self.get_view()(request, slug=group.name)
@@ -3780,7 +3780,7 @@ class ManagedGroupDetailTest(TestCase):
     def test_workspace_table_two(self):
         """Two workspaces are shown if the group have access to two workspaces."""
         group = factories.ManagedGroupFactory.create()
-        factories.WorkspaceGroupAccessFactory.create_batch(2, group=group)
+        factories.WorkspaceGroupSharingFactory.create_batch(2, group=group)
         request = self.factory.get(self.get_url(group.name))
         request.user = self.user
         response = self.get_view()(request, slug=group.name)
@@ -3791,7 +3791,7 @@ class ManagedGroupDetailTest(TestCase):
         """Only shows workspcaes that this group has access to."""
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
-        factories.WorkspaceGroupAccessFactory.create(group=other_group)
+        factories.WorkspaceGroupSharingFactory.create(group=other_group)
         request = self.factory.get(self.get_url(group.name))
         request.user = self.user
         response = self.get_view()(request, slug=group.name)
@@ -4651,7 +4651,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         This is a behavior enforced by AnVIL."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=workspace, group=group
         )
         # Need to use a client for messages.
@@ -4670,8 +4670,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=group.pk)
         # Make sure the relationships still exists.
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
-        models.WorkspaceGroupAccess.objects.get(pk=access.pk)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        models.WorkspaceGroupSharing.objects.get(pk=access.pk)
 
     def test_post_redirect_group_has_access_to_workspace(self):
         """Redirect post request when trying to delete a group that has access to a workspace.
@@ -4679,7 +4679,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         This is a behavior enforced by AnVIL."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        access = factories.WorkspaceGroupAccessFactory.create(
+        access = factories.WorkspaceGroupSharingFactory.create(
             workspace=workspace, group=group
         )
         # Need to use a client for messages.
@@ -4698,8 +4698,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=group.pk)
         # Make sure the relationships still exists.
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
-        models.WorkspaceGroupAccess.objects.get(pk=access.pk)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        models.WorkspaceGroupSharing.objects.get(pk=access.pk)
 
     def test_can_delete_group_that_has_child_groups(self):
         """Can delete a group that has other groups as members."""
@@ -5491,7 +5491,7 @@ class WorkspaceDetailTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo1", workspace_slug="foo2")
 
-    def test_group_access_table(self):
+    def test_group_sharing_table(self):
         """The workspace group access table exists."""
         obj = factories.WorkspaceFactory.create()
         request = self.factory.get(obj.get_absolute_url())
@@ -5501,13 +5501,13 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=obj.billing_project.name,
             workspace_slug=obj.name,
         )
-        self.assertIn("group_access_table", response.context_data)
+        self.assertIn("group_sharing_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["group_access_table"],
-            tables.WorkspaceGroupAccessTable,
+            response.context_data["group_sharing_table"],
+            tables.WorkspaceGroupSharingTable,
         )
 
-    def test_group_access_table_none(self):
+    def test_group_sharing_table_none(self):
         """No groups are shown if the workspace has not been shared with any groups."""
         workspace = factories.WorkspaceFactory.create()
         request = self.factory.get(workspace.get_absolute_url())
@@ -5517,13 +5517,13 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 0)
 
-    def test_group_access_table_one(self):
+    def test_group_sharing_table_one(self):
         """One group is shown if the workspace has been shared with one group."""
         workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupAccessFactory.create(workspace=workspace)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
         request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
         response = self.get_view()(
@@ -5531,13 +5531,13 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 1)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 1)
 
-    def test_group_access_table_two(self):
+    def test_group_sharing_table_two(self):
         """Two groups are shown if the workspace has been shared with two groups."""
         workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupAccessFactory.create_batch(2, workspace=workspace)
+        factories.WorkspaceGroupSharingFactory.create_batch(2, workspace=workspace)
         request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
         response = self.get_view()(
@@ -5545,14 +5545,14 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 2)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 2)
 
-    def test_shows_workspace_group_access_for_only_that_workspace(self):
+    def test_shows_workspace_group_sharing_for_only_that_workspace(self):
         """Only shows groups that this workspace has been shared with."""
         workspace = factories.WorkspaceFactory.create(name="workspace-1")
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
-        factories.WorkspaceGroupAccessFactory.create(workspace=other_workspace)
+        factories.WorkspaceGroupSharingFactory.create(workspace=other_workspace)
         request = self.factory.get(workspace.get_absolute_url())
         request.user = self.user
         response = self.get_view()(
@@ -5560,8 +5560,8 @@ class WorkspaceDetailTest(TestCase):
             billing_project_slug=workspace.billing_project.name,
             workspace_slug=workspace.name,
         )
-        self.assertIn("group_access_table", response.context_data)
-        self.assertEqual(len(response.context_data["group_access_table"].rows), 0)
+        self.assertIn("group_sharing_table", response.context_data)
+        self.assertEqual(len(response.context_data["group_sharing_table"].rows), 0)
 
     def test_auth_domain_table(self):
         """The workspace auth domain table exists."""
@@ -8228,7 +8228,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             billing_project=billing_project, name="test-workspace"
         )
         group = factories.ManagedGroupFactory.create(name="test-group")
-        factories.WorkspaceGroupAccessFactory.create(workspace=object, group=group)
+        factories.WorkspaceGroupSharingFactory.create(workspace=object, group=group)
         url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
@@ -8237,7 +8237,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
         # The group still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=group.pk)
@@ -8245,9 +8245,11 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # History is added for workspace.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
-        # History is added for WorkspaceGroupAccess.
-        self.assertEqual(models.WorkspaceGroupAccess.history.count(), 2)
-        self.assertEqual(models.WorkspaceGroupAccess.history.latest().history_type, "-")
+        # History is added for WorkspaceGroupSharing.
+        self.assertEqual(models.WorkspaceGroupSharing.history.count(), 2)
+        self.assertEqual(
+            models.WorkspaceGroupSharing.history.latest().history_type, "-"
+        )
 
     def test_success_url(self):
         """Redirects to the expected page."""
@@ -8707,8 +8709,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
-class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the WorkspaceAccessAudit view."""
+class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceSharingAudit view."""
 
     def setUp(self):
         """Set up test class."""
@@ -8745,7 +8747,7 @@ class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:audit_access", args=args)
+        return reverse("anvil_consortium_manager:workspaces:audit_sharing", args=args)
 
     def update_api_response(self, email, access, can_compute=False, can_share=False):
         """Return a paired down json for a single ACL, including the service account."""
@@ -8762,7 +8764,7 @@ class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceAccessAudit.as_view()
+        return views.WorkspaceSharingAudit.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -8840,7 +8842,7 @@ class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
-        access = factories.WorkspaceGroupAccessFactory.create(workspace=self.workspace)
+        access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.update_api_response(access.group.get_email(), "READER")
         # Group membership API call.
         responses.add(
@@ -8884,7 +8886,7 @@ class WorkspaceAccessAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
-        access = factories.WorkspaceGroupAccessFactory.create(workspace=self.workspace)
+        access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         # Different access recorded.
         self.update_api_response(access.group.get_email(), "WRITER")
         # Group membership API call.
@@ -11308,7 +11310,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
-class WorkspaceGroupAccessDetailTest(TestCase):
+class WorkspaceGroupSharingDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -11322,11 +11324,11 @@ class WorkspaceGroupAccessDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:access:detail", args=args)
+        return reverse("anvil_consortium_manager:workspaces:sharing:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceGroupAccessDetail.as_view()
+        return views.WorkspaceGroupSharingDetail.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -11343,7 +11345,7 @@ class WorkspaceGroupAccessDetailTest(TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
         response = self.get_view()(
@@ -11373,7 +11375,7 @@ class WorkspaceGroupAccessDetailTest(TestCase):
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        factories.WorkspaceGroupAccessFactory.create()
+        factories.WorkspaceGroupSharingFactory.create()
         request = self.factory.get(
             self.get_url("billing_project", "workspace", "group")
         )
@@ -11398,14 +11400,14 @@ class WorkspaceGroupAccessDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:access:delete",
+                "anvil_consortium_manager:workspaces:sharing:delete",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -11423,14 +11425,14 @@ class WorkspaceGroupAccessDetailTest(TestCase):
             ),
         )
         self.client.force_login(view_user)
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertFalse(response.context_data["show_edit_links"])
         self.assertNotContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:access:delete",
+                "anvil_consortium_manager:workspaces:sharing:delete",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -11440,7 +11442,7 @@ class WorkspaceGroupAccessDetailTest(TestCase):
         )
 
 
-class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
+class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 200
 
@@ -11464,11 +11466,13 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspace_group_access:new", args=args)
+        return reverse(
+            "anvil_consortium_manager:workspace_group_sharing:new", args=args
+        )
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceGroupAccessCreate.as_view()
+        return views.WorkspaceGroupSharingCreate.as_view()
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -11526,7 +11530,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         response = self.get_view()(request)
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(
-            response.context_data["form"], forms.WorkspaceGroupAccessForm
+            response.context_data["form"], forms.WorkspaceGroupSharingForm
         )
 
     def test_can_create_an_object_reader(self):
@@ -11563,14 +11567,14 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
-        new_object = models.WorkspaceGroupAccess.objects.latest("pk")
-        self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
-        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.READER)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
         responses.assert_call_count(url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
@@ -11610,14 +11614,14 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
                 "can_compute": True,
             },
         )
         self.assertEqual(response.status_code, 302)
-        new_object = models.WorkspaceGroupAccess.objects.latest("pk")
-        self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
-        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.WRITER)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
         responses.assert_call_count(url, 1)
         # History is added.
@@ -11658,7 +11662,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
             follow=True,
@@ -11666,7 +11670,9 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupAccessCreate.success_msg, str(messages[0]))
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreate.success_msg, str(messages[0])
+        )
 
     def test_can_create_an_object_writer(self):
         """Posting valid data to the form creates an object."""
@@ -11701,14 +11707,14 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
                 "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
-        new_object = models.WorkspaceGroupAccess.objects.latest("pk")
-        self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
-        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.WRITER)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
         responses.assert_call_count(url, 1)
 
@@ -11745,14 +11751,14 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.OWNER,
+                "access": models.WorkspaceGroupSharing.OWNER,
                 "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
-        new_object = models.WorkspaceGroupAccess.objects.latest("pk")
-        self.assertIsInstance(new_object, models.WorkspaceGroupAccess)
-        self.assertEqual(new_object.access, models.WorkspaceGroupAccess.OWNER)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
         responses.assert_call_count(url, 1)
 
     def test_redirects_to_list(self):
@@ -11789,12 +11795,12 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.OWNER,
+                "access": models.WorkspaceGroupSharing.OWNER,
                 "can_compute": False,
             },
         )
         self.assertRedirects(
-            response, reverse("anvil_consortium_manager:workspace_group_access:list")
+            response, reverse("anvil_consortium_manager:workspace_group_sharing:list")
         )
         responses.assert_call_count(url, 1)
 
@@ -11802,17 +11808,17 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot create a second object for the same workspace and group with the same access level."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        obj = factories.WorkspaceGroupAccessFactory(
+        obj = factories.WorkspaceGroupSharingFactory(
             group=group,
             workspace=workspace,
-            access=models.WorkspaceGroupAccess.READER,
+            access=models.WorkspaceGroupSharing.READER,
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -11823,25 +11829,25 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.WorkspaceGroupAccess.objects.all(),
-            models.WorkspaceGroupAccess.objects.filter(pk=obj.pk),
+            models.WorkspaceGroupSharing.objects.all(),
+            models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
 
     def test_cannot_create_duplicate_object_with_different_access(self):
         """Cannot create a second object for the same workspace and group with a different access level."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        obj = factories.WorkspaceGroupAccessFactory(
+        obj = factories.WorkspaceGroupSharingFactory(
             group=group,
             workspace=workspace,
-            access=models.WorkspaceGroupAccess.READER,
+            access=models.WorkspaceGroupSharing.READER,
         )
         request = self.factory.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.OWNER,
+                "access": models.WorkspaceGroupSharing.OWNER,
                 "can_compute": False,
             },
         )
@@ -11852,15 +11858,17 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerysetEqual(
-            models.WorkspaceGroupAccess.objects.all(),
-            models.WorkspaceGroupAccess.objects.filter(pk=obj.pk),
+            models.WorkspaceGroupSharing.objects.all(),
+            models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
 
     def test_can_have_two_workspaces_for_one_group(self):
         group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
         group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupAccessFactory.create(group=group_1, workspace=workspace)
+        factories.WorkspaceGroupSharingFactory.create(
+            group=group_1, workspace=workspace
+        )
         json_data = [
             {
                 "email": group_2.get_email(),
@@ -11890,19 +11898,21 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group_2.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 2)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 2)
         responses.assert_call_count(url, 1)
 
     def test_can_have_two_groups_for_one_workspace(self):
         group = factories.ManagedGroupFactory.create()
         workspace_1 = factories.WorkspaceFactory.create(name="test-workspace-1")
         workspace_2 = factories.WorkspaceFactory.create(name="test-workspace-2")
-        factories.WorkspaceGroupAccessFactory.create(group=group, workspace=workspace_1)
+        factories.WorkspaceGroupSharingFactory.create(
+            group=group, workspace=workspace_1
+        )
         json_data = [
             {
                 "email": group.get_email(),
@@ -11932,12 +11942,12 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace_2.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 2)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 2)
         responses.assert_call_count(url, 1)
 
     def test_invalid_input_group(self):
@@ -11948,7 +11958,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": 1,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -11959,7 +11969,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("valid choice", form.errors["group"][0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_invalid_input_workspace(self):
         """Posting invalid data to workspace field does not create an object."""
@@ -11969,7 +11979,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": 1,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -11980,7 +11990,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("workspace", form.errors.keys())
         self.assertIn("valid choice", form.errors["workspace"][0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_invalid_input_access(self):
         """Posting invalid data to access field does not create an object."""
@@ -12002,7 +12012,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("access", form.errors.keys())
         self.assertIn("valid choice", form.errors["access"][0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_invalid_reader_with_can_compute(self):
         """Posting invalid data to access field does not create an object."""
@@ -12013,7 +12023,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": True,
             },
         )
@@ -12025,7 +12035,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(form.errors), 1)
         self.assertEqual(len(form.non_field_errors()), 1)
         self.assertIn("cannot be granted compute", form.non_field_errors()[0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -12041,7 +12051,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", form.errors["workspace"][0])
         self.assertIn("access", form.errors.keys())
         self.assertIn("required", form.errors["access"][0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
@@ -12050,7 +12060,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -12061,7 +12071,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_post_blank_data_workspace(self):
         """Posting blank data to the workspace field does not create an object."""
@@ -12070,7 +12080,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(),
             {
                 "group": group.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -12081,7 +12091,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("workspace", form.errors.keys())
         self.assertIn("required", form.errors["workspace"][0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not create an object."""
@@ -12102,7 +12112,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("access", form.errors.keys())
         self.assertIn("required", form.errors["access"][0])
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_post_blank_data_can_compute(self):
         """Posting blank data to the can_compute field does not create an object."""
@@ -12137,13 +12147,13 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "workspace": workspace.pk,
                 "group": group.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
             },
         )
         self.assertEqual(response.status_code, 302)
-        new_object = models.WorkspaceGroupAccess.objects.latest("pk")
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertEqual(new_object.can_compute, False)
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
 
     def test_invalid_anvil_group_does_not_exist(self):
         """No object is saved if the group doesn't exist on AnVIL but does exist in the app."""
@@ -12176,7 +12186,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -12190,12 +12200,12 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn(
-            views.WorkspaceGroupAccessCreate.message_group_not_found,
+            views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -12222,7 +12232,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupAccess.READER,
+                "access": models.WorkspaceGroupSharing.READER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -12235,7 +12245,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     @skip("AnVIL API issue")
     def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
@@ -12246,7 +12256,7 @@ class WorkspaceGroupAccessCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
-class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
+class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 200
 
     def setUp(self):
@@ -12269,11 +12279,11 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:access:update", args=args)
+        return reverse("anvil_consortium_manager:workspaces:sharing:update", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceGroupAccessUpdate.as_view()
+        return views.WorkspaceGroupSharingUpdate.as_view()
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -12299,7 +12309,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         request = self.factory.get(
             self.get_url(
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
@@ -12355,7 +12365,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_has_form_in_context(self):
         """Response includes a form."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         request = self.factory.get(
             self.get_url(
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
@@ -12393,8 +12403,8 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            group=group, workspace=workspace, access=models.WorkspaceGroupSharing.READER
         )
         json_data = [
             {
@@ -12421,12 +12431,12 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
             ),
             {
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
             },
         )
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
-        self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.WRITER)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
         self.assertEqual(obj.history.latest().history_type, "~")
@@ -12440,8 +12450,8 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.WRITER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            group=group, workspace=workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         json_data = [
             {
@@ -12467,11 +12477,11 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
             ),
-            {"access": models.WorkspaceGroupAccess.WRITER, "can_compute": True},
+            {"access": models.WorkspaceGroupSharing.WRITER, "can_compute": True},
         )
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
-        self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(obj.can_compute, True)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
@@ -12486,15 +12496,15 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            group=group, workspace=workspace, access=models.WorkspaceGroupSharing.READER
         )
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
             ),
-            {"access": models.WorkspaceGroupAccess.READER, "can_compute": True},
+            {"access": models.WorkspaceGroupSharing.READER, "can_compute": True},
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
@@ -12504,7 +12514,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(form.non_field_errors()), 1)
         self.assertIn("cannot be granted compute", form.non_field_errors()[0])
         obj.refresh_from_db()
-        self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
         self.assertEqual(obj.can_compute, False)
         # History is not added.
         self.assertEqual(obj.history.count(), 1)
@@ -12518,8 +12528,8 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            group=group, workspace=workspace, access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            group=group, workspace=workspace, access=models.WorkspaceGroupSharing.READER
         )
         json_data = [
             {
@@ -12546,20 +12556,22 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
             ),
             {
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
             },
             follow=True,
         )
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupAccessUpdate.success_msg, str(messages[0]))
+        self.assertEqual(
+            views.WorkspaceGroupSharingUpdate.success_msg, str(messages[0])
+        )
 
     def test_redirects_to_detail(self):
         """After successfully updating an object, view redirects to the model's get_absolute_url."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        obj = factories.WorkspaceGroupAccessFactory(
-            access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory(
+            access=models.WorkspaceGroupSharing.READER
         )
         json_data = [
             {
@@ -12590,7 +12602,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
             ),
             {
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
             },
         )
         self.assertRedirects(response, obj.get_absolute_url())
@@ -12598,8 +12610,8 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not update the object."""
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            access=models.WorkspaceGroupSharing.READER
         )
         request = self.factory.post(
             self.get_url(
@@ -12620,7 +12632,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("access", form.errors.keys())
         self.assertIn("required", form.errors["access"][0])
         obj.refresh_from_db()
-        self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
 
     def test_post_blank_data_can_compute(self):
         """Posting blank data to the can_compute field updates the object."""
@@ -12628,10 +12640,10 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project__name="test-billing-project"
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
+        obj = factories.WorkspaceGroupSharingFactory.create(
             group=group,
             workspace=workspace,
-            access=models.WorkspaceGroupAccess.OWNER,
+            access=models.WorkspaceGroupSharing.OWNER,
             can_compute=True,
         )
         json_data = [
@@ -12658,17 +12670,17 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
             ),
-            {"access": models.WorkspaceGroupAccess.WRITER},
+            {"access": models.WorkspaceGroupSharing.WRITER},
         )
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
-        self.assertEqual(obj.access, models.WorkspaceGroupAccess.WRITER)
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(obj.can_compute, False)
 
     def test_post_invalid_data_access(self):
         """Posting invalid data to the access field does not update the object."""
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            access=models.WorkspaceGroupSharing.READER
         )
         request = self.factory.post(
             self.get_url(
@@ -12689,13 +12701,13 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("access", form.errors.keys())
         self.assertIn("valid choice", form.errors["access"][0])
         obj.refresh_from_db()
-        self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
 
     def test_post_group_pk(self):
         """Posting a group pk has no effect."""
         original_group = factories.ManagedGroupFactory.create()
-        obj = factories.WorkspaceGroupAccessFactory(
-            group=original_group, access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory(
+            group=original_group, access=models.WorkspaceGroupSharing.READER
         )
         new_group = factories.ManagedGroupFactory.create()
         json_data = [
@@ -12728,7 +12740,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             ),
             {
                 "group": new_group.pk,
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -12739,8 +12751,8 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_workspace_pk(self):
         """Posting a workspace pk has no effect."""
         original_workspace = factories.WorkspaceFactory.create()
-        obj = factories.WorkspaceGroupAccessFactory(
-            workspace=original_workspace, access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory(
+            workspace=original_workspace, access=models.WorkspaceGroupSharing.READER
         )
         new_workspace = factories.WorkspaceFactory.create()
         json_data = [
@@ -12773,7 +12785,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
             ),
             {
                 "workspace": new_workspace.pk,
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -12784,8 +12796,8 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            access=models.WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            access=models.WorkspaceGroupSharing.READER
         )
         url = (
             self.entry_point
@@ -12807,7 +12819,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
             ),
             {
-                "access": models.WorkspaceGroupAccess.WRITER,
+                "access": models.WorkspaceGroupSharing.WRITER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -12820,9 +12832,9 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
         obj.refresh_from_db()
-        self.assertEqual(obj.access, models.WorkspaceGroupAccess.READER)
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
 
     @skip("AnVIL API issue")
     def test_api_updating_access_to_workspace_that_doesnt_exist_for_group_that_doesnt_exist(
@@ -12833,7 +12845,7 @@ class WorkspaceGroupAccessUpdateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
-class WorkspaceGroupAccessListTest(TestCase):
+class WorkspaceGroupSharingListTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -12848,12 +12860,12 @@ class WorkspaceGroupAccessListTest(TestCase):
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse(
-            "anvil_consortium_manager:workspace_group_access:list", args=args
+            "anvil_consortium_manager:workspace_group_sharing:list", args=args
         )
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceGroupAccessList.as_view()
+        return views.WorkspaceGroupSharingList.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -12886,7 +12898,7 @@ class WorkspaceGroupAccessListTest(TestCase):
         response = self.get_view()(request)
         self.assertIn("table", response.context_data)
         self.assertIsInstance(
-            response.context_data["table"], tables.WorkspaceGroupAccessTable
+            response.context_data["table"], tables.WorkspaceGroupSharingTable
         )
 
     def test_view_with_no_objects(self):
@@ -12898,7 +12910,7 @@ class WorkspaceGroupAccessListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_one_object(self):
-        factories.WorkspaceGroupAccessFactory()
+        factories.WorkspaceGroupSharingFactory()
         request = self.factory.get(self.get_url())
         request.user = self.user
         response = self.get_view()(request)
@@ -12907,7 +12919,7 @@ class WorkspaceGroupAccessListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.WorkspaceGroupAccessFactory.create_batch(2)
+        factories.WorkspaceGroupSharingFactory.create_batch(2)
         request = self.factory.get(self.get_url())
         request.user = self.user
         response = self.get_view()(request)
@@ -12916,7 +12928,7 @@ class WorkspaceGroupAccessListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
-class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
+class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     api_success_code = 200
 
@@ -12940,11 +12952,11 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:access:delete", args=args)
+        return reverse("anvil_consortium_manager:workspaces:sharing:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceGroupAccessDelete.as_view()
+        return views.WorkspaceGroupSharingDelete.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -12961,7 +12973,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         request = self.factory.get(
             self.get_url(
                 obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
@@ -13038,7 +13050,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
+        obj = factories.WorkspaceGroupSharingFactory.create(
             group=group, workspace=workspace
         )
         json_data = [
@@ -13067,7 +13079,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
         responses.assert_call_count(url, 1)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
@@ -13082,7 +13094,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
+        obj = factories.WorkspaceGroupSharingFactory.create(
             group=group, workspace=workspace
         )
         json_data = [
@@ -13114,12 +13126,14 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupAccessDelete.success_msg, str(messages[0]))
+        self.assertEqual(
+            views.WorkspaceGroupSharingDelete.success_msg, str(messages[0])
+        )
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
-        other_object = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
+        other_object = factories.WorkspaceGroupSharingFactory.create()
         json_data = [
             {
                 "email": obj.group.get_email(),
@@ -13150,10 +13164,10 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
         self.assertQuerysetEqual(
-            models.WorkspaceGroupAccess.objects.all(),
-            models.WorkspaceGroupAccess.objects.filter(pk=other_object.pk),
+            models.WorkspaceGroupSharing.objects.all(),
+            models.WorkspaceGroupSharing.objects.filter(pk=other_object.pk),
         )
         responses.assert_call_count(url, 1)
 
@@ -13166,7 +13180,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create(
             name="test-workspace", billing_project=billing_project
         )
-        obj = factories.WorkspaceGroupAccessFactory.create(
+        obj = factories.WorkspaceGroupSharingFactory.create(
             group=group,
             workspace=workspace,
             can_compute=True,
@@ -13197,7 +13211,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 0)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
         responses.assert_call_count(url, 1)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
@@ -13205,7 +13219,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         json_data = [
             {
                 "email": obj.group.get_email(),
@@ -13238,14 +13252,14 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(
-            response, reverse("anvil_consortium_manager:workspace_group_access:list")
+            response, reverse("anvil_consortium_manager:workspace_group_sharing:list")
         )
         responses.assert_call_count(url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         url = (
             self.entry_point
             + "/api/workspaces/"
@@ -13277,7 +13291,7 @@ class WorkspaceGroupAccessDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         responses.assert_call_count(url, 1)
         # Make sure that the object was not created.
-        self.assertEqual(models.WorkspaceGroupAccess.objects.count(), 1)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
 
     @skip("AnVIL API issue")
     def test_api_removing_access_to_workspace_that_doesnt_exist_for_group_that_doesnt_exist(
