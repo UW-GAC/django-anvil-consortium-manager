@@ -116,6 +116,11 @@ workspace_sharing_patterns = (
             name="detail",
         ),
         path(
+            "<slug:group_slug>/new/",
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.as_view(),
+            name="new_by_group",
+        ),
+        path(
             "<slug:group_slug>/update/",
             views.WorkspaceGroupSharingUpdate.as_view(),
             name="update",

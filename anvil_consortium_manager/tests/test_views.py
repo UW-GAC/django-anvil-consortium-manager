@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import Permission, User
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.forms import BaseInlineFormSet
+from django.forms import BaseInlineFormSet, HiddenInput
 from django.http.response import Http404
 from django.shortcuts import resolve_url
 from django.test import RequestFactory, TestCase
@@ -12229,6 +12229,852 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: workspace group access create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    @skip("AnVIL API issue")
+    def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
+        self,
+    ):
+        self.fail(
+            "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
+        )
+
+
+class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, TestCase):
+
+    api_success_code = 200
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.workspace = factories.WorkspaceFactory.create()
+        self.group = factories.ManagedGroupFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:workspaces:sharing:new_by_group", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceGroupSharingCreateByWorkspaceGroup.as_view()
+
+    def get_api_json_response(
+        self, invites_sent=[], users_not_found=[], users_updated=[]
+    ):
+        return {
+            "invitesSent": invites_sent,
+            "usersNotFound": users_not_found,
+            "usersUpdated": users_updated,
+        }
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            billing_project_slug=self.workspace.billing_project.name,
+            workspace_slug=self.workspace.name,
+            group_slug=self.group.name,
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace.billing_project.name,
+                workspace_slug=self.workspace.name,
+                group_slug=self.group.name,
+            )
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace.billing_project.name,
+                workspace_slug=self.workspace.name,
+                group_slug=self.group.name,
+            )
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.WorkspaceGroupSharingForm
+        )
+
+    def test_form_hidden_input(self):
+        """The proper inputs are hidden in the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.WorkspaceGroupSharingForm
+        )
+        self.assertIsInstance(
+            response.context_data["form"].fields["workspace"].widget, HiddenInput
+        )
+        self.assertIsInstance(
+            response.context_data["form"].fields["group"].widget, HiddenInput
+        )
+
+    def test_can_create_an_object_reader(self):
+        """Posting valid data to the form creates an object."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_can_create_a_writer_with_can_compute(self):
+        """Posting valid data to the form creates an object."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": True,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": True,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
+        self.assertEqual(new_object.can_compute, True)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project=billing_project
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_msg,
+            str(messages[0]),
+        )
+
+    def test_can_create_an_object_writer(self):
+        """Posting valid data to the form creates an object."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "WRITER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": False,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
+        self.assertEqual(new_object.can_compute, False)
+        responses.assert_call_count(url, 1)
+
+    def test_can_create_an_object_owner(self):
+        """Posting valid data to the form creates an object."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "OWNER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.OWNER,
+                "can_compute": False,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.WorkspaceGroupSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
+        self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
+        responses.assert_call_count(url, 1)
+
+    def test_success_redirect(self):
+        """After successfully creating an object, view redirects to the model's list view."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        json_data = [
+            {
+                "email": group.get_email(),
+                "accessLevel": "OWNER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_updated=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.OWNER,
+                "can_compute": False,
+            },
+        )
+        self.assertRedirects(
+            response,
+            models.WorkspaceGroupSharing.objects.latest("pk").get_absolute_url(),
+        )
+        responses.assert_call_count(url, 1)
+
+    def test_get_duplicate_object(self):
+        """Redirects to detail view if object already exists."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory(
+            group=group,
+            workspace=workspace,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
+            ),
+            follow=True,
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        # No new object was created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        # A message exists.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_already_exists,
+            str(messages[0]),
+        )
+
+    def test_post_duplicate_object(self):
+        """Cannot create a second object for the same workspace and group with the same access level."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory(
+            group=group,
+            workspace=workspace,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                obj.workspace.billing_project.name, obj.workspace.name, obj.group.name
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        # No new object was created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        # A message exists.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_already_exists,
+            str(messages[0]),
+        )
+
+    def test_get_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.get(
+            self.get_url(
+                self.workspace.billing_project.name, self.workspace.name, "foo"
+            )
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace.billing_project.name,
+                workspace_slug=self.workspace.name,
+                group_slug="foo",
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_post_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.post(
+            self.get_url(
+                self.workspace.billing_project.name, self.workspace.name, "foo"
+            ),
+            {
+                "group": self.group.pk + 1,
+                "workspace": self.workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": False,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace.billing_project.name,
+                workspace_slug=self.workspace.name,
+                group_slug="foo",
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_get_billing_project_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.get(
+            self.get_url("foo", self.workspace.name, self.group.name)
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug="foo",
+                workspace_slug=self.workspace.name,
+                group_slug=self.group,
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_post_billing_project_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.post(
+            self.get_url("foo", self.workspace.name, self.group.name),
+            {
+                "group": self.group.pk,
+                "workspace": self.workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": False,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug="foo",
+                workspace_slug=self.workspace.name,
+                group_slug=self.group,
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_get_workspace_not_found(self):
+        """Raises 404 if workspace in URL does not exist when posting data."""
+        # Create a workspace with the same name but different billing project.
+        factories.WorkspaceFactory.create(name="foo")
+        request = self.factory.get(
+            self.get_url(self.workspace.billing_project.name, "foo", self.group.name)
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace.billing_project.name,
+                workspace_slug="foo",
+                group_slug=self.group.name,
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_post_workspace_not_found(self):
+        """Raises 404 if workspace in URL does not exist when posting data."""
+        # Create a workspace with the same name but different billing project.
+        factories.WorkspaceFactory.create(name="foo")
+        request = self.factory.post(
+            self.get_url(self.workspace.billing_project.name, "foo", self.group.name),
+            {
+                "group": self.group.pk,
+                "workspace": self.workspace.pk + 1,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": False,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace.billing_project.name,
+                workspace_slug="foo",
+                group_slug=self.group.name,
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_invalid_input_access(self):
+        """Posting invalid data to access field does not create an object."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": "foo",
+                "can_compute": False,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("access", form.errors.keys())
+        self.assertIn("valid choice", form.errors["access"][0])
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_invalid_reader_with_can_compute(self):
+        """Posting invalid data to access field does not create an object."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": True,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertEqual(len(form.non_field_errors()), 1)
+        self.assertIn("cannot be granted compute", form.non_field_errors()[0])
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors.keys())
+        self.assertIn("required", form.errors["group"][0])
+        self.assertIn("workspace", form.errors.keys())
+        self.assertIn("required", form.errors["workspace"][0])
+        self.assertIn("access", form.errors.keys())
+        self.assertIn("required", form.errors["access"][0])
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_post_blank_data_access(self):
+        """Posting blank data to the access field does not create an object."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "can_compute": False,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("access", form.errors.keys())
+        self.assertIn("required", form.errors["access"][0])
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_invalid_anvil_group_does_not_exist(self):
+        """No object is saved if the group doesn't exist on AnVIL but does exist in the app."""
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        workspace = factories.WorkspaceFactory.create(
+            name="test-workspace", billing_project__name="test-billing-project"
+        )
+        json_data = [
+            {
+                "email": "test-group@firecloud.org",
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        url = (
+            self.entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json=self.get_api_json_response(users_not_found=json_data),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        # The form is valid, but there was a different error.
+        self.assertTrue(form.is_valid())
+        self.assertEqual(response.status_code, 200)
+        # Check for the correct message.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            views.WorkspaceGroupSharingCreate.message_group_not_found,
+            str(messages[0]),
+        )
+        responses.assert_call_count(url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        url = (
+            self.entry_point
+            + "/api/workspaces/"
+            + workspace.billing_project.name
+            + "/"
+            + workspace.name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        responses.add(
+            responses.PATCH,
+            url,
+            status=500,
+            json={"message": "workspace group access create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            ),
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
