@@ -12389,6 +12389,18 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             response.context_data["form"], forms.WorkspaceGroupSharingForm
         )
 
+    def test_context_workspace(self):
+        """Context contains the workspace."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+            )
+        )
+        self.assertTrue("workspace" in response.context_data)
+        self.assertEqual(response.context_data["workspace"], self.workspace)
+
     def test_form_hidden_input(self):
         """The proper inputs are hidden in the form."""
         self.client.force_login(self.user)
@@ -13167,6 +13179,17 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             response.context_data["form"], forms.WorkspaceGroupSharingForm
         )
 
+    def test_context_group(self):
+        """Context contains the group."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.group.name,
+            )
+        )
+        self.assertTrue("group" in response.context_data)
+        self.assertEqual(response.context_data["group"], self.group)
+
     def test_form_hidden_input(self):
         """The proper inputs are hidden in the form."""
         self.client.force_login(self.user)
@@ -13911,6 +13934,32 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         self.assertIsInstance(
             response.context_data["form"], forms.WorkspaceGroupSharingForm
         )
+
+    def test_context_group(self):
+        """Context contains the group."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        self.assertTrue("group" in response.context_data)
+        self.assertEqual(response.context_data["group"], self.group)
+
+    def test_context_workspace(self):
+        """Context contains the workspace."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace.billing_project.name,
+                self.workspace.name,
+                self.group.name,
+            )
+        )
+        self.assertTrue("workspace" in response.context_data)
+        self.assertEqual(response.context_data["workspace"], self.workspace)
 
     def test_form_hidden_input(self):
         """The proper inputs are hidden in the form."""
