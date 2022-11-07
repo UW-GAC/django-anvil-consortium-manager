@@ -111,6 +111,11 @@ managed_group_patterns = (
 workspace_sharing_patterns = (
     [
         path(
+            "new/",
+            views.WorkspaceGroupSharingCreateByWorkspace.as_view(),
+            name="new",
+        ),
+        path(
             "<slug:group_slug>/",
             views.WorkspaceGroupSharingDetail.as_view(),
             name="detail",

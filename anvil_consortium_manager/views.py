@@ -1781,6 +1781,63 @@ class WorkspaceGroupSharingCreate(
         return super().form_valid(form)
 
 
+class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
+    """View to create a new WorkspaceGroupSharing object for the workspace specified in the url."""
+
+    model = models.WorkspaceGroupSharing
+    form_class = forms.WorkspaceGroupSharingForm
+    template_name = (
+        "anvil_consortium_manager/workspacegroupsharing_byworkspace_form.html"
+    )
+    success_msg = "Successfully shared Workspace with Group."
+    """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
+
+    message_group_not_found = "Managed Group not found on AnVIL."
+    """Message to display when the ManagedGroup was not found on AnVIL."""
+
+    message_already_exists = (
+        "This workspace has already been shared with this managed group."
+    )
+
+    def get_workspace(self):
+        try:
+            billing_project_slug = self.kwargs["billing_project_slug"]
+            workspace_slug = self.kwargs["workspace_slug"]
+            workspace = models.Workspace.objects.get(
+                billing_project__name=billing_project_slug, name=workspace_slug
+            )
+        except models.Workspace.DoesNotExist:
+            raise Http404("Workspace not found.")
+        return workspace
+
+    def get(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["workspace"] = self.workspace
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["workspace"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace"] = self.workspace
+        return context
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+
 class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     """View to create a new WorkspaceGroupSharing object for the workspace and group specified in the url."""
 
