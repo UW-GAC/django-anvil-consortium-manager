@@ -60,7 +60,9 @@
 
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:audit_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Audit sharing</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
+
+  <a href="{% url 'anvil_consortium_manager:workspaces:audit_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
 </p>
 {% if show_edit_links %}
 <p>
