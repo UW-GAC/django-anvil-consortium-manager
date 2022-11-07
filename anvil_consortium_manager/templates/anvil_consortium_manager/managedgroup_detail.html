@@ -54,7 +54,7 @@
       <h2 class="accordion-header" id="headingWorkspaceAccessOne">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspaceAccessOne" aria-expanded="false" aria-controls="collapseWorkspaceAccessOne">
           <span class="fa-solid fa-computer mx-2"></span>
-          View workspaces that this group has access to
+          View workspaces shared with this group
           <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
         </button>
       </h2>
@@ -141,7 +141,8 @@
 
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:audit_membership' slug=object.name %}" class="btn btn-primary" role="button">Audit membership</a>
+  <a href="{% url 'anvil_consortium_manager:managed_groups:sharing:new' group_slug=object.name %}" class="btn btn-primary" role="button">Share a workspace with this group</a>
+  <a href="{% url 'anvil_consortium_manager:managed_groups:audit_membership' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
 </p>
 {% if show_edit_links %}
 <p>

@@ -85,6 +85,16 @@ member_account_patterns = (
     "member_accounts",
 )
 
+managed_group_sharing_patterns = (
+    [
+        path(
+            "new/",
+            views.WorkspaceGroupSharingCreateByGroup.as_view(),
+            name="new",
+        ),
+    ],
+    "sharing",
+)
 managed_group_patterns = (
     [
         path("", views.ManagedGroupList.as_view(), name="list"),
@@ -104,6 +114,7 @@ managed_group_patterns = (
         path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
+        path("<slug:group_slug>/sharing/", include(managed_group_sharing_patterns)),
     ],
     "managed_groups",
 )
@@ -111,9 +122,19 @@ managed_group_patterns = (
 workspace_sharing_patterns = (
     [
         path(
+            "new/",
+            views.WorkspaceGroupSharingCreateByWorkspace.as_view(),
+            name="new",
+        ),
+        path(
             "<slug:group_slug>/",
             views.WorkspaceGroupSharingDetail.as_view(),
             name="detail",
+        ),
+        path(
+            "<slug:group_slug>/new/",
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.as_view(),
+            name="new_by_group",
         ),
         path(
             "<slug:group_slug>/update/",
