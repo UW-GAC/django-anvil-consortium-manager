@@ -1787,7 +1787,7 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
     model = models.WorkspaceGroupSharing
     form_class = forms.WorkspaceGroupSharingForm
     template_name = (
-        "anvil_consortium_manager/workspacegroupsharing_byworkspace_form.html"
+        "anvil_consortium_manager/workspacegroupsharing_form_byworkspace.html"
     )
     success_msg = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
@@ -1844,7 +1844,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     model = models.WorkspaceGroupSharing
     form_class = forms.WorkspaceGroupSharingForm
     template_name = (
-        "anvil_consortium_manager/workspacegroupsharing_byworkspacegroup_form.html"
+        "anvil_consortium_manager/workspacegroupsharing_form_byworkspacegroup.html"
     )
     success_msg = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
