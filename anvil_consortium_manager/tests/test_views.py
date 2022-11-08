@@ -10739,6 +10739,506 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
+class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, TestCase):
+
+    api_success_code = 204
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.account = factories.AccountFactory.create()
+        self.group = factories.ManagedGroupFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:managed_groups:member_accounts:new", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupAccountMembershipCreateByGroupAccount.as_view()
+
+    def get_api_json_response(
+        self, invites_sent=[], users_not_found=[], users_updated=[]
+    ):
+        return {
+            "invitesSent": invites_sent,
+            "usersNotFound": users_not_found,
+            "usersUpdated": users_updated,
+        }
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(self.group.name, self.account.uuid))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.group.name, self.account.uuid),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url(self.group.name, self.account.uuid))
+        request.user = self.user
+        response = self.get_view()(
+            request, group_slug=self.group.name, account_uuid=self.account.uuid
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.group.name, self.account.uuid))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request, group_slug=self.group.name, account_uuid=self.account.uuid
+            )
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(self.group.name, self.account.uuid))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request, group_slug=self.group.name, account_slug=self.account.uuid
+            )
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, self.account.uuid))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.GroupAccountMembershipForm
+        )
+
+    def test_context_group(self):
+        """Context contains the group."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, self.account.uuid))
+        self.assertTrue("group" in response.context_data)
+        self.assertEqual(response.context_data["group"], self.group)
+
+    def test_context_account(self):
+        """Context contains the account."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, self.account.uuid))
+        self.assertTrue("account" in response.context_data)
+        self.assertEqual(response.context_data["account"], self.account)
+
+    def test_form_hidden_input(self):
+        """The proper inputs are hidden in the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, self.account.uuid))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"].fields["account"].widget, HiddenInput
+        )
+        self.assertIsInstance(
+            response.context_data["form"].fields["group"].widget, HiddenInput
+        )
+
+    def test_can_create_an_object_member(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.group.name
+            + "/MEMBER/"
+            + self.account.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupAccountMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupAccountMembership)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(new_object.group, self.group)
+        self.assertEqual(new_object.account, self.account)
+        responses.assert_call_count(url, 1)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.group.name
+            + "/MEMBER/"
+            + self.account.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupAccountMembershipCreate.success_msg, str(messages[0])
+        )
+
+    def test_can_create_an_object_admin(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.group.name
+            + "/ADMIN/"
+            + self.account.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupAccountMembership.ADMIN,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupAccountMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupAccountMembership)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
+        self.assertEqual(new_object.group, self.group)
+        self.assertEqual(new_object.account, self.account)
+        responses.assert_call_count(url, 1)
+
+    def test_success_redirect(self):
+        """After successfully creating an object, view redirects to the model's list view."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.group.name
+            + "/ADMIN/"
+            + self.account.email
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupAccountMembership.ADMIN,
+            },
+        )
+        obj = models.GroupAccountMembership.objects.latest("pk")
+        self.assertRedirects(response, obj.get_absolute_url())
+        responses.assert_call_count(url, 1)
+
+    def test_get_duplicate_object(self):
+        """Redirects to detail view if object already exists."""
+        obj = factories.GroupAccountMembershipFactory.create(
+            group=self.group,
+            account=self.account,
+            role=models.GroupAccountMembership.MEMBER,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.group.name, self.account.uuid),
+            follow=True,
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        # No new object was created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        # A message exists.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupAccountMembershipCreateByGroupAccount.message_already_exists,
+            str(messages[0]),
+        )
+
+    def test_post_duplicate_object(self):
+        """Cannot create a second object for the same account and group with a different role."""
+        obj = factories.GroupAccountMembershipFactory.create(
+            group=self.group,
+            account=self.account,
+            role=models.GroupAccountMembership.MEMBER,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupAccountMembership.ADMIN,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        # No new object was created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        obj.refresh_from_db()
+        self.assertEqual(obj.role, models.GroupAccountMembership.MEMBER)
+        # A message exists.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupAccountMembershipCreateByGroupAccount.message_already_exists,
+            str(messages[0]),
+        )
+
+    def test_get_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.get(self.get_url("foo", self.account.uuid))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, group_slug="foo", account_uuid=self.account.uuid)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_post_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.post(
+            self.get_url(
+                "foo",
+                self.account.uuid,
+            ),
+            {
+                "group": self.group.pk + 1,
+                "account": self.account,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                group_slug="foo",
+                account_uuid=self.account.uuid,
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_get_account_not_found(self):
+        """Raises 404 if account in URL does not exist."""
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(self.group.name, uuid))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, group_slug=self.group.name, account_uuid=uuid)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_post_account_not_found(self):
+        """Raises 404 if account in URL does not exist when posting data."""
+        uuid = uuid4()
+        request = self.factory.post(
+            self.get_url(
+                self.group.name,
+                uuid,
+            ),
+            {
+                "group": self.group.pk,
+                "account": uuid,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                group_slug=self.group.name,
+                account_uuid=uuid,
+            )
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_invalid_input_role(self):
+        """Posting invalid data to group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {"group": self.group.pk, "account": self.account.pk, "role": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("valid choice", form.errors["role"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid), {}
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors.keys())
+        self.assertIn("required", form.errors["group"][0])
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("required", form.errors["account"][0])
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_post_blank_data_group(self):
+        """Posting blank data to the group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {"account": self.account.pk, "role": models.GroupAccountMembership.MEMBER},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors.keys())
+        self.assertIn("required", form.errors["group"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_post_blank_data_account(self):
+        """Posting blank data to the account field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {"group": self.group.pk, "role": models.GroupAccountMembership.MEMBER},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("required", form.errors["account"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_post_blank_data_role(self):
+        """Posting blank data to the role field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {"group": self.group.pk, "account": self.account.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_cannot_add_account_if_group_not_managed_by_app(self):
+        """Cannot add an account to a group if the group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": group.pk,
+                "account": self.account.pk,
+                "role": models.GroupAccountMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors.keys())
+        self.assertIn("valid choice", form.errors["group"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.group.name
+            + "/MEMBER/"
+            + self.account.email
+        )
+        responses.add(
+            responses.PUT,
+            url,
+            status=500,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_cannot_add_inactive_account_to_group(self):
+        """Cannot add an inactive account to a group."""
+        account = factories.AccountFactory.create(status=models.Account.INACTIVE_STATUS)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, account.uuid),
+            {
+                "group": self.group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("account", form.errors.keys())
+        self.assertIn("valid choice", form.errors["account"][0])
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+
 class GroupAccountMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""

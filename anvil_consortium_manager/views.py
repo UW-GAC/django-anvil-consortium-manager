@@ -1597,6 +1597,81 @@ class GroupAccountMembershipCreate(
         return super().form_valid(form)
 
 
+class GroupAccountMembershipCreateByGroupAccount(GroupAccountMembershipCreate):
+    """View to create a new GroupAccountMembership object for the group and account specified in the url."""
+
+    template_name = (
+        "anvil_consortium_manager/groupaccountmembership_form_bygroupaccount.html"
+    )
+
+    message_group_not_found = "Managed Group not found on AnVIL."
+    """Message to display when the ManagedGroup was not found on AnVIL."""
+
+    message_already_exists = "This Account is already a member of this Managed Group."
+
+    def get_account(self):
+        try:
+            uuid = self.kwargs["account_uuid"]
+            account = models.Account.objects.get(uuid=uuid)
+        except models.Account.DoesNotExist:
+            raise Http404("Account not found.")
+        return account
+
+    def get_group(self):
+        try:
+            group_slug = self.kwargs["group_slug"]
+            group = models.ManagedGroup.objects.get(name=group_slug)
+        except models.ManagedGroup.DoesNotExist:
+            raise Http404("Workspace or ManagedGroup not found.")
+        return group
+
+    def get(self, request, *args, **kwargs):
+        self.account = self.get_account()
+        self.group = self.get_group()
+        try:
+            obj = models.GroupAccountMembership.objects.get(
+                account=self.account, group=self.group
+            )
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.GroupAccountMembership.DoesNotExist:
+            return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.account = self.get_account()
+        self.group = self.get_group()
+        try:
+            obj = models.GroupAccountMembership.objects.get(
+                account=self.account, group=self.group
+            )
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.GroupAccountMembership.DoesNotExist:
+            return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["account"] = self.account
+        initial["group"] = self.group
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["account"].widget = HiddenInput()
+        form.fields["group"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["account"] = self.account
+        context["group"] = self.group
+        return context
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+
 class GroupAccountMembershipList(
     auth.AnVILConsortiumManagerViewRequired, SingleTableView
 ):
