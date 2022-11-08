@@ -72,6 +72,11 @@ member_group_patterns = (
 member_account_patterns = (
     [
         path(
+            "new",
+            views.GroupAccountMembershipCreateByGroup.as_view(),
+            name="new",
+        ),
+        path(
             "<uuid:account_uuid>/",
             views.GroupAccountMembershipDetail.as_view(),
             name="detail",
@@ -79,7 +84,7 @@ member_account_patterns = (
         path(
             "<uuid:account_uuid>/new/",
             views.GroupAccountMembershipCreateByGroupAccount.as_view(),
-            name="new",
+            name="new_by_account",
         ),
         path(
             "<uuid:account_uuid>/delete/",
