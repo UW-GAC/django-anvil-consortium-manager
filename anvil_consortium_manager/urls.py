@@ -48,6 +48,11 @@ account_patterns = (
             views.AccountLinkVerify.as_view(),
             name="verify",
         ),
+        path(
+            "<uuid:uuid>/add_to_group/",
+            views.GroupAccountMembershipCreateByAccount.as_view(),
+            name="add_to_group",
+        ),
         path("audit/", views.AccountAudit.as_view(), name="audit"),
     ],
     "accounts",
