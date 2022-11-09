@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.4 (2022-11-09)
 
 - Only show links to views requiring edit permission if the user has that permission.
 - Add a get_absolute_url method for `WorkspaceData` which returns the absolute url of the associated workspace.
