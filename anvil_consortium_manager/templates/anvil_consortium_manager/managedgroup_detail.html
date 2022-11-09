@@ -142,9 +142,13 @@
 
 <p>
   <a href="{% url 'anvil_consortium_manager:managed_groups:sharing:new' group_slug=object.name %}" class="btn btn-primary" role="button">Share a workspace with this group</a>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:new' group_slug=object.name %}" class="btn btn-primary" role="button">Add an account to this group</a>
 </p>
 
+<p>
+  <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:new' group_slug=object.name %}" class="btn btn-primary" role="button">Add an account to this group</a>
+  <a href="{% url 'anvil_consortium_manager:managed_groups:member_groups:new' parent_group_slug=object.name %}" class="btn btn-primary" role="button">Add a group to this group</a>
+  <a href="{% url 'anvil_consortium_manager:managed_groups:add_to_group' group_slug=object.name %}" class="btn btn-primary" role="button">Add this group to another group</a>
+</p>
 <p>
   <a href="{% url 'anvil_consortium_manager:managed_groups:audit_membership' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
 </p>

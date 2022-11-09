@@ -1450,6 +1450,196 @@ class GroupGroupMembershipCreate(
         return super().form_valid(form)
 
 
+class GroupGroupMembershipCreateByParent(GroupGroupMembershipCreate):
+    """View to create a new GroupGroupMembership object for the parent group specified in the url."""
+
+    template_name = "anvil_consortium_manager/groupgroupmembership_form_byparent.html"
+    message_not_managed_by_app = "Parent group is not managed by this app."
+
+    def get_parent_group(self):
+        try:
+            name = self.kwargs["parent_group_slug"]
+            group = models.ManagedGroup.objects.get(name=name)
+        except models.ManagedGroup.DoesNotExist:
+            raise Http404("ManagedGroup not found.")
+        return group
+
+    def check_group_errors(self):
+        """Check parent and child groups and return an error message upon error."""
+        if not self.parent_group.is_managed_by_app:
+            return self.message_not_managed_by_app
+
+    def get(self, request, *args, **kwargs):
+        self.parent_group = self.get_parent_group()
+        error = self.check_group_errors()
+        if error:
+            messages.error(self.request, error)
+            return HttpResponseRedirect(self.parent_group.get_absolute_url())
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.parent_group = self.get_parent_group()
+        error = self.check_group_errors()
+        if error:
+            messages.error(self.request, error)
+            return HttpResponseRedirect(self.parent_group.get_absolute_url())
+        return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["parent_group"] = self.parent_group
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["parent_group"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["parent_group"] = self.parent_group
+        return context
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+
+class GroupGroupMembershipCreateByChild(GroupGroupMembershipCreate):
+    """View to create a new GroupGroupMembership object for the child group specified in the url."""
+
+    template_name = "anvil_consortium_manager/groupgroupmembership_form_bychild.html"
+
+    def get_child_group(self):
+        try:
+            name = self.kwargs["group_slug"]
+            group = models.ManagedGroup.objects.get(name=name)
+        except models.ManagedGroup.DoesNotExist:
+            raise Http404("ManagedGroup not found.")
+        return group
+
+    def get(self, request, *args, **kwargs):
+        self.child_group = self.get_child_group()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.child_group = self.get_child_group()
+        return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["child_group"] = self.child_group
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["child_group"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["child_group"] = self.child_group
+        return context
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+
+class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
+    """View to create a new GroupGroupMembership object for the parent and child groups specified in the url."""
+
+    template_name = (
+        "anvil_consortium_manager/groupgroupmembership_form_byparentchild.html"
+    )
+
+    message_already_exists = (
+        "Child group is already a member of the parent Managed Group."
+    )
+    message_cannot_add_group_to_itself = "Cannot add a group to itself as a member."
+    message_circular_relationship = "Cannot add a circular group relationship."
+    message_not_managed_by_app = "Parent group is not managed by this app."
+
+    def get_parent_group(self):
+        try:
+            name = self.kwargs["parent_group_slug"]
+            group = models.ManagedGroup.objects.get(name=name)
+        except models.ManagedGroup.DoesNotExist:
+            raise Http404("ManagedGroup not found.")
+        return group
+
+    def get_child_group(self):
+        try:
+            name = self.kwargs["child_group_slug"]
+            group = models.ManagedGroup.objects.get(name=name)
+        except models.ManagedGroup.DoesNotExist:
+            raise Http404("ManagedGroup not found.")
+        return group
+
+    def check_group_errors(self):
+        """Check parent and child groups and return an error message upon error."""
+        if not self.parent_group.is_managed_by_app:
+            return self.message_not_managed_by_app
+        if self.parent_group == self.child_group:
+            return self.message_cannot_add_group_to_itself
+        if self.parent_group in self.child_group.get_all_children():
+            return self.message_circular_relationship
+
+    def get(self, request, *args, **kwargs):
+        self.parent_group = self.get_parent_group()
+        self.child_group = self.get_child_group()
+        error = self.check_group_errors()
+        if error:
+            messages.error(self.request, error)
+            return HttpResponseRedirect(self.parent_group.get_absolute_url())
+        try:
+            obj = models.GroupGroupMembership.objects.get(
+                parent_group=self.parent_group, child_group=self.child_group
+            )
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.GroupGroupMembership.DoesNotExist:
+            return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.parent_group = self.get_parent_group()
+        self.child_group = self.get_child_group()
+        error = self.check_group_errors()
+        if error:
+            messages.error(self.request, error)
+            return HttpResponseRedirect(self.parent_group.get_absolute_url())
+        try:
+            obj = models.GroupGroupMembership.objects.get(
+                parent_group=self.parent_group, child_group=self.child_group
+            )
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.GroupGroupMembership.DoesNotExist:
+            return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["parent_group"] = self.parent_group
+        initial["child_group"] = self.child_group
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["parent_group"].widget = HiddenInput()
+        form.fields["child_group"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["parent_group"] = self.parent_group
+        context["child_group"] = self.child_group
+        return context
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+
 class GroupGroupMembershipList(
     auth.AnVILConsortiumManagerViewRequired, SingleTableView
 ):

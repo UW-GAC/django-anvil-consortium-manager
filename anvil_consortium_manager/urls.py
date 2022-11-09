@@ -61,9 +61,19 @@ account_patterns = (
 member_group_patterns = (
     [
         path(
+            "new/",
+            views.GroupGroupMembershipCreateByParent.as_view(),
+            name="new",
+        ),
+        path(
             "<slug:child_group_slug>/",
             views.GroupGroupMembershipDetail.as_view(),
             name="detail",
+        ),
+        path(
+            "<slug:child_group_slug>/new/",
+            views.GroupGroupMembershipCreateByParentChild.as_view(),
+            name="new_by_child",
         ),
         path(
             "<slug:child_group_slug>/delete/",
@@ -130,6 +140,11 @@ managed_group_patterns = (
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
         path("<slug:group_slug>/sharing/", include(managed_group_sharing_patterns)),
+        path(
+            "<slug:group_slug>/add_to_group/",
+            views.GroupGroupMembershipCreateByChild.as_view(),
+            name="add_to_group",
+        ),
     ],
     "managed_groups",
 )

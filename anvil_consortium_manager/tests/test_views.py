@@ -9717,6 +9717,1462 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
+class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
+
+    api_success_code = 204
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.parent_group = factories.ManagedGroupFactory.create()
+        self.child_group = factories.ManagedGroupFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:managed_groups:member_groups:new", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupGroupMembershipCreateByParent.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(self.parent_group.name))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.parent_group.name),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url(self.parent_group.name))
+        request.user = self.user
+        response = self.get_view()(request, parent_group_slug=self.parent_group.name)
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.parent_group.name))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, parent_group_slug=self.parent_group.name)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(self.parent_group.name))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, parent_group_slug=self.parent_group.name)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.parent_group.name))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.GroupGroupMembershipForm
+        )
+
+    def test_form_hidden_input(self):
+        """The proper inputs are hidden in the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.parent_group.name))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"].fields["parent_group"].widget, HiddenInput
+        )
+
+    def test_can_create_an_object_member(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(new_object.parent_group, self.parent_group)
+        self.assertEqual(new_object.child_group, self.child_group)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParent.success_msg, str(messages[0])
+        )
+
+    def test_can_create_an_object_admin(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/ADMIN/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        responses.assert_call_count(url, 1)
+
+    def test_redirects_to_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/ADMIN/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        self.assertRedirects(
+            response,
+            models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
+        )
+        responses.assert_call_count(url, 1)
+
+    def test_cannot_create_duplicate_object(self):
+        """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name),
+            {
+                "parent_group": obj.parent_group.pk,
+                "child_group": obj.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("already exists", form.non_field_errors()[0])
+        self.assertQuerysetEqual(
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=obj.pk),
+        )
+
+    def test_invalid_input_child(self):
+        """Posting invalid data to child_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": 100,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("valid choice", form.errors["child_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_get_parent_group_not_found(self):
+        """Raises 404 if parent group in URL does not exist when posting data."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, parent_group_slug="foo")
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_parent_group_not_found(self):
+        """Raises 404 if parent group in URL does not exist when posting data."""
+        request = self.factory.post(
+            self.get_url("foo"),
+            {
+                "parent_group": self.parent_group.pk + 1,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, parent_group_slug="foo")
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_invalid_input_role(self):
+        """Posting invalid data to group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": "foo",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("valid choice", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(self.parent_group.name), {})
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_parent_group(self):
+        """Posting blank data to the parent_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {"child_group": self.child_group.pk, "role": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_child_group(self):
+        """Posting blank data to the child_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {"parent_group": self.parent_group.pk, "role": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_role(self):
+        """Posting blank data to the role field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {"parent_group": self.parent_group.pk, "child_group": self.child_group.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cannot_add_group_to_itself(self):
+        """Cannot add a group to itself.."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.parent_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        # import ipdb; ipdb.set_trace()
+        self.assertEqual(len(form.non_field_errors()), 1)
+        self.assertIn("itself", form.non_field_errors()[0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cant_add_circular_relationship(self):
+        """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
+        grandparent = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(child.name),
+            {
+                "parent_group": child.pk,
+                "child_group": grandparent.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.non_field_errors()), 1)
+        self.assertIn("circular", form.non_field_errors()[0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+
+    def test_get_cannot_add_child_group_if_parent_not_managed_by_app(self):
+        """Cannot add a child group to a parent group if the parent group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(group.name),
+            follow=True,
+        )
+        self.assertRedirects(response, group.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
+            str(messages[0]),
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_cannot_add_child_group_if_parent_not_managed_by_app(self):
+        """Cannot add a child group to a parent group if the parent group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name),
+            {
+                "parent_group": group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, group.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
+            str(messages[0]),
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(
+            responses.PUT,
+            url,
+            status=500,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+
+class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
+
+    api_success_code = 204
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.parent_group = factories.ManagedGroupFactory.create()
+        self.child_group = factories.ManagedGroupFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:managed_groups:add_to_group", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupGroupMembershipCreateByChild.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(self.child_group.name))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.child_group.name),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(self.get_url(self.child_group.name))
+        request.user = self.user
+        response = self.get_view()(request, group_slug=self.child_group.name)
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.child_group.name))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, group_slug=self.child_group.name)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(self.child_group.name))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, group_slug=self.child_group.name)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.child_group.name))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.GroupGroupMembershipForm
+        )
+
+    def test_form_hidden_input(self):
+        """The proper inputs are hidden in the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.child_group.name))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"].fields["child_group"].widget, HiddenInput
+        )
+
+    def test_can_create_an_object_member(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(new_object.parent_group, self.parent_group)
+        self.assertEqual(new_object.child_group, self.child_group)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParent.success_msg, str(messages[0])
+        )
+
+    def test_can_create_an_object_admin(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/ADMIN/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        responses.assert_call_count(url, 1)
+
+    def test_redirects_to_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/ADMIN/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        self.assertRedirects(
+            response,
+            models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
+        )
+        responses.assert_call_count(url, 1)
+
+    def test_cannot_create_duplicate_object(self):
+        """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.child_group.name),
+            {
+                "parent_group": obj.parent_group.pk,
+                "child_group": obj.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("already exists", form.non_field_errors()[0])
+        self.assertQuerysetEqual(
+            models.GroupGroupMembership.objects.all(),
+            models.GroupGroupMembership.objects.filter(pk=obj.pk),
+        )
+
+    def test_invalid_input_parent(self):
+        """Posting invalid data to parent_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": 100,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("valid choice", form.errors["parent_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_get_child_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, group_slug="foo")
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_child_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        request = self.factory.post(
+            self.get_url("foo"),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk + 1,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, group_slug="foo")
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_invalid_input_role(self):
+        """Posting invalid data to group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": "foo",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("valid choice", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(self.child_group.name), {})
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_parent_group(self):
+        """Posting blank data to the parent_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {"child_group": self.child_group.pk, "role": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_child_group(self):
+        """Posting blank data to the child_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {"parent_group": self.parent_group.pk, "role": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_role(self):
+        """Posting blank data to the role field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {"parent_group": self.parent_group.pk, "child_group": self.child_group.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cannot_add_group_to_itself(self):
+        """Cannot add a group to itself.."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.child_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        # import ipdb; ipdb.set_trace()
+        self.assertEqual(len(form.non_field_errors()), 1)
+        self.assertIn("itself", form.non_field_errors()[0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cant_add_circular_relationship(self):
+        """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
+        grandparent = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(grandparent.name),
+            {
+                "parent_group": child.pk,
+                "child_group": grandparent.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.non_field_errors()), 1)
+        self.assertIn("circular", form.non_field_errors()[0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(
+            responses.PUT,
+            url,
+            status=500,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+
+class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCase):
+
+    api_success_code = 204
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.parent_group = factories.ManagedGroupFactory.create()
+        self.child_group = factories.ManagedGroupFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:managed_groups:member_groups:new_by_child",
+            args=args,
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.GroupGroupMembershipCreateByParentChild.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(
+            self.get_url(self.parent_group.name, self.child_group.name)
+        )
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.parent_group.name, self.child_group.name),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        request = self.factory.get(
+            self.get_url(self.parent_group.name, self.child_group.name)
+        )
+        request.user = self.user
+        response = self.get_view()(
+            request,
+            parent_group_slug=self.parent_group.name,
+            child_group_slug=self.child_group.name,
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(
+            self.get_url(self.parent_group.name, self.child_group.name)
+        )
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request,
+                parent_group_slug=self.parent_group.name,
+                child_group_slug=self.child_group.name,
+            )
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(
+            self.get_url(self.parent_group.name, self.child_group.name)
+        )
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request,
+                parent_group_slug=self.parent_group.name,
+                child_group_slug=self.child_group.name,
+            )
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.parent_group.name, self.child_group.name)
+        )
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.GroupGroupMembershipForm
+        )
+
+    def test_form_hidden_input(self):
+        """The proper inputs are hidden in the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.parent_group.name, self.child_group.name)
+        )
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"].fields["child_group"].widget, HiddenInput
+        )
+        self.assertIsInstance(
+            response.context_data["form"].fields["parent_group"].widget, HiddenInput
+        )
+
+    def test_can_create_an_object_member(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(new_object.parent_group, self.parent_group)
+        self.assertEqual(new_object.child_group, self.child_group)
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.success_msg, str(messages[0])
+        )
+
+    def test_can_create_an_object_admin(self):
+        """Posting valid data to the form creates an object."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/ADMIN/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.GroupGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.GroupGroupMembership)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        responses.assert_call_count(url, 1)
+
+    def test_redirects_to_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/ADMIN/"
+            + self.child_group.get_email()
+        )
+        responses.add(responses.PUT, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+        )
+        self.assertRedirects(
+            response,
+            models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
+        )
+        responses.assert_call_count(url, 1)
+
+    def test_get_duplicate_object_redirect_cannot_create_duplicate_object(self):
+        """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.parent_group.name, obj.child_group.name), follow=True
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_already_exists,
+            str(messages[0]),
+        )
+
+    def test_post_duplicate_object_redirect_cannot_create_duplicate_object(self):
+        """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
+        obj = factories.GroupGroupMembershipFactory.create(
+            role=models.GroupGroupMembership.MEMBER
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name),
+            {
+                "parent_group": obj.parent_group.pk,
+                "child_group": obj.child_group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_already_exists,
+            str(messages[0]),
+        )
+
+    def test_get_parent_group_not_found(self):
+        """Raises 404 if parent group in URL does not exist when posting data."""
+        request = self.factory.get(self.get_url("foo", self.child_group.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request, parent_group_slug="foo", child_group_slug=self.child_group.name
+            )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_parent_group_not_found(self):
+        """Raises 404 if parent group in URL does not exist when posting data."""
+        request = self.factory.post(
+            self.get_url("foo", self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk + 1,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request, parent_group_slug="foo", child_group_slug=self.child_group.name
+            )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_get_child_group_not_found(self):
+        """Raises 404 if child group in URL does not exist when posting data."""
+        request = self.factory.get(self.get_url(self.parent_group.name, "foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                parent_group_slug=self.parent_group.name,
+                child_group_slug="foo",
+            )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_child_group_not_found(self):
+        """Raises 404 if parent group in URL does not exist when posting data."""
+        request = self.factory.post(
+            self.get_url(self.parent_group.name, "foo"),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk + 1,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                parent_group_slug=self.parent_group.name,
+                child_group_slug="foo",
+            )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_invalid_input_role(self):
+        """Posting invalid data to group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": "foo",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("valid choice", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name), {}
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_parent_group(self):
+        """Posting blank data to the parent_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {"child_group": self.child_group.pk, "role": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("parent_group", form.errors.keys())
+        self.assertIn("required", form.errors["parent_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_child_group(self):
+        """Posting blank data to the child_group field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {"parent_group": self.parent_group.pk, "role": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("child_group", form.errors.keys())
+        self.assertIn("required", form.errors["child_group"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_role(self):
+        """Posting blank data to the role field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {"parent_group": self.parent_group.pk, "child_group": self.child_group.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors.keys())
+        self.assertIn("required", form.errors["role"][0])
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cant_add_a_group_to_itself_member(self):
+        """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
+        group = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name, group.name),
+            {
+                "parent_group": group.pk,
+                "child_group": group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, group.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_cannot_add_group_to_itself,
+            str(messages[0]),
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cant_add_a_group_to_itself_admin(self):
+        """Cannot create a GroupGroupMembership object where the parent and child are the same group."""
+        group = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name, group.name),
+            {
+                "parent_group": group.pk,
+                "child_group": group.pk,
+                "role": models.GroupGroupMembership.ADMIN,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, group.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_cannot_add_group_to_itself,
+            str(messages[0]),
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_cant_add_circular_relationship(self):
+        """Cannot create a GroupGroupMembership object that makes a cirular relationship."""
+        grandparent = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(child.name, grandparent.name),
+            {
+                "parent_group": child.pk,
+                "child_group": grandparent.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, child.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_circular_relationship,
+            str(messages[0]),
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+
+    def test_get_cannot_add_child_group_if_parent_not_managed_by_app(self):
+        """Cannot add a child group to a parent group if the parent group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(group.name, self.child_group.name),
+            follow=True,
+        )
+        self.assertRedirects(response, group.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
+            str(messages[0]),
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_post_cannot_add_child_group_if_parent_not_managed_by_app(self):
+        """Cannot add a child group to a parent group if the parent group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name, self.child_group.name),
+            {
+                "parent_group": group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, group.get_absolute_url())
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
+            str(messages[0]),
+        )
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error(self):
+        """Shows a message if an AnVIL API error occurs."""
+        url = (
+            self.entry_point
+            + "/api/groups/"
+            + self.parent_group.name
+            + "/MEMBER/"
+            + self.child_group.get_email()
+        )
+        responses.add(
+            responses.PUT,
+            url,
+            status=500,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+
 class GroupGroupMembershipListTest(TestCase):
     def setUp(self):
         """Set up test class."""
