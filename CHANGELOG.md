@@ -8,7 +8,7 @@
 - Add Workspace and ManagedGroup methods to check whether a group has access to a workspace.
 - Rename the `WorkspaceGroupAccess` model to `WorkspaceGroupSharing`, which is more consistent with AnVIL terminology.
 - Reword "access" to "sharing" in WorkspaceGroupSharing-related views and templates.
-- Add more views for creating WorkspaceGroupSharing objects using url parameters.
+- Add more views for creating WorkspaceGroupSharing, GroupAccountMembership, and GroupGroupMembership objects using url parameters.
 
 ## 0.3 (2022-09-27)
 

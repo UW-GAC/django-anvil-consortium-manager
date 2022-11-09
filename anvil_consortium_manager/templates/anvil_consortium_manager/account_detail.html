@@ -61,6 +61,9 @@
 </div>
 
 
+<p>
+  <a href="{% url 'anvil_consortium_manager:accounts:add_to_group' uuid=object.uuid %}" class="btn btn-primary" role="button">Add this account to a group</a>
+</p>
 {% if show_edit_links %}
 <p>
   {% if show_deactivate_button %}
