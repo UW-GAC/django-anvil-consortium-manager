@@ -6,7 +6,7 @@
 
 {% block content %}
 
-  <h2>Add Account {{ account }} to Managed Group {{ group }}</h2>
+  <h2>Add {{ account }} to {{ group }}</h2>
 
   <form method="post">
     {% csrf_token %}
