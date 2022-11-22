@@ -34,6 +34,12 @@ class BillingProjectTest(TestCase):
         instance.save()
         self.assertIsInstance(instance, BillingProject)
 
+    def test_note_field(self):
+        instance = BillingProject(name="my_project", has_app_as_user=True, note="foo")
+        instance.save()
+        self.assertIsInstance(instance, BillingProject)
+        self.assertEqual(instance.note, "foo")
+
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         instance = BillingProject(name="my_project", has_app_as_user=True)
@@ -173,6 +179,14 @@ class AccountTest(TestCase):
         instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
         self.assertIsInstance(instance, Account)
+
+    def test_note_field(self):
+        instance = Account(
+            email="email@example.com", is_service_account=False, note="foo"
+        )
+        instance.save()
+        self.assertIsInstance(instance, Account)
+        self.assertEqual(instance.note, "foo")
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -364,6 +378,13 @@ class ManagedGroupTest(TestCase):
         instance = ManagedGroup(name="my_group")
         instance.save()
         self.assertIsInstance(instance, ManagedGroup)
+
+    def test_note_field(self):
+        """Creation using the model constructor and .save() works with a note field."""
+        instance = ManagedGroup(name="my_group", note="test note")
+        instance.save()
+        self.assertIsInstance(instance, ManagedGroup)
+        self.assertEqual(instance.note, "test note")
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -964,6 +985,19 @@ class WorkspaceTest(TestCase):
         )
         instance.save()
         self.assertIsInstance(instance, Workspace)
+
+    def test_note_field(self):
+        """Creation using the model constructor and .save() works when note is set."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            note="test note",
+        )
+        instance.save()
+        self.assertIsInstance(instance, Workspace)
+        self.assertEqual(instance.note, "test note")
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""

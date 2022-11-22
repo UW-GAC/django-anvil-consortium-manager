@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Add an optional note field to the `BillingProject`, `Account`, `ManagedGroup`, and `Workspace` models.
+
 ## 0.4 (2022-11-09)
 
 - Only show links to views requiring edit permission if the user has that permission.

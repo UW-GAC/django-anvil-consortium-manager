@@ -41,6 +41,7 @@ class BillingProject(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     has_app_as_user = models.BooleanField()
+    note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
     def __str__(self):
@@ -61,12 +62,14 @@ class BillingProject(TimeStampedModel):
         return response.status_code == 200
 
     @classmethod
-    def anvil_import(cls, billing_project_name):
+    def anvil_import(cls, billing_project_name, **kwargs):
         """BiillingProject class method to import an existing billing project from AnVIL."""
         try:
             billing_project = cls.objects.get(name=billing_project_name)
         except cls.DoesNotExist:
-            billing_project = cls(name=billing_project_name, has_app_as_user=True)
+            billing_project = cls(
+                name=billing_project_name, has_app_as_user=True, **kwargs
+            )
             billing_project.full_clean()
         else:
             # The billing project already exists in the database.
@@ -217,6 +220,8 @@ class Account(TimeStampedModel, ActivatorModel):
     )
     """The UserEmailEntry object used to verify the email, if the account was created by a user linking their email."""
 
+    note = models.TextField(blank=True, help_text="Additional notes.")
+
     history = HistoricalRecords()
     """Django simple history record for this model."""
 
@@ -332,6 +337,7 @@ class ManagedGroup(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     is_managed_by_app = models.BooleanField(default=True)
+    note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
     def __str__(self):
@@ -412,11 +418,11 @@ class ManagedGroup(TimeStampedModel):
             raise exceptions.AnVILGroupDeletionError(self.name)
 
     @classmethod
-    def anvil_import(cls, group_name):
+    def anvil_import(cls, group_name, **kwargs):
         """Import an existing group from AnVIL."""
         # Create the group but don't save it yet.
         # Assume that it's not managed by the app until we figure out that it is.
-        group = cls(name=group_name, is_managed_by_app=False)
+        group = cls(name=group_name, is_managed_by_app=False, **kwargs)
         # Make sure we don't already have it in the database.
         group.full_clean()
         # Note that we have to be a member of the group to import it.
@@ -601,6 +607,7 @@ class Workspace(TimeStampedModel):
     authorization_domains = models.ManyToManyField(
         "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
     )
+    note = models.TextField(blank=True)
 
     # If this doesn't work easily, we could switch to using generic relationships.
     workspace_type = models.CharField(max_length=255)
@@ -718,7 +725,9 @@ class Workspace(TimeStampedModel):
         AnVILAPIClient().delete_workspace(self.billing_project.name, self.name)
 
     @classmethod
-    def anvil_import(cls, billing_project_name, workspace_name, workspace_type):
+    def anvil_import(
+        cls, billing_project_name, workspace_name, workspace_type, note=""
+    ):
         """Create a new instance for a workspace that already exists on AnVIL.
 
         Methods calling this should handle AnVIL API exceptions appropriately.
@@ -756,7 +765,9 @@ class Workspace(TimeStampedModel):
 
                 # Do not set the Billing yet, since we might be importing it or creating it later.
                 # This is only to validate the other fields.
-                workspace = cls(name=workspace_name, workspace_type=workspace_type)
+                workspace = cls(
+                    name=workspace_name, workspace_type=workspace_type, note=note
+                )
                 workspace.clean_fields(exclude="billing_project")
                 # At this point, they should be valid objects.
 

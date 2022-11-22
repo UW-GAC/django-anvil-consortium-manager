@@ -51,9 +51,12 @@ class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.get_api_json_response(),
         )
-        billing_project = models.BillingProject.anvil_import(billing_project_name)
+        billing_project = models.BillingProject.anvil_import(
+            billing_project_name, note="test note"
+        )
         # Check values.
         self.assertEqual(billing_project.name, billing_project_name)
+        self.assertEqual(billing_project.note, "test note")
         # Check that it was saved.
         self.assertEqual(models.BillingProject.objects.count(), 1)
         # Make sure it's the workspace returned.
@@ -2363,6 +2366,32 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         models.Workspace.objects.get(pk=workspace.pk)
         # No additional billing projects were created.
         self.assertEqual(models.BillingProject.objects.count(), 1)
+
+    def test_anvil_import_with_note(self):
+        """Sets note if specified when importing."""
+        workspace_name = "test-workspace"
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        responses.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            DefaultWorkspaceAdapter().get_type(),
+            note="test note",
+        )
+        # Check workspace values.
+        self.assertEqual(workspace.billing_project, billing_project)
+        self.assertEqual(workspace.name, workspace_name)
+        self.assertEqual(workspace.note, "test note")
+        # Check that it was saved.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
 
     def test_anvil_import_billing_project_does_not_exist_in_django_db(self):
         """Can import a workspace if we are user of the billing project but it does not exist in Django yet."""

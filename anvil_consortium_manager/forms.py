@@ -12,7 +12,10 @@ class BillingProjectImportForm(forms.ModelForm):
 
     class Meta:
         model = models.BillingProject
-        fields = ("name",)
+        fields = (
+            "name",
+            "note",
+        )
         help_texts = {"name": "Enter the name of the billing project on AnVIL."}
 
     def clean_name(self):
@@ -27,7 +30,11 @@ class AccountImportForm(forms.ModelForm):
 
     class Meta:
         model = models.Account
-        fields = ("email", "is_service_account")
+        fields = (
+            "email",
+            "is_service_account",
+            "note",
+        )
         help_texts = {
             "email": "Email must be associated with an account on AnVIL.",
             "is_service_account": "Check this box if the account being imported is a service account.",
@@ -51,7 +58,10 @@ class ManagedGroupCreateForm(forms.ModelForm):
 
     class Meta:
         model = models.ManagedGroup
-        fields = ("name",)
+        fields = (
+            "name",
+            "note",
+        )
         help_texts = {"name": "Enter the name of the group to create on AnVIL."}
 
     def clean_name(self):
@@ -77,7 +87,12 @@ class WorkspaceCreateForm(forms.ModelForm):
 
     class Meta:
         model = models.Workspace
-        fields = ("billing_project", "name", "authorization_domains")
+        fields = (
+            "billing_project",
+            "name",
+            "authorization_domains",
+            "note",
+        )
         widgets = {
             "billing_project": autocomplete.ModelSelect2(
                 url="anvil_consortium_manager:billing_projects:autocomplete",
@@ -101,6 +116,10 @@ class WorkspaceImportForm(forms.Form):
     """Form to import a workspace from AnVIL -- new version."""
 
     title = "Import a workspace"
+    workspace = forms.ChoiceField()
+    note = forms.CharField(
+        widget=forms.Textarea, help_text="Additional notes.", required=False
+    )
 
     def __init__(self, workspace_choices=[], *args, **kwargs):
         """Initialize form with a set of possible workspace choices."""

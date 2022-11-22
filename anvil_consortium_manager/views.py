@@ -136,7 +136,10 @@ class BillingProjectImport(
     def form_valid(self, form):
         """If the form is valid, check that we can access the BillingProject on AnVIL and save the associated model."""
         try:
-            self.object = models.BillingProject.anvil_import(form.cleaned_data["name"])
+            self.object = models.BillingProject.anvil_import(
+                form.cleaned_data["name"],
+                note=form.cleaned_data["note"],
+            )
         except anvil_api.AnVILAPIError404:
             # Either the workspace doesn't exist or we don't have permission for it.
             messages.add_message(
@@ -1216,6 +1219,7 @@ class WorkspaceImport(
                 billing_project_name,
                 workspace_name,
                 workspace_type=workspace_type,
+                note=form.cleaned_data["note"],
             )
             workspace_data_formset = self.get_workspace_data_formset()
             if not workspace_data_formset.is_valid():
