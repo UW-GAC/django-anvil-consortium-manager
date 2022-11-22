@@ -250,6 +250,17 @@ class WorkspaceCreateFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_valid_with_note(self):
+        """Form is valid with necessary input and note is specified."""
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "note": "test note",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
     def test_invalid_missing_billing_project(self):
         """Form is invalid when missing billing_project_name."""
         form_data = {"name": "test-workspace"}
@@ -308,6 +319,18 @@ class WorkspaceImportFormTest(TestCase):
         """Form is valid with necessary input."""
         form_data = {
             "workspace": "test-billing-project/test-workspace",
+        }
+        workspace_choices = [
+            ("test-billing-project/test-workspace", 1),
+        ]
+        form = self.form_class(workspace_choices=workspace_choices, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_with_note(self):
+        """Form is valid with necessary input and note is specified."""
+        form_data = {
+            "workspace": "test-billing-project/test-workspace",
+            "note": "test note",
         }
         workspace_choices = [
             ("test-billing-project/test-workspace", 1),

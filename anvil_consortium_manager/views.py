@@ -1219,6 +1219,7 @@ class WorkspaceImport(
                 billing_project_name,
                 workspace_name,
                 workspace_type=workspace_type,
+                note=form.cleaned_data["note"],
             )
             workspace_data_formset = self.get_workspace_data_formset()
             if not workspace_data_formset.is_valid():

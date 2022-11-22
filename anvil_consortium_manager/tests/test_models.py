@@ -986,6 +986,19 @@ class WorkspaceTest(TestCase):
         instance.save()
         self.assertIsInstance(instance, Workspace)
 
+    def test_note_field(self):
+        """Creation using the model constructor and .save() works when note is set."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            note="test note",
+        )
+        instance.save()
+        self.assertIsInstance(instance, Workspace)
+        self.assertEqual(instance.note, "test note")
+
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         instance = factories.WorkspaceFactory.build(

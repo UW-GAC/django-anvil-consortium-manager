@@ -87,7 +87,12 @@ class WorkspaceCreateForm(forms.ModelForm):
 
     class Meta:
         model = models.Workspace
-        fields = ("billing_project", "name", "authorization_domains")
+        fields = (
+            "billing_project",
+            "name",
+            "authorization_domains",
+            "note",
+        )
         widgets = {
             "billing_project": autocomplete.ModelSelect2(
                 url="anvil_consortium_manager:billing_projects:autocomplete",
@@ -111,6 +116,10 @@ class WorkspaceImportForm(forms.Form):
     """Form to import a workspace from AnVIL -- new version."""
 
     title = "Import a workspace"
+    workspace = forms.ChoiceField()
+    note = forms.CharField(
+        widget=forms.Textarea, help_text="Additional notes.", required=False
+    )
 
     def __init__(self, workspace_choices=[], *args, **kwargs):
         """Initialize form with a set of possible workspace choices."""
