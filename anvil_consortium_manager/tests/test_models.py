@@ -34,6 +34,12 @@ class BillingProjectTest(TestCase):
         instance.save()
         self.assertIsInstance(instance, BillingProject)
 
+    def test_note_field(self):
+        instance = BillingProject(name="my_project", has_app_as_user=True, note="foo")
+        instance.save()
+        self.assertIsInstance(instance, BillingProject)
+        self.assertEqual(instance.note, "foo")
+
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         instance = BillingProject(name="my_project", has_app_as_user=True)

@@ -51,9 +51,12 @@ class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
             status=200,
             json=self.get_api_json_response(),
         )
-        billing_project = models.BillingProject.anvil_import(billing_project_name)
+        billing_project = models.BillingProject.anvil_import(
+            billing_project_name, note="test note"
+        )
         # Check values.
         self.assertEqual(billing_project.name, billing_project_name)
+        self.assertEqual(billing_project.note, "test note")
         # Check that it was saved.
         self.assertEqual(models.BillingProject.objects.count(), 1)
         # Make sure it's the workspace returned.

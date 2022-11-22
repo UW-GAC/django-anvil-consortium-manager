@@ -41,6 +41,7 @@ class BillingProject(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     has_app_as_user = models.BooleanField()
+    note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
     def __str__(self):
@@ -61,12 +62,14 @@ class BillingProject(TimeStampedModel):
         return response.status_code == 200
 
     @classmethod
-    def anvil_import(cls, billing_project_name):
+    def anvil_import(cls, billing_project_name, **kwargs):
         """BiillingProject class method to import an existing billing project from AnVIL."""
         try:
             billing_project = cls.objects.get(name=billing_project_name)
         except cls.DoesNotExist:
-            billing_project = cls(name=billing_project_name, has_app_as_user=True)
+            billing_project = cls(
+                name=billing_project_name, has_app_as_user=True, **kwargs
+            )
             billing_project.full_clean()
         else:
             # The billing project already exists in the database.

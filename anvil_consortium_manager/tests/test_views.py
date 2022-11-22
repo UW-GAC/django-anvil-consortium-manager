@@ -476,6 +476,20 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
+    def test_can_set_note(self):
+        """Can set the note when creating a billing project."""
+        billing_project_name = "test-billing"
+        url = self.get_api_url(billing_project_name)
+        responses.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(), {"name": billing_project_name, "note": "test note"}
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.BillingProject.objects.latest("pk")
+        self.assertEqual(new_object.note, "test note")
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         billing_project_name = "test-billing"

@@ -19,6 +19,12 @@ class BillingProjectImportFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"name": "foo", "note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
     def test_invalid_missing_name(self):
         """Form is invalid when missing name."""
         form_data = {}

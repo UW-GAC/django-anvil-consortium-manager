@@ -12,7 +12,10 @@ class BillingProjectImportForm(forms.ModelForm):
 
     class Meta:
         model = models.BillingProject
-        fields = ("name",)
+        fields = (
+            "name",
+            "note",
+        )
         help_texts = {"name": "Enter the name of the billing project on AnVIL."}
 
     def clean_name(self):
