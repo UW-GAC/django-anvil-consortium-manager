@@ -9,6 +9,7 @@ from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
+from freezegun import freeze_time
 
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..models import (
@@ -158,7 +159,12 @@ class UserEmailEntryTest(TestCase):
         with self.assertRaises(ProtectedError):
             obj.delete()
 
-    def test_send_verification_emaiL(self):
+    # This test occasionally fails if the time flips one second between sending the email and
+    # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
+    # this spurious failure.
+    @freeze_time("2022-11-22 03:12:34")
+    def test_send_verification_email(self):
+        """Verification email is correct."""
         email_entry = factories.UserEmailEntryFactory.create()
         email_entry.send_verification_email("www.test.com")
         # One message has been sent.
