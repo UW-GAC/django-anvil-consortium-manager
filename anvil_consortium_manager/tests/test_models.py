@@ -163,7 +163,7 @@ class UserEmailEntryTest(TestCase):
     # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
     # this spurious failure.
     @freeze_time("2022-11-22 03:12:34")
-    def test_send_verification_emaiL(self):
+    def test_send_verification_email(self):
         """Verification email is correct."""
         email_entry = factories.UserEmailEntryFactory.create()
         email_entry.send_verification_email("www.test.com")
