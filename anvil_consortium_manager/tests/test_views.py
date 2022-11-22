@@ -1389,6 +1389,20 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
+    def test_can_create_an_object_with_note(self):
+        """Posting valid data with a note field to the form creates an object."""
+        email = "test@example.com"
+        responses.add(responses.GET, self.get_api_url(email), status=200)
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(), {"email": email, "note": "test note"}
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Account.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Account)
+        self.assertEqual(new_object.note, "test note")
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         email = "test@example.com"

@@ -30,7 +30,11 @@ class AccountImportForm(forms.ModelForm):
 
     class Meta:
         model = models.Account
-        fields = ("email", "is_service_account")
+        fields = (
+            "email",
+            "is_service_account",
+            "note",
+        )
         help_texts = {
             "email": "Email must be associated with an account on AnVIL.",
             "is_service_account": "Check this box if the account being imported is a service account.",

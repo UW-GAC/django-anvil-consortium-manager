@@ -220,6 +220,8 @@ class Account(TimeStampedModel, ActivatorModel):
     )
     """The UserEmailEntry object used to verify the email, if the account was created by a user linking their email."""
 
+    note = models.TextField(blank=True, help_text="Additional notes.")
+
     history = HistoricalRecords()
     """Django simple history record for this model."""
 

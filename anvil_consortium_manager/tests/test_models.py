@@ -180,6 +180,14 @@ class AccountTest(TestCase):
         instance.save()
         self.assertIsInstance(instance, Account)
 
+    def test_note_field(self):
+        instance = Account(
+            email="email@example.com", is_service_account=False, note="foo"
+        )
+        instance.save()
+        self.assertIsInstance(instance, Account)
+        self.assertEqual(instance.note, "foo")
+
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         instance = Account(email="email@example.com", is_service_account=False)

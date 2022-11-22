@@ -76,6 +76,16 @@ class AccountImportFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_valid_with_note(self):
+        """Form is valid with necessary input."""
+        form_data = {
+            "email": "test_email@example.com",
+            "is_service_account": True,
+            "note": "test note",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
     def test_invalid_missing_email(self):
         """Form is invalid when missing email."""
         form_data = {"is_service_account": True}

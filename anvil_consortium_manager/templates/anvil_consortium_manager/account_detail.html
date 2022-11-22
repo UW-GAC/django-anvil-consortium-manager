@@ -38,6 +38,7 @@
     <li>Date modified: {{ object.modified }}</li>
     <li>User: {% if object.verified_email_entry %}{{ object.verified_email_entry.user }}{% else %} &mdash; {% endif %}</li>
     <li>Date verified by user: {% if object.verified_email_entry %}{{ object.verified_email_entry.date_verified }}{% else %} &mdash; {% endif %}</li>
+    <li>Note: {{ object.note }}</li>
   </ul>
 </div>
 
