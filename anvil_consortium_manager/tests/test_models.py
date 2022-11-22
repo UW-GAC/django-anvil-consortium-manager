@@ -379,6 +379,13 @@ class ManagedGroupTest(TestCase):
         instance.save()
         self.assertIsInstance(instance, ManagedGroup)
 
+    def test_note_field(self):
+        """Creation using the model constructor and .save() works with a note field."""
+        instance = ManagedGroup(name="my_group", note="test note")
+        instance.save()
+        self.assertIsInstance(instance, ManagedGroup)
+        self.assertEqual(instance.note, "test note")
+
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         instance = ManagedGroup(name="my_group")

@@ -58,7 +58,10 @@ class ManagedGroupCreateForm(forms.ModelForm):
 
     class Meta:
         model = models.ManagedGroup
-        fields = ("name",)
+        fields = (
+            "name",
+            "note",
+        )
         help_texts = {"name": "Enter the name of the group to create on AnVIL."}
 
     def clean_name(self):

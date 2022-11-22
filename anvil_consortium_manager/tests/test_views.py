@@ -4223,6 +4223,23 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
+    def test_can_create_an_object_with_note(self):
+        """Posting valid data including note to the form creates an object."""
+        url = self.entry_point + "/api/groups/" + "test-group"
+        responses.add(responses.POST, url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(), {"name": "test-group", "note": "test note"}
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.ManagedGroup.objects.latest("pk")
+        self.assertIsInstance(new_object, models.ManagedGroup)
+        self.assertEqual(new_object.note, "test note")
+        responses.assert_call_count(url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         url = self.entry_point + "/api/groups/" + "test-group"

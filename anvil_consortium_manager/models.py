@@ -337,6 +337,7 @@ class ManagedGroup(TimeStampedModel):
 
     name = models.SlugField(max_length=64, unique=True)
     is_managed_by_app = models.BooleanField(default=True)
+    note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
     def __str__(self):
@@ -417,11 +418,11 @@ class ManagedGroup(TimeStampedModel):
             raise exceptions.AnVILGroupDeletionError(self.name)
 
     @classmethod
-    def anvil_import(cls, group_name):
+    def anvil_import(cls, group_name, **kwargs):
         """Import an existing group from AnVIL."""
         # Create the group but don't save it yet.
         # Assume that it's not managed by the app until we figure out that it is.
-        group = cls(name=group_name, is_managed_by_app=False)
+        group = cls(name=group_name, is_managed_by_app=False, **kwargs)
         # Make sure we don't already have it in the database.
         group.full_clean()
         # Note that we have to be a member of the group to import it.

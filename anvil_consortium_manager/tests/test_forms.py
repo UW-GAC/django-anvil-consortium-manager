@@ -179,6 +179,15 @@ class ManagedGroupCreateFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_valid_with_note(self):
+        """Form is valid with necessary input and note is specified."""
+        form_data = {
+            "name": "test-group-name",
+            "note": "test note",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
     def test_invalid_missing_name(self):
         """Form is invalid when missing name."""
         form_data = {}
