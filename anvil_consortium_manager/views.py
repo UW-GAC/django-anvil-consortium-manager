@@ -157,6 +157,18 @@ class BillingProjectImport(
         return HttpResponseRedirect(self.get_success_url())
 
 
+class BillingProjectUpdate(
+    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView
+):
+    """View to update information about a Billing Project."""
+
+    model = models.BillingProject
+    slug_field = "name"
+    form_class = forms.BillingProjectUpdateForm
+    template_name = "anvil_consortium_manager/billingproject_update.html"
+    success_msg = "Successfully updated Billing Project."
+
+
 class BillingProjectDetail(
     auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
 ):
@@ -168,6 +180,17 @@ class BillingProjectDetail(
         return tables.WorkspaceTable(
             self.object.workspace_set.all(), exclude="billing_project"
         )
+
+    def get_context_data(self, **kwargs):
+        """Add show_edit_links to context data."""
+        context = super().get_context_data(**kwargs)
+        edit_permission_codename = (
+            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        )
+        context["show_edit_links"] = self.request.user.has_perm(
+            "anvil_consortium_manager." + edit_permission_codename
+        )
+        return context
 
 
 class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):

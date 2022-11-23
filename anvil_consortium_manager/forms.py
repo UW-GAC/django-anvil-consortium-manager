@@ -25,6 +25,14 @@ class BillingProjectImportForm(forms.ModelForm):
         return value
 
 
+class BillingProjectUpdateForm(forms.ModelForm):
+    """Form to update a billing project."""
+
+    class Meta:
+        model = models.BillingProject
+        fields = ("note",)
+
+
 class AccountImportForm(forms.ModelForm):
     """Form to import an Account from AnVIL."""
 
