@@ -141,11 +141,12 @@
 
 
 
+
+{% if show_edit_links %}
 <p>
   <a href="{% url 'anvil_consortium_manager:managed_groups:sharing:new' group_slug=object.name %}" class="btn btn-primary" role="button">Share a workspace with this group</a>
 </p>
 
-{% if show_edit_links %}
 <p>
   <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:new' group_slug=object.name %}" class="btn btn-primary" role="button">Add an account to this group</a>
   <a href="{% url 'anvil_consortium_manager:managed_groups:member_groups:new' parent_group_slug=object.name %}" class="btn btn-primary" role="button">Add a group to this group</a>
@@ -158,6 +159,7 @@
 </p>
 {% if show_edit_links %}
 <p>
+  <a href="{% url 'anvil_consortium_manager:managed_groups:update' slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
   <a href="{% url 'anvil_consortium_manager:managed_groups:delete' slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </p>
 {% endif %}

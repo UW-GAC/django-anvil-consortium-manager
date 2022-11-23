@@ -780,6 +780,20 @@ class ManagedGroupCreate(
         return super().form_valid(form)
 
 
+class ManagedGroupUpdate(
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    UpdateView,
+):
+    """View to update information about an Account."""
+
+    model = models.ManagedGroup
+    form_class = forms.ManagedGroupUpdateForm
+    slug_field = "name"
+    template_name = "anvil_consortium_manager/managedgroup_update.html"
+    success_msg = "Successfully updated ManagedGroup."
+
+
 class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable

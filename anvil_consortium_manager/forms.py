@@ -87,6 +87,14 @@ class ManagedGroupCreateForm(forms.ModelForm):
         return value
 
 
+class ManagedGroupUpdateForm(forms.ModelForm):
+    """Form to update information about a ManagedGroup."""
+
+    class Meta:
+        model = models.ManagedGroup
+        fields = ("note",)
+
+
 class WorkspaceCreateForm(forms.ModelForm):
     """Form to create a new workspace on AnVIL."""
 

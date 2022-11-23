@@ -144,6 +144,7 @@ managed_group_patterns = (
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
         path("<slug:group_slug>/sharing/", include(managed_group_sharing_patterns)),
+        path("<slug:slug>/update/", views.ManagedGroupUpdate.as_view(), name="update"),
         path(
             "<slug:group_slug>/add_to_group/",
             views.GroupGroupMembershipCreateByChild.as_view(),

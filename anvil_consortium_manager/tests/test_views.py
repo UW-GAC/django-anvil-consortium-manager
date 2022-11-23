@@ -4445,6 +4445,118 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
 
 
+class ManagedGroupUpdateTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:managed_groups:update", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ManagedGroupUpdate.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo"))
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo")
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        instance = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(instance.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo")
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo")
+
+    def test_object_does_not_exist(self):
+        """Raises Http404 if object does not exist."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, slug="foo")
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        instance = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(instance.name))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(
+            response.context_data["form"], forms.ManagedGroupUpdateForm
+        )
+
+    def test_can_modify_note(self):
+        """Can set the note when creating a billing project."""
+        instance = factories.ManagedGroupFactory.create(note="original note")
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(instance.name), {"note": "new note"})
+        self.assertEqual(response.status_code, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.note, "new note")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        instance = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(instance.name), {}, follow=True)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.ManagedGroupUpdate.success_msg, str(messages[0]))
+
+    def test_redirects_to_object_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        instance = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(instance.name), {})
+        self.assertRedirects(response, instance.get_absolute_url())
+
+
 class ManagedGroupListTest(TestCase):
     def setUp(self):
         """Set up test class."""

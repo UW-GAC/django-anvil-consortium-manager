@@ -271,6 +271,24 @@ class ManagedGroupCreateFormTest(TestCase):
         self.assertIn("already exists", form.errors["name"][0])
 
 
+class ManagedGroupUpdateFormTest(TestCase):
+    """Tests for the ManagedGroupUpdateForm class."""
+
+    form_class = forms.ManagedGroupUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+
 class WorkspaceCreateFormTest(TestCase):
     """Tests for the WorkspaceCreateForm class."""
 
