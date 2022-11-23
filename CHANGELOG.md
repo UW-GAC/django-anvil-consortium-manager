@@ -3,6 +3,7 @@
 ## Devel
 
 - Add an optional note field to the `BillingProject`, `Account`, `ManagedGroup`, and `Workspace` models.
+- Add a user guide to the documentation.
 
 ## 0.4 (2022-11-09)
 
