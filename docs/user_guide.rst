@@ -4,14 +4,16 @@ User guide
 ==========
 
 
-Creating a Group
+Creating a Managed Group
 ----------------
 
 1. Navigate to Managed Groups -> Add a group.
 
 2. Type the name of the group to create in the "Name" field.
 
-3. Click on "Save group". This can take some time due to delays from AnVIL.
+3. If desired, add any notes about the Managed Group in the "note" field.
+
+4. Click on "Save group". This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a success message and information about the group that you just created.
 
@@ -25,7 +27,9 @@ Note that the service account running the website must be added as a user of the
 
 2. In the "name" field, type the name of the billing project to import.
 
-3. Click on the "Import billing project" button.
+3. If desired, add any notes about the Billing Project in the "note" field.
+
+4. Click on the "Import billing project" button.
 
 If successful, you will be shown a success message and information about the billing project that you just imported.
 
@@ -43,9 +47,11 @@ Creating a new workspace
     * You can select multiple authorization domains using Command-click.
     * To de-select an authorization domain, click on it while holding the Command key.
 
-5. Fill out all other required fields for the type of workspace you are creating.
+5. If desired, add any notes about the Workspace in the "note" field.
 
-6. Click on the "Save workspace" button. This can take some time due to delays from AnVIL.
+6. Fill out all other required fields for the type of workspace you are creating.
+
+7. Click on the "Save workspace" button. This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a success message and information about the workspace that you just created. The examples would create a workspace named "primed-cc/test-workspace".
 
@@ -61,7 +67,9 @@ If the workspace has any auth domains, they will be imported into the app even i
 
 3. Fill out all other required fields for this workspace type.
 
-4. Click on the "Import workspace" button. This can take some time due to delays from AnVIL.
+4. If desired, add any notes about the Workspace in the "note" field.
+
+5. Click on the "Import workspace" button. This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a success message and information about the workspace that you just imported.
 
@@ -148,7 +156,13 @@ For those two cases, follow these steps.
 Note that the account must already exist on AnVIL to be able to import it.
 
 1. Navigate to `Accounts -> Import an Account`.
+
 2. Type the email of the account in the "email" field.
+
 3. If the account that you are importing is a service account instead of a user account, check the "I service account" box.
-4. Click on "Save account". This can take some time due to delays from AnVIL.
-5. If successful, you will be shown a message and information about the account that you just imported. Otherwise, you will be shown an error message at the top of the page.
+
+4. If desired, add any notes about the Account in the "note" field.
+
+5. Click on "Save account". This can take some time due to delays from AnVIL.
+
+If successful, you will be shown a message and information about the account that you just imported. Otherwise, you will be shown an error message at the top of the page.
