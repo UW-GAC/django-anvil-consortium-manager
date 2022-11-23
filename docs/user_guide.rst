@@ -68,20 +68,34 @@ If successful, you will be shown a success message and information about the wor
 Adding a user account to a group
 --------------------------------
 
-1. Navigate to `Managed Groups -> Add an account to a group`.
-2. Select the Group and Account that you would like to add to the group from the Group and Account fields. You can start typing to autocomplete the Group name and Account email.
-3. In the Role field, select the role that this Account should have in the Group. Typically, everyone should be added as a "Member".
-4. Click on the "Save membership" button. This can take some time due to delays from AnVIL.
+You can add a user account to a group using three different options.
+
+1. Navigate to `Managed Groups -> Add an account to a group`. This allows you to select both the Managed Group and the Account on one form.
+2. Navigate to a Managed Group detail page and click the "Add an account to this group" button. This allows you to select the Account to add to the group.
+3. Navigate to a Account detail page and click the "Add this account to a group" button. This allows you to select the Managed Group to add to the Account to.
+
+In any case, once you have arrived at the form using one of the above three methods, follow these instructions to add an account to a group.
+
+1. If applicable, select the Managed Group and/or Account that you would like to add to the group from the Managed Group and Account fields. You can start typing to autocomplete the Managed Group name and Account email.
+2. In the Role field, select the role that this Account should have in the Managed Group. Typically, everyone should be added as a "Member".
+3. Click on the "Save membership" button. This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a success message.
 
 Adding a group to another group
 -------------------------------
 
-1. Navigate to `Managed Groups -> Add a group to a group`.
-2. Select the Parent Group and Child Group that you would like to add to the group from the Parent Group and Child Group fields. You can start typing to autocomplete the Parent Group name and Child Group email.
-3. In the Role field, select the role that the Child Group should have in the Group. In most cases, everyone should be added as a "Member".
-4. Click on the "Save membership" button. This can take some time due to delays from AnVIL.
+You can add a user account to a group using three different options.
+
+1. Navigate to `Managed Groups -> Add a group to a group`. This allows you to select both the parent and child Managed Groups on one form.
+2. Navigate to a Managed Group detail page and click the "Add a group to this group" button. This allows you to select a child group to add to this group.
+3. Navigate to a Managed Group detail page and click the "Add this group to a group" button. This allows you to select the parent Managed Group to add to this group to.
+
+In any case, once you have arrived at the form using one of the above three methods, follow these instructions to add an account to a group.
+
+1. If applicable, select the Parent Group and/or Child Group that you would like to add to the group from the Parent Group and Child Group fields. You can start typing to autocomplete the Parent Group name and Child Group email.
+2. In the Role field, select the role that the Child Group should have in the Group. In most cases, everyone should be added as a "Member".
+3. Click on the "Save membership" button. This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a success message.
 
@@ -90,7 +104,7 @@ Sharing a workspace with a group
 
 You can share a workspace with a group using three different options.
 
-1. Navigate to `Workspaces -> Share a workspace with a group`. This allows you to select both the workspace and the Managed Group.
+1. Navigate to `Workspaces -> Share a workspace with a group`. This allows you to select both the workspace and the Managed Group on one form.
 2. Navigate to a Workspace detail page and click the "Share this workspace with a group" button. This allows you to select the Managed Group with which to share the workspace.
 3. Navigate to a Managed Group detail page and click the "Share a workspace with this group" button. This allows you to select the Workspace to share with this group.
 
