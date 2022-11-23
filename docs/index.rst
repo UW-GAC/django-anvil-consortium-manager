@@ -11,6 +11,7 @@ Welcome to django-anvil-consortium-manager's documentation!
    :caption: Contents
 
    quickstart
+   user_guide
    models
    views
    anvil_api
