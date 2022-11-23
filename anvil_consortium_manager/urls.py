@@ -29,6 +29,7 @@ account_patterns = (
         path("all/", views.AccountList.as_view(), name="list"),
         path("active/", views.AccountActiveList.as_view(), name="list_active"),
         path("inactive/", views.AccountInactiveList.as_view(), name="list_inactive"),
+        path("<uuid:uuid>/update/", views.AccountUpdate.as_view(), name="update"),
         path("<uuid:uuid>/delete/", views.AccountDelete.as_view(), name="delete"),
         path(
             "<uuid:uuid>/deactivate/",

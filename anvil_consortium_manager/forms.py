@@ -55,6 +55,14 @@ class AccountImportForm(forms.ModelForm):
         return value
 
 
+class AccountUpdateForm(forms.ModelForm):
+    """Form to update an Account."""
+
+    class Meta:
+        model = models.Account
+        fields = ("note",)
+
+
 class UserEmailEntryForm(forms.Form):
     """Form for user to enter their email attempting to link their AnVIL account."""
 

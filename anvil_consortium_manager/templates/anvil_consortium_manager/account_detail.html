@@ -62,11 +62,13 @@
 </div>
 
 
+{% if show_edit_links %}
 <p>
   <a href="{% url 'anvil_consortium_manager:accounts:add_to_group' uuid=object.uuid %}" class="btn btn-primary" role="button">Add this account to a group</a>
 </p>
-{% if show_edit_links %}
+
 <p>
+  <a href="{% url 'anvil_consortium_manager:accounts:update' uuid=object.uuid %}" class="btn btn-secondary" role="button">Update</a>
   {% if show_deactivate_button %}
     <a href="{% url 'anvil_consortium_manager:accounts:deactivate' uuid=object.uuid %}" class="btn btn-secondary" role="button">Deactivate account</a>
   {% endif %}

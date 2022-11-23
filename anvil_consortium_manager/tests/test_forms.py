@@ -150,6 +150,24 @@ class AccountImportFormTest(TestCase):
         self.assertIn("already exists", form.errors["email"][0])
 
 
+class AccountUpdateFormTest(TestCase):
+    """Tests for the AccountUpdateForm class."""
+
+    form_class = forms.AccountUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+
 class UserEmailEntryFormTest(TestCase):
     """Tests for the UserEmailEntryForm class."""
 

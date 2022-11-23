@@ -321,6 +321,20 @@ class AccountImport(
         return super().form_valid(form)
 
 
+class AccountUpdate(
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    SingleAccountMixin,
+    UpdateView,
+):
+    """View to update information about an Account."""
+
+    model = models.Account
+    form_class = forms.AccountUpdateForm
+    template_name = "anvil_consortium_manager/account_update.html"
+    success_msg = "Successfully updated Account."
+
+
 class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
     """View where a user enter their AnVIL email to get an email verification link."""
 
