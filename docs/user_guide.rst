@@ -7,7 +7,7 @@ User guide
 Creating a Managed Group
 ----------------
 
-1. Navigate to Managed Groups -> Add a group.
+1. Navigate to `Managed Groups -> Add a group`.
 
 2. Type the name of the group to create in the "Name" field.
 
