@@ -5,13 +5,16 @@
 {% block title %}New Workspace{% endblock title %}
 
 {% block content %}
+
+<h2>Create a new Workspace on AnVIL</h2>
+
   <form method="post">
 
     {% csrf_token %}
     {{ workspace_data_formset|crispy }}
     {{ form|crispy }}
 
-    <button type="submit" class="btn btn-success">Save workspace</button>
+    <button type="submit" class="btn btn-success">Create workspace</button>
   </form>
 {% endblock %}
 

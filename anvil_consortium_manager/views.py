@@ -762,6 +762,7 @@ class ManagedGroupCreate(
 ):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
+    template_name = "anvil_consortium_manager/managedgroup_create.html"
     success_msg = "Successfully created Managed Group on AnVIL."
 
     def form_valid(self, form):
@@ -1055,7 +1056,7 @@ class WorkspaceCreate(
 ):
     form_class = forms.WorkspaceCreateForm
     success_msg = "Successfully created Workspace on AnVIL."
-    template_name = "anvil_consortium_manager/workspace_form.html"
+    template_name = "anvil_consortium_manager/workspace_create.html"
 
     def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
