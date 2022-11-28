@@ -4,7 +4,7 @@ from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.test import TestCase
@@ -1073,9 +1073,15 @@ class WorkspaceTest(TestCase):
         billing_project = factories.BillingProjectFactory.create()
         name = "AbAbA"
         factories.WorkspaceFactory.create(billing_project=billing_project, name=name)
-        instance = Workspace(billing_project=billing_project, name=name.lower())
-        with self.assertRaises(ValidationError):
+        instance = factories.WorkspaceFactory.build(
+            billing_project=billing_project, name=name.lower()
+        )
+        with self.assertRaises(ValidationError) as e:
             instance.full_clean()
+        self.assertEqual(len(e.exception.message_dict), 1)
+        self.assertIn(NON_FIELD_ERRORS, e.exception.message_dict)
+        self.assertEqual(len(e.exception.message_dict[NON_FIELD_ERRORS]), 1)
+        self.assertIn("already exists", e.exception.message_dict[NON_FIELD_ERRORS][0])
 
     @skip("Add this constraint.")
     def test_name_save_case_insensitivity(self):
