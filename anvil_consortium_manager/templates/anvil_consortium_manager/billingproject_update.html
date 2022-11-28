@@ -1,0 +1,15 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Import an existing Billing Project{% endblock title %}
+
+{% block content %}
+
+<h2>Update Billing Project {{ object.name }}</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-success">Save</button>
+  </form>
+{% endblock %}

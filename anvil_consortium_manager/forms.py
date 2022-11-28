@@ -25,6 +25,14 @@ class BillingProjectImportForm(forms.ModelForm):
         return value
 
 
+class BillingProjectUpdateForm(forms.ModelForm):
+    """Form to update a billing project."""
+
+    class Meta:
+        model = models.BillingProject
+        fields = ("note",)
+
+
 class AccountImportForm(forms.ModelForm):
     """Form to import an Account from AnVIL."""
 
@@ -45,6 +53,14 @@ class AccountImportForm(forms.ModelForm):
         if models.Account.objects.filter(email__iexact=value).exists():
             raise ValidationError("Account with this Email already exists.")
         return value
+
+
+class AccountUpdateForm(forms.ModelForm):
+    """Form to update an Account."""
+
+    class Meta:
+        model = models.Account
+        fields = ("note",)
 
 
 class UserEmailEntryForm(forms.Form):
@@ -69,6 +85,14 @@ class ManagedGroupCreateForm(forms.ModelForm):
         if models.ManagedGroup.objects.filter(name__iexact=value).exists():
             raise ValidationError("Managed Group with this Name already exists.")
         return value
+
+
+class ManagedGroupUpdateForm(forms.ModelForm):
+    """Form to update information about a ManagedGroup."""
+
+    class Meta:
+        model = models.ManagedGroup
+        fields = ("note",)
 
 
 class WorkspaceCreateForm(forms.ModelForm):
@@ -110,6 +134,32 @@ class WorkspaceCreateForm(forms.ModelForm):
             "authorization_domains": """Select one or more authorization domains for this workspace.
                         These cannot be changed after creation.""",
         }
+
+    def clean(self):
+        # Check for the same case insensitive name in the same billing project.
+        billing_project = self.cleaned_data.get("billing_project", None)
+        name = self.cleaned_data.get("name", None)
+        if (
+            billing_project
+            and name
+            and models.Workspace.objects.filter(
+                billing_project=billing_project,
+                name__iexact=name,
+            ).exists()
+        ):
+            # The workspace already exists - raise a Validation error.
+            raise ValidationError(
+                "Workspace with this Billing Project and Name already exists."
+            )
+        return self.cleaned_data
+
+
+class WorkspaceUpdateForm(forms.ModelForm):
+    """Form to update information about a Workspace."""
+
+    class Meta:
+        model = models.Workspace
+        fields = ("note",)
 
 
 class WorkspaceImportForm(forms.Form):

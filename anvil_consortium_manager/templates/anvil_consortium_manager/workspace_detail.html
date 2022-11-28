@@ -61,14 +61,16 @@
 
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
-
   <a href="{% url 'anvil_consortium_manager:workspaces:audit_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
-</p>
+
 {% if show_edit_links %}
-<p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
 </p>
+
+<p>
+  <a href="{% url 'anvil_consortium_manager:workspaces:update' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
+  <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 {% endif %}
+</p>
 
 {% endblock content %}

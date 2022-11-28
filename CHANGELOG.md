@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Add ability to update `BillingProject`, `Account`, `ManagedGroup`, and `Workspace`, and workspace data models.
+
 ## 0.5 (2022-11-22)
 
 - Add an optional note field to the `BillingProject`, `Account`, `ManagedGroup`, and `Workspace` models.

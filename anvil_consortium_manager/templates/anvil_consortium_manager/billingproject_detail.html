@@ -44,4 +44,9 @@
 </div>
 
 
+{% if show_edit_links %}
+<a href="{% url 'anvil_consortium_manager:billing_projects:update' slug=object.name %}" class="btn btn-secondary" role="button">Update information</a>
+</p>
+{% endif %}
+
 {% endblock content %}

@@ -1,5 +1,6 @@
 """Test forms for the anvil_consortium_manager app."""
 
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.test import TestCase
 
 from .. import forms, models
@@ -60,6 +61,24 @@ class BillingProjectImportFormTest(TestCase):
         self.assertIn("name", form.errors)
         self.assertEqual(len(form.errors["name"]), 1)
         self.assertIn("already exists", form.errors["name"][0])
+
+
+class BillingProjectUpdateFormTest(TestCase):
+    """Tests for the BillingProjectUpdateForm class."""
+
+    form_class = forms.BillingProjectUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
 
 
 class AccountImportFormTest(TestCase):
@@ -130,6 +149,24 @@ class AccountImportFormTest(TestCase):
         self.assertIn("email", form.errors)
         self.assertEqual(len(form.errors["email"]), 1)
         self.assertIn("already exists", form.errors["email"][0])
+
+
+class AccountUpdateFormTest(TestCase):
+    """Tests for the AccountUpdateForm class."""
+
+    form_class = forms.AccountUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
 
 
 class UserEmailEntryFormTest(TestCase):
@@ -235,6 +272,24 @@ class ManagedGroupCreateFormTest(TestCase):
         self.assertIn("already exists", form.errors["name"][0])
 
 
+class ManagedGroupUpdateFormTest(TestCase):
+    """Tests for the ManagedGroupUpdateForm class."""
+
+    form_class = forms.ManagedGroupUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+
 class WorkspaceCreateFormTest(TestCase):
     """Tests for the WorkspaceCreateForm class."""
 
@@ -310,6 +365,37 @@ class WorkspaceCreateFormTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("billing_project", form.errors)
         self.assertEqual(len(form.errors), 1)
+
+    def test_invalid_case_insensitive_duplicate(self):
+        """Cannot validate with the same case-insensitive name in the same billing project as an existing workspace."""
+        billing_project = factories.BillingProjectFactory.create()
+        name = "AbAbA"
+        factories.WorkspaceFactory.create(billing_project=billing_project, name=name)
+        form_data = {"billing_project": billing_project, "name": name.lower()}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn(NON_FIELD_ERRORS, form.errors)
+        self.assertEqual(len(form.errors[NON_FIELD_ERRORS]), 1)
+        self.assertIn("already exists", form.errors[NON_FIELD_ERRORS][0])
+
+
+class WorkspaceUpdateFormTest(TestCase):
+    """Tests for the ManagedGroupUpdateForm class."""
+
+    form_class = forms.WorkspaceUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
 
 
 class WorkspaceImportFormTest(TestCase):

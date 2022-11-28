@@ -1068,15 +1068,6 @@ class WorkspaceTest(TestCase):
         # Also deletes the relationship.
         self.assertEqual(WorkspaceGroupSharing.objects.count(), 0)
 
-    def test_name_validation_case_insensitivity(self):
-        """Cannot validate two models with the same case-insensitive name in the same billing project."""
-        billing_project = factories.BillingProjectFactory.create()
-        name = "AbAbA"
-        factories.WorkspaceFactory.create(billing_project=billing_project, name=name)
-        instance = Workspace(billing_project=billing_project, name=name.lower())
-        with self.assertRaises(ValidationError):
-            instance.full_clean()
-
     @skip("Add this constraint.")
     def test_name_save_case_insensitivity(self):
         """Cannot save two models with the same case-insensitive name in the same billing project."""

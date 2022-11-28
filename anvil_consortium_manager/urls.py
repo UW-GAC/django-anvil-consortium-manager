@@ -15,6 +15,9 @@ billing_project_patterns = (
         ),
         path("audit/", views.BillingProjectAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.BillingProjectDetail.as_view(), name="detail"),
+        path(
+            "<slug:slug>/update/", views.BillingProjectUpdate.as_view(), name="update"
+        ),
     ],
     "billing_projects",
 )
@@ -26,6 +29,7 @@ account_patterns = (
         path("all/", views.AccountList.as_view(), name="list"),
         path("active/", views.AccountActiveList.as_view(), name="list_active"),
         path("inactive/", views.AccountInactiveList.as_view(), name="list_inactive"),
+        path("<uuid:uuid>/update/", views.AccountUpdate.as_view(), name="update"),
         path("<uuid:uuid>/delete/", views.AccountDelete.as_view(), name="delete"),
         path(
             "<uuid:uuid>/deactivate/",
@@ -140,6 +144,7 @@ managed_group_patterns = (
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
         path("<slug:group_slug>/sharing/", include(managed_group_sharing_patterns)),
+        path("<slug:slug>/update/", views.ManagedGroupUpdate.as_view(), name="update"),
         path(
             "<slug:group_slug>/add_to_group/",
             views.GroupGroupMembershipCreateByChild.as_view(),
@@ -222,6 +227,11 @@ workspace_patterns = (
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/sharing/",
             include(workspace_sharing_patterns),
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/update/",
+            views.WorkspaceUpdate.as_view(),
+            name="update",
         ),
     ],
     "workspaces",

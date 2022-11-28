@@ -634,22 +634,6 @@ class Workspace(TimeStampedModel):
                     }
                 )
 
-    def clean(self):
-        super().clean()
-        # Check for the same case insensitive name in the same billing group.
-        try:
-            Workspace.objects.get(
-                billing_project=self.billing_project, name__iexact=self.name
-            )
-        except ObjectDoesNotExist:
-            # No workspace with the same billing project and case-insensitive name exists.
-            pass
-        else:
-            # The workspace already exists - raise a Validation error.
-            raise ValidationError(
-                "Workspace with this Billing Project and Name already exists."
-            )
-
     def __str__(self):
         return "{billing_project}/{name}".format(
             billing_project=self.billing_project, name=self.name
