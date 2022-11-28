@@ -290,6 +290,7 @@ class AccountImport(
     """
 
     model = models.Account
+    template_name = "anvil_consortium_manager/account_import.html"
 
     message_account_does_not_exist = "This account does not exist on AnVIL."
     """A string that can be displayed if the account does not exist on AnVIL."""
