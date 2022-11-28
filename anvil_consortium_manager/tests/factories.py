@@ -99,6 +99,18 @@ class WorkspaceFactory(DjangoModelFactory):
         django_get_or_create = ["billing_project", "name"]
 
 
+class DefaultWorkspaceDataFactory(DjangoModelFactory):
+    """A factory for the DefaultWorkspaceData model."""
+
+    workspace = SubFactory(WorkspaceFactory)
+
+    class Meta:
+        model = models.DefaultWorkspaceData
+        django_get_or_create = [
+            "workspace",
+        ]
+
+
 class WorkspaceAuthorizationDomainFactory(DjangoModelFactory):
     """A factory for the WorkspaceAuthorizationDomain model."""
 

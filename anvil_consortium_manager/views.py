@@ -969,8 +969,13 @@ class ManagedGroupMembershipAudit(
 class WorkspaceAdapterMixin:
     """Class for handling workspace adapters."""
 
-    def get_adapter(self):
+    def get_workspace_type(self):
+        # Try getting it from the kwargs.
         workspace_type = self.kwargs.get("workspace_type")
+        return workspace_type
+
+    def get_adapter(self):
+        workspace_type = self.get_workspace_type()
         if workspace_type:
             try:
                 adapter = workspace_adapter_registry.get_adapter(workspace_type)
@@ -978,8 +983,7 @@ class WorkspaceAdapterMixin:
                 raise Http404("workspace_type is not registered.")
         else:
             raise AttributeError(
-                "View %s must be called with `workspace_type` in the URLconf."
-                % self.__class__.__name__
+                "`workspace_type` must be specified." % self.__class__.__name__
             )
         return adapter
 
@@ -1293,6 +1297,117 @@ class WorkspaceImport(
                 form=form, workspace_data_formset=workspace_data_formset
             )
         )
+
+
+class WorkspaceUpdate(
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    WorkspaceAdapterMixin,
+    UpdateView,
+):
+    """View to update information about an Account."""
+
+    model = models.Workspace
+    form_class = forms.WorkspaceUpdateForm
+    slug_field = "name"
+    template_name = "anvil_consortium_manager/workspace_update.html"
+    success_msg = "Successfully updated Workspace."
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(
+            billing_project__name=billing_project_slug, name=workspace_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get_workspace_type(self):
+        """Return the workspace type of this workspace."""
+        object = self.get_object()
+        return object.workspace_type
+
+    def get_workspace_data_formset(self):
+        """Return an instance of the workspace data form to be used in this view."""
+        formset_prefix = "workspacedata"
+        form_class = self.adapter.get_workspace_data_form_class()
+        model = self.adapter.get_workspace_data_model()
+        formset_factory = inlineformset_factory(
+            models.Workspace,
+            model,
+            form=form_class,
+            # exclude=("workspace",),
+            can_delete=False,
+            can_delete_extra=False,
+            absolute_max=1,
+            max_num=1,
+            min_num=1,
+        )
+        if self.request.method in ("POST"):
+            formset = formset_factory(
+                self.request.POST,
+                instance=self.object,
+                prefix=formset_prefix,
+                initial=[{"workspace": self.object}],
+            )
+        else:
+            formset = formset_factory(
+                prefix=formset_prefix, initial=[{}], instance=self.object
+            )
+        # import ipdb; ipdb.set_trace()
+        print(self.request.POST)
+        return formset
+
+    def get_context_data(self, **kwargs):
+        """Insert the workspace data formset into the context dict."""
+        if "workspace_data_formset" not in kwargs:
+            kwargs["workspace_data_formset"] = self.get_workspace_data_formset()
+        return super().get_context_data(**kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests: instantiate the forms instances with the passed
+        POST variables and then check if they are valid.
+        """
+        self.object = self.get_object()
+        self.adapter = self.get_adapter()
+        form = self.get_form()
+        workspace_data_formset = self.get_workspace_data_formset()
+        if form.is_valid() and workspace_data_formset.is_valid():
+            return self.form_valid(form, workspace_data_formset)
+        else:
+            return self.forms_invalid(form, workspace_data_formset)
+
+    @transaction.atomic
+    def form_valid(self, form, workspace_data_formset):
+        """If the form(s) are valid, save the associated model(s) and create the workspace on AnVIL."""
+        workspace_data_formset.save()
+        return super().form_valid(form)
+
+    def forms_invalid(self, form, workspace_data_formset):
+        """If the form(s) are invalid, render the invalid form."""
+        return self.render_to_response(
+            self.get_context_data(
+                form=form, workspace_data_formset=workspace_data_formset
+            )
+        )
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
 
 
 class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):

@@ -228,6 +228,11 @@ workspace_patterns = (
             "<slug:billing_project_slug>/<slug:workspace_slug>/sharing/",
             include(workspace_sharing_patterns),
         ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/update/",
+            views.WorkspaceUpdate.as_view(),
+            name="update",
+        ),
     ],
     "workspaces",
 )

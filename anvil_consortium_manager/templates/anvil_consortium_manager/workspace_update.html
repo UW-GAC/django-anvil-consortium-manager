@@ -1,0 +1,22 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Update Workspace{% endblock title %}
+
+{% block content %}
+
+  <h2>Update Workspace {{ object }}</h2>
+  <form method="post">
+
+    {% csrf_token %}
+    {{ workspace_data_formset|crispy }}
+    {{ form|crispy }}
+
+    <button type="submit" class="btn btn-success">Save workspace</button>
+  </form>
+{% endblock %}
+
+{% block inline_javascript %}
+  {{ form.media }}
+{% endblock inline_javascript %}

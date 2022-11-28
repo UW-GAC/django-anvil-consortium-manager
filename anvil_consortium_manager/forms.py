@@ -135,6 +135,32 @@ class WorkspaceCreateForm(forms.ModelForm):
                         These cannot be changed after creation.""",
         }
 
+    def clean(self):
+        # Check for the same case insensitive name in the same billing project.
+        billing_project = self.cleaned_data.get("billing_project", None)
+        name = self.cleaned_data.get("name", None)
+        if (
+            billing_project
+            and name
+            and models.Workspace.objects.filter(
+                billing_project=billing_project,
+                name__iexact=name,
+            ).exists()
+        ):
+            # The workspace already exists - raise a Validation error.
+            raise ValidationError(
+                "Workspace with this Billing Project and Name already exists."
+            )
+        return self.cleaned_data
+
+
+class WorkspaceUpdateForm(forms.ModelForm):
+    """Form to update information about a Workspace."""
+
+    class Meta:
+        model = models.Workspace
+        fields = ("note",)
+
 
 class WorkspaceImportForm(forms.Form):
     """Form to import a workspace from AnVIL -- new version."""

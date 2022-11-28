@@ -8030,6 +8030,260 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(responses.calls), 2)
 
 
+class WorkspaceUpdateTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.workspace_data = factories.DefaultWorkspaceDataFactory.create()
+        self.workspace = self.workspace_data.workspace
+
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:update", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceUpdate.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project, self.workspace.name)
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
+
+    def test_object_does_not_exist(self):
+        """Raises Http404 if object does not exist."""
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        self.assertIn("form", response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceUpdateForm)
+
+    def test_has_formset_in_context(self):
+        """Response includes a formset for the workspace_data model."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        self.assertTrue("workspace_data_formset" in response.context_data)
+        formset = response.context_data["workspace_data_formset"]
+        self.assertIsInstance(formset, BaseInlineFormSet)
+        self.assertEqual(len(formset.forms), 1)
+        self.assertIsInstance(formset.forms[0], forms.DefaultWorkspaceDataForm)
+
+    def test_can_modify_note(self):
+        """Can set the note when creating a billing project."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "note": "new note",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 1,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-id": self.workspace_data.pk,
+                "workspacedata-0-workspace": self.workspace.pk,
+                "workspacedata-0-study_name": "updated name",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.workspace_data.refresh_from_db()
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.workspace.note, "new note")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "note": "new note",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 1,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-id": self.workspace_data.pk,
+                "workspacedata-0-workspace": self.workspace.pk,
+                "workspacedata-0-study_name": "updated name",
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceUpdate.success_msg, str(messages[0]))
+
+    def test_redirects_to_object_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "note": "new note",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 1,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-id": self.workspace_data.pk,
+                "workspacedata-0-workspace": self.workspace.pk,
+                "workspacedata-0-study_name": "updated name",
+            },
+        )
+        self.assertRedirects(response, self.workspace.get_absolute_url())
+
+    def test_can_update_workspace_data(self):
+        """Can update workspace data when updating the workspace."""
+        # Note that we need to use the test adapter for this.
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        workspace_data = app_models.TestWorkspaceData.objects.create(
+            workspace=workspace, study_name="original name"
+        )
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name),
+            {
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 1,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-id": workspace_data.pk,
+                "workspacedata-0-workspace": workspace.pk,
+                "workspacedata-0-study_name": "updated name",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        workspace_data.refresh_from_db()
+        self.assertEqual(workspace_data.study_name, "updated name")
+
+    def test_custom_adapter_workspace_data(self):
+        # Note that we need to use the test adapter for this.
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        app_models.TestWorkspaceData.objects.create(
+            workspace=workspace, study_name="original name"
+        )
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.billing_project.name, workspace.name)
+        )
+        self.assertTrue("workspace_data_formset" in response.context_data)
+        formset = response.context_data["workspace_data_formset"]
+        self.assertIsInstance(formset, BaseInlineFormSet)
+        self.assertEqual(len(formset.forms), 1)
+        self.assertIsInstance(formset.forms[0], app_forms.TestWorkspaceDataForm)
+
+    def test_no_updates_if_invalid_workspace_data_form(self):
+        """Nothing is updated if workspace_data_form is invalid."""
+        # Note that we need to use the test adapter for this.
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory(
+            workspace_type=TestWorkspaceAdapter().get_type(),
+            note="original note",
+        )
+        workspace_data = app_models.TestWorkspaceData.objects.create(
+            workspace=workspace, study_name="original name"
+        )
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name),
+            {
+                "note": "updated note",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-id": workspace_data.pk,
+                "workspacedata-0-workspace": workspace.pk,
+                "workspacedata-0-study_name": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        workspace.refresh_from_db()
+        workspace_data.refresh_from_db()
+        self.assertEqual(workspace.note, "original note")
+        self.assertEqual(workspace_data.study_name, "original name")
+
+
 class WorkspaceListTest(TestCase):
     def setUp(self):
         """Set up test class."""
