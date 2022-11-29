@@ -1,9 +1,9 @@
 {% extends "anvil_consortium_manager/workspace_detail.html" %}
 
 {% block workspace_data %}
+  <hr>
   <ul>
     <li>Study: {{ object.exampleworkspacedata.study_name }}</li>
     <li>Consent: {{ object.exampleworkspacedata.consent_code }}</li>
-    <li>Note: {{ object.note }}</li>
   </ul>
 {% endblock workspace_data %}
