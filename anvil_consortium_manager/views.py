@@ -998,7 +998,9 @@ class WorkspaceAdapterMixin:
         return super().post(request, *args, **kwargs)
 
 
-class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
+class WorkspaceDetail(
+    auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, DetailView
+):
     model = models.Workspace
 
     def get_object(self, queryset=None):
@@ -1024,6 +1026,11 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
             )
         return obj
 
+    def get_workspace_type(self):
+        """Return the workspace type of this workspace."""
+        object = self.get_object()
+        return object.workspace_type
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
@@ -1039,6 +1046,8 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
         context["show_edit_links"] = self.request.user.has_perm(
             "anvil_consortium_manager." + edit_permission_codename
         )
+        context["workspace_type_display_name"] = self.adapter.get_name()
+        print(context["workspace_type_display_name"])
         return context
 
     def get_template_names(self):

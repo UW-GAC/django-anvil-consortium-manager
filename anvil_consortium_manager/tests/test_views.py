@@ -5882,6 +5882,33 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(workspace.get_absolute_url())
         self.assertTemplateUsed(response, "test_workspace_detail.html")
 
+    def test_context_workspace_type_display_name(self):
+        """workspace_type_display_name is present in context."""
+        workspace = factories.WorkspaceFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertIn("workspace_type_display_name", response.context)
+        self.assertEqual(
+            response.context["workspace_type_display_name"],
+            DefaultWorkspaceAdapter().get_name(),
+        )
+
+    def test_context_workspace_type_display_name_custom_adapter(self):
+        """workspace_type_display_name is present in context with a custom adapter."""
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory.create(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertTemplateUsed(response, "test_workspace_detail.html")
+        self.assertIn("workspace_type_display_name", response.context)
+        self.assertEqual(
+            response.context["workspace_type_display_name"],
+            TestWorkspaceAdapter().get_name(),
+        )
+
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
