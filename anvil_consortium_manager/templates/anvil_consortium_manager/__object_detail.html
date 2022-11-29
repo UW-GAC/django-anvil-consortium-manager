@@ -11,9 +11,14 @@
   {% block pills %}
   {% endblock pills %}
 
-  <div class="my-3 p-3 bg-light border rounded shadow-sm">
-  {% block panel %}
-  {% endblock panel %}
+  <div class="card my-3">
+    <h5 class="card-header">Details</h5>
+    <div class="card-body">
+      <p class-card-text>
+      {% block panel %}
+      {% endblock panel %}
+      </p>
+    </div>
   </div>
 
   {% block after_panel %}
