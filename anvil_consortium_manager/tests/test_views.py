@@ -199,7 +199,6 @@ class ViewEditUrlTest(TestCase):
         """Links to edit required do not appear in the index when user only has view permission."""
         self.client.force_login(self.edit_user)
         response = self.client.get(reverse("anvil_consortium_manager:index"))
-        # import ipdb; ipdb.set_trace()
         for url in self.edit_urls:
             self.assertContains(response, url)
         for url in self.view_urls:
@@ -10510,7 +10509,6 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        # import ipdb; ipdb.set_trace()
         self.assertEqual(len(form.non_field_errors()), 1)
         self.assertIn("itself", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
@@ -10976,7 +10974,6 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
-        # import ipdb; ipdb.set_trace()
         self.assertEqual(len(form.non_field_errors()), 1)
         self.assertIn("itself", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
