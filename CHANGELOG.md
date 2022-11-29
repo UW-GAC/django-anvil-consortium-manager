@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.6 (2022-11-29)
 
 - Add ability to update `BillingProject`, `Account`, `ManagedGroup`, and `Workspace`, and workspace data models.
 - Add an extendable __object_detail.html template intended to be used by object detail templates.
