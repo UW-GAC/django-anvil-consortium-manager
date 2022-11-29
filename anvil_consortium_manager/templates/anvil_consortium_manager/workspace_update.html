@@ -1,21 +1,32 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/workspace_detail.html" %}
 {% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}Update Workspace{% endblock title %}
 
-{% block content %}
+{% block panel %}
+<ul>
+  <li>Billing project: {{ object.billing_project }}</li>
+  <li>Name: {{ object.name }}</li>
+  <li>Date added: {{ object.created }}</li>
+  <li>Date modified: {{ object.modified }}</li>
+</ul>
+{% endblock panel %}
 
-  <h2>Update Workspace {{ object }}</h2>
+{% block after_panel %}
   <form method="post">
-
     {% csrf_token %}
     {{ workspace_data_formset|crispy }}
     {{ form|crispy }}
-
     <button type="submit" class="btn btn-success">Save</button>
+    <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">Cancel</a>
   </form>
-{% endblock %}
+{% endblock after_panel %}
+
+
+{% block action_buttons %}
+{% endblock action_buttons %}
+
 
 {% block inline_javascript %}
   {{ form.media }}

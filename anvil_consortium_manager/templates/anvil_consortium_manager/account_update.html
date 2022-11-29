@@ -1,13 +1,29 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/account_detail.html" %}
 {% load crispy_forms_tags %}
 
-{% block title %}Update an Account{% endblock title %}
+{% block title %}Update Account{% endblock title %}
 
-{% block content %}
-<h2>Update Account {{ object }}</h2>
+{% block panel %}
+  <ul>
+    <li>Email: {{ object.email }}</li>
+    <li>Status: {{ object.get_status_display }}</li>
+    <li>Date added: {{ object.created }}</li>
+    <li>Date modified: {{ object.modified }}</li>
+    <li>User: {% if object.verified_email_entry %}{{ object.verified_email_entry.user }}{% else %} &mdash; {% endif %}</li>
+    <li>Date verified by user: {% if object.verified_email_entry %}{{ object.verified_email_entry.date_verified }}{% else %} &mdash; {% endif %}</li>
+  </ul>
+{% endblock panel %}
+
+
+{% block after_panel %}
   <form method="post">
     {% csrf_token %}
     {{ form|crispy }}
-    <button type="submit" class="btn btn-success">Save account</button>
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">Cancel</a>
   </form>
-{% endblock %}
+{% endblock after_panel %}
+
+
+{% block action_buttons %}
+{% endblock action_buttons %}

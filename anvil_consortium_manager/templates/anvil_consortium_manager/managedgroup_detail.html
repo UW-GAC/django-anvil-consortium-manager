@@ -1,34 +1,40 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/__object_detail.html" %}
 {% load static %}
 
 {% load render_table from django_tables2 %}
 
+
 {% block title %}Managed Group: {{ object.name }}{% endblock %}
 
-{% block content %}
 
-<h2>
-  Managed Group Details
-    <a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
-      <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
-      View on AnVIL
-    </a>
-</h2>
+{% block anvil_link %}
+<a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
+  <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
+  View on AnVIL
+</a>
+{% endblock anvil_link %}
 
-{% if object.is_managed_by_app %}
-  <span class="badge bg-success">Managed by app</span>
-{% else %}
-  <span class="badge bg-secondary">Not managed by app</span>
-{% endif %}
-<div class="my-3 p-3 bg-light border rounded shadow-sm">
+
+{% block pills %}
+  {% if object.is_managed_by_app %}
+    <span class="badge bg-success">Managed by app</span>
+  {% else %}
+    <span class="badge bg-secondary">Not managed by app</span>
+  {% endif %}
+{% endblock pills %}
+
+
+{% block panel %}
   <ul>
     <li>Name: {{ object.name }}</li>
     <li>Date added: {{ object.created }}</li>
     <li>Date modified: {{ object.modified }}</li>
     <li>Note: {{ object.note }}</li>
   </ul>
-</div>
+{% endblock panel %}
 
+
+{% block after_panel %}
 <div class="my-3">
   <div class="accordion" id="accordionWorkspaceAuthDomains">
     <div class="accordion-item">
@@ -48,28 +54,26 @@
   </div>
 </div>
 
+{% if object.is_managed_by_app %}
 
-<div class="my-3">
-  <div class="accordion" id="accordionWorkspaceAccess">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingWorkspaceAccessOne">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspaceAccessOne" aria-expanded="false" aria-controls="collapseWorkspaceAccessOne">
-          <span class="fa-solid fa-computer mx-2"></span>
-          View workspaces shared with this group
-          <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseWorkspaceAccessOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAccessOne" data-bs-parent="#accordionWorkspaceAccess">
-        <div class="accordion-body">
-          {% render_table workspace_table %}
+  <div class="my-3">
+    <div class="accordion" id="accordionWorkspaceAccess">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingWorkspaceAccessOne">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspaceAccessOne" aria-expanded="false" aria-controls="collapseWorkspaceAccessOne">
+            <span class="fa-solid fa-computer mx-2"></span>
+            View workspaces shared with this group
+            <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseWorkspaceAccessOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAccessOne" data-bs-parent="#accordionWorkspaceAccess">
+          <div class="accordion-body">
+            {% render_table workspace_table %}
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-
-{% if object.is_managed_by_app %}
 
   <div class="my-3">
     <div class="accordion" id="accordionMembers">
@@ -138,32 +142,35 @@
     </div>
   </div>
 
+  {% endif %}
+
+{% endblock after_panel %}
 
 
+{% block action_buttons %}
 
-
+{% if object.is_managed_by_app %}
 {% if show_edit_links %}
-<p>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:sharing:new' group_slug=object.name %}" class="btn btn-primary" role="button">Share a workspace with this group</a>
-</p>
+  <p>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:sharing:new' group_slug=object.name %}" class="btn btn-primary" role="button">Share a workspace with this group</a>
+  </p>
 
-<p>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:new' group_slug=object.name %}" class="btn btn-primary" role="button">Add an account to this group</a>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:member_groups:new' parent_group_slug=object.name %}" class="btn btn-primary" role="button">Add a group to this group</a>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:add_to_group' group_slug=object.name %}" class="btn btn-primary" role="button">Add this group to another group</a>
-</p>
+  <p>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:new' group_slug=object.name %}" class="btn btn-primary" role="button">Add an account to this group</a>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:member_groups:new' parent_group_slug=object.name %}" class="btn btn-primary" role="button">Add a group to this group</a>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:add_to_group' group_slug=object.name %}" class="btn btn-primary" role="button">Add this group to another group</a>
+  </p>
 {% endif %}
 
 <p>
   <a href="{% url 'anvil_consortium_manager:managed_groups:audit_membership' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
 </p>
 {% if show_edit_links %}
-<p>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:update' slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:delete' slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-</p>
+  <p>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:update' slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:delete' slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  </p>
+  {% endif %}
 {% endif %}
 
-{% endif %}
-
-{% endblock content %}
+{% endblock action_buttons %}

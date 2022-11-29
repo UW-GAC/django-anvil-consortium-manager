@@ -1,0 +1,25 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% block content %}
+
+  <h2>
+    {% block title %}{% endblock title %}
+    {% block anvil_link %} {% endblock anvil_link %}
+  </h2>
+
+  {% block pills %}
+  {% endblock pills %}
+
+  <div class="my-3 p-3 bg-light border rounded shadow-sm">
+  {% block panel %}
+  {% endblock panel %}
+  </div>
+
+  {% block after_panel %}
+  {% endblock after_panel %}
+
+  {% block action_buttons %}
+  {% endblock action_buttons %}
+
+{% endblock content %}

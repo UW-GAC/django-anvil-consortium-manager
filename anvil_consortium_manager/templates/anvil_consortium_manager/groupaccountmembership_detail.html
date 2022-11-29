@@ -1,12 +1,9 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/__object_detail.html" %}
 {% load static %}
 
 {% block title %}Group account membership: {{ object }}{% endblock %}
 
-{% block content %}
-
-<h2>Group Account Membership Details</h2>
-<div class="my-3 p-3 bg-light border rounded shadow-sm">
+{% block panel %}
   <ul>
     <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>
     <li>Account: <a href="{{object.account.get_absolute_url}}"> {{ object.account}} </a></li>
@@ -14,12 +11,12 @@
     <li>Date added: {{ object.created }}</li>
     <li>Date modified: {{ object.modified }}</li>
   </ul>
-</div>
+{% endblock panel %}
 
-{% if show_edit_links %}
-<p>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:delete' group_slug=object.group.name account_uuid=object.account.uuid %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-</p>
-{% endif %}
-
-{% endblock content %}
+{% block action_buttons %}
+  {% if show_edit_links %}
+    <p>
+      <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:delete' group_slug=object.group.name account_uuid=object.account.uuid %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+    </p>
+  {% endif %}
+{% endblock action_buttons %}
