@@ -10,6 +10,14 @@
   {% block pills %}
   {% endblock pills %}
 
+  {% block note %}
+    {% if object.note %}
+    <div class="alert alert-secondary my-3" role="alert">
+      <b>Note</b>: {{ object.note }}
+    </div>
+    {% endif %}
+  {% endblock note %}
+
   <div class="card my-3">
     <div class="card-header">
       <span class="fa-solid fa-circle-info mx-2"></span>
