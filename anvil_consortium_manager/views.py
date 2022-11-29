@@ -997,6 +997,11 @@ class WorkspaceAdapterMixin:
         self.adapter = self.get_adapter()
         return super().post(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        if "workspace_type_display_name" not in kwargs:
+            kwargs["workspace_type_display_name"] = self.adapter.get_name()
+        return super().get_context_data(**kwargs)
+
 
 class WorkspaceDetail(
     auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, DetailView
@@ -1046,8 +1051,6 @@ class WorkspaceDetail(
         context["show_edit_links"] = self.request.user.has_perm(
             "anvil_consortium_manager." + edit_permission_codename
         )
-        context["workspace_type_display_name"] = self.adapter.get_name()
-        print(context["workspace_type_display_name"])
         return context
 
     def get_template_names(self):
