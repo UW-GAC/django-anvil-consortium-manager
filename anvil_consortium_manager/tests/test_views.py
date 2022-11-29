@@ -15,6 +15,7 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from faker import Faker
+from freezegun import freeze_time
 
 from .. import __version__, anvil_api, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
@@ -1823,6 +1824,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(), {"email": email})
         self.assertRedirects(response, "/test_home/")
 
+    # This test occasionally fails if the time flips one second between sending the email and
+    # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
+    # this spurious failure.
+    @freeze_time("2022-11-22 03:12:34")
     def test_email_is_sent(self):
         """An email is sent when the form is submitted correctly."""
         email = "test@example.com"
@@ -2021,6 +2026,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             str(messages[0]), views.AccountLink.message_account_already_exists
         )
 
+    # This test occasionally fails if the time flips one second between sending the email and
+    # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
+    # this spurious failure.
+    @freeze_time("2022-11-22 03:12:34")
     def test_user_can_enter_two_different_emails(self):
         """A user can attempt to link two different emails."""
         other_timestamp = timezone.now() - datetime.timedelta(days=30)
@@ -2074,6 +2083,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # API call to AnVIL is made.
         responses.assert_call_count(api_url, 1)
 
+    # This test occasionally fails if the time flips one second between sending the email and
+    # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
+    # this spurious failure.
+    @freeze_time("2022-11-22 03:12:34")
     def test_two_different_users_can_attempt_to_link_same_email(self):
         """Two different users can enter the same email."""
         email = "test@example.com"
@@ -2128,6 +2141,10 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # API call to AnVIL is made.
         responses.assert_call_count(api_url, 1)
 
+    # This test occasionally fails if the time flips one second between sending the email and
+    # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
+    # this spurious failure.
+    @freeze_time("2022-11-22 03:12:34")
     def test_email_case_insensitive(self):
         """Case sensitivity."""
         email = "TEST@example.com"
@@ -5881,6 +5898,33 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertTemplateUsed(response, "test_workspace_detail.html")
+
+    def test_context_workspace_type_display_name(self):
+        """workspace_type_display_name is present in context."""
+        workspace = factories.WorkspaceFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertIn("workspace_type_display_name", response.context)
+        self.assertEqual(
+            response.context["workspace_type_display_name"],
+            DefaultWorkspaceAdapter().get_name(),
+        )
+
+    def test_context_workspace_type_display_name_custom_adapter(self):
+        """workspace_type_display_name is present in context with a custom adapter."""
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory.create(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertTemplateUsed(response, "test_workspace_detail.html")
+        self.assertIn("workspace_type_display_name", response.context)
+        self.assertEqual(
+            response.context["workspace_type_display_name"],
+            TestWorkspaceAdapter().get_name(),
+        )
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):

@@ -1,76 +1,80 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/__object_detail.html" %}
 {% load static %}
 
 {% load render_table from django_tables2 %}
 
-{% block title %}Workspace: {{ object }}{% endblock %}
-
-{% block content %}
+{% block title %}{{ workspace_type_display_name }}: {{ object }}{% endblock %}
 
 
-
-<h2>
-  Workspace: {{ object }}
+{% block after_title %}
   <a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
     <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
     View on AnVIL
   </a>
-</h2>
+{% endblock after_title %}
 
-{% block workspace_data %}
-<div class="my-3 p-3 bg-light border rounded shadow-sm">
+{% block pills %}
+{% endblock pills %}
+
+{% block panel %}
+
   <ul>
-    <li>Billing project: {{ object.billing_project }}</li>
+    <li>Billing project: <a href="{{ object.billing_project.get_absolute_url }}">{{ object.billing_project }}</a></li>
+    <li>Name: {{ object.name }}</li>
     <li>Date added: {{ object.created }}</li>
     <li>Date modified: {{ object.modified }}</li>
     <li>Note: {{ object.note }}</li>
   </ul>
-</div>
-{% endblock workspace_data %}
+  {% if object.workspace_type != "workspace" %}
+    <hr>
+    {% block workspace_data %}
+    {% endblock workspace_data %}
+  {% endif %}
+{% endblock panel %}
 
-<div>
-<div class="card my-3">
-  <div class="card-header">
-    <span class="fa-solid fa-shield mx-2"></span>
-    Authorization domains
+{% block after_panel %}
+  <div>
+    <div class="card my-3">
+      <div class="card-header">
+        <span class="fa-solid fa-shield mx-2"></span>
+        Authorization domains
+      </div>
+      <div class="card-body">
+          {% render_table authorization_domain_table %}
+      </div>
+    </div>
   </div>
-  <div class="card-body">
-      {% render_table authorization_domain_table %}
-  </div>
-</div>
-</div>
-
-<div class="my-3">
-  <div class="accordion" id="accordionGroups">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingGroupsOne">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
-          <span class="fa-solid fa-user-group mx-2"></span>
-          View groups that this workspace is shared with
-          <span class="badge mx-2 bg-secondary pill"> {{ group_sharing_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseGroupsOne" class="accordion-collapse collapse" aria-labelledby="headingGroupsOne" data-bs-parent="#accordionGroups">
-        <div class="accordion-body">
-          {% render_table group_sharing_table %}
+  <div class="my-3">
+    <div class="accordion" id="accordionGroups">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingGroupsOne">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
+            <span class="fa-solid fa-user-group mx-2"></span>
+            View groups that this workspace is shared with
+            <span class="badge mx-2 bg-secondary pill"> {{ group_sharing_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseGroupsOne" class="accordion-collapse collapse" aria-labelledby="headingGroupsOne" data-bs-parent="#accordionGroups">
+          <div class="accordion-body">
+            {% render_table group_sharing_table %}
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
+{% endblock after_panel %}
 
+{% block action_buttons %}
+  <p>
+    <a href="{% url 'anvil_consortium_manager:workspaces:audit_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
 
-<p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:audit_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
+  {% if show_edit_links %}
+    <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
+  </p>
 
-{% if show_edit_links %}
-  <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
-</p>
-
-<p>
-  <a href="{% url 'anvil_consortium_manager:workspaces:update' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
-  <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-{% endif %}
-</p>
-
-{% endblock content %}
+  <p>
+    <a href="{% url 'anvil_consortium_manager:workspaces:update' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
+    <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  {% endif %}
+  </p>
+{% endblock action_buttons %}

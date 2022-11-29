@@ -1,52 +1,52 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/__object_detail.html" %}
 {% load static %}
 
 {% load render_table from django_tables2 %}
 
 {% block title %}Billing project: {{ object.name }}{% endblock %}
 
-{% block content %}
 
-<h2>Billing Project Details</h2>
+{% block pills %}
+  {% if object.has_app_as_user %}
+    <span class="badge bg-success">Has app as user</span>
+  {% else %}
+    <span class="badge bg-secondary">Does not have app as user</span>
+  {% endif %}
+{% endblock pills %}
 
-{% if object.has_app_as_user %}
-  <span class="badge bg-success">Has app as user</span>
-{% else %}
-  <span class="badge bg-secondary">Does not have app as user</span>
-{% endif %}
-
-<div class="my-3 p-3 bg-light border rounded shadow-sm">
+{% block panel %}
   <ul>
     <li>Name: {{ object.name }}</li>
     <li>Date added: {{ object.created }}</li>
     <li>Date modified: {{ object.modified }}</li>
     <li>Note: {{ object.note }}</li>
   </ul>
-</div>
+{% endblock panel %}
 
-<div class="my-3">
-  <div class="accordion" id="accordionWorkspaces">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingWorkspacesOne">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspacesOne" aria-expanded="false" aria-controls="collapseWorkspacesOne">
-          <span class="fa-solid fa-computer mx-2"></span>
-          View workspaces in this billing project
-          <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseWorkspacesOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspacesOne" data-bs-parent="#accordionWorkspaces">
-        <div class="accordion-body">
-          {% render_table workspace_table %}
+{% block after_panel %}
+  <div class="my-3">
+    <div class="accordion" id="accordionWorkspaces">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingWorkspacesOne">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspacesOne" aria-expanded="false" aria-controls="collapseWorkspacesOne">
+            <span class="fa-solid fa-computer mx-2"></span>
+            View workspaces in this billing project
+            <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseWorkspacesOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspacesOne" data-bs-parent="#accordionWorkspaces">
+          <div class="accordion-body">
+            {% render_table workspace_table %}
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
+{% endblock after_panel %}
 
-
-{% if show_edit_links %}
-<a href="{% url 'anvil_consortium_manager:billing_projects:update' slug=object.name %}" class="btn btn-secondary" role="button">Update information</a>
-</p>
-{% endif %}
-
-{% endblock content %}
+{% block action_buttons %}
+  {% if show_edit_links %}
+  <a href="{% url 'anvil_consortium_manager:billing_projects:update' slug=object.name %}" class="btn btn-secondary" role="button">Update information</a>
+  </p>
+  {% endif %}
+{% endblock action_buttons %}

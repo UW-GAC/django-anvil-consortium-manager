@@ -997,8 +997,15 @@ class WorkspaceAdapterMixin:
         self.adapter = self.get_adapter()
         return super().post(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        if "workspace_type_display_name" not in kwargs:
+            kwargs["workspace_type_display_name"] = self.adapter.get_name()
+        return super().get_context_data(**kwargs)
 
-class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
+
+class WorkspaceDetail(
+    auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, DetailView
+):
     model = models.Workspace
 
     def get_object(self, queryset=None):
@@ -1023,6 +1030,11 @@ class WorkspaceDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
                 % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
+
+    def get_workspace_type(self):
+        """Return the workspace type of this workspace."""
+        object = self.get_object()
+        return object.workspace_type
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

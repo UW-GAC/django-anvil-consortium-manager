@@ -1,0 +1,32 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% block content %}
+
+  <h2>
+    {% block title %}{% endblock title %} {% block after_title %}{% endblock after_title %}
+  </h2>
+
+  {% block pills %}
+  {% endblock pills %}
+
+  <div class="card my-3">
+    <div class="card-header">
+      <span class="fa-solid fa-circle-info mx-2"></span>
+      Details
+    </div>
+    <div class="card-body">
+      <p class-card-text>
+      {% block panel %}
+      {% endblock panel %}
+      </p>
+    </div>
+  </div>
+
+  {% block after_panel %}
+  {% endblock after_panel %}
+
+  {% block action_buttons %}
+  {% endblock action_buttons %}
+
+{% endblock content %}
