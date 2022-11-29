@@ -5,13 +5,16 @@
 {% block title %}Update Workspace{% endblock title %}
 
 {% block panel %}
-<ul>
-  <li>Billing project: {{ object.billing_project }}</li>
-  <li>Name: {{ object.name }}</li>
-  <li>Date added: {{ object.created }}</li>
-  <li>Date modified: {{ object.modified }}</li>
-</ul>
+  <ul>
+    <li>Billing project: {{ object.billing_project }}</li>
+    <li>Name: {{ object.name }}</li>
+    <li>Date added: {{ object.created }}</li>
+    <li>Date modified: {{ object.modified }}</li>
+  </ul>
+  {% block workspace_data %}
+  {% endblock workspace_data %}
 {% endblock panel %}
+
 
 {% block after_panel %}
   <form method="post">

@@ -24,6 +24,11 @@
     <li>Date modified: {{ object.modified }}</li>
     <li>Note: {{ object.note }}</li>
   </ul>
+  {% if object.workspace_type != "workspace" %}
+    <hr>
+    {% block workspace_data %}
+    {% endblock workspace_data %}
+  {% endif %}
 {% endblock panel %}
 
 {% block after_panel %}
