@@ -6,17 +6,18 @@
 {% block title %}{{ workspace_type_display_name }}: {{ object }}{% endblock %}
 
 
-{% block anvil_link %}
+{% block after_title %}
   <a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
     <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
     View on AnVIL
   </a>
-{% endblock anvil_link %}
+{% endblock after_title %}
 
 {% block pills %}
 {% endblock pills %}
 
 {% block panel %}
+
   <ul>
     <li>Billing project: <a href="{{ object.billing_project.get_absolute_url }}">{{ object.billing_project }}</a></li>
     <li>Name: {{ object.name }}</li>

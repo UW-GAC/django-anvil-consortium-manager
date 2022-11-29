@@ -6,15 +6,6 @@
 
 {% block title %}Managed Group: {{ object.name }}{% endblock %}
 
-
-{% block anvil_link %}
-<a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
-  <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
-  View on AnVIL
-</a>
-{% endblock anvil_link %}
-
-
 {% block pills %}
   {% if object.is_managed_by_app %}
     <span class="badge bg-success">Managed by app</span>
