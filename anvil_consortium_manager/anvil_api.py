@@ -251,6 +251,51 @@ class AnVILAPIClient:
 
         return self.auth_session.post(method, 201, json=body)
 
+    def clone_workspace(
+        self,
+        existing_workspace_namespace,
+        existing_workspace_name,
+        cloned_workspace_namespace,
+        cloned_workspace_name,
+        authorization_domains=[],
+    ):
+        """Clone an existing workspace on AnVIL.
+
+        Calls the /api/create_workspace POST method.
+
+        Args:
+            existing_workspace_namespace (str): The namespace (or billing project) of the
+                existing workspace to clone.
+            existing_workspace_name (str): The name of the existing workspace to clone.
+            cloned_workspace_namespace (str): The namespace (or billing project) in which
+                to create the cloned workspace.
+            cloned_workspace_name (str): The name of the cloned workspace to create.
+            authorization_domains (str): If desired, a list of group names that should be
+                used as the authorization domain for this workspace. This must include the
+                authorization domains of the existing workspace.
+
+        Returns:
+            requests.Response
+        """
+        method = "api/workspaces/{namespace}/{name}/clone".format(
+            namespace=existing_workspace_namespace,
+            name=existing_workspace_name,
+        )
+        body = {
+            "namespace": cloned_workspace_namespace,
+            "name": cloned_workspace_name,
+            "attributes": {},
+        }
+
+        # Add authorization domains.
+        if authorization_domains:
+            if not isinstance(authorization_domains, list):
+                authorization_domains = [authorization_domains]
+            auth_domain = [{"membersGroupName": g} for g in authorization_domains]
+            body["authorizationDomain"] = auth_domain
+
+        return self.auth_session.post(method, 201, json=body)
+
     def delete_workspace(self, workspace_namespace, workspace_name):
         """Delete a workspace on AnVIL. You must be an owner of the workspace to use this method.
 
