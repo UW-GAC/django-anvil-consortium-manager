@@ -241,11 +241,11 @@ class AnVILAPIClient:
             "name": workspace_name,
             "attributes": {},
         }
+        if not isinstance(authorization_domains, list):
+            raise ValueError("authorization_domains must be a list.")
 
         # Add authorization domains.
         if authorization_domains:
-            if not isinstance(authorization_domains, list):
-                authorization_domains = [authorization_domains]
             auth_domain = [{"membersGroupName": g} for g in authorization_domains]
             body["authorizationDomain"] = auth_domain
 
@@ -286,11 +286,11 @@ class AnVILAPIClient:
             "name": cloned_workspace_name,
             "attributes": {},
         }
+        if not isinstance(authorization_domains, list):
+            raise ValueError("authorization_domains must be a list.")
 
         # Add authorization domains.
         if authorization_domains:
-            if not isinstance(authorization_domains, list):
-                authorization_domains = [authorization_domains]
             auth_domain = [{"membersGroupName": g} for g in authorization_domains]
             body["authorizationDomain"] = auth_domain
 
