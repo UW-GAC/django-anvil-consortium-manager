@@ -708,29 +708,29 @@ class Workspace(TimeStampedModel):
         """Delete the workspace on AnVIL."""
         AnVILAPIClient().delete_workspace(self.billing_project.name, self.name)
 
-    def anvil_clone(
-        self, billing_project, workspace_name, additional_authorization_domains=[]
-    ):
-        """Clone this workspace to create a new workspace on AnVIL."""
+    def anvil_clone(self, billing_project, workspace_name, authorization_domains=[]):
+        """Clone this workspace to create a new workspace on AnVIL.
+
+        If the workspace to clone already has authorization domains, they will be added to
+        the authorization domains specified in `authorization_domains`."""
         # Check that the app can create workspaes in this billing project.
         if not billing_project.has_app_as_user:
             raise ValueError("BillingProject must have has_app_as_user=True.")
-        # Check that the new workspace does not already exist in the database.
-        if Workspace.objects.filter(
-            billing_project=billing_project, name=workspace_name
-        ).exists():
-            raise ValueError(
-                "Workspace with this BillingProject and Name already exists."
-            )
+        # Do not check if the new workspace already exists in the app.
+        # It may have already been created for some reason.
+        # if Workspace.objects.filter(
+        #     billing_project=billing_project, name=workspace_name
+        # ).exists():
+        #     raise ValueError(
+        #         "Workspace with this BillingProject and Name already exists."
+        #     )
         # All checks have passed, so start the cloning process.
         # Set up new auth domains using:
         # - existing auth domains for the workspace being cloned
         # - new auth domains that are specified when cloning.
         current_auth_domains = self.authorization_domains.all()
         auth_domains = [g.name for g in current_auth_domains] + [
-            g.name
-            for g in additional_authorization_domains
-            if g not in current_auth_domains
+            g.name for g in authorization_domains if g not in current_auth_domains
         ]
         # Clone the workspace on AnVIL.
         AnVILAPIClient().clone_workspace(

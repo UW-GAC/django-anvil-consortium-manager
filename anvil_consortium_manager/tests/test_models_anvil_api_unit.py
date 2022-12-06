@@ -2436,7 +2436,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.anvil_clone(
             billing_project,
             "test-workspace",
-            additional_authorization_domains=[auth_domain],
+            authorization_domains=[auth_domain],
         )
 
     def test_can_clone_workspace_add_two_auth_domains(self):
@@ -2467,7 +2467,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.anvil_clone(
             billing_project,
             "test-workspace",
-            additional_authorization_domains=[auth_domain_1, auth_domain_2],
+            authorization_domains=[auth_domain_1, auth_domain_2],
         )
 
     def test_can_clone_workspace_one_auth_domain_add_one_auth_domain(self):
@@ -2499,7 +2499,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.anvil_clone(
             billing_project,
             "test-workspace",
-            additional_authorization_domains=[new_auth_domain],
+            authorization_domains=[new_auth_domain],
         )
 
     def test_can_clone_workspace_one_auth_domain_add_two_auth_domains(self):
@@ -2533,7 +2533,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.anvil_clone(
             billing_project,
             "test-workspace",
-            additional_authorization_domains=[new_auth_domain_1, new_auth_domain_2],
+            authorization_domains=[new_auth_domain_1, new_auth_domain_2],
         )
 
     def test_can_clone_workspace_one_auth_domain_add_same_auth_domain(self):
@@ -2561,7 +2561,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.anvil_clone(
             billing_project,
             "test-workspace",
-            additional_authorization_domains=[auth_domain],
+            authorization_domains=[auth_domain],
         )
 
     def test_error_cloning_workspace_into_billing_project_where_app_is_not_user(self):
@@ -2574,20 +2574,6 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         # No new workspace was created.
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertIn(self.workspace, models.Workspace.objects.all())
-
-    def test_error_workspace_already_exists_in_app(self):
-        """Error when the workspace to be cloned already exists in the app."""
-        existing_workspace = factories.WorkspaceFactory.create()
-        # No API call exected.
-        with self.assertRaises(ValueError) as e:
-            self.workspace.anvil_clone(
-                existing_workspace.billing_project, existing_workspace.name
-            )
-        self.assertIn("already exists", str(e.exception))
-        # No new workspace was created.
-        self.assertEqual(models.Workspace.objects.count(), 2)
-        self.assertIn(self.workspace, models.Workspace.objects.all())
-        self.assertIn(existing_workspace, models.Workspace.objects.all())
 
     def test_error_workspace_already_exists_in_anvil_but_not_in_app(self):
         """Error when the workspace to be cloned already exists in AnVIL but is not in the app."""
@@ -2666,7 +2652,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
             self.workspace.anvil_clone(
                 billing_project,
                 "test-workspace",
-                additional_authorization_domains=[new_auth_domain],
+                authorization_domains=[new_auth_domain],
             )
         # No new workspace was created.
         self.assertEqual(models.Workspace.objects.count(), 1)

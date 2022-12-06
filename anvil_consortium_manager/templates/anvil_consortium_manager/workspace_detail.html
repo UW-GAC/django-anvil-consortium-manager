@@ -29,6 +29,7 @@
 {% endblock panel %}
 
 {% block after_panel %}
+
   <div>
     <div class="card my-3">
       <div class="card-header">
@@ -66,6 +67,21 @@
 
   {% if show_edit_links %}
     <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
+  </p>
+
+  <p>
+    <div class="dropdown">
+      <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="cloneWorkspaceMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
+        Clone workspace
+      </a>
+
+      <ul class="dropdown-menu" aria-labelledby="cloneWorkspaceMenuLink">
+        {% for workspace_type, workspace_name in registered_workspaces.items %}
+          <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:clone' billing_project_slug=object.billing_project.name workspace_slug=object.name workspace_type=workspace_type %}">{{ workspace_name }}</a></li>
+        {% endfor %}
+
+      </ul>
+    </div>
   </p>
 
   <p>
