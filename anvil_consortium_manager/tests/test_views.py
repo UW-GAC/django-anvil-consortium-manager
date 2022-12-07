@@ -8116,7 +8116,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceCreate.as_view()
+        return views.WorkspaceClone.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -8232,6 +8232,19 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
                 billing_project_slug=self.workspace_to_clone.billing_project.name,
                 workspace_slug=self.workspace_to_clone.name,
                 workspace_type="foo",
+            )
+
+    def test_get_workspace_not_found(self):
+        """Raises a 404 error when workspace does not exist."""
+        print(self.get_url("foo", "bar", self.workspace_type))
+        request = self.factory.get(self.get_url("foo", "bar", self.workspace_type))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug="foo",
+                workspace_slug="bar",
+                workspace_type=self.workspace_type,
             )
 
     def test_has_form_in_context(self):
