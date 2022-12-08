@@ -2310,6 +2310,380 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.url_workspace, 1)
 
 
+class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests of the Workspace.anvil_clone method."""
+
+    def setUp(self):
+        super().setUp()
+        self.workspace = factories.WorkspaceFactory.create()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        return (
+            self.entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/clone"
+        )
+
+    def get_api_json_response(self, billing_project_name, workspace_name):
+        """Return a pared down version of the json response from the AnVIL API with only fields we need."""
+        json_data = {
+            "name": workspace_name,
+            "namespace": billing_project_name,
+        }
+        return json_data
+
+    def test_can_clone_workspace_no_auth_domain(self):
+        """Can clone a workspace with no auth domains."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                    }
+                )
+            ],
+        )
+        self.workspace.anvil_clone(billing_project, "test-workspace")
+        # No new workspaces were created in the app.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace, models.Workspace.objects.all())
+
+    def test_can_clone_workspace_one_auth_domain(self):
+        """Can clone a workspace with one auth domain."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+                    }
+                )
+            ],
+        )
+        self.workspace.anvil_clone(billing_project, "test-workspace")
+
+    def test_can_clone_workspace_two_auth_domains(self):
+        """Can clone a workspace with two auth domains."""
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain_1, auth_domain_2)
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [
+                            {"membersGroupName": auth_domain_1.name},
+                            {"membersGroupName": auth_domain_2.name},
+                        ],
+                    }
+                )
+            ],
+        )
+        self.workspace.anvil_clone(billing_project, "test-workspace")
+
+    def test_can_clone_workspace_add_one_auth_domain(self):
+        """Can clone a workspace and add one auth domain."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+                    }
+                )
+            ],
+        )
+        # import ipdb; ipdb.set_trace()
+        self.workspace.anvil_clone(
+            billing_project,
+            "test-workspace",
+            authorization_domains=[auth_domain],
+        )
+
+    def test_can_clone_workspace_add_two_auth_domains(self):
+        """Can clone a workspace and add one auth domain."""
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [
+                            {"membersGroupName": auth_domain_1.name},
+                            {"membersGroupName": auth_domain_2.name},
+                        ],
+                    }
+                )
+            ],
+        )
+        self.workspace.anvil_clone(
+            billing_project,
+            "test-workspace",
+            authorization_domains=[auth_domain_1, auth_domain_2],
+        )
+
+    def test_can_clone_workspace_one_auth_domain_add_one_auth_domain(self):
+        """Can clone a workspace with one auth domain and add another auth domain."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain)
+        new_auth_domain = factories.ManagedGroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [
+                            {"membersGroupName": auth_domain.name},
+                            {"membersGroupName": new_auth_domain.name},
+                        ],
+                    }
+                )
+            ],
+        )
+        self.workspace.anvil_clone(
+            billing_project,
+            "test-workspace",
+            authorization_domains=[new_auth_domain],
+        )
+
+    def test_can_clone_workspace_one_auth_domain_add_two_auth_domains(self):
+        """Can clone a workspace with one auth domain and add another auth domain."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain)
+        new_auth_domain_1 = factories.ManagedGroupFactory.create()
+        new_auth_domain_2 = factories.ManagedGroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [
+                            {"membersGroupName": auth_domain.name},
+                            {"membersGroupName": new_auth_domain_1.name},
+                            {"membersGroupName": new_auth_domain_2.name},
+                        ],
+                    }
+                )
+            ],
+        )
+        self.workspace.anvil_clone(
+            billing_project,
+            "test-workspace",
+            authorization_domains=[new_auth_domain_1, new_auth_domain_2],
+        )
+
+    def test_can_clone_workspace_one_auth_domain_add_same_auth_domain(self):
+        """Can clone a workspace with one auth domain and add the same auth domain."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=201,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, "test-workspace"),
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+                    }
+                )
+            ],
+        )
+        self.workspace.anvil_clone(
+            billing_project,
+            "test-workspace",
+            authorization_domains=[auth_domain],
+        )
+
+    def test_error_cloning_workspace_into_billing_project_where_app_is_not_user(self):
+        """Error when cloning a workspace into a billing project where the app is not a user."""
+        billing_project = factories.BillingProjectFactory.create(has_app_as_user=False)
+        # No API call exected.
+        with self.assertRaises(ValueError) as e:
+            self.workspace.anvil_clone(billing_project, "test-workspace")
+        self.assertIn("has_app_as_user", str(e.exception))
+        # No new workspace was created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace, models.Workspace.objects.all())
+
+    def test_error_workspace_already_exists_in_anvil_but_not_in_app(self):
+        """Error when the workspace to be cloned already exists in AnVIL but is not in the app."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=409,  # already exists
+            json={"message": "other"},
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                    }
+                )
+            ],
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError409):
+            self.workspace.anvil_clone(billing_project, "test-workspace")
+        # No new workspace was created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace, models.Workspace.objects.all())
+
+    def test_error_workspace_does_not_exist_in_anvil(self):
+        """Error the workspace to clone does not exist on AnVIL."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=404,  # already exists
+            json={"message": "other"},
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                    }
+                )
+            ],
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.workspace.anvil_clone(billing_project, "test-workspace")
+        # No new workspace was created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace, models.Workspace.objects.all())
+
+    def test_error_authorization_domain_exists_in_app_but_not_on_anvil(self):
+        """Error when the authorization domain exists in the app but not on AnVIL."""
+        billing_project = factories.BillingProjectFactory.create()
+        new_auth_domain = factories.ManagedGroupFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=404,  # resource not found
+            json={"message": "other"},
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                        "authorizationDomain": [
+                            {"membersGroupName": new_auth_domain.name}
+                        ],
+                    }
+                )
+            ],
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.workspace.anvil_clone(
+                billing_project,
+                "test-workspace",
+                authorization_domains=[new_auth_domain],
+            )
+        # No new workspace was created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace, models.Workspace.objects.all())
+
+    def test_other_api_error(self):
+        """Error when the response is an error for an unknown reason."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add response.
+        responses.add(
+            responses.POST,
+            self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
+            status=500,  # other
+            json={"message": "other"},
+            match=[
+                responses.matchers.json_params_matcher(
+                    {
+                        "namespace": billing_project.name,
+                        "name": "test-workspace",
+                        "attributes": {},
+                    }
+                )
+            ],
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            self.workspace.anvil_clone(billing_project, "test-workspace")
+        # No new workspace was created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace, models.Workspace.objects.all())
+
+
 class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the Workspace.anvil_import method."""
 

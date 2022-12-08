@@ -1313,6 +1313,158 @@ class WorkspaceImport(
         )
 
 
+class WorkspaceClone(
+    auth.AnVILConsortiumManagerEditRequired,
+    SuccessMessageMixin,
+    WorkspaceAdapterMixin,
+    SingleObjectMixin,
+    FormView,
+):
+    model = models.Workspace
+    form_class = forms.WorkspaceCloneForm
+    success_msg = "Successfully created Workspace on AnVIL."
+    template_name = "anvil_consortium_manager/workspace_clone.html"
+
+    def get_object(self, queryset=None):
+        """Return the workspace to clone."""
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug")
+        workspace_slug = self.kwargs.get("workspace_slug")
+        queryset = queryset.filter(
+            billing_project__name=billing_project_slug, name=workspace_slug
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query")
+                % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().get(request, *args, **kwargs)
+
+    def get_initial(self):
+        """Add the authorization domains of the workspace to be cloned to the form."""
+        initial = super().get_initial()
+        initial["authorization_domains"] = self.object.authorization_domains.all()
+        return initial
+
+    def get_form(self, form_class=None):
+        """Return an instance of the form to be used in this view."""
+        if form_class is None:
+            form_class = self.get_form_class()
+        return form_class(self.object, **self.get_form_kwargs())
+
+    def get_workspace_data_formset(self):
+        """Return an instance of the workspace data form to be used in this view."""
+        formset_prefix = "workspacedata"
+        form_class = self.adapter.get_workspace_data_form_class()
+        model = self.adapter.get_workspace_data_model()
+        formset_factory = inlineformset_factory(
+            models.Workspace,
+            model,
+            form=form_class,
+            can_delete=False,
+            can_delete_extra=False,
+            absolute_max=1,
+            max_num=1,
+            min_num=1,
+        )
+        if self.request.method in ("POST"):
+            formset = formset_factory(
+                self.request.POST,
+                instance=self.new_workspace,
+                prefix=formset_prefix,
+                initial=[{"workspace": self.new_workspace}],
+            )
+        else:
+            formset = formset_factory(prefix=formset_prefix, initial=[{}])
+        return formset
+
+    def get_context_data(self, **kwargs):
+        """Insert the workspace data formset into the context dict."""
+        if "workspace_data_formset" not in kwargs:
+            kwargs["workspace_data_formset"] = self.get_workspace_data_formset()
+        return super().get_context_data(**kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests: instantiate the forms instances with the passed
+        POST variables and then check if they are valid.
+        """
+        self.adapter = self.get_adapter()
+        self.object = self.get_object()
+        self.new_workspace = None
+        form = self.get_form()
+        # First, check if the workspace form is valid.
+        # If it is, we'll save the model and then check the workspace data formset in the post method.
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            workspace_data_formset = self.get_workspace_data_formset()
+            return self.forms_invalid(form, workspace_data_formset)
+
+    def form_valid(self, form):
+        """If the form(s) are valid, save the associated model(s) and create the workspace on AnVIL."""
+        # Need to use a transaction because the object needs to be saved to access the many-to-many field.
+        try:
+            with transaction.atomic():
+                # Calling form.save() does not create the history for the authorization domain many to many field.
+                # Instead, save the workspace first and then create the auth domain relationships one by one.
+                # Add the workspace data type from the adapter to the instance.
+                form.instance.workspace_type = self.adapter.get_type()
+                self.new_workspace = form.save(commit=False)
+                self.new_workspace.save()
+                # Now check the workspace_data_formset.
+                workspace_data_formset = self.get_workspace_data_formset()
+                if not workspace_data_formset.is_valid():
+                    # Tell the transaction to roll back, since we are not raising an exception.
+                    transaction.set_rollback(True)
+                    return self.forms_invalid(form, workspace_data_formset)
+                # Now save the auth domains and the workspace_data_form.
+                for auth_domain in form.cleaned_data["authorization_domains"]:
+                    models.WorkspaceAuthorizationDomain.objects.create(
+                        workspace=self.new_workspace, group=auth_domain
+                    )
+                workspace_data_formset.forms[0].save()
+                # Then create the workspace on AnVIL.
+                authorization_domains = self.new_workspace.authorization_domains.all()
+                print(authorization_domains)
+                self.object.anvil_clone(
+                    self.new_workspace.billing_project,
+                    self.new_workspace.name,
+                    authorization_domains=authorization_domains,
+                )
+        except AnVILAPIError as e:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(
+                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
+            )
+            return self.render_to_response(
+                self.get_context_data(
+                    form=form, workspace_data_formset=workspace_data_formset
+                )
+            )
+        return super().form_valid(form)
+
+    def forms_invalid(self, form, workspace_data_formset):
+        """If the form(s) are invalid, render the invalid form."""
+        return self.render_to_response(
+            self.get_context_data(
+                form=form, workspace_data_formset=workspace_data_formset
+            )
+        )
+
+    def get_success_url(self):
+        return self.new_workspace.get_absolute_url()
+
+
 class WorkspaceUpdate(
     auth.AnVILConsortiumManagerEditRequired,
     SuccessMessageMixin,
