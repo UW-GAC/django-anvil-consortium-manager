@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Add ability to clone a workspace on AnVIL.
+
 ## 0.6 (2022-11-29)
 
 - Add ability to update `BillingProject`, `Account`, `ManagedGroup`, and `Workspace`, and workspace data models.
