@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.7 (2022-12-07)
 
 - Add ability to clone a workspace on AnVIL.
 
