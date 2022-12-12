@@ -497,6 +497,7 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
         # Mark the entry as verified.
         email_entry.date_verified = timezone.now()
         email_entry.save()
+        email_entry.send_notification_email()
 
         # Save the account
         account.full_clean()
