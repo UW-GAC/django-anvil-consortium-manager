@@ -2,6 +2,7 @@ import datetime
 import time
 from unittest import skip
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -177,6 +178,19 @@ class UserEmailEntryTest(TestCase):
         self.assertIn(email_entry.user.username, email_body)
         self.assertIn(account_verification_token.make_token(email_entry), email_body)
         self.assertIn(str(email_entry.uuid), email_body)
+
+    def test_send_notification_email(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set"""
+        settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "notify@example.com"
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_not_send_notification_email(self):
+        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set"""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class AccountTest(TestCase):
