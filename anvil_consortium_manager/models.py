@@ -180,6 +180,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         if (
             hasattr(settings, "ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL")
             and settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL
+            and not settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL.isspace()
         ):
             mail_subject = "User verified AnVIL account"
             message = render_to_string(
