@@ -2,13 +2,12 @@ import datetime
 import time
 from unittest import skip
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from freezegun import freeze_time
 
@@ -179,9 +178,9 @@ class UserEmailEntryTest(TestCase):
         self.assertIn(account_verification_token.make_token(email_entry), email_body)
         self.assertIn(str(email_entry.uuid), email_body)
 
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="notify@example.com")
     def test_send_notification_email(self):
         """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set"""
-        settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "notify@example.com"
         email_entry = factories.UserEmailEntryFactory.create()
         email_entry.send_notification_email()
         self.assertEqual(len(mail.outbox), 1)

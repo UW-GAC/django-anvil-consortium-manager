@@ -177,7 +177,10 @@ class UserEmailEntry(TimeStampedModel, models.Model):
 
     def send_notification_email(self):
         """Send notification email after account is verified if the email setting is set"""
-        if hasattr(settings, "ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL"):
+        if (
+            hasattr(settings, "ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL")
+            and settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL
+        ):
             mail_subject = "User verified AnVIL account"
             message = render_to_string(
                 "anvil_consortium_manager/account_notification_email.html",
