@@ -57,6 +57,8 @@ Settings
       ANVIL_ACCOUNT_LINK_REDIRECT = "home"
       # Specify the subject for AnVIL account verification emails.
       ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
+      # Specify the email to receive notification when account is linked
+      ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
 
 
 Permissions
