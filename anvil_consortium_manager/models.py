@@ -655,7 +655,7 @@ class Workspace(TimeStampedModel):
 
     def get_anvil_url(self):
         """Return the URL of the workspace on AnVIL."""
-        return "https://app.terra.bio/#workspaces/{billing_project}/{group}".format(
+        return "https://anvil.terra.bio/#workspaces/{billing_project}/{group}".format(
             billing_project=self.billing_project.name, group=self.name
         )
 

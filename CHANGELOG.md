@@ -1,5 +1,9 @@
 # Change log
 
+## 0.8 (unreleased)
+
+- Change `Workspace` link on AnVIL to use `anvil.terra.bio` instead of `app.terra.bio`
+
 ## 0.7 (2022-12-07)
 
 - Add ability to clone a workspace on AnVIL.
