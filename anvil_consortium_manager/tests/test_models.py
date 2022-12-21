@@ -186,7 +186,21 @@ class UserEmailEntryTest(TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_not_send_notification_email(self):
-        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set"""
+        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL=None)
+    def test_send_notification_email_none(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="  ")
+    def test_send_notification_email_spaces(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set to only spaces."""
         email_entry = factories.UserEmailEntryFactory.create()
         email_entry.send_notification_email()
         self.assertEqual(len(mail.outbox), 0)
