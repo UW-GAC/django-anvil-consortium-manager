@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from .. import models, tables
@@ -41,6 +42,13 @@ class AccountTableTest(TestCase):
     model_factory = factories.AccountFactory
     table_class = tables.AccountTable
 
+    def tearDown(self):
+        # One of the testes dynamically sets the get_absolute_url method..
+        try:
+            del get_user_model().get_absolute_url
+        except AttributeError:
+            pass
+
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
         self.assertEqual(len(table.rows), 0)
@@ -54,6 +62,27 @@ class AccountTableTest(TestCase):
         self.model_factory.create_batch(2)
         table = self.table_class(self.model.objects.all())
         self.assertEqual(len(table.rows), 2)
+
+    def test_render_user_without_get_absolute_url(self):
+        """Table renders the user string method without a link when user does not have get_absolute_url."""
+        user = factories.UserFactory.create()
+        self.model_factory.create(user=user)
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(table.rows[0].get_cell("user"), str(user))
+
+    def test_render_user_with_get_absolute_url(self):
+        """Table renders a link to the user profile when the user has a get_absolute_url method."""
+        # Dynamically set the get_absolute_url method. This is hacky...
+        def foo(self):
+            return "test_profile_{}".format(self.username)
+
+        UserModel = get_user_model()
+        setattr(UserModel, "get_absolute_url", foo)
+        user = UserModel.objects.create(username="testuser", password="testpassword")
+        self.model_factory.create(user=user)
+        table = self.table_class(self.model.objects.all())
+        self.assertIn(str(user), table.rows[0].get_cell("user"))
+        self.assertIn("test_profile_testuser", table.rows[0].get_cell("user"))
 
 
 class ManagedGroupTableTest(TestCase):

@@ -1,4 +1,5 @@
 import django_tables2 as tables
+from django.utils.safestring import mark_safe
 
 from . import models
 from .adapters.workspace import workspace_adapter_registry
@@ -28,6 +29,16 @@ class AccountTable(tables.Table):
     class Meta:
         model = models.Account
         fields = ("email", "user", "is_service_account", "status")
+
+    def render_user(self, record):
+        """If user.get_absolute_url is defined, then include link to it. Otherwise, just show the user."""
+        if hasattr(record.user, "get_absolute_url"):
+            link = """<a href="{url}">{link_text}</a>""".format(
+                link_text=str(record), url=record.user.get_absolute_url()
+            )
+            return mark_safe(link)
+        else:
+            return str(record.user)
 
 
 class ManagedGroupTable(tables.Table):
