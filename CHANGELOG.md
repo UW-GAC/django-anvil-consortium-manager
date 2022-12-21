@@ -4,6 +4,7 @@
 
 - Change `Workspace` link on AnVIL to use `anvil.terra.bio` instead of `app.terra.bio`
 - Add ability to send a notification email when a user links their AnVIL account.
+- Display the linked user in the `AccountTable` table.
 
 ## 0.7 (2022-12-07)
 
