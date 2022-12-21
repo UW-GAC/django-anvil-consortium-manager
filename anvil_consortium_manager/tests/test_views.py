@@ -11,7 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.forms import BaseInlineFormSet, HiddenInput
 from django.http.response import Http404
 from django.shortcuts import resolve_url
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from faker import Faker
@@ -2473,6 +2473,55 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: other error", str(messages[0]))
         # API call to AnVIL was made.
         responses.assert_call_count(api_url, 1)
+
+    def test_no_notification_email(self):
+        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set"""
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email=email
+        )
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(email_entry.uuid, token))
+        self.assertEqual(response.status_code, 302)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="test@example.com")
+    def test_notification_email(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email=email
+        )
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(email_entry.uuid, token))
+        self.assertEqual(response.status_code, 302)
+        # An email is sent.
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox[0].to), 1)
+        self.assertIn("test@example.com", mail.outbox[0].to)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL=None)
+    def test_no_notification_email_when_none(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=self.user, email=email
+        )
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        responses.add(responses.GET, api_url, status=200)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(email_entry.uuid, token))
+        self.assertEqual(response.status_code, 302)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class AccountListTest(TestCase):

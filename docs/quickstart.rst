@@ -59,6 +59,15 @@ Settings
       ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
 
 
+Optional settings
+~~~~~~~~~~~~~~~~~
+If you would like to receive emails when a user links their account, set the ``ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL`` setting in your settings file.
+
+  .. code-block:: python
+
+      ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
+
+
 Permissions
 ~~~~~~~~~~~
 

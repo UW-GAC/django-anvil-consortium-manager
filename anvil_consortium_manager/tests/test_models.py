@@ -7,7 +7,7 @@ from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from freezegun import freeze_time
 
@@ -177,6 +177,33 @@ class UserEmailEntryTest(TestCase):
         self.assertIn(email_entry.user.username, email_body)
         self.assertIn(account_verification_token.make_token(email_entry), email_body)
         self.assertIn(str(email_entry.uuid), email_body)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="notify@example.com")
+    def test_send_notification_email(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set"""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_not_send_notification_email(self):
+        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL=None)
+    def test_send_notification_email_none(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="  ")
+    def test_send_notification_email_spaces(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set to only spaces."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class AccountTest(TestCase):
