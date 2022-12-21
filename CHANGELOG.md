@@ -2,7 +2,12 @@
 
 ## 0.8 (unreleased)
 
+- Change `Workspace` link on AnVIL to use `anvil.terra.bio` instead of `app.terra.bio`
 - Add ability to send a notification email when a user links their AnVIL account.
+
+## 0.7 (2022-12-07)
+
+- Add ability to clone a workspace on AnVIL.
 
 ## 0.6 (2022-11-29)
 

@@ -55,6 +55,31 @@ Creating a new workspace
 
 If successful, you will be shown a success message and information about the workspace that you just created. The examples would create a workspace named "primed-cc/test-workspace".
 
+Cloning an existing workspace
+-----------------------------
+
+1. Navigate to the workspace detail page that you would like to clone.
+
+2. Click the "Clone workspace" button and then choose the workspace type that you would like to use for the new workspace.
+
+3. In the "Billing project" field, select the billing project in which to create the workspace (e.g., primed-cc). If it doesn’t exist, you may need to import a billing project (see instructions).
+
+4. In the "name" field, type the name of the workspace that you would like to create within the selected billing project (e.g., test-workspace).
+
+5. If applicable, in the "authorization domains" box, select one or more authorization domains for this workspace.
+
+    * You can select multiple authorization domains using Command-click.
+    * To de-select an authorization domain, click on it while holding the Command key.
+    * You must include all the authorization domains from the workspace you are cloning. The form will be autopopulated with these groups.
+
+6. If desired, add any notes about the Workspace in the "note" field.
+
+7. Fill out all other required fields for the type of workspace you are creating.
+
+8. Click on the "Save workspace" button. This can take some time due to delays from AnVIL.
+
+If successful, you will be shown a success message and information about the workspace that you just created. The examples would create a workspace named "primed-cc/test-workspace".
+
 Importing an existing workspace
 -------------------------------
 

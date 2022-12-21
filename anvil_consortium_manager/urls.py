@@ -208,6 +208,11 @@ workspace_patterns = (
             views.WorkspaceImport.as_view(),
             name="import",
         ),
+        # path(
+        #     "types/<str:workspace_type>/clone/",
+        #     views.WorkspaceClone.as_view(),
+        #     name="clone",
+        # ),
         path("audit/", views.WorkspaceAudit.as_view(), name="audit"),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
@@ -232,6 +237,11 @@ workspace_patterns = (
             "<slug:billing_project_slug>/<slug:workspace_slug>/update/",
             views.WorkspaceUpdate.as_view(),
             name="update",
+        ),
+        path(
+            "<slug:billing_project_slug>/<slug:workspace_slug>/clone/<str:workspace_type>/",
+            views.WorkspaceClone.as_view(),
+            name="clone",
         ),
     ],
     "workspaces",

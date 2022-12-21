@@ -8122,6 +8122,1114 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(responses.calls), 2)
 
 
+class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceClone view."""
+
+    api_success_code = 201
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            )
+        )
+        self.workspace_to_clone = factories.WorkspaceFactory.create()
+        self.api_url = self.entry_point + "/api/workspaces/{}/{}/clone".format(
+            self.workspace_to_clone.billing_project.name,
+            self.workspace_to_clone.name,
+        )
+        self.workspace_type = DefaultWorkspaceAdapter.type
+
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:clone", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceClone.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(
+            username="test-other", password="test-other"
+        )
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace_to_clone.billing_project.name,
+                workspace_slug=self.workspace_to_clone.name,
+                workspace_type=self.workspace_type,
+            )
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace_to_clone.billing_project.name,
+                workspace_slug=self.workspace_to_clone.name,
+                workspace_type=self.workspace_type,
+            )
+
+    def test_get_workspace_type_not_registered(self):
+        """Raises 404 with get request if workspace type is not registered with adapter."""
+        request = self.factory.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                "foo",
+            )
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace_to_clone.billing_project.name,
+                workspace_slug=self.workspace_to_clone.name,
+                workspace_type="foo",
+            )
+
+    def test_post_workspace_type_not_registered(self):
+        """Raises 404 with post request if workspace type is not registered with adapter."""
+        request = self.factory.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                "foo",
+            ),
+            {},
+        )
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace_to_clone.billing_project.name,
+                workspace_slug=self.workspace_to_clone.name,
+                workspace_type="foo",
+            )
+
+    def test_get_workspace_not_found(self):
+        """Raises a 404 error when workspace does not exist."""
+        print(self.get_url("foo", "bar", self.workspace_type))
+        request = self.factory.get(self.get_url("foo", "bar", self.workspace_type))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug="foo",
+                workspace_slug="bar",
+                workspace_type=self.workspace_type,
+            )
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceCloneForm)
+
+    def test_has_formset_in_context(self):
+        """Response includes a formset for the workspace_data model."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        self.assertTrue("workspace_data_formset" in response.context_data)
+        formset = response.context_data["workspace_data_formset"]
+        self.assertIsInstance(formset, BaseInlineFormSet)
+        self.assertEqual(len(formset.forms), 1)
+        self.assertIsInstance(formset.forms[0], forms.DefaultWorkspaceDataForm)
+
+    def test_can_create_an_object(self):
+        """Posting valid data to the form creates an object."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(
+            new_object.workspace_type,
+            DefaultWorkspaceAdapter().get_type(),
+        )
+        responses.assert_call_count(self.api_url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_can_create_object_with_auth_domains(self):
+        """Posting valid data to the form creates an object."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk],
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        # Has an auth domain.
+        self.assertEqual(new_object.authorization_domains.count(), 1)
+        self.assertIn(auth_domain, new_object.authorization_domains.all())
+        responses.assert_call_count(self.api_url, 1)
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_can_add_an_auth_domains(self):
+        """Posting valid data to the form creates an object."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain)
+        new_auth_domain = factories.ManagedGroupFactory.create()
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [
+                {"membersGroupName": auth_domain.name},
+                {"membersGroupName": new_auth_domain.name},
+            ],
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk, new_auth_domain.pk],
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        # Has an auth domain.
+        self.assertEqual(new_object.authorization_domains.count(), 2)
+        self.assertIn(auth_domain, new_object.authorization_domains.all())
+        self.assertIn(new_auth_domain, new_object.authorization_domains.all())
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_creates_default_workspace_data(self):
+        """Posting valid data to the form creates the default workspace data object."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_workspace = models.Workspace.objects.latest("pk")
+        # Also creates a workspace data object.
+        self.assertEqual(models.DefaultWorkspaceData.objects.count(), 1)
+        self.assertIsInstance(
+            new_workspace.defaultworkspacedata, models.DefaultWorkspaceData
+        )
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        billing_project = factories.BillingProjectFactory.create()
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+            follow=True,
+        )
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceCreate.success_msg, str(messages[0]))
+
+    def test_redirects_to_new_object_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        billing_project = factories.BillingProjectFactory.create()
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertRedirects(response, new_object.get_absolute_url())
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_cannot_create_duplicate_object(self):
+        """Cannot create two workspaces with the same billing project and name."""
+        obj = factories.WorkspaceFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": obj.billing_project.pk,
+                "name": obj.name,
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("already exists", form.non_field_errors()[0])
+        self.assertEqual(models.Workspace.objects.count(), 2)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        self.assertIn(obj, models.Workspace.objects.all())
+
+    def test_can_create_workspace_with_same_billing_project_different_name(self):
+        """Can create a workspace with a different name in the same billing project."""
+        billing_project = factories.BillingProjectFactory.create()
+        factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-name-1"
+        )
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-name-2",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-name-2",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Workspace.objects.count(), 3)
+        # Make sure you can get the new object.
+        models.Workspace.objects.get(
+            billing_project=billing_project, name="test-name-2"
+        )
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_can_create_workspace_with_same_name_different_billing_project(self):
+        """Can create a workspace with the same name in a different billing project."""
+        billing_project_1 = factories.BillingProjectFactory.create(name="project-1")
+        billing_project_2 = factories.BillingProjectFactory.create(name="project-2")
+        workspace_name = "test-name"
+        factories.WorkspaceFactory.create(
+            billing_project=billing_project_1, name=workspace_name
+        )
+        json_data = {
+            "namespace": billing_project_2.name,
+            "name": "test-name",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project_2.pk,
+                "name": workspace_name,
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Workspace.objects.count(), 3)
+        # Make sure you can get the new object.
+        models.Workspace.objects.get(
+            billing_project=billing_project_2, name=workspace_name
+        )
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_invalid_input_name(self):
+        """Posting invalid data to name field does not create an object."""
+        billing_project = factories.BillingProjectFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "invalid name",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("slug", form.errors["name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_invalid_input_billing_project(self):
+        """Posting invalid data to billing_project field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": 100,
+                "name": "test-name",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("valid choice", form.errors["billing_project"][0])
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_post_invalid_name_billing_project(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("required", form.errors["billing_project"][0])
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("required", form.errors["name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("required", form.errors["billing_project"][0])
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("required", form.errors["name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_api_error_message(self):
+        """Shows a method if an AnVIL API error occurs."""
+        billing_project = factories.BillingProjectFactory.create()
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=500,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json={"message": "workspace create test error"},
+        )
+        # Need a client to check messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
+        responses.assert_call_count(self.api_url, 1)
+        # Make sure that no object is created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+
+    def test_invalid_auth_domain(self):
+        """Does not create a workspace when an invalid authorization domain is specified."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [1],
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("authorization_domains", form.errors.keys())
+        self.assertIn("valid choice", form.errors["authorization_domains"][0])
+        # No object was created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        # No API calls made.
+        responses.assert_call_count(self.api_url, 0)
+
+    def test_one_valid_one_invalid_auth_domain(self):
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk, auth_domain.pk + 1],
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("authorization_domains", form.errors.keys())
+        self.assertIn("valid choice", form.errors["authorization_domains"][0])
+        # No object was created.
+        self.assertEqual(len(models.Workspace.objects.all()), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        # No API calls made.
+        responses.assert_call_count(self.api_url, 0)
+
+    def test_auth_domain_does_not_exist_on_anvil(self):
+        """No workspace is displayed if the auth domain group doesn't exist on AnVIL."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain = factories.ManagedGroupFactory.create()
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [
+                {"membersGroupName": auth_domain.name},
+            ],
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=400,
+            json={"message": "api error"},
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        # Need a client to check messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk],
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # The form is valid but there was an API error.
+        form = response.context_data["form"]
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
+        # Did not create any new Workspaces.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_not_admin_of_auth_domain_on_anvil(self):
+        """No workspace is displayed if we are not the admins of the auth domain on AnVIL."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        auth_domain = factories.ManagedGroupFactory.create()
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "authorizationDomain": [
+                {"membersGroupName": auth_domain.name},
+            ],
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=400,
+            json={"message": "api error"},
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        # Need a client to check messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                "authorization_domains": [auth_domain.pk],
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # The form is valid but there was an API error.
+        form = response.context_data["form"]
+        self.assertTrue(form.is_valid())
+        # Check messages.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
+        # Did not create any new Workspaces.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_not_user_of_billing_project(self):
+        """Posting a billing project where we are not users does not create an object."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project", has_app_as_user=False
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("billing_project", form.errors.keys())
+        self.assertIn("valid choice", form.errors["billing_project"][0])
+        # No workspace was created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+
+    def test_adapter_includes_workspace_data_formset(self):
+        """Response includes the workspace data formset if specified."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        self.assertTrue("workspace_data_formset" in response.context_data)
+        formset = response.context_data["workspace_data_formset"]
+        self.assertIsInstance(formset, BaseInlineFormSet)
+        self.assertEqual(len(formset.forms), 1)
+        self.assertIsInstance(formset.forms[0], app_forms.TestWorkspaceDataForm)
+
+    def test_adapter_creates_workspace_data(self):
+        """Posting valid data to the form creates a workspace data object when using a custom adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-study_name": "test study",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # The workspace is created.
+        new_workspace = models.Workspace.objects.latest("pk")
+        # workspace_type is set properly.
+        self.assertEqual(
+            new_workspace.workspace_type,
+            TestWorkspaceAdapter().get_type(),
+        )
+        # Workspace data is added.
+        self.assertEqual(app_models.TestWorkspaceData.objects.count(), 1)
+        new_workspace_data = app_models.TestWorkspaceData.objects.latest("pk")
+        self.assertEqual(new_workspace_data.workspace, new_workspace)
+        self.assertEqual(new_workspace_data.study_name, "test study")
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
+        """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        billing_project = factories.BillingProjectFactory.create()
+        url = self.entry_point + "/api/workspaces"
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-study_name": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # Workspace form is valid.
+        form = response.context_data["form"]
+        self.assertTrue(form.is_valid())
+        # workspace_data_form is not valid.
+        workspace_data_formset = response.context_data["workspace_data_formset"]
+        self.assertEqual(workspace_data_formset.is_valid(), False)
+        workspace_data_form = workspace_data_formset.forms[0]
+        self.assertEqual(workspace_data_form.is_valid(), False)
+        self.assertEqual(len(workspace_data_form.errors), 1)
+        self.assertIn("study_name", workspace_data_form.errors)
+        self.assertEqual(len(workspace_data_form.errors["study_name"]), 1)
+        self.assertIn("required", workspace_data_form.errors["study_name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_workspace_to_clone_does_not_exist_on_anvil(self):
+        """Shows a method if an AnVIL API 404 error occurs."""
+        billing_project = factories.BillingProjectFactory.create()
+        json_data = {
+            "namespace": billing_project.name,
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.api_url,
+            status=404,
+            match=[responses.matchers.json_params_matcher(json_data)],
+            json={"message": "workspace create test error"},
+        )
+        # Need a client to check messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
+        responses.assert_call_count(self.api_url, 1)
+        # Make sure that no object is created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+
+
 class WorkspaceUpdateTest(TestCase):
     def setUp(self):
         """Set up test class."""
