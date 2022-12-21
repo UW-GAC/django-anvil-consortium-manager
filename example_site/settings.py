@@ -213,8 +213,8 @@ ANVIL_API_SERVICE_ACCOUNT_FILE = os.getenv("ANVIL_API_SERVICE_ACCOUNT_FILE")
 ANVIL_ACCOUNT_LINK_REDIRECT = "home"
 # Specify the subject for AnVIL account verification emails.
 ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
-# Specify the email address to send an email to after a user verifies an account
-ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = ""
+# If desired, specify the email address to send an email to after a user verifies an account.
+# ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
 
 # Workspace adapters.
 ANVIL_WORKSPACE_ADAPTERS = [
