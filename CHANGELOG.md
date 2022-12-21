@@ -1,5 +1,9 @@
 # Change log
 
+## 0.8 (unreleased)
+
+- Add ability to send a notification email when a user links their AnVIL account.
+
 ## 0.6 (2022-11-29)
 
 - Add ability to update `BillingProject`, `Account`, `ManagedGroup`, and `Workspace`, and workspace data models.
