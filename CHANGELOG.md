@@ -1,6 +1,6 @@
 # Change log
 
-## 0.8 (unreleased)
+## 0.8 (2022-12-27)
 
 - Change `Workspace` link on AnVIL to use `anvil.terra.bio` instead of `app.terra.bio`
 - Add ability to send a notification email when a user links their AnVIL account.
