@@ -34,7 +34,16 @@
     <li>Status: {{ object.get_status_display }}</li>
     <li>Date added: {{ object.created }}</li>
     <li>Date modified: {{ object.modified }}</li>
-    <li>User: {% if object.verified_email_entry %}{{ object.verified_email_entry.user }}{% else %} &mdash; {% endif %}</li>
+    <li>User:
+      {% if object.verified_email_entry %}
+        {% if object.verified_email_entry.user.get_absolute_url %}
+          <a href="{{ object.verified_email_entry.user.get_absolute_url }}">{{ object.verified_email_entry.user }}</a>
+        {% else %}
+          {{ object.verified_email_entry.user }}
+        {% endif %}
+      {% else %}
+        &mdash;
+      {% endif %}</li>
     <li>Date verified by user: {% if object.verified_email_entry %}{{ object.verified_email_entry.date_verified }}{% else %} &mdash; {% endif %}</li>
   </ul>
 {% endblock panel %}

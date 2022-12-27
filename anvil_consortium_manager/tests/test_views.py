@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import responses
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, User
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
@@ -1184,6 +1185,13 @@ class AccountDetailTest(TestCase):
             )
         )
 
+    def tearDown(self):
+        # One of the testes dynamically sets the get_absolute_url method..
+        try:
+            del get_user_model().get_absolute_url
+        except AttributeError:
+            pass
+
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:accounts:detail", args=args)
@@ -1360,6 +1368,25 @@ class AccountDetailTest(TestCase):
                 "anvil_consortium_manager:accounts:delete",
                 kwargs={"uuid": account.uuid},
             ),
+        )
+
+    def test_render_with_user_get_absolute_url(self):
+        """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
+        # Dynamically set the get_absolute_url method. This is hacky...
+        def foo(self):
+            return "test_profile_{}".format(self.username)
+
+        UserModel = get_user_model()
+        setattr(UserModel, "get_absolute_url", foo)
+        user = UserModel.objects.create(username="testuser2", password="testpassword")
+        account = factories.AccountFactory.create(
+            verified=True, verified_email_entry__user=user
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertInHTML(
+            """<a href="test_profile_testuser2">testuser2</a>""",
+            response.content.decode(),
         )
 
 
