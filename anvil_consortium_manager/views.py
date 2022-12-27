@@ -257,15 +257,6 @@ class AccountDetail(
 ):
     """Render detail page for an :class:`anvil_consortium_manager.models.Account`."""
 
-    context_table_name = "group_table"
-
-    def get_table(self):
-        """Get a table of :class:`anvil_consortium_manager.models.ManagedGroup` s that this account is a member of."""
-        return tables.GroupAccountMembershipTable(
-            self.object.groupaccountmembership_set.all(),
-            exclude=["account", "is_service_account"],
-        )
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Add an indicator of whether the account is inactive.
@@ -278,6 +269,15 @@ class AccountDetail(
         )
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
+
+        context["group_table"] = tables.GroupAccountMembershipTable(
+            self.object.groupaccountmembership_set.all(),
+            exclude=["account", "is_service_account"],
+        )
+
+        context["accessible_workspace_table"] = tables.WorkspaceTable(
+            self.object.get_accessible_workspaces(),
+        )
         return context
 
 
