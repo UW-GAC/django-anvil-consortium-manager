@@ -404,6 +404,66 @@ class AccountTest(TestCase):
             Account.ERROR_MISMATCHED_USER, e.exception.error_dict["user"][0].message
         )
 
+    def test_account_has_one_accessible_workspace_when_one_is_shared_with_itself(self):
+        """An account with no parent has one accessible workspace when the workspace is shared with the group"""
+        account = factories.AccountFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.assertEqual(len(account.get_accessible_workspaces()), 1)
+
+    def test_account_has_one_accessible_workspace_when_shared_with_parent(self):
+        """An account with parent has one accessible workspace when the workspace is shared with the parent"""
+        account = factories.AccountFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=auth_domain
+        )
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=auth_domain,
+            child_group=parent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group,
+            child_group=group,
+        )
+        self.assertEqual(len(account.get_accessible_workspaces()), 1)
+
+    def test_account_has_no_accessible_workspace_when_none_shared_with_itself(self):
+        """An account has one accessible workspace when the workspace is shared with the group"""
+        account = factories.AccountFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(group)
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
+    def test_account_has_no_accessible_workspace_when_none_shared_with_either(self):
+        """An account with parent has no accessible workspace when the workspace is not shared with"""
+        account = factories.AccountFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=auth_domain,
+            child_group=parent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group,
+            child_group=group,
+        )
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
 
 class ManagedGroupTest(TestCase):
     def test_model_saving(self):
