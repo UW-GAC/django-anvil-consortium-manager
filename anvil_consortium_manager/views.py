@@ -5,6 +5,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
+from django.db.models import ProtectedError, RestrictedError
+from django.db.models.deletion import Collector
 from django.forms import Form, HiddenInput, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
@@ -820,7 +822,10 @@ class ManagedGroupDelete(
         "Cannot delete group because it has access to at least one workspace."
     )
     # In some cases the AnVIL API returns a successful code but the group is not deleted.
-    message_could_not_delete_group = (
+    message_could_not_delete_group_from_app = (
+        "Cannot delete group from app due to foreign key restrictions."
+    )
+    message_could_not_delete_group_from_anvil = (
         "Cannot not delete group from AnVIL - unknown reason."
     )
     success_msg = "Successfully deleted Group on AnVIL."
@@ -893,11 +898,25 @@ class ManagedGroupDelete(
             )
             return HttpResponseRedirect(self.object.get_absolute_url())
 
+        # Check if this object can be deleted.
+        collector = Collector(using="default")  # or specific database
+        try:
+            collector.collect([self.object])
+        except (ProtectedError, RestrictedError):
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_group_from_app,
+            )
+            return HttpResponseRedirect(self.object.get_absolute_url())
+
         try:
             self.object.anvil_delete()
         except exceptions.AnVILGroupDeletionError:
             messages.add_message(
-                self.request, messages.ERROR, self.message_could_not_delete_group
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_group_from_anvil,
             )
             return HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:

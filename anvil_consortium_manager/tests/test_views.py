@@ -4868,7 +4868,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.ManagedGroupDelete.message_could_not_delete_group,
+            views.ManagedGroupDelete.message_could_not_delete_group_from_anvil,
             str(messages[0]),
         )
         # Make sure that the object still exists.
@@ -5158,6 +5158,26 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "AnVIL API returns 204 instead of 404 when trying to delete a group that doesn't exist."
         )
+
+    def test_post_does_not_delete_when_protected_fk_to_another_model(self):
+        """Group is not deleted when there is another model referencing the group with a protected foreing key."""
+        object = factories.ManagedGroupFactory.create(name="test-group")
+        app_models.ProtectedManagedGroup.objects.create(group=object)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.name), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        # A message is added.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.ManagedGroupDelete.message_could_not_delete_group_from_app,
+            str(messages[0]),
+        )
+        # Make sure the group still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        object.refresh_from_db()
 
 
 class ManagedGroupAutocompleteTest(TestCase):
