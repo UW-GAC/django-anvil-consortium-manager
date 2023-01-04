@@ -23,10 +23,10 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
 from . import factories
-from .adapter_app import forms as app_forms
-from .adapter_app import models as app_models
-from .adapter_app import tables as app_tables
-from .adapter_app.adapters import TestWorkspaceAdapter
+from .test_app import forms as app_forms
+from .test_app import models as app_models
+from .test_app import tables as app_tables
+from .test_app.adapters import TestWorkspaceAdapter
 from .utils import AnVILAPIMockTestMixin
 
 fake = Faker()

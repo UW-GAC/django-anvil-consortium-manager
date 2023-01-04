@@ -12,8 +12,8 @@ from ..adapters.workspace import (
 from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
 from ..tables import WorkspaceTable
-from .adapter_app import forms, models, tables
-from .adapter_app.adapters import TestWorkspaceAdapter
+from .test_app import forms, models, tables
+from .test_app.adapters import TestWorkspaceAdapter
 
 
 class WorkspaceAdapterTest(TestCase):
@@ -527,7 +527,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
     @override_settings(
         ANVIL_WORKSPACE_ADAPTERS=[
             "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
-            "anvil_consortium_manager.tests.adapter_app.adapters.TestWorkspaceAdapter",
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter",
         ]
     )
     def test_populate_from_settings_multiple(self):
