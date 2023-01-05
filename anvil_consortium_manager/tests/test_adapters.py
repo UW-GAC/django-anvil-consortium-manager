@@ -2,7 +2,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.forms import ModelForm
 from django.test import TestCase, override_settings
 
-from ..adapters.default import DefaultWorkspaceAdapter
+from ..adapters.account import BaseAccountAdapter
+from ..adapters.default import DefaultAccountAdapter, DefaultWorkspaceAdapter
 from ..adapters.workspace import (
     AdapterAlreadyRegisteredError,
     AdapterNotRegisteredError,
@@ -12,12 +13,29 @@ from ..adapters.workspace import (
 from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
 from ..tables import WorkspaceTable
+from . import factories
 from .test_app import forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
 
 
 class AccountAdapterTestCase(TestCase):
     """Tests for Account adapters."""
+
+    def test_get_str_default(self):
+        """get_str returns the correct strnig for an account using a custom adapter."""
+        account = factories.AccountFactory.create()
+        self.assertEqual(DefaultAccountAdapter().get_str(account), str(account))
+
+    def test_get_str_custom(self):
+        """get_str returns the correct strnig for an account using a custom adapter."""
+        account = factories.AccountFactory.create()
+
+        class TestAdapter(BaseAccountAdapter):
+            def get_str(self, account):
+                return "test {}".format(account.email)
+
+        account = factories.AccountFactory.create(email="foo@bar.com")
+        self.assertEqual(TestAdapter().get_str(account), "test foo@bar.com")
 
 
 class WorkspaceAdapterTest(TestCase):
