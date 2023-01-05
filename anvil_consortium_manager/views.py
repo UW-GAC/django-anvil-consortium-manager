@@ -24,6 +24,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import __version__, anvil_api, auth, exceptions, forms, models, tables
+from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 from .tokens import account_verification_token
@@ -511,8 +512,15 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
 
 
 class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+    """View to display a list of Accounts.
+
+    The table class can be customized using in a custom Account adapter."""
+
     model = models.Account
-    table_class = tables.AccountTable
+
+    def get_table_class(self):
+        adapter = get_account_adapter()
+        return adapter().get_list_table_class()
 
 
 class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
