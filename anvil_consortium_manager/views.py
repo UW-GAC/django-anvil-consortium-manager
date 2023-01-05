@@ -909,7 +909,7 @@ class ManagedGroupDelete(
                 messages.ERROR,
                 self.message_could_not_delete_group_from_app,
             )
-            return HttpResponseRedirect(self.object.get_absolute_url())
+            response = HttpResponseRedirect(self.object.get_absolute_url())
         except exceptions.AnVILGroupDeletionError:
             messages.add_message(
                 self.request,
