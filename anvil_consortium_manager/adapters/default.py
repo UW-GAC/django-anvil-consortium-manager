@@ -8,6 +8,8 @@ from .workspace import BaseWorkspaceAdapter
 class DefaultAccountAdapter(BaseAccountAdapter):
     """Default account adapter for use with the app."""
 
+    list_table_class = tables.AccountTable
+
 
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     """Default workspace adapter for use with the app."""

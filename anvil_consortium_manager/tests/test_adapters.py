@@ -12,8 +12,7 @@ from ..adapters.workspace import (
 )
 from ..forms import DefaultWorkspaceDataForm
 from ..models import DefaultWorkspaceData
-from ..tables import WorkspaceTable
-from . import factories
+from ..tables import AccountTable, WorkspaceTable
 from .test_app import forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
 
@@ -36,6 +35,27 @@ class AccountAdapterTestCase(TestCase):
     #
     #     account = factories.AccountFactory.create(email="foo@bar.com")
     #     self.assertEqual(TestAdapter().get_str(account), "test foo@bar.com")
+
+    def test_list_table_class_default(self):
+        """get_list_table_class returns the correct table when using the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().get_list_table_class(), AccountTable)
+
+    def test_list_table_class_custom(self):
+        """get_list_table_class returns the correct table when using a custom adapter."""
+
+        class TestAdapter(BaseAccountAdapter):
+            list_table_class = tables.TestAccountTable
+
+        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestAccountTable)
+
+    def test_list_table_class_none(self):
+        """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
+
+        class TestAdapter(BaseAccountAdapter):
+            list_table_class = None
+
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_list_table_class()
 
 
 class WorkspaceAdapterTest(TestCase):

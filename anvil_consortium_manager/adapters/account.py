@@ -3,6 +3,7 @@
 from abc import ABC
 
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 
 
@@ -15,6 +16,14 @@ class BaseAccountAdapter(ABC):
     #     This method can be extended to show informatiom from the user profile linked to the Account.
     #     """
     #     return str(account)
+
+    def get_list_table_class(self):
+        """Return the table class to use for the AccountList view."""
+        if not self.list_table_class:
+            raise ImproperlyConfigured(
+                "Set `list_table_class` in `{}`.".format(type(self))
+            )
+        return self.list_table_class
 
 
 def get_account_adapter():
