@@ -128,3 +128,6 @@ ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "account activation"
 ANVIL_WORKSPACE_ADAPTERS = [
     "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
+ANVIL_ACCOUNT_ADAPTER = (
+    "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
+)

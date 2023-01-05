@@ -3,6 +3,10 @@
 Advanced Usage
 ==============
 
+The account adapter
+-------------------
+
+
 The workspace adapter
 ---------------------
 
