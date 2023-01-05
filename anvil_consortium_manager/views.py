@@ -1620,6 +1620,9 @@ class WorkspaceDelete(
 ):
     model = models.Workspace
     success_msg = "Successfully deleted Workspace on AnVIL."
+    message_could_not_delete_workspace_from_app = (
+        "Cannot delete workspace from app due to foreign key restrictions."
+    )
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1656,15 +1659,26 @@ class WorkspaceDelete(
         """
         self.object = self.get_object()
         try:
-            self.object.anvil_delete()
+            with transaction.atomic():
+                self.object.delete()
+                self.object.anvil_delete()
+                self.add_success_message()
+                response = HttpResponseRedirect(self.get_success_url())
+        except (ProtectedError, RestrictedError):
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_workspace_from_app,
+            )
+            response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             # Rerender the same page with an error message.
-            return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+            response = self.render_to_response(self.get_context_data())
+        return response
 
 
 class WorkspaceAudit(
