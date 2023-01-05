@@ -16,8 +16,12 @@ from .test_app import forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
 
 
+class AccountAdapterTestCase(TestCase):
+    """Tests for Account adapters."""
+
+
 class WorkspaceAdapterTest(TestCase):
-    """Tests for extending the WorkspaceAdapter class."""
+    """Tests for Workspace adapters."""
 
     def test_list_table_class_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
