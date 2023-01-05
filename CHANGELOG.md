@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Bug fix: Do not allow `ManagedGroup` or `Workspace` instances to be deleted if referenced in another model by a protected foreign key.
+
 ## 0.8 (2022-12-27)
 
 - Change `Workspace` link on AnVIL to use `anvil.terra.bio` instead of `app.terra.bio`
@@ -18,7 +22,7 @@
 
 ## 0.5 (2022-11-22)
 
-- Add an optional note field to the `BillingProject`, `Account`, `ManagedGroup`, and `Workspace` models.
+- Add an optional note field to the  `BillingProject`, `Account`, `ManagedGroup`, and `Workspace` models.
 - Add a user guide to the documentation.
 
 ## 0.4 (2022-11-09)

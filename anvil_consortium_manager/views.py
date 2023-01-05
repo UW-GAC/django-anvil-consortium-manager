@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
+from django.db.models import ProtectedError, RestrictedError
 from django.forms import Form, HiddenInput, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
@@ -820,7 +821,10 @@ class ManagedGroupDelete(
         "Cannot delete group because it has access to at least one workspace."
     )
     # In some cases the AnVIL API returns a successful code but the group is not deleted.
-    message_could_not_delete_group = (
+    message_could_not_delete_group_from_app = (
+        "Cannot delete group from app due to foreign key restrictions."
+    )
+    message_could_not_delete_group_from_anvil = (
         "Cannot not delete group from AnVIL - unknown reason."
     )
     success_msg = "Successfully deleted Group on AnVIL."
@@ -894,20 +898,33 @@ class ManagedGroupDelete(
             return HttpResponseRedirect(self.object.get_absolute_url())
 
         try:
-            self.object.anvil_delete()
+            with transaction.atomic():
+                self.object.delete()
+                self.object.anvil_delete()
+                self.add_success_message()
+                response = HttpResponseRedirect(self.get_success_url())
+        except (ProtectedError, RestrictedError):
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_group_from_app,
+            )
+            response = HttpResponseRedirect(self.object.get_absolute_url())
         except exceptions.AnVILGroupDeletionError:
             messages.add_message(
-                self.request, messages.ERROR, self.message_could_not_delete_group
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_group_from_anvil,
             )
-            return HttpResponseRedirect(self.object.get_absolute_url())
+            response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             # Rerender the same page with an error message.
-            return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+            response = self.render_to_response(self.get_context_data())
+        return response
 
 
 class ManagedGroupAutocomplete(
@@ -1603,6 +1620,9 @@ class WorkspaceDelete(
 ):
     model = models.Workspace
     success_msg = "Successfully deleted Workspace on AnVIL."
+    message_could_not_delete_workspace_from_app = (
+        "Cannot delete workspace from app due to foreign key restrictions."
+    )
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1639,15 +1659,26 @@ class WorkspaceDelete(
         """
         self.object = self.get_object()
         try:
-            self.object.anvil_delete()
+            with transaction.atomic():
+                self.object.delete()
+                self.object.anvil_delete()
+                self.add_success_message()
+                response = HttpResponseRedirect(self.get_success_url())
+        except (ProtectedError, RestrictedError):
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_workspace_from_app,
+            )
+            response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             # Rerender the same page with an error message.
-            return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+            response = self.render_to_response(self.get_context_data())
+        return response
 
 
 class WorkspaceAudit(

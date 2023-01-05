@@ -23,10 +23,10 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
 from . import factories
-from .adapter_app import forms as app_forms
-from .adapter_app import models as app_models
-from .adapter_app import tables as app_tables
-from .adapter_app.adapters import TestWorkspaceAdapter
+from .test_app import forms as app_forms
+from .test_app import models as app_models
+from .test_app import tables as app_tables
+from .test_app.adapters import TestWorkspaceAdapter
 from .utils import AnVILAPIMockTestMixin
 
 fake = Faker()
@@ -4868,7 +4868,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.ManagedGroupDelete.message_could_not_delete_group,
+            views.ManagedGroupDelete.message_could_not_delete_group_from_anvil,
             str(messages[0]),
         )
         # Make sure that the object still exists.
@@ -5158,6 +5158,26 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "AnVIL API returns 204 instead of 404 when trying to delete a group that doesn't exist."
         )
+
+    def test_post_does_not_delete_when_protected_fk_to_another_model(self):
+        """Group is not deleted when there is another model referencing the group with a protected foreing key."""
+        object = factories.ManagedGroupFactory.create(name="test-group")
+        app_models.ProtectedManagedGroup.objects.create(group=object)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.name), {"submit": ""}, follow=True
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        # A message is added.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.ManagedGroupDelete.message_could_not_delete_group_from_app,
+            str(messages[0]),
+        )
+        # Make sure the group still exists.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        object.refresh_from_db()
 
 
 class ManagedGroupAutocompleteTest(TestCase):
@@ -10035,6 +10055,53 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.Workspace.objects.count(), 1)
+
+    def test_post_does_not_delete_when_protected_fk_to_another_model(self):
+        """Workspace is not deleted when there is a protected foreign key reference to the workspace."""
+        object = factories.WorkspaceFactory.create()
+        app_models.ProtectedWorkspace.objects.create(workspace=object)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name),
+            {"submit": ""},
+            follow=True,
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        # A message is added.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceDelete.message_could_not_delete_workspace_from_app,
+            str(messages[0]),
+        )
+        # Make sure the group still exists.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        object.refresh_from_db()
+
+    def test_post_does_not_delete_when_workspace_data_has_protected_fk_to_another_model(
+        self,
+    ):
+        """Workspace is not deleted when there is a protected foreign key reference to the workspace data."""
+        workspace_data = factories.DefaultWorkspaceDataFactory()
+        object = workspace_data.workspace
+        app_models.ProtectedWorkspaceData.objects.create(workspace_data=workspace_data)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name),
+            {"submit": ""},
+            follow=True,
+        )
+        self.assertRedirects(response, object.get_absolute_url())
+        # A message is added.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceDelete.message_could_not_delete_workspace_from_app,
+            str(messages[0]),
+        )
+        # Make sure the group still exists.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        object.refresh_from_db()
 
 
 class WorkspaceAutocompleteTest(TestCase):

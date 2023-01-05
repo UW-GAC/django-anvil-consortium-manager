@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     # Your stuff: custom apps go here
     "anvil_consortium_manager",
     # Test app
-    "anvil_consortium_manager.tests.adapter_app",
+    "anvil_consortium_manager.tests.test_app",
 ]
 
 
