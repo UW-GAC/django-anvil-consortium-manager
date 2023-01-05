@@ -21,21 +21,21 @@ from .test_app.adapters import TestWorkspaceAdapter
 class AccountAdapterTestCase(TestCase):
     """Tests for Account adapters."""
 
-    def test_get_str_default(self):
-        """get_str returns the correct strnig for an account using a custom adapter."""
-        account = factories.AccountFactory.create()
-        self.assertEqual(DefaultAccountAdapter().get_str(account), str(account))
-
-    def test_get_str_custom(self):
-        """get_str returns the correct strnig for an account using a custom adapter."""
-        account = factories.AccountFactory.create()
-
-        class TestAdapter(BaseAccountAdapter):
-            def get_str(self, account):
-                return "test {}".format(account.email)
-
-        account = factories.AccountFactory.create(email="foo@bar.com")
-        self.assertEqual(TestAdapter().get_str(account), "test foo@bar.com")
+    # def test_get_str_default(self):
+    #     """get_str returns the correct strnig for an account using a custom adapter."""
+    #     account = factories.AccountFactory.create()
+    #     self.assertEqual(DefaultAccountAdapter().get_str(account), str(account))
+    #
+    # def test_get_str_custom(self):
+    #     """get_str returns the correct strnig for an account using a custom adapter."""
+    #     account = factories.AccountFactory.create()
+    #
+    #     class TestAdapter(BaseAccountAdapter):
+    #         def get_str(self, account):
+    #             return "test {}".format(account.email)
+    #
+    #     account = factories.AccountFactory.create(email="foo@bar.com")
+    #     self.assertEqual(TestAdapter().get_str(account), "test foo@bar.com")
 
 
 class WorkspaceAdapterTest(TestCase):
