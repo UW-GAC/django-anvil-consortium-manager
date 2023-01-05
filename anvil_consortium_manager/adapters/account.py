@@ -1,6 +1,6 @@
 """Contains base adapter for accounts."""
 
-from abc import ABC
+from abc import ABC, abstractproperty
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -10,12 +10,10 @@ from django.utils.module_loading import import_string
 class BaseAccountAdapter(ABC):
     """Base class to inherit when customizing the account adapter."""
 
-    # def get_str(self, account):
-    #     """Set the custom string method for Accounts.
-    #
-    #     This method can be extended to show informatiom from the user profile linked to the Account.
-    #     """
-    #     return str(account)
+    @abstractproperty
+    def list_table_class(self):
+        """Table class to use in a list of Accounts."""
+        ...
 
     def get_list_table_class(self):
         """Return the table class to use for the AccountList view."""
@@ -24,6 +22,11 @@ class BaseAccountAdapter(ABC):
                 "Set `list_table_class` in `{}`.".format(type(self))
             )
         return self.list_table_class
+
+    def get_autocomplete_queryset(self, queryset, q):
+        """Filter the Account `queryset` using the query `q` for use in the autocomplete."""
+        queryset = queryset.filter(email__icontains=self.q)
+        return queryset
 
 
 def get_account_adapter():

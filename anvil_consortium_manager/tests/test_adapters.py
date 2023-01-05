@@ -11,8 +11,9 @@ from ..adapters.workspace import (
     WorkspaceAdapterRegistry,
 )
 from ..forms import DefaultWorkspaceDataForm
-from ..models import DefaultWorkspaceData
+from ..models import Account, DefaultWorkspaceData
 from ..tables import AccountTable, WorkspaceTable
+from . import factories
 from .test_app import forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
 
@@ -44,6 +45,32 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "list_table_class", None)
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class()
+
+    def test_get_autocomplete_queryset_default(self):
+        """get_autocomplete_queryset returns the correct queryset when using the default adapter."""
+        account_1 = factories.AccountFactory.create(email="test@test.com")
+        account_2 = factories.AccountFactory.create(email="foo@bar.com")
+        qs = DefaultAccountAdapter().get_autocomplete_queryset(
+            Account.objects.all(), "test"
+        )
+        self.assertEqual(qs.count(), 1)
+        self.assertIn(account_1, qs)
+        self.assertNotIn(account_2, qs)
+
+    def test_get_autocomplete_queryset_custom(self):
+        """get_autocomplete_queryset returns the correct queryset when using a custom adapter."""
+
+        def foo(self, queryset, q):
+            return queryset.filter(email__startswith=q)
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "get_autocomplete_queryset", foo)
+        account_1 = factories.AccountFactory.create(email="test@test.com")
+        account_2 = factories.AccountFactory.create(email="foo@test.com")
+        qs = TestAdapter().get_autocomplete_queryset(Account.objects.all(), "test")
+        self.assertEqual(qs.count(), 1)
+        self.assertIn(account_1, qs)
+        self.assertNotIn(account_2, qs)
 
 
 class WorkspaceAdapterTest(TestCase):
