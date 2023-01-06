@@ -19,3 +19,6 @@ class TestAccountAdapter(BaseAccountAdapter):
     """Test adapter for accounts."""
 
     list_table_class = tables.TestAccountTable
+
+    def get_autocomplete_queryset(self, queryset, q):
+        return queryset.filter(email__startswith=q)

@@ -706,8 +706,9 @@ class AccountAutocomplete(
         ).order_by("email")
 
         if self.q:
-            # When Accounts are linked to users, we'll want to figure out how to filter on fields in the user model.
-            qs = qs.filter(email__icontains=self.q)
+            # Use the account adapter to process the query.
+            adapter = get_account_adapter()
+            qs = adapter().get_autocomplete_queryset(qs, self.q)
 
         return qs
 

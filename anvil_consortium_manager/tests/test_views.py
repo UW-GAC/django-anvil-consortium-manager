@@ -3810,6 +3810,23 @@ class AccountAutocompleteTest(TestCase):
         ]
         self.assertEqual(len(returned_ids), 0)
 
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter_queryset(self):
+        """Filters queryset correctly if custom get_autocomplete_queryset is set in adapter."""
+        account_1 = factories.AccountFactory.create(email="test@bar.com")
+        account_2 = factories.AccountFactory.create(email="foo@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"q": "test"})
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertIn(account_1.pk, returned_ids)
+        self.assertNotIn(account_2.pk, returned_ids)
+
 
 class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the AccountAudit view."""

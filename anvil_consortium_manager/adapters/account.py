@@ -25,7 +25,7 @@ class BaseAccountAdapter(ABC):
 
     def get_autocomplete_queryset(self, queryset, q):
         """Filter the Account `queryset` using the query `q` for use in the autocomplete."""
-        queryset = queryset.filter(email__icontains=self.q)
+        queryset = queryset.filter(email__icontains=q)
         return queryset
 
 
