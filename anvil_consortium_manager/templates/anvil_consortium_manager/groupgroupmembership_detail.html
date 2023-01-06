@@ -8,13 +8,13 @@
 
 <h2>Group Group Membership Details</h2>
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
-<ul>
-    <li>Parent group: <a href="{{object.parent_group.get_absolute_url}}"> {{ object.parent_group}} </a></li>
-    <li>Child group: <a href="{{object.child_group.get_absolute_url}}"> {{ object.child_group}} </a></li>
-    <li>Role: {{ object.role }}</li>
-    <li>Date added: {{ object.created }}</li>
-    <li>Date modified: {{ object.modified }}</li>
-  </ul>
+  <dl class="row">
+    <dt class="col-sm-2">Parent group</dt> <dd class="col-sm-10"><a href="{{ object.billing_project.get_absolute_url }}">{{ object.parent_group }}</a></dd>
+    <dt class="col-sm-2">Child group</dt> <dd class="col-sm-10"><a href="{{ object.account.get_absolute_url }}">{{ object.child_group }}</a></dd>
+    <dt class="col-sm-2">Role</dt> <dd class="col-sm-10">{{ object.role }}</dd>
+    <dt class="col-sm-2">Date added</dt> <dd class="col-sm-10">{{ object.created }}</dd>
+    <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
+  </dl>
 </div>
 
 {% if show_edit_links %}
