@@ -3,6 +3,7 @@
 ## Devel
 
 - Bug fix: Do not allow `ManagedGroup` or `Workspace` instances to be deleted if referenced in another model by a protected foreign key.
+- Add a customizable adapter for `Accounts`. This requires setting the `ANVIL_ACCOUNT_ADAPTER` setting in your settings file.
 
 ## 0.8 (2022-12-27)
 
