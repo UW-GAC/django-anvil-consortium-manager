@@ -2646,6 +2646,18 @@ class AccountListTest(TestCase):
         self.assertIn(active_object, response.context_data["table"].data)
         self.assertIn(inactive_object, response.context_data["table"].data)
 
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter(self):
+        """Displays the correct table if specified in the adapter."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], app_tables.TestAccountTable
+        )
+
 
 class AccountActiveListTest(TestCase):
     def setUp(self):
@@ -2741,6 +2753,18 @@ class AccountActiveListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
         self.assertIn(active_object, response.context_data["table"].data)
         self.assertNotIn(inactive_object, response.context_data["table"].data)
+
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter_table_class(self):
+        """Displays the correct table if specified in the adapter."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], app_tables.TestAccountTable
+        )
 
 
 class AccountInactiveListTest(TestCase):
@@ -2841,6 +2865,18 @@ class AccountInactiveListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
         self.assertNotIn(active_object, response.context_data["table"].data)
         self.assertIn(inactive_object, response.context_data["table"].data)
+
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter(self):
+        """Displays the correct table if specified in the adapter."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], app_tables.TestAccountTable
+        )
 
 
 class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
@@ -3797,6 +3833,37 @@ class AccountAutocompleteTest(TestCase):
             for x in json.loads(response.content.decode("utf-8"))["results"]
         ]
         self.assertEqual(len(returned_ids), 0)
+
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter_queryset(self):
+        """Filters queryset correctly if custom get_autocomplete_queryset is set in adapter."""
+        account_1 = factories.AccountFactory.create(email="test@bar.com")
+        account_2 = factories.AccountFactory.create(email="foo@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"q": "test"})
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertIn(account_1.pk, returned_ids)
+        self.assertNotIn(account_2.pk, returned_ids)
+
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter_labels(self):
+        """Test view labels."""
+        account = factories.AccountFactory.create(email="test@bar.com")
+
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        view = views.AccountAutocomplete()
+        view.setup(request)
+        self.assertEqual(view.get_result_label(account), "TEST test@bar.com")
+        self.assertEqual(view.get_selected_result_label(account), "TEST test@bar.com")
 
 
 class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):

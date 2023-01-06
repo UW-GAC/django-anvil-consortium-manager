@@ -3,11 +3,23 @@
 Advanced Usage
 ==============
 
+The account adapter
+-------------------
+
+The app provides an adapter that you can use to customize behavior for Accounts.
+By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultAccountAdapter`.
+
+The default adapter provides the following settings and methods:
+
+- ``list_table_class``: an attribute set to the class of the table used to display accounts in the `AccountList` view. The default is :class:`anvil_consortium_manager.tables.AccountTable`.
+- ``get_autocomplete_queryset(self, queryset, q)``: a method that allows the user to provide custom filtering for the autocomplete view. By default, this filters to Accounts whose email contains the case-insensitive search string in ``q``.
+- ``get_autocomplete_label(self, account)``: a method that allows the user to set the label for an account shown in forms using the autocomplete widget.
+
 The workspace adapter
 ---------------------
 
 The app provides an adapter that you can use to provide extra, customized data about a workspace.
-By default, the app uses :class:`~anvil_consortium_manager.adapter.DefaultWorkspaceAdapter`.
+By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter`.
 The default ``workspace_data_model`` specified in this adapter has no fields other than those provided by :class:`~anvil_consortium_manager.models.BaseWorkspaceData`.
 This section describes how to store additional information about a workspace by setting up a custom adapter.
 

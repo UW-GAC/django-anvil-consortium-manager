@@ -221,3 +221,7 @@ ANVIL_WORKSPACE_ADAPTERS = [
     "example_site.app.adapters.ExampleWorkspaceAdapter",
     # "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
+# Account adapter.
+ANVIL_ACCOUNT_ADAPTER = (
+    "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
+)

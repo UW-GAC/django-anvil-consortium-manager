@@ -1,10 +1,11 @@
+from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 
 from . import forms, models, tables
 
 
 class TestWorkspaceAdapter(BaseWorkspaceAdapter):
-    """Example adapter for workspaces."""
+    """Test adapter for workspaces."""
 
     name = "Test workspace"
     type = "test"
@@ -12,3 +13,15 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_model = models.TestWorkspaceData
     workspace_data_form_class = forms.TestWorkspaceDataForm
     workspace_detail_template_name = "test_workspace_detail.html"
+
+
+class TestAccountAdapter(BaseAccountAdapter):
+    """Test adapter for accounts."""
+
+    list_table_class = tables.TestAccountTable
+
+    def get_autocomplete_queryset(self, queryset, q):
+        return queryset.filter(email__startswith=q)
+
+    def get_autocomplete_label(self, account):
+        return "TEST {}".format(account.email)
