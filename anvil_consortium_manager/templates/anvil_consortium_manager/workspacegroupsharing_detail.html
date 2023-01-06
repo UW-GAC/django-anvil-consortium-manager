@@ -4,14 +4,14 @@
 {% block title %}Workspace group sharing: {{ object }}{% endblock %}
 
 {% block panel %}
-<ul>
-  <li>Group: <a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></li>
-  <li>Workspace: <a href="{{object.workspace.get_absolute_url}}"> {{ object.workspace}} </a></li>
-  <li>Access: {{ object.access }}</li>
-  <li>Can compute: {{ object.can_compute }}</li>
-  <li>Date created: {{ object.created }}</li>
-  <li>Date modified: {{ object.modified }}</li>
-</ul>
+<dl class="row">
+  <dt class="col-sm-2">Group</dt> <dd class="col-sm-10"><a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></dd>
+  <dt class="col-sm-2">Workspace</dt> <dd class="col-sm-10"><a href="{{object.workspace.get_absolute_url}}"> {{ object.workspace}} </a></dd>
+  <dt class="col-sm-2">Access</dt> <dd class="col-sm-10"> {{ object.access}} </dd>
+  <dt class="col-sm-2">Can compute</dt> <dd class="col-sm-10"> {{ object.can_compute}} </dd>
+  <dt class="col-sm-2">Date created</dt> <dd class="col-sm-10">{{ object.created}} </dd>
+  <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10"> {{ object.modified}} </dd>
+</dl>
 {% endblock panel %}
 
 {% block after_panel %}
