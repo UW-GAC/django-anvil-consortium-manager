@@ -525,7 +525,10 @@ class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
 
 class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
-    table_class = tables.AccountTable
+
+    def get_table_class(self):
+        adapter = get_account_adapter()
+        return adapter().get_list_table_class()
 
     def get_queryset(self):
         return self.model.objects.active()
@@ -533,7 +536,10 @@ class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView
 
 class AccountInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
-    table_class = tables.AccountTable
+
+    def get_table_class(self):
+        adapter = get_account_adapter()
+        return adapter().get_list_table_class()
 
     def get_queryset(self):
         return self.model.objects.inactive()

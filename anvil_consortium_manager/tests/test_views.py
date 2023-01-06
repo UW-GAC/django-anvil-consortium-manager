@@ -2754,6 +2754,18 @@ class AccountActiveListTest(TestCase):
         self.assertIn(active_object, response.context_data["table"].data)
         self.assertNotIn(inactive_object, response.context_data["table"].data)
 
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter_table_class(self):
+        """Displays the correct table if specified in the adapter."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], app_tables.TestAccountTable
+        )
+
 
 class AccountInactiveListTest(TestCase):
     def setUp(self):
@@ -2853,6 +2865,18 @@ class AccountInactiveListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
         self.assertNotIn(active_object, response.context_data["table"].data)
         self.assertIn(inactive_object, response.context_data["table"].data)
+
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter(self):
+        """Displays the correct table if specified in the adapter."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["table"], app_tables.TestAccountTable
+        )
 
 
 class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
