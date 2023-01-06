@@ -28,6 +28,10 @@ class BaseAccountAdapter(ABC):
         queryset = queryset.filter(email__icontains=q)
         return queryset
 
+    def get_autocomplete_label(self, account):
+        """Adapter to provide a label for an account in autocomplete views."""
+        return str(account)
+
 
 def get_account_adapter():
     adapter = import_string(settings.ANVIL_ACCOUNT_ADAPTER)

@@ -72,6 +72,27 @@ class AccountAdapterTestCase(TestCase):
         self.assertIn(account_1, qs)
         self.assertNotIn(account_2, qs)
 
+    def test_get_autocomplete_label_default(self):
+        """get_label_from_instance returns the correct queryset when using the default adapter."""
+        account = factories.AccountFactory.create(email="test@test.com")
+        self.assertEqual(
+            DefaultAccountAdapter().get_autocomplete_label(account), "test@test.com"
+        )
+
+    def test_get_autocomplete_label_custom(self):
+        """get_label_from_instance returns the correct queryset when using a custom adapter."""
+
+        account = factories.AccountFactory.create(
+            verified=True, user__username="testuser"
+        )
+
+        def foo(self, account):
+            return account.user.username
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "get_autocomplete_label", foo)
+        self.assertEqual(TestAdapter().get_autocomplete_label(account), "testuser")
+
 
 class WorkspaceAdapterTest(TestCase):
     """Tests for Workspace adapters."""

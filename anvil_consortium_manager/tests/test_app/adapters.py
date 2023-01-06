@@ -22,3 +22,6 @@ class TestAccountAdapter(BaseAccountAdapter):
 
     def get_autocomplete_queryset(self, queryset, q):
         return queryset.filter(email__startswith=q)
+
+    def get_autocomplete_label(self, account):
+        return "TEST {}".format(account.email)

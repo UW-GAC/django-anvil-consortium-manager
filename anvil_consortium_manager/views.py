@@ -699,6 +699,14 @@ class AccountAutocomplete(
 ):
     """View to provide autocompletion for Accounts. Only active accounts are included."""
 
+    def get_result_label(self, item):
+        adapter = get_account_adapter()
+        return adapter().get_autocomplete_label(item)
+
+    def get_selected_result_label(self, item):
+        adapter = get_account_adapter()
+        return adapter().get_autocomplete_label(item)
+
     def get_queryset(self):
         # Only active accounts.
         qs = models.Account.objects.filter(

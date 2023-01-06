@@ -3827,6 +3827,20 @@ class AccountAutocompleteTest(TestCase):
         self.assertIn(account_1.pk, returned_ids)
         self.assertNotIn(account_2.pk, returned_ids)
 
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
+    )
+    def test_adapter_labels(self):
+        """Test view labels."""
+        account = factories.AccountFactory.create(email="test@bar.com")
+
+        request = self.factory.get(self.get_url())
+        request.user = self.user
+        view = views.AccountAutocomplete()
+        view.setup(request)
+        self.assertEqual(view.get_result_label(account), "TEST test@bar.com")
+        self.assertEqual(view.get_selected_result_label(account), "TEST test@bar.com")
+
 
 class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the AccountAudit view."""
