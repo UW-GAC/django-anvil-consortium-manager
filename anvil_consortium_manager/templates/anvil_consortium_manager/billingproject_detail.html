@@ -15,11 +15,11 @@
 {% endblock pills %}
 
 {% block panel %}
-  <ul>
-    <li>Name: {{ object.name }}</li>
-    <li>Date added: {{ object.created }}</li>
-    <li>Date modified: {{ object.modified }}</li>
-  </ul>
+  <dl class="row">
+    <dt class="col-sm-2">Name</dt> <dd class="col-sm-10">{{ object.name }}</dd>
+    <dt class="col-sm-2">Date created</dt> <dd class="col-sm-10">{{ object.created }}</dd>
+    <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
+  </dl>
 {% endblock panel %}
 
 {% block after_panel %}
@@ -45,7 +45,7 @@
 
 {% block action_buttons %}
   {% if show_edit_links %}
-  <a href="{% url 'anvil_consortium_manager:billing_projects:update' slug=object.name %}" class="btn btn-secondary" role="button">Update information</a>
+  <a href="{% url 'anvil_consortium_manager:billing_projects:update' slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
   </p>
   {% endif %}
 {% endblock action_buttons %}

@@ -16,7 +16,6 @@ class BillingProjectImportForm(forms.ModelForm):
             "name",
             "note",
         )
-        help_texts = {"name": "Enter the name of the billing project on AnVIL."}
 
     def clean_name(self):
         value = self.cleaned_data["name"]
@@ -43,10 +42,6 @@ class AccountImportForm(forms.ModelForm):
             "is_service_account",
             "note",
         )
-        help_texts = {
-            "email": "Email must be associated with an account on AnVIL.",
-            "is_service_account": "Check this box if the account being imported is a service account.",
-        }
 
     def clean_email(self):
         value = self.cleaned_data["email"]
@@ -66,7 +61,9 @@ class AccountUpdateForm(forms.ModelForm):
 class UserEmailEntryForm(forms.Form):
     """Form for user to enter their email attempting to link their AnVIL account."""
 
-    email = forms.EmailField(label="Email")
+    email = forms.EmailField(
+        label="Email", help_text="Enter the email associated with your AnVIL account."
+    )
 
 
 class ManagedGroupCreateForm(forms.ModelForm):
@@ -78,7 +75,7 @@ class ManagedGroupCreateForm(forms.ModelForm):
             "name",
             "note",
         )
-        help_texts = {"name": "Enter the name of the group to create on AnVIL."}
+        help_texts = {"name": "Name of the group to create on AnVIL."}
 
     def clean_name(self):
         value = self.cleaned_data["name"]
@@ -215,9 +212,6 @@ class WorkspaceCloneForm(forms.ModelForm):
             ),
         }
         help_texts = {
-            "billing_project": """Enter the billing project in which the workspace should be created.
-                               Only billing projects that have this app as a user are shown.""",
-            "name": "Enter the name of the workspace to create.",
             "authorization_domains": """Select the authorization domain(s) to use for this workspace.
                                      This cannot be changed after creation.""",
         }
@@ -318,7 +312,7 @@ class GroupAccountMembershipForm(forms.ModelForm):
 
     account = forms.ModelChoiceField(
         queryset=models.Account.objects.active(),
-        help_text="Only active accounts can be added.",
+        help_text="Only active accounts can be added to a group.",
         widget=autocomplete.ModelSelect2(
             url="anvil_consortium_manager:accounts:autocomplete",
             attrs={"data-theme": "bootstrap-5"},
@@ -362,15 +356,4 @@ class WorkspaceGroupSharingForm(forms.ModelForm):
                 url="anvil_consortium_manager:managed_groups:autocomplete",
                 attrs={"data-theme": "bootstrap-5"},
             ),
-        }
-        help_texts = {
-            "workspace": "Select the workspace to share with.",
-            "group": "Select the group that this workspace should be shared with.",
-            "access": """Select the access level that this group should have.
-                         A "Reader" can see data int the workspace.
-                         A "Writer" can add or remove data in the workspace.
-                         An "Owner" can share the workspace with others or delete the workspace.""",
-            "can_compute": """Select this box if the group should have the ability to incur computing costs
-                              in the workspace.
-                              Readers cannot be granted compute access.""",
         }

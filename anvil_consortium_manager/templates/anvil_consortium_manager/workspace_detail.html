@@ -17,19 +17,17 @@
 {% endblock pills %}
 
 {% block panel %}
-
-  <ul>
-    <li>Billing project: <a href="{{ object.billing_project.get_absolute_url }}">{{ object.billing_project }}</a></li>
-    <li>Name: {{ object.name }}</li>
-    <li>Date added: {{ object.created }}</li>
-    <li>Date modified: {{ object.modified }}</li>
-  </ul>
+<dl class="row">
+  <dt class="col-sm-2">Billing project</dt> <dd class="col-sm-10"><a href="{{ object.billing_project.get_absolute_url }}">{{ object.billing_project }}</a></dd>
+  <dt class="col-sm-2">Name</dt> <dd class="col-sm-10">{{ object.name }}</dd>
+  <dt class="col-sm-2">Date added</dt> <dd class="col-sm-10">{{ object.created }}</dd>
+  <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
+</dl>
   {% block workspace_data %}
   {% endblock workspace_data %}
 {% endblock panel %}
 
 {% block after_panel %}
-
   <div>
     <div class="card my-3">
       <div class="card-header">
