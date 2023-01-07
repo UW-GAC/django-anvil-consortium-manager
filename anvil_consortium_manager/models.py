@@ -39,8 +39,12 @@ class AnVILProjectManagerAccess(models.Model):
 class BillingProject(TimeStampedModel):
     """A model to store information about AnVIL billing projects."""
 
-    name = models.SlugField(max_length=64, unique=True)
-    has_app_as_user = models.BooleanField()
+    name = models.SlugField(
+        max_length=64, unique=True, help_text="Name of the Billing Project on AnVIL."
+    )
+    has_app_as_user = models.BooleanField(
+        help_text="Indicator of whether the app is a user in this BillingProject."
+    )
     note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
@@ -217,32 +221,36 @@ class Account(TimeStampedModel, ActivatorModel):
     )
 
     # TODO: Consider using CIEmailField if using postgres.
-    email = models.EmailField(unique=True)
-    """Email associated with this account on AnVIL."""
-
-    is_service_account = models.BooleanField()
-    """Indicator of whether this account is a service account or a user account."""
-
-    uuid = models.UUIDField(default=uuid.uuid4)
-    """UUID for use in urls."""
+    email = models.EmailField(
+        unique=True, help_text="""Email associated with this account on AnVIL."""
+    )
+    is_service_account = models.BooleanField(
+        help_text="""Indicator of whether this account is a service account or a user account."""
+    )
+    uuid = models.UUIDField(default=uuid.uuid4, help_text="""UUID for use in urls.""")
     # Use on_delete=PROTECT here because additional things need to happen when an account is deleted,
     # and we're not sure what that should be. Deactivate the account or and/or remove it from groups?
     # I think it's unlikely we will be deleting users frequently, and we can revisit this if necessary.
     # So table it for later.
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        help_text="User linked to this AnVIL account.",
     )
-    is_service_account = models.BooleanField()
-
+    is_service_account = models.BooleanField(
+        help_text="Indicator of whether this Account is a service account."
+    )
     verified_email_entry = models.OneToOneField(
         UserEmailEntry,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
         related_name="verified_account",
+        help_text="""The UserEmailEntry object used to verify the email,
+        if the account was created by a user linking their email.""",
     )
-    """The UserEmailEntry object used to verify the email, if the account was created by a user linking their email."""
-
     note = models.TextField(blank=True, help_text="Additional notes.")
 
     history = HistoricalRecords()
@@ -358,8 +366,12 @@ class Account(TimeStampedModel, ActivatorModel):
 class ManagedGroup(TimeStampedModel):
     """A model to store information about AnVIL Managed Groups."""
 
-    name = models.SlugField(max_length=64, unique=True)
-    is_managed_by_app = models.BooleanField(default=True)
+    name = models.SlugField(
+        max_length=64, unique=True, help_text="Name of the group on AnVIL."
+    )
+    is_managed_by_app = models.BooleanField(
+        default=True, help_text="Indicator of whether this group is managed by the app."
+    )
     note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
@@ -623,18 +635,28 @@ class Workspace(TimeStampedModel):
     # NB: In the APIs some documentation, this is also referred to as "namespace".
     # In other places, it is "billing project".
     # For internal consistency, call it "billing project" here.
-    billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
-    name = models.SlugField(max_length=64)
+    billing_project = models.ForeignKey(
+        "BillingProject",
+        on_delete=models.PROTECT,
+        help_text="Billing project associated with this Workspace.",
+    )
+    name = models.SlugField(
+        max_length=64,
+        help_text="Name of the workspace on AnVIL, not including billing project name.",
+    )
     # This makes it possible to easily select the authorization domains in the WorkspaceCreateForm.
     # However, it does not create a record in django-simple-history for creating the many-to-many field.
     authorization_domains = models.ManyToManyField(
-        "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
+        "ManagedGroup",
+        through="WorkspaceAuthorizationDomain",
+        blank=True,
+        help_text="Authorization domain(s) for this workspace.",
     )
-    note = models.TextField(blank=True)
-
+    note = models.TextField(blank=True, help_text="Additional notes.")
     # If this doesn't work easily, we could switch to using generic relationships.
-    workspace_type = models.CharField(max_length=255)
-    """Workspace data type as indicated in an adapter."""
+    workspace_type = models.CharField(
+        max_length=255, help_text="""Workspace data type as indicated by an adapter."""
+    )
 
     history = HistoricalRecords()
 
@@ -1015,8 +1037,16 @@ class DefaultWorkspaceData(BaseWorkspaceData):
 class WorkspaceAuthorizationDomain(TimeStampedModel):
     """Through table for the Workspace authorization_domains field."""
 
-    group = models.ForeignKey(ManagedGroup, on_delete=models.PROTECT)
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE)
+    group = models.ForeignKey(
+        ManagedGroup,
+        on_delete=models.PROTECT,
+        help_text="Group used as an authorization domain.",
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        help_text="Workspace for which this group is an authorization domain.",
+    )
     history = HistoricalRecords()
 
     class Meta:
@@ -1182,17 +1212,31 @@ class WorkspaceGroupSharing(TimeStampedModel):
     ]
     """Allowed choices for the ``access`` field."""
 
-    group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
-    """ManagedGroup that has access to the Workspace in ``workspace``."""
-
-    workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
-    """Workspace that the ManagedGroup ``group`` has access to."""
-
-    access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
-    """Access type that this ``ManagedGroup`` has to this ``Workspace``."""
-
-    can_compute = models.BooleanField(default=False)
-    """Indicator of whether the group has ``can_compute`` permission. "READERS" cannot be granted compute permission."""
+    group = models.ForeignKey(
+        "ManagedGroup",
+        on_delete=models.PROTECT,
+        help_text="""ManagedGroup that has access to this Workspace.""",
+    )
+    workspace = models.ForeignKey(
+        "Workspace",
+        on_delete=models.CASCADE,
+        help_text="""Workspace that the ManagedGroup has access to.""",
+    )
+    access = models.CharField(
+        max_length=10,
+        choices=ACCESS_CHOICES,
+        default=READER,
+        help_text="""Access level that this ManagedGroup has to this Workspace.
+            A "Reader" can see data int the workspace.
+            A "Writer" can add or remove data in the workspace.
+            An "Owner" can share the workspace with others or delete the workspace.""",
+    )
+    can_compute = models.BooleanField(
+        default=False,
+        verbose_name="Allow compute in this workspace?",
+        help_text="""Indicator of whether the group is able to perform compute in this workspace.
+        "READERS" cannot be granted compute permission.""",
+    )
 
     history = HistoricalRecords()
     """Historical records from django-simple-history."""
