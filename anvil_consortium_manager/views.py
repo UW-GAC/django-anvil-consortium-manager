@@ -198,6 +198,7 @@ class BillingProjectDetail(
 class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
+    ordering = ("name",)
 
 
 class BillingProjectAutocomplete(
@@ -517,6 +518,7 @@ class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     The table class can be customized using in a custom Account adapter."""
 
     model = models.Account
+    ordering = ("email",)
 
     def get_table_class(self):
         adapter = get_account_adapter()
@@ -525,6 +527,7 @@ class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
 
 class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
+    ordering = ("email",)
 
     def get_table_class(self):
         adapter = get_account_adapter()
@@ -536,6 +539,7 @@ class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView
 
 class AccountInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
+    ordering = ("email",)
 
     def get_table_class(self):
         adapter = get_account_adapter()
@@ -824,6 +828,7 @@ class ManagedGroupUpdate(
 class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
+    ordering = ("name",)
 
 
 class ManagedGroupDelete(
@@ -1620,6 +1625,10 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
 
     model = models.Workspace
     table_class = tables.WorkspaceTable
+    ordering = (
+        "billing_project__name",
+        "name",
+    )
 
 
 class WorkspaceListByType(
@@ -1628,6 +1637,10 @@ class WorkspaceListByType(
     """Display a list of workspaces of the given ``workspace_type``."""
 
     model = models.Workspace
+    ordering = (
+        "billing_project__name",
+        "name",
+    )
 
     def get_queryset(self):
         return self.model.objects.filter(workspace_type=self.adapter.get_type())
@@ -2034,6 +2047,10 @@ class GroupGroupMembershipList(
 ):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
+    ordering = (
+        "parent_group__name",
+        "child_group__name",
+    )
 
 
 class GroupGroupMembershipDelete(
@@ -2364,6 +2381,10 @@ class GroupAccountMembershipList(
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+    ordering = (
+        "group__name",
+        "account__email",
+    )
 
 
 class GroupAccountMembershipActiveList(
@@ -2373,6 +2394,10 @@ class GroupAccountMembershipActiveList(
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+    ordering = (
+        "group__name",
+        "account__email",
+    )
 
     def get_queryset(self):
         return self.model.objects.filter(account__status=models.Account.ACTIVE_STATUS)
@@ -2385,6 +2410,10 @@ class GroupAccountMembershipInactiveList(
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+    ordering = (
+        "group__name",
+        "account__email",
+    )
 
     def get_queryset(self):
         return self.model.objects.filter(account__status=models.Account.INACTIVE_STATUS)
@@ -2796,6 +2825,11 @@ class WorkspaceGroupSharingList(
 ):
     model = models.WorkspaceGroupSharing
     table_class = tables.WorkspaceGroupSharingTable
+    ordering = (
+        "workspace__billing_project__name",
+        "workspace__name",
+        "group__name",
+    )
 
 
 class WorkspaceGroupSharingDelete(
