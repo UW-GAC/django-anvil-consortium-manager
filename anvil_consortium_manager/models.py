@@ -365,18 +365,17 @@ class Account(TimeStampedModel, ActivatorModel):
 
             for group in parents:
                 groups.append(group)
-
         # check what workspaces have been shared with any of those groups;
         workspaces = WorkspaceGroupSharing.objects.filter(group__in=groups)
         # check if all the auth domains for each workspace are in the Account's set of groups.
         accessible_workspaces = []
         for ws in workspaces:
-            authorized_domains = ws.workspace.workspaceauthorizationdomain_set.all()
-            accessible_workspaces = [
-                ad.workspace
-                for ad in authorized_domains
-                if ad.workspace.is_shared(ws.group)
-            ]
+            authorized_domains = list(
+                ws.workspace.authorization_domains.all().values_list("name", flat=True)
+            )
+            for membership in group_memberships:
+                if str(membership.group) in authorized_domains:
+                    accessible_workspaces.append(ws.workspace)
         return accessible_workspaces
 
 
