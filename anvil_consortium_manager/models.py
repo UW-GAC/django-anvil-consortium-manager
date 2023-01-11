@@ -370,12 +370,9 @@ class Account(TimeStampedModel, ActivatorModel):
         # check if all the auth domains for each workspace are in the Account's set of groups.
         accessible_workspaces = []
         for ws in workspaces:
-            authorized_domains = list(
-                ws.workspace.authorization_domains.all().values_list("name", flat=True)
-            )
-            for membership in group_memberships:
-                if str(membership.group) in authorized_domains:
-                    accessible_workspaces.append(ws.workspace)
+            authorized_domains = list(ws.workspace.authorization_domains.all())
+            if all(x in groups for x in authorized_domains):
+                accessible_workspaces.append(ws.workspace)
         return accessible_workspaces
 
 
