@@ -368,11 +368,11 @@ class Account(TimeStampedModel, ActivatorModel):
         # check what workspaces have been shared with any of those groups;
         workspaces = WorkspaceGroupSharing.objects.filter(group__in=groups)
         # check if all the auth domains for each workspace are in the Account's set of groups.
-        accessible_workspaces = []
+        accessible_workspaces = set()
         for ws in workspaces:
             authorized_domains = list(ws.workspace.authorization_domains.all())
             if all(x in groups for x in authorized_domains):
-                accessible_workspaces.append(ws.workspace)
+                accessible_workspaces.add(ws.workspace)
         return accessible_workspaces
 
 
