@@ -1362,6 +1362,16 @@ class AccountDetailTest(TestCase):
             ),
         )
 
+    def test_accessible_workspace_table(self):
+        """The accessible workspace table exists."""
+        obj = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["accessible_workspace_table"], tables.WorkspaceTable
+        )
+
 
 class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
