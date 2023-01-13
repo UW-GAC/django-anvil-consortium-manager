@@ -4,11 +4,11 @@ import google.auth.credentials
 import google.auth.transport.requests
 import responses
 
+from ..anvil_api import AnVILAPIClient
+
 
 class AnVILAPIMockTestMixin:
     """Base class for AnVIL API mocked tests."""
-
-    entry_point = "https://api.firecloud.org"
 
     def setUp(self):
         """Set up class -- mock credentials for AuthorizedSession."""
@@ -28,6 +28,8 @@ class AnVILAPIMockTestMixin:
             mock.sentinel.project,
         )
         responses.start()
+        # Get an instance of the API client to access entry points?
+        self.api_client = AnVILAPIClient()
 
     def tearDown(self):
         super().tearDown()

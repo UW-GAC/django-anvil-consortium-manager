@@ -256,9 +256,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
@@ -278,9 +278,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_anvil_status_ok(self):
         """Context data contains anvil_status."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
@@ -295,9 +295,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_anvil_status_not_ok(self):
         """Context data contains anvil_status."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET,
             url_status,
@@ -315,10 +315,10 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_status_api_error(self):
         """Page still loads if there is an AnVIL API error in the status call."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
         # Error in status API
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -332,9 +332,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_status_me_error(self):
         """Page still loads if there is an AnVIL API error in the me call."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=499)
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET,
             url_status,
@@ -353,10 +353,10 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_both_api_error(self):
         """Page still loads if there is an AnVIL API error in both the status and me call."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=499)
         # Error in status API
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -390,7 +390,11 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/billing/v2/" + billing_project_name
+        return (
+            self.api_client.firecloud_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
+        )
 
     def get_api_json_response(self):
         return {
@@ -1051,7 +1055,11 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:billing_projects:audit", args=args)
 
     def get_api_url(self, billing_project_name):
-        return self.entry_point + "/api/billing/v2/" + billing_project_name
+        return (
+            self.api_client.firecloud_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
+        )
 
     def get_api_json_response(self):
         return {
@@ -1410,7 +1418,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1770,7 +1778,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
 
     def get_view(self):
         """Return the view being tested."""
@@ -2260,7 +2268,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -2907,7 +2915,11 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name, account_email):
         return (
-            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group_name
+            + "/MEMBER/"
+            + account_email
         )
 
     def test_view_redirect_not_logged_in(self):
@@ -3139,7 +3151,11 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name, account_email):
         return (
-            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group_name
+            + "/MEMBER/"
+            + account_email
         )
 
     def test_view_redirect_not_logged_in(self):
@@ -3438,7 +3454,11 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name, account_email):
         return (
-            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group_name
+            + "/MEMBER/"
+            + account_email
         )
 
     def test_view_redirect_not_logged_in(self):
@@ -3886,7 +3906,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:accounts:audit", args=args)
 
     def get_api_url(self, email):
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
 
     def get_view(self):
         """Return the view being tested."""
@@ -4470,7 +4490,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
-        url = self.entry_point + "/api/groups/" + "test-group"
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
@@ -4485,7 +4505,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_with_note(self):
         """Posting valid data including note to the form creates an object."""
-        url = self.entry_point + "/api/groups/" + "test-group"
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -4502,7 +4522,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = self.entry_point + "/api/groups/" + "test-group"
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"}, follow=True)
@@ -4514,7 +4534,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = self.entry_point + "/api/groups/" + "test-group"
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
         responses.add(responses.POST, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
@@ -4580,7 +4600,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_api_error_message(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = self.entry_point + "/api/groups/" + "test-group"
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
         responses.add(
             responses.POST, url, status=500, json={"message": "group create test error"}
         )
@@ -4870,7 +4890,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.entry_point + "/api/groups/" + object.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
@@ -4885,7 +4905,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.entry_point + "/api/groups/" + object.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
@@ -4901,7 +4921,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.ManagedGroupFactory.create()
         other_object = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/groups/" + object.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
@@ -4920,7 +4940,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         The AnVIL group delete API is buggy and often returns a successful API response when it should return an error.
         """
         object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.entry_point + "/api/groups/" + object.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         # Group was not actually deleted on AnVIL.
         responses.add(responses.GET, url, status=200)
@@ -4946,7 +4966,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/groups/" + object.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         # Need to use the client instead of RequestFactory to check redirection url.
@@ -5115,7 +5135,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
-        url = self.entry_point + "/api/groups/" + parent.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + parent.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
@@ -5139,7 +5159,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
-        url = self.entry_point + "/api/groups/" + group.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + group.name
         responses.add(responses.DELETE, url, status=self.api_success_code)
         responses.add(responses.GET, url, status=404, json={"message": "mock message"})
         self.client.force_login(self.user)
@@ -5162,7 +5182,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/groups/" + object.name
+        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
         responses.add(
             responses.DELETE,
             url,
@@ -5386,7 +5406,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
-        return self.entry_point + "/api/groups"
+        return self.api_client.firecloud_entry_point + "/api/groups"
 
     def get_api_group_json(self, group_name, role):
         """Return json data about groups in the API format."""
@@ -5399,7 +5419,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_group_members_url(self, group_name):
         """Return the API url being called by the method."""
-        return self.entry_point + "/api/groups/" + group_name
+        return self.api_client.firecloud_entry_point + "/api/groups/" + group_name
 
     def get_api_group_members_json_response(self, admins=[], members=[]):
         """Return json data about groups in the API format."""
@@ -5622,7 +5642,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_group_members_url(self, group_name):
         """Return the API url being called by the method."""
-        return self.entry_point + "/api/groups/" + group_name
+        return self.api_client.firecloud_entry_point + "/api/groups/" + group_name
 
     def get_api_group_members_json_response(self, admins=[], members=[]):
         """Return json data about groups in the API format."""
@@ -6206,7 +6226,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6248,7 +6268,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6285,7 +6305,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6321,7 +6341,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6356,7 +6376,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6416,7 +6436,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-name-1"
         )
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-name-2",
@@ -6457,7 +6477,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project_1, name=workspace_name
         )
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project_2.name,
             "name": "test-name",
@@ -6568,7 +6588,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error_message(self):
         """Shows a method if an AnVIL API error occurs."""
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6611,7 +6631,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6660,7 +6680,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         auth_domain_1 = factories.ManagedGroupFactory.create(name="auth1")
         auth_domain_2 = factories.ManagedGroupFactory.create(name="auth2")
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6703,7 +6723,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
@@ -6734,7 +6754,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
@@ -6766,7 +6786,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6816,7 +6836,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6914,7 +6934,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6964,7 +6984,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -7046,7 +7066,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name, workspace_name):
         return (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"
@@ -7087,7 +7107,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7146,7 +7166,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a form."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7167,7 +7187,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a formset for the workspace_data model."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7189,7 +7209,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_no_available_workspaces(self):
         """Choices are populated correctly with one available workspace."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7218,7 +7238,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_one_available_workspace(self):
         """Choices are populated correctly with one available workspace."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7242,7 +7262,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_two_available_workspaces(self):
         """Choices are populated correctly with two available workspaces."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7274,7 +7294,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="ws-imported"
         )
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7306,7 +7326,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_does_not_show_workspaces_not_owner(self):
         """The form does not show workspaces where we aren't owners in the choices."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7336,7 +7356,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7350,7 +7370,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
+            self.api_client.firecloud_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
         )
         responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
@@ -7400,7 +7422,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7414,7 +7436,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
+            self.api_client.firecloud_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
         )
         responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
@@ -7454,7 +7478,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7468,7 +7492,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
+            self.api_client.firecloud_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
         )
         responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
@@ -7503,7 +7529,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7517,7 +7543,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
+            self.api_client.firecloud_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
         )
         responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
@@ -7550,7 +7578,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7564,7 +7592,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
+            self.api_client.firecloud_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
         )
         responses.add(
             responses.GET, billing_project_url, status=404, json={"message": "other"}
@@ -7612,7 +7642,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7667,7 +7697,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             workspace_name,
             authorization_domains=[auth_domain.name],
         )
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7720,7 +7750,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "workspace"
         auth_domain_name = "auth-group"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7750,7 +7780,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             ),
         )
         # Add Response for the auth domain group.
-        group_url = self.entry_point + "/api/groups"
+        group_url = self.api_client.firecloud_entry_point + "/api/groups"
         responses.add(
             responses.GET,
             group_url,
@@ -7807,7 +7837,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7846,7 +7876,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Does not import a workspace that already exists in Django."""
         workspace = factories.WorkspaceFactory.create()
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7889,7 +7919,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_workspace_name(self):
         """Does not create an object if workspace name is invalid."""
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7927,7 +7957,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7962,7 +7992,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -7975,7 +8005,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_json_response(billing_project_name, workspace_name)],
         )
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -8024,7 +8054,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Available workspaces API call.
         responses.add(
             responses.GET,
-            self.entry_point + "/api/workspaces",
+            self.api_client.firecloud_entry_point + "/api/workspaces",
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8052,7 +8082,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Available workspaces API call.
         responses.add(
             responses.GET,
-            self.entry_point + "/api/workspaces",
+            self.api_client.firecloud_entry_point + "/api/workspaces",
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8098,7 +8128,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -8129,7 +8159,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -8186,7 +8216,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
+        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
             workspace_list_url,
@@ -8259,9 +8289,12 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
         self.workspace_to_clone = factories.WorkspaceFactory.create()
-        self.api_url = self.entry_point + "/api/workspaces/{}/{}/clone".format(
-            self.workspace_to_clone.billing_project.name,
-            self.workspace_to_clone.name,
+        self.api_url = (
+            self.api_client.firecloud_entry_point
+            + "/api/workspaces/{}/{}/clone".format(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+            )
         )
         self.workspace_type = DefaultWorkspaceAdapter.type
 
@@ -9251,7 +9284,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -9914,7 +9947,10 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
+        url = (
+            self.api_client.firecloud_entry_point
+            + "/api/workspaces/test-billing-project/test-workspace"
+        )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -9935,7 +9971,10 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
+        url = (
+            self.api_client.firecloud_entry_point
+            + "/api/workspaces/test-billing-project/test-workspace"
+        )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -9953,7 +9992,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create()
         other_object = factories.WorkspaceFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + object.billing_project.name
             + "/"
@@ -9985,7 +10024,10 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             workspace=object, group=auth_domain
         )
         # object.authorization_domains.add(auth_domain)
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
+        url = (
+            self.api_client.firecloud_entry_point
+            + "/api/workspaces/test-billing-project/test-workspace"
+        )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -10015,7 +10057,10 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         group = factories.ManagedGroupFactory.create(name="test-group")
         factories.WorkspaceGroupSharingFactory.create(workspace=object, group=group)
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
+        url = (
+            self.api_client.firecloud_entry_point
+            + "/api/workspaces/test-billing-project/test-workspace"
+        )
         responses.add(responses.DELETE, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -10042,7 +10087,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + object.billing_project.name
             + "/"
@@ -10072,7 +10117,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Need to use the client instead of RequestFactory to check redirection url.
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + object.billing_project.name
             + "/"
@@ -10098,7 +10143,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         object = factories.WorkspaceFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + object.billing_project.name
             + "/"
@@ -10301,7 +10346,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:workspaces:audit", args=args)
 
     def get_api_url(self):
-        return self.entry_point + "/api/workspaces"
+        return self.api_client.firecloud_entry_point + "/api/workspaces"
 
     def get_api_workspace_json(
         self, billing_project_name, workspace_name, access, auth_domains=[]
@@ -10318,7 +10363,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_workspace_acl_url(self, billing_project_name, workspace_name):
         return (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"
@@ -10555,7 +10600,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a workspace for use in tests.
         self.workspace = factories.WorkspaceFactory.create()
         self.api_url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + self.workspace.billing_project.name
             + "/"
@@ -10992,7 +11037,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + parent_group.name
             + "/MEMBER/"
@@ -11022,7 +11067,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + parent_group.name
             + "/MEMBER/"
@@ -11049,7 +11094,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + parent_group.name
             + "/ADMIN/"
@@ -11077,7 +11122,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + parent_group.name
             + "/ADMIN/"
@@ -11156,7 +11201,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             parent_group=parent, child_group=group_1
         )
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + parent.name
             + "/MEMBER/"
@@ -11184,7 +11229,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             parent_group=group_1, child_group=child
         )
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + group_2.name
             + "/MEMBER/"
@@ -11414,7 +11459,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + parent_group.name
             + "/MEMBER/"
@@ -11569,7 +11614,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -11599,7 +11644,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -11626,7 +11671,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/ADMIN/"
@@ -11651,7 +11696,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/ADMIN/"
@@ -11903,7 +11948,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -12034,7 +12079,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -12064,7 +12109,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -12091,7 +12136,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/ADMIN/"
@@ -12116,7 +12161,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/ADMIN/"
@@ -12327,7 +12372,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -12482,7 +12527,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -12513,7 +12558,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
     def test_success_message(self):
         """Response includes a success message if successful."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -12540,7 +12585,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/ADMIN/"
@@ -12565,7 +12610,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/ADMIN/"
@@ -12885,7 +12930,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.parent_group.name
             + "/MEMBER/"
@@ -13092,7 +13137,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             role=models.GroupGroupMembership.MEMBER
         )
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + obj.parent_group.name
             + "/"
@@ -13118,7 +13163,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             role=models.GroupGroupMembership.MEMBER
         )
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + obj.parent_group.name
             + "/"
@@ -13143,7 +13188,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create()
         other_object = factories.GroupGroupMembershipFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + obj.parent_group.name
             + "/"
@@ -13169,7 +13214,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create()
         parent_group = obj.parent_group
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + obj.parent_group.name
             + "/"
@@ -13192,7 +13237,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         obj = factories.GroupGroupMembershipFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + obj.parent_group.name
             + "/"
@@ -13490,7 +13535,11 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
         url = (
-            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group.name
+            + "/MEMBER/"
+            + account.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
         self.client.force_login(self.user)
@@ -13516,7 +13565,11 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
         url = (
-            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group.name
+            + "/MEMBER/"
+            + account.email
         )
         responses.add(responses.PUT, url, status=self.api_success_code)
         self.client.force_login(self.user)
@@ -13540,7 +13593,13 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
+        url = (
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group.name
+            + "/ADMIN/"
+            + account.email
+        )
         responses.add(responses.PUT, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -13562,7 +13621,13 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
-        url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
+        url = (
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group.name
+            + "/ADMIN/"
+            + account.email
+        )
         responses.add(responses.PUT, url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -13634,7 +13699,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + group_2.name
             + "/MEMBER/"
@@ -13660,7 +13725,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
         factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + group.name
             + "/MEMBER/"
@@ -13821,7 +13886,11 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         url = (
-            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
+            self.api_client.firecloud_entry_point
+            + "/api/groups/"
+            + group.name
+            + "/MEMBER/"
+            + account.email
         )
         responses.add(
             responses.PUT,
@@ -14021,7 +14090,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14048,7 +14117,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14075,7 +14144,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/ADMIN/"
@@ -14103,7 +14172,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/ADMIN/"
@@ -14314,7 +14383,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14481,7 +14550,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14508,7 +14577,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
     def test_success_message(self):
         """Response includes a success message if successful."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14535,7 +14604,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/ADMIN/"
@@ -14563,7 +14632,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/ADMIN/"
@@ -14755,7 +14824,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14938,7 +15007,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14965,7 +15034,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
     def test_success_message(self):
         """Response includes a success message if successful."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -14992,7 +15061,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/ADMIN/"
@@ -15020,7 +15089,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/ADMIN/"
@@ -15253,7 +15322,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + self.group.name
             + "/MEMBER/"
@@ -15656,7 +15725,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Posting submit to the form successfully deletes the object."""
         object = factories.GroupAccountMembershipFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + object.group.name
             + "/"
@@ -15680,7 +15749,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         object = factories.GroupAccountMembershipFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + object.group.name
             + "/"
@@ -15707,7 +15776,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.GroupAccountMembershipFactory.create()
         other_object = factories.GroupAccountMembershipFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + object.group.name
             + "/"
@@ -15734,7 +15803,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         group = object.group
         # Need to use the client instead of RequestFactory to check redirection url.
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + object.group.name
             + "/"
@@ -15804,7 +15873,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         object = factories.GroupAccountMembershipFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/groups/"
             + object.group.name
             + "/"
@@ -16092,7 +16161,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -16139,7 +16208,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -16187,7 +16256,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -16228,7 +16297,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -16272,7 +16341,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -16316,7 +16385,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -16417,7 +16486,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -16461,7 +16530,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace_2.billing_project.name
             + "/"
@@ -16658,7 +16727,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -16701,7 +16770,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -16744,7 +16813,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -16962,7 +17031,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -17012,7 +17081,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -17063,7 +17132,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -17108,7 +17177,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -17155,7 +17224,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -17202,7 +17271,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -17489,7 +17558,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -17535,7 +17604,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -17746,7 +17815,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -17797,7 +17866,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -17845,7 +17914,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -17887,7 +17956,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -17933,7 +18002,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -17979,7 +18048,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -18223,7 +18292,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -18268,7 +18337,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -18516,7 +18585,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -18567,7 +18636,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -18619,7 +18688,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -18665,7 +18734,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -18713,7 +18782,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -18761,7 +18830,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -19085,7 +19154,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -19132,7 +19201,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + workspace.billing_project.name
             + "/"
@@ -19326,7 +19395,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -19373,7 +19442,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -19451,7 +19520,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -19493,7 +19562,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + obj.workspace.billing_project.name
             + "/"
@@ -19560,7 +19629,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -19618,7 +19687,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + obj.workspace.billing_project.name
             + "/"
@@ -19663,7 +19732,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + obj.workspace.billing_project.name
             + "/"
@@ -19699,7 +19768,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             access=models.WorkspaceGroupSharing.READER
         )
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + obj.workspace.billing_project.name
             + "/"
@@ -19950,7 +20019,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -19994,7 +20063,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -20031,7 +20100,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + obj.workspace.billing_project.name
             + "/"
@@ -20082,7 +20151,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         responses.add(
@@ -20117,7 +20186,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             }
         ]
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + obj.workspace.billing_project.name
             + "/"
@@ -20149,7 +20218,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         obj = factories.WorkspaceGroupSharingFactory.create()
         url = (
-            self.entry_point
+            self.api_client.firecloud_entry_point
             + "/api/workspaces/"
             + obj.workspace.billing_project.name
             + "/"
