@@ -1372,6 +1372,63 @@ class AccountDetailTest(TestCase):
             response.context_data["accessible_workspace_table"], tables.WorkspaceTable
         )
 
+    def test_accessible_workspace_none(self):
+        """No accessible_workspaces are shown if there are no accessible workspace for the account."""
+        account = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 0
+        )
+
+    def test_accessible_workspace_one(self):
+        """One accessible_workspace is shown if there is one accessible workspace for the account."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 1
+        )
+
+    def test_accessible_workspace_two(self):
+        """Two accessible_workspaces are shown if there are two accessible workspaces for the account."""
+        account = factories.AccountFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace_2, group=group
+        )
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace_1, group=group
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 2
+        )
+
+    def test_accessible_workspace_for_only_that_user(self):
+        """Only shows accessible_workspace that is accessible to the account."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 0
+        )
+
 
 class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
