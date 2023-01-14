@@ -3425,7 +3425,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def get_api_url(self):
-        return self.api_client.firecloud_entry_point + "/api/workspaces"
+        return self.api_client.rawls_entry_point + "/api/workspaces"
 
     def get_api_workspace_json(
         self, billing_project_name, workspace_name, access, auth_domains=[]

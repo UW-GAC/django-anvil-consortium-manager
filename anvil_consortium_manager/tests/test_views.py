@@ -7051,6 +7051,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
+        self.workspace_list_url = self.api_client.rawls_entry_point + "/api/workspaces"
 
     def tearDown(self):
         """Clean up after tests."""
@@ -7107,10 +7108,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7166,10 +7166,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a form."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7187,10 +7186,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a formset for the workspace_data model."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7209,10 +7207,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_no_available_workspaces(self):
         """Choices are populated correctly with one available workspace."""
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7238,10 +7235,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_one_available_workspace(self):
         """Choices are populated correctly with one available workspace."""
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7262,10 +7258,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_two_available_workspaces(self):
         """Choices are populated correctly with two available workspaces."""
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7294,10 +7289,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="ws-imported"
         )
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7326,10 +7320,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_does_not_show_workspaces_not_owner(self):
         """The form does not show workspaces where we aren't owners in the choices."""
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7356,10 +7349,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7422,10 +7414,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7478,10 +7469,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7529,10 +7519,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7578,10 +7567,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7642,10 +7630,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7697,10 +7684,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             workspace_name,
             authorization_domains=[auth_domain.name],
         )
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7750,10 +7736,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "workspace"
         auth_domain_name = "auth-group"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7837,10 +7822,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7876,10 +7860,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Does not import a workspace that already exists in Django."""
         workspace = factories.WorkspaceFactory.create()
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7919,10 +7902,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_workspace_name(self):
         """Does not create an object if workspace name is invalid."""
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7957,10 +7939,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7992,23 +7973,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
-            match=[
-                responses.matchers.query_param_matcher(
-                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
-                )
-            ],
-            status=200,
-            json=[self.get_api_json_response(billing_project_name, workspace_name)],
-        )
-        # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
-        responses.add(
-            responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8054,7 +8021,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Available workspaces API call.
         responses.add(
             responses.GET,
-            self.api_client.firecloud_entry_point + "/api/workspaces",
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8082,7 +8049,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Available workspaces API call.
         responses.add(
             responses.GET,
-            self.api_client.firecloud_entry_point + "/api/workspaces",
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8128,10 +8095,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8159,10 +8125,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8216,10 +8181,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.api_client.firecloud_entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -10346,7 +10310,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:workspaces:audit", args=args)
 
     def get_api_url(self):
-        return self.api_client.firecloud_entry_point + "/api/workspaces"
+        return self.api_client.rawls_entry_point + "/api/workspaces"
 
     def get_api_workspace_json(
         self, billing_project_name, workspace_name, access, auth_domains=[]

@@ -32,6 +32,7 @@ class AnVILAPIClient:
     # Class variable for auth session. Set in init method.
     auth_session = None
     firecloud_entry_point = "https://api.firecloud.org"
+    rawls_entry_point = "https://rawls.dsde-prod.broadinstitute.org"
 
     def __init__(self):
         """Initialize a new AnVILAPIClient instance.
@@ -216,7 +217,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.firecloud_entry_point + "/api/workspaces"
+        url = self.rawls_entry_point + "/api/workspaces"
         if fields:
             return self.auth_session.get(url, 200, params={"fields": fields})
         else:
