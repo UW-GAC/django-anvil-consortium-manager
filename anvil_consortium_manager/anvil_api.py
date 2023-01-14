@@ -303,7 +303,7 @@ class AnVILAPIClient:
             requests.Response
         """
         url = (
-            self.firecloud_entry_point
+            self.rawls_entry_point
             + "/api/workspaces/{namespace}/{name}/clone".format(
                 namespace=existing_workspace_namespace,
                 name=existing_workspace_name,

@@ -2340,7 +2340,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name, workspace_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"

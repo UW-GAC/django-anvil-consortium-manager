@@ -8239,7 +8239,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.workspace_to_clone = factories.WorkspaceFactory.create()
         self.api_url = (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/{}/{}/clone".format(
                 self.workspace_to_clone.billing_project.name,
                 self.workspace_to_clone.name,
