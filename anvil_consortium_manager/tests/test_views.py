@@ -6131,6 +6131,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
         self.workspace_type = DefaultWorkspaceAdapter.type
+        self.api_url = self.api_client.rawls_entry_point + "/api/workspaces"
 
     def tearDown(self):
         """Clean up after tests."""
@@ -6226,7 +6227,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6234,7 +6234,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6258,7 +6258,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             new_object.workspace_type,
             DefaultWorkspaceAdapter().get_type(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -6268,7 +6268,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6276,7 +6275,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6298,14 +6297,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
         self.assertEqual(new_object.note, "test note")
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_creates_default_workspace_data(self):
         """Posting valid data to the form creates the default workspace data object."""
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6313,7 +6311,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6341,7 +6339,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         billing_project = factories.BillingProjectFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6349,7 +6346,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6376,7 +6373,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         billing_project = factories.BillingProjectFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6384,7 +6380,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6403,7 +6399,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         new_object = models.Workspace.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two workspaces with the same billing project and name."""
@@ -6436,7 +6432,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-name-1"
         )
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-name-2",
@@ -6444,7 +6439,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6467,7 +6462,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         models.Workspace.objects.get(
             billing_project=billing_project, name="test-name-2"
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_can_create_workspace_with_same_name_different_billing_project(self):
         """Can create a workspace with the same name in a different billing project."""
@@ -6477,7 +6472,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project_1, name=workspace_name
         )
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project_2.name,
             "name": "test-name",
@@ -6485,7 +6479,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6508,7 +6502,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         models.Workspace.objects.get(
             billing_project=billing_project_2, name=workspace_name
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_invalid_input_name(self):
         """Posting invalid data to name field does not create an object."""
@@ -6588,7 +6582,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error_message(self):
         """Shows a method if an AnVIL API error occurs."""
         billing_project = factories.BillingProjectFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6596,7 +6589,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=500,
             match=[responses.matchers.json_params_matcher(json_data)],
             json={"message": "workspace create test error"},
@@ -6621,7 +6614,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
         # Make sure that no object is created.
         self.assertEqual(models.Workspace.objects.count(), 0)
 
@@ -6631,7 +6624,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6640,7 +6632,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6663,7 +6655,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.Workspace)
         self.assertEqual(len(new_object.authorization_domains.all()), 1)
         self.assertIn(auth_domain, new_object.authorization_domains.all())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -6680,7 +6672,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         auth_domain_1 = factories.ManagedGroupFactory.create(name="auth1")
         auth_domain_2 = factories.ManagedGroupFactory.create(name="auth2")
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6692,7 +6683,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6716,14 +6707,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(new_object.authorization_domains.all()), 2)
         self.assertIn(auth_domain_1, new_object.authorization_domains.all())
         self.assertIn(auth_domain_2, new_object.authorization_domains.all())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_invalid_auth_domain(self):
         """Does not create a workspace when an invalid authorization domain is specified."""
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
@@ -6747,14 +6737,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # No object was created.
         self.assertEqual(len(models.Workspace.objects.all()), 0)
         # No API calls made.
-        responses.assert_call_count(url, 0)
+        responses.assert_call_count(self.api_url, 0)
 
     def test_one_valid_one_invalid_auth_domain(self):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
@@ -6778,7 +6767,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # No object was created.
         self.assertEqual(len(models.Workspace.objects.all()), 0)
         # No API calls made.
-        responses.assert_call_count(url, 0)
+        responses.assert_call_count(self.api_url, 0)
 
     def test_auth_domain_does_not_exist_on_anvil(self):
         """No workspace is displayed if the auth domain group doesn't exist on AnVIL."""
@@ -6786,7 +6775,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6797,7 +6785,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=400,
             json={"message": "api error"},
             match=[responses.matchers.json_params_matcher(json_data)],
@@ -6828,7 +6816,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_not_admin_of_auth_domain_on_anvil(self):
         """No workspace is displayed if we are not the admins of the auth domain on AnVIL."""
@@ -6836,7 +6824,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6847,7 +6834,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=400,
             json={"message": "api error"},
             match=[responses.matchers.json_params_matcher(json_data)],
@@ -6878,7 +6865,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_not_user_of_billing_project(self):
         """Posting a billing project where we are not users does not create an object."""
@@ -6934,7 +6921,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6942,7 +6928,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6973,7 +6959,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace_data = app_models.TestWorkspaceData.objects.latest("pk")
         self.assertEqual(new_workspace_data.workspace, new_workspace)
         self.assertEqual(new_workspace_data.study_name, "test study")
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
@@ -6984,7 +6970,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6992,7 +6977,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )

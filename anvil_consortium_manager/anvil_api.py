@@ -260,7 +260,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.firecloud_entry_point + "/api/workspaces"
+        url = self.rawls_entry_point + "/api/workspaces"
         body = {
             "namespace": workspace_namespace,
             "name": workspace_name,
