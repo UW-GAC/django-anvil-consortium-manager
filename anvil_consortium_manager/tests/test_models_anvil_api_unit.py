@@ -2068,7 +2068,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object = factories.WorkspaceFactory()
         self.url_create = self.api_client.rawls_entry_point + "/api/workspaces"
         self.url_workspace = (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + self.object.billing_project.name
             + "/"
@@ -2717,7 +2717,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name, workspace_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"

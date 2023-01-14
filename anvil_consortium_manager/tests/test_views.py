@@ -7052,7 +7052,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name, workspace_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"
@@ -9838,6 +9838,15 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:workspaces:delete", args=args)
 
+    def get_api_url(self, billing_project_name, workspace_name):
+        return (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+        )
+
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceDelete.as_view()
@@ -9896,18 +9905,15 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace"
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -9920,11 +9926,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace"
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name),
@@ -9940,14 +9943,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.WorkspaceFactory.create()
         other_object = factories.WorkspaceFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -9958,7 +9955,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.objects.all(),
             models.Workspace.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_delete_workspace_with_auth_domain(self):
         """A workspace can be deleted if it has an auth domain, and the auth domain group is not deleted."""
@@ -9973,11 +9970,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             workspace=object, group=auth_domain
         )
         # object.authorization_domains.add(auth_domain)
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace"
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -9988,7 +9982,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The auth domain group still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=auth_domain.pk)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added for workspace.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -10006,11 +10000,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         group = factories.ManagedGroupFactory.create(name="test-group")
         factories.WorkspaceGroupSharingFactory.create(workspace=object, group=group)
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace"
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -10021,7 +10012,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The group still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=group.pk)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added for workspace.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -10035,14 +10026,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Redirects to the expected page."""
         object = factories.WorkspaceFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -10055,7 +10040,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 args=[DefaultWorkspaceAdapter().get_type()],
             ),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_adapter_success_url(self):
         """Redirects to the expected page."""
@@ -10065,14 +10050,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             workspace_type=TestWorkspaceAdapter().get_type()
         )
         # Need to use the client instead of RequestFactory to check redirection url.
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -10085,22 +10064,16 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 args=[TestWorkspaceAdapter().get_type()],
             ),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.WorkspaceFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
+        api_url = self.get_api_url(object.billing_project.name, object.name)
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace delete test error"},
         )
@@ -10113,7 +10086,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace delete test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.Workspace.objects.count(), 1)
 
