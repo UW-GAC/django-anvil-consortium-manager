@@ -10285,7 +10285,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_workspace_acl_url(self, billing_project_name, workspace_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"
@@ -10522,7 +10522,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a workspace for use in tests.
         self.workspace = factories.WorkspaceFactory.create()
         self.api_url = (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + self.workspace.billing_project.name
             + "/"
@@ -16008,6 +16008,17 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreate.as_view()
 
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
+
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
     ):
@@ -16082,13 +16093,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url("test-billing-project", "test-workspace")
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16107,7 +16115,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -16129,13 +16137,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url("test-billing-project", "test-workspace")
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16155,10 +16160,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -16177,13 +16179,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url("test-billing-project", "test-workspace")
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16218,17 +16217,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16248,7 +16240,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -16262,17 +16254,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16291,7 +16276,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -16306,17 +16291,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16334,7 +16312,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:workspace_group_sharing:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
@@ -16407,17 +16385,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16434,7 +16405,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_have_two_groups_for_one_workspace(self):
         group = factories.ManagedGroupFactory.create()
@@ -16451,17 +16422,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace_2.billing_project.name
-            + "/"
-            + workspace_2.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace_2.billing_project.name, workspace_2.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16478,7 +16442,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
@@ -16648,17 +16612,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16691,13 +16648,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -16725,7 +16679,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -16734,17 +16688,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -16765,7 +16712,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -16809,6 +16756,17 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreateByWorkspace.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -16952,13 +16910,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16980,7 +16935,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -17002,13 +16957,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": True,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17031,7 +16983,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -17053,13 +17005,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17098,17 +17047,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17131,7 +17073,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -17145,17 +17087,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17177,7 +17112,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -17192,17 +17127,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17224,7 +17152,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             response,
             models.WorkspaceGroupSharing.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
@@ -17479,13 +17407,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -17516,7 +17441,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -17525,17 +17450,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -17559,7 +17477,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -17603,6 +17521,17 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreateByGroup.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -17736,13 +17665,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17765,7 +17691,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
         self.assertEqual(new_object.workspace, workspace)
         self.assertEqual(new_object.group, group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -17787,13 +17713,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17813,10 +17736,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -17835,13 +17755,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17877,17 +17794,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17909,7 +17819,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -17923,17 +17833,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17954,7 +17857,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -17969,17 +17872,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18000,7 +17896,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             response,
             models.WorkspaceGroupSharing.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
@@ -18213,13 +18109,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -18249,7 +18142,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -18258,17 +18151,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -18291,7 +18177,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -18337,6 +18223,17 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreateByWorkspaceGroup.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -18506,13 +18403,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18535,7 +18429,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -18557,13 +18451,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": True,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18587,10 +18478,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -18609,13 +18497,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18655,17 +18540,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18689,7 +18567,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -18703,17 +18581,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18736,7 +18607,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -18751,17 +18622,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18784,7 +18648,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             response,
             models.WorkspaceGroupSharing.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_duplicate_object(self):
         """Redirects to detail view if object already exists."""
@@ -19075,13 +18939,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -19113,7 +18974,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -19122,17 +18983,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -19157,7 +19011,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -19198,6 +19052,17 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingUpdate.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -19316,13 +19181,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19363,13 +19227,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19385,9 +19248,6 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(obj.can_compute, True)
-        # History is added.
-        self.assertEqual(obj.history.count(), 2)
-        self.assertEqual(obj.history.latest().history_type, "~")
 
     def test_invalid_reader_can_compute(self):
         """The form is not valid when trying to update a READER's can_compute value to True."""
@@ -19441,13 +19301,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19483,17 +19342,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19508,7 +19362,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not update the object."""
@@ -19550,13 +19404,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19608,17 +19461,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19636,7 +19484,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.group, original_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_post_workspace_pk(self):
         """Posting a workspace pk has no effect."""
@@ -19653,17 +19501,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19681,7 +19524,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.workspace, original_workspace)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -19689,17 +19532,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.WorkspaceGroupSharingFactory.create(
             access=models.WorkspaceGroupSharing.READER
         )
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access update test error"},
         )
@@ -19720,7 +19558,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access update test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
         obj.refresh_from_db()
@@ -19843,6 +19681,17 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingDelete.as_view()
 
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -19940,13 +19789,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -19959,7 +19807,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
         self.assertEqual(obj.history.latest().history_type, "-")
@@ -19984,13 +19832,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20021,17 +19868,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20048,7 +19890,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_delete_with_can_compute(self):
         """Can delete a record with can_compute=True."""
@@ -20072,13 +19914,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20091,10 +19932,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(obj.history.count(), 2)
-        self.assertEqual(obj.history.latest().history_type, "-")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
@@ -20107,17 +19945,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20133,23 +19966,18 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:workspace_group_sharing:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         obj = factories.WorkspaceGroupSharingFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access delete test error"},
         )
@@ -20168,7 +19996,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access delete test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
 

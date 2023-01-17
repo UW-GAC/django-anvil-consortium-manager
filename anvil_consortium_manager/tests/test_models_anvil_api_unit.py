@@ -3442,7 +3442,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_workspace_acl_url(self, billing_project_name, workspace_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"
@@ -4401,7 +4401,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         # Create a workspace for use in tests.
         self.workspace = factories.WorkspaceFactory.create()
         self.api_url = (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + self.workspace.billing_project.name
             + "/"
@@ -5255,7 +5255,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             workspace=workspace, group=group, access=models.WorkspaceGroupSharing.READER
         )
         self.url = (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
         )
         self.headers = {"Content-type": "application/json"}
