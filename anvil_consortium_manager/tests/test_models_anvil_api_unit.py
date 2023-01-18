@@ -2163,6 +2163,24 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
         responses.assert_call_count(self.url_create, 1)
 
+    def test_anvil_create_404(self):
+        """Returns documented response code when a workspace can't be created."""
+        json = {
+            "namespace": self.object.billing_project.name,
+            "name": self.object.name,
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.url_create,
+            status=404,
+            match=[responses.matchers.json_params_matcher(json)],
+            json={"message": "mock message"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.object.anvil_create()
+        responses.assert_call_count(self.url_create, 1)
+
     def test_anvil_create_already_exists(self):
         """Returns documented response code when a workspace already exists."""
         json = {
@@ -2178,6 +2196,23 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError409):
+            self.object.anvil_create()
+        responses.assert_call_count(self.url_create, 1)
+
+    def test_anvil_create_422(self):
+        json = {
+            "namespace": self.object.billing_project.name,
+            "name": self.object.name,
+            "attributes": {},
+        }
+        responses.add(
+            responses.POST,
+            self.url_create,
+            status=422,
+            match=[responses.matchers.json_params_matcher(json)],
+            json={"message": "mock message"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError):
             self.object.anvil_create()
         responses.assert_call_count(self.url_create, 1)
 
@@ -5320,6 +5355,18 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(self.data_add)],
         )
         with self.assertRaises(anvil_api.AnVILAPIError400):
+            self.object.anvil_create_or_update()
+        responses.assert_call_count(self.url, 1)
+
+    def test_anvil_create_or_update_unsuccessful_403(self):
+        responses.add(
+            responses.PATCH,
+            self.url,
+            status=403,
+            json={"message": "mock message"},
+            match=[responses.matchers.json_params_matcher(self.data_add)],
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError403):
             self.object.anvil_create_or_update()
         responses.assert_call_count(self.url, 1)
 
