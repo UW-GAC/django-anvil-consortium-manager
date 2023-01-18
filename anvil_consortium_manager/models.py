@@ -12,7 +12,7 @@ from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import anvil_audit, exceptions
 from .adapters.workspace import workspace_adapter_registry
-from .anvil_api import AnVILAPIClient, AnVILAPIError404
+from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
 
 
@@ -147,9 +147,14 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     def anvil_account_exists(self):
         """Check if this account exists on AnVIL."""
         try:
-            AnVILAPIClient().get_proxy_group(self.email)
+            AnVILAPIClient().get_user(self.email)
         except AnVILAPIError404:
             return False
+        except AnVILAPIError as e:
+            if e.status_code == 204:
+                return False
+            else:
+                raise
         return True
 
     def save(self, *args, **kwargs):
@@ -331,9 +336,14 @@ class Account(TimeStampedModel, ActivatorModel):
             Boolean indicator of whether ``email`` is associated with an account on AnVIL.
         """
         try:
-            AnVILAPIClient().get_proxy_group(self.email)
+            AnVILAPIClient().get_user(self.email)
         except AnVILAPIError404:
             return False
+        except AnVILAPIError as e:
+            if e.status_code == 204:
+                return False
+            else:
+                raise
         return True
 
     def anvil_remove_from_groups(self):

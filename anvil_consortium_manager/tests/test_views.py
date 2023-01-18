@@ -1418,11 +1418,19 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:accounts:import", args=args)
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def get_view(self):
         """Return the view being tested."""
@@ -1477,7 +1485,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
@@ -1492,7 +1505,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_with_note(self):
         """Posting valid data with a note field to the form creates an object."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(
@@ -1506,7 +1524,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
         self.assertIn("messages", response.context)
@@ -1518,7 +1541,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         new_object = models.Account.objects.latest("pk")
@@ -1583,7 +1611,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_service_account(self):
         """Can create a service account."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(
@@ -1619,6 +1652,31 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountImport.message_account_does_not_exist
+        )
+        # No accounts were created.
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_email_is_associated_with_group(self):
+        """Does not create a new Account if the API returns a code associated with a group."""
+        email = "test@example.com"
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=204,
+        )
+        # Need the client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but there was some error from the API.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountImport.message_account_does_not_exist, str(messages[0])
         )
         # No accounts were created.
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1778,7 +1836,15 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def get_view(self):
         """Return the view being tested."""
@@ -1808,7 +1874,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form works as expected."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -1839,7 +1907,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """A success message is added."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
@@ -1852,7 +1922,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """View redirects to the correct URL."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
@@ -1866,7 +1938,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """An email is sent when the form is submitted correctly."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         self.client.post(self.get_url(), {"email": email})
@@ -1936,7 +2010,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             user=self.user, email=email, date_verification_email_sent=original_date
         )
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         timestamp_lower_limit = timezone.now()
         self.client.force_login(self.user)
@@ -2074,7 +2150,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -2130,7 +2208,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             user=other_user, email=email, date_verification_email_sent=other_timestamp
         )
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -2190,7 +2270,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         # API call will be made with the existing entry.
         api_url = self.get_api_url(email_entry.email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         timestamp_lower_limit = timezone.now()
         self.client.force_login(self.user)
@@ -2247,6 +2329,33 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_email_associated_with_group(self):
+        """Does not create a new entry or send email if the email is associated with a group."""
+        email = "test@example.com"
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=204,
+        )
+        # Need the client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but there was some error from the API.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountLink.message_account_does_not_exist, str(messages[0])
+        )
+        # No accounts were created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
+
 
 class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the AccountLinkVerify view."""
@@ -2268,7 +2377,15 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -2287,7 +2404,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_threshold = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -2481,6 +2600,34 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # API call to AnVIL was made.
         responses.assert_call_count(api_url, 1)
 
+    def test_email_associated_with_group(self):
+        """The email is associated with a group on AnVIL."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        api_url = self.get_api_url(email_entry.email)
+        responses.add(responses.GET, api_url, status=204)
+        token = account_verification_token.make_token(email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No accounts are created.
+        self.assertEqual(models.Account.objects.count(), 0)
+        # The email_entry object was not updated.
+        email_entry.refresh_from_db()
+        self.assertIsNone(email_entry.date_verified)
+        with self.assertRaises(ObjectDoesNotExist):
+            email_entry.verified_account
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLinkVerify.message_account_does_not_exist
+        )
+        # API call to AnVIL was made.
+        responses.assert_call_count(api_url, 1)
+
     def test_api_call_fails(self):
         """The API call to AnVIL fails."""
         email_entry = factories.UserEmailEntryFactory.create()
@@ -2517,7 +2664,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
@@ -2527,13 +2676,15 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="test@example.com")
     def test_notification_email(self):
         """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
-        email = "test@example.com"
+        email = "test1@example.com"
         email_entry = factories.UserEmailEntryFactory.create(
             user=self.user, email=email
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
@@ -2551,7 +2702,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
@@ -3906,7 +4059,15 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:accounts:audit", args=args)
 
     def get_api_url(self, email):
-        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def get_view(self):
         """Return the view being tested."""
@@ -3957,6 +4118,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
+            json=self.get_api_json_response(account.email),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -4000,6 +4162,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
+            json=self.get_api_json_response(account.email),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())

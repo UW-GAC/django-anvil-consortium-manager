@@ -304,13 +304,24 @@ class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         super().setUp()
         self.object = factories.UserEmailEntryFactory.create()
         self.api_url = (
-            self.api_client.firecloud_entry_point
-            + "/api/proxyGroup/"
-            + self.object.email
+            self.api_client.sam_entry_point + "/api/users/v1/" + self.object.email
         )
 
+    def get_api_user_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
+
     def test_anvil_account_exists_does_exist(self):
-        responses.add(responses.GET, self.api_url, status=200)
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.get_api_user_json_response(self.object.email),
+        )
         self.assertIs(self.object.anvil_account_exists(), True)
         responses.assert_call_count(self.api_url, 1)
 
@@ -321,15 +332,18 @@ class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIs(self.object.anvil_account_exists(), False)
         responses.assert_call_count(self.api_url, 1)
 
+    def test_anvil_account_exists_associated_with_group(self):
+        responses.add(responses.GET, self.api_url, status=204)
+        self.assertIs(self.object.anvil_account_exists(), False)
+        responses.assert_call_count(self.api_url, 1)
+
 
 class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.object = factories.AccountFactory.create()
         self.api_url = (
-            self.api_client.firecloud_entry_point
-            + "/api/proxyGroup/"
-            + self.object.email
+            self.api_client.sam_entry_point + "/api/users/v1/" + self.object.email
         )
 
     def get_api_remove_from_group_url(self, group_name):
@@ -341,8 +355,21 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             + self.object.email
         )
 
+    def get_api_user_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
+
     def test_anvil_exists_does_exist(self):
-        responses.add(responses.GET, self.api_url, status=200)
+        responses.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.get_api_user_json_response(self.object.email),
+        )
         self.assertIs(self.object.anvil_exists(), True)
         responses.assert_call_count(self.api_url, 1)
 
@@ -350,6 +377,11 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.add(
             responses.GET, self.api_url, status=404, json={"message": "mock message"}
         )
+        self.assertIs(self.object.anvil_exists(), False)
+        responses.assert_call_count(self.api_url, 1)
+
+    def test_anvil_exists_email_is_group(self):
+        responses.add(responses.GET, self.api_url, status=204)
         self.assertIs(self.object.anvil_exists(), False)
         responses.assert_call_count(self.api_url, 1)
 
@@ -500,7 +532,15 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the Account.anvil_audit method."""
 
     def get_api_url(self, email):
-        return self.api_client.firecloud_entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def test_anvil_audit_no_accounts(self):
         """anvil_audit works correct if there are no Accounts in the app."""
@@ -519,6 +559,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
+            json=self.get_api_json_response(account.email),
         )
         audit_results = models.Account.anvil_audit()
         self.assertTrue(audit_results.ok())
@@ -554,6 +595,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_1,
             status=200,
+            json=self.get_api_json_response(account_1.email),
         )
         account_2 = factories.AccountFactory.create()
         api_url_2 = self.get_api_url(account_2.email)
@@ -561,6 +603,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_2,
             status=200,
+            json=self.get_api_json_response(account_2.email),
         )
         audit_results = models.Account.anvil_audit()
         self.assertTrue(audit_results.ok())
@@ -586,6 +629,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_2,
             status=200,
+            json=self.get_api_json_response(account_2.email),
         )
         audit_results = models.Account.anvil_audit()
         self.assertEqual(audit_results.get_verified(), set([account_2]))

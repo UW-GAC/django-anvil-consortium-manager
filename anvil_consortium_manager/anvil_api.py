@@ -33,6 +33,7 @@ class AnVILAPIClient:
     auth_session = None
     firecloud_entry_point = "https://api.firecloud.org"
     rawls_entry_point = "https://rawls.dsde-prod.broadinstitute.org"
+    sam_entry_point = "https://sam.dsde-prod.broadinstitute.org/"
 
     def __init__(self):
         """Initialize a new AnVILAPIClient instance.
@@ -76,10 +77,10 @@ class AnVILAPIClient:
         url = self.firecloud_entry_point + "/me?userDetailsOnly=true"
         return self.auth_session.get(url, 200)
 
-    def get_proxy_group(self, email):
-        """Get the proxy group created for a specific AnVIL account email.
+    def get_user(self, email):
+        """Get the subject IDs associated with a specific AnVIL account email.
 
-        Calls the /api/proxyGroup GET method.
+        Calls the /api/users/v1/{email} GET method.
 
         Args:
             email (str): Email address associated with the AnVIL account
@@ -87,7 +88,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.firecloud_entry_point + "/api/proxyGroup/" + email
+        url = self.sam_entry_point + "/api/users/v1/" + email
         return self.auth_session.get(url, 200)
 
     def get_billing_project(self, billing_project):

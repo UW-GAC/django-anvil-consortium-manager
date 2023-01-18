@@ -298,6 +298,11 @@ class AccountImport(
     message_account_does_not_exist = "This account does not exist on AnVIL."
     """A string that can be displayed if the account does not exist on AnVIL."""
 
+    message_email_associated_with_group = (
+        "This email is associated with a group, not a user."
+    )
+    """A string that can be displayed if the account does not exist on AnVIL."""
+
     form_class = forms.AccountImportForm
     """A string that can be displayed if the account does not exist on AnVIL."""
 
@@ -310,10 +315,13 @@ class AccountImport(
         try:
             account_exists = object.anvil_exists()
         except AnVILAPIError as e:
+            if e.status_code == 204:
+                # 204 indicates that it is associated with a group.
+                msg = "AnVIL API Error: " + self.message_email_associated_with_group
+            else:
+                msg = "AnVIL API Error: " + str(e)
             # If the API call failed for some other reason, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, msg)
             return self.render_to_response(self.get_context_data(form=form))
         if not account_exists:
             messages.add_message(
