@@ -5569,7 +5569,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
-        return self.api_client.firecloud_entry_point + "/api/groups"
+        return self.api_client.sam_entry_point + "/api/groups/v1"
 
     def get_api_group_json(self, group_name, role):
         """Return json data about groups in the API format."""
@@ -7893,7 +7893,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             ),
         )
         # Add Response for the auth domain group.
-        group_url = self.api_client.firecloud_entry_point + "/api/groups"
+        group_url = self.api_client.sam_entry_point + "/api/groups/v1"
         responses.add(
             responses.GET,
             group_url,

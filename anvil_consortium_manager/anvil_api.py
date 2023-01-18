@@ -33,7 +33,7 @@ class AnVILAPIClient:
     auth_session = None
     firecloud_entry_point = "https://api.firecloud.org"
     rawls_entry_point = "https://rawls.dsde-prod.broadinstitute.org"
-    sam_entry_point = "https://sam.dsde-prod.broadinstitute.org/"
+    sam_entry_point = "https://sam.dsde-prod.broadinstitute.org"
 
     def __init__(self):
         """Initialize a new AnVILAPIClient instance.
@@ -113,7 +113,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.firecloud_entry_point + "/api/groups"
+        url = self.sam_entry_point + "/api/groups/v1"
         return self.auth_session.get(url, 200)
 
     def get_group(self, group_name):
