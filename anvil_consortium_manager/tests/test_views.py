@@ -391,7 +391,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def get_api_url(self, billing_project_name):
         """Get the AnVIL API url that is called by the anvil_exists method."""
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/billing/v2/"
             + billing_project_name
         )
@@ -1056,7 +1056,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/billing/v2/"
             + billing_project_name
         )
@@ -7347,7 +7347,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/billing/v2/"
             + billing_project_name
         )
@@ -7397,6 +7397,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_import_workspace_with_note(self):
         """Sets note when specified when importing a workspace."""
         billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name=billing_project_name
+        )
         workspace_name = "workspace"
         # Available workspaces API call.
         responses.add(
@@ -7410,13 +7413,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_json_response(billing_project_name, workspace_name)],
         )
-        # Billing project API call.
-        billing_project_url = (
-            self.api_client.firecloud_entry_point
-            + "/api/billing/v2/"
-            + billing_project_name
-        )
-        responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
         responses.add(
             responses.GET,
@@ -7440,18 +7436,16 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         # Created a billing project.
         self.assertEqual(models.BillingProject.objects.count(), 1)
-        new_billing_project = models.BillingProject.objects.latest("pk")
-        self.assertEqual(new_billing_project.name, billing_project_name)
-        self.assertEqual(new_billing_project.has_app_as_user, True)
         # Created a workspace.
         self.assertEqual(models.Workspace.objects.count(), 1)
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, workspace_name)
         self.assertEqual(new_workspace.note, "test note")
+        self.assertEqual(new_workspace.billing_project, billing_project)
 
     def test_creates_default_workspace_data_without_custom_adapter(self):
         """The default workspace data object is created if no custom aadpter is used."""
-        billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create()
         workspace_name = "workspace"
         # Available workspaces API call.
         responses.add(
@@ -7463,27 +7457,20 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
             status=200,
-            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
         )
-        # Billing project API call.
-        billing_project_url = (
-            self.api_client.firecloud_entry_point
-            + "/api/billing/v2/"
-            + billing_project_name
-        )
-        responses.add(responses.GET, billing_project_url, status=200)
-        url = self.get_api_url(billing_project_name, workspace_name)
+        url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             url,
             status=self.api_success_code,
-            json=self.get_api_json_response(billing_project_name, workspace_name),
+            json=self.get_api_json_response(billing_project.name, workspace_name),
         )
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
             {
-                "workspace": billing_project_name + "/" + workspace_name,
+                "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 0,
@@ -7501,7 +7488,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_success_message(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
-        billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create()
         workspace_name = "workspace"
         # Available workspaces API call.
         responses.add(
@@ -7513,27 +7500,20 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 )
             ],
             status=200,
-            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
         )
-        # Billing project API call.
-        billing_project_url = (
-            self.api_client.firecloud_entry_point
-            + "/api/billing/v2/"
-            + billing_project_name
-        )
-        responses.add(responses.GET, billing_project_url, status=200)
-        url = self.get_api_url(billing_project_name, workspace_name)
+        url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             url,
             status=self.api_success_code,
-            json=self.get_api_json_response(billing_project_name, workspace_name),
+            json=self.get_api_json_response(billing_project.name, workspace_name),
         )
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
             {
-                "workspace": billing_project_name + "/" + workspace_name,
+                "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 0,
@@ -7565,7 +7545,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/billing/v2/"
             + billing_project_name
         )

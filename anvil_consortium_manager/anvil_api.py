@@ -101,7 +101,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.firecloud_entry_point + "/api/billing/v2/" + billing_project
+        url = self.rawls_entry_point + "/api/billing/v2/" + billing_project
         return self.auth_session.get(url, 200)
 
     def get_groups(self):

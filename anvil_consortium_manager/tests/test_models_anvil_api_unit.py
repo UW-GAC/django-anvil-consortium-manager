@@ -16,9 +16,7 @@ class BillingProjectAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         super().setUp()
         self.object = factories.BillingProjectFactory()
         self.url = (
-            self.api_client.firecloud_entry_point
-            + "/api/billing/v2/"
-            + self.object.name
+            self.api_client.rawls_entry_point + "/api/billing/v2/" + self.object.name
         )
 
     def test_anvil_exists_does_exist(self):
@@ -39,7 +37,7 @@ class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
 
     def get_api_url(self, billing_project_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/billing/v2/"
             + billing_project_name
         )
@@ -137,7 +135,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/billing/v2/"
             + billing_project_name
         )
@@ -2745,7 +2743,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_billing_project_api_url(self, billing_project_name):
         return (
-            self.api_client.firecloud_entry_point
+            self.api_client.rawls_entry_point
             + "/api/billing/v2/"
             + billing_project_name
         )
