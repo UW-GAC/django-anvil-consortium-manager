@@ -32,6 +32,7 @@ class AnVILAPIClient:
     # Class variable for auth session. Set in init method.
     auth_session = None
     firecloud_entry_point = "https://api.firecloud.org"
+    # Terra support recommended that we use these APIs instead of the Firecloud API.
     rawls_entry_point = "https://rawls.dsde-prod.broadinstitute.org"
     sam_entry_point = "https://sam.dsde-prod.broadinstitute.org"
 
