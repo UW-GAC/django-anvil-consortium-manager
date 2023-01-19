@@ -481,7 +481,7 @@ class ManagedGroup(TimeStampedModel):
         except StopIteration:
             raise exceptions.AnVILNotGroupMemberError
         # Check if we're an admin.
-        if group_details["role"] == "Admin":
+        if group_details["role"].lower() == "admin":
             group.is_managed_by_app = True
         group.save()
         return group
@@ -584,7 +584,7 @@ class ManagedGroup(TimeStampedModel):
         groups_on_anvil = {}
         for group_details in response.json():
             group_name = group_details["groupName"]
-            role = group_details["role"]
+            role = group_details["role"].lower()
             try:
                 groups_on_anvil[group_name] = groups_on_anvil[group_name] + [role]
             except KeyError:
@@ -598,7 +598,7 @@ class ManagedGroup(TimeStampedModel):
             else:
                 # Check role.
                 if group.is_managed_by_app:
-                    if "Admin" not in group_roles:
+                    if "admin" not in group_roles:
                         audit_results.add_error(
                             group, audit_results.ERROR_DIFFERENT_ROLE
                         )
@@ -607,7 +607,7 @@ class ManagedGroup(TimeStampedModel):
                             audit_results.add_error(
                                 group, audit_results.ERROR_GROUP_MEMBERSHIP
                             )
-                elif not group.is_managed_by_app and "Admin" in group_roles:
+                elif not group.is_managed_by_app and "admin" in group_roles:
                     audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
 
             try:

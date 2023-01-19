@@ -854,6 +854,29 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the group that was returned.
         models.ManagedGroup.objects.get(pk=group.pk)
 
+    def test_anvil_import_admin_on_anvil_lowercase(self):
+        group_name = "test-group"
+        responses.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                [
+                    ("other-member-group", "member"),
+                    ("other-admin-group", "admin"),
+                    (group_name, "admin"),
+                ]
+            ),
+        )
+        group = models.ManagedGroup.anvil_import(group_name)
+        # Check values.
+        self.assertEqual(group.name, group_name)
+        self.assertEqual(group.is_managed_by_app, True)
+        # Check that it was saved.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        # Make sure it's the group that was returned.
+        models.ManagedGroup.objects.get(pk=group.pk)
+
     def test_anvil_import_member_on_anviL(self):
         group_name = "test-group"
         responses.add(
@@ -865,6 +888,29 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     ("other-member-group", "Member"),
                     ("other-admin-group", "Admin"),
                     (group_name, "Member"),
+                ]
+            ),
+        )
+        group = models.ManagedGroup.anvil_import(group_name)
+        # Check values.
+        self.assertEqual(group.name, group_name)
+        self.assertEqual(group.is_managed_by_app, False)
+        # Check that it was saved.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        # Make sure it's the group that was returned.
+        models.ManagedGroup.objects.get(pk=group.pk)
+
+    def test_anvil_import_member_on_anvil_lowercase(self):
+        group_name = "test-group"
+        responses.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(
+                [
+                    ("other-member-group", "member"),
+                    ("other-admin-group", "admin"),
+                    (group_name, "member"),
                 ]
             ),
         )
@@ -1006,6 +1052,32 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(api_url, 1)
         responses.assert_call_count(api_group_members_url, 1)
 
+    def test_anvil_audit_one_group_managed_by_app_lowercase_role(self):
+        """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_group_json(group.name, "admin")],
+        )
+        api_group_members_url = self.get_api_group_members_url(group.name)
+        responses.add(
+            responses.GET,
+            api_group_members_url,
+            status=200,
+            json=self.get_api_group_members_json_response(),
+        )
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([group]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+        responses.assert_call_count(api_url, 1)
+        responses.assert_call_count(api_group_members_url, 1)
+
     def test_anvil_audit_one_group_not_managed_by_app_no_errors(self):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
@@ -1015,6 +1087,24 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=[self.get_api_group_json(group.name, "Member")],
+        )
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([group]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+        responses.assert_call_count(api_url, 1)
+
+    def test_anvil_audit_one_group_not_managed_by_app_no_errors_lowercase_role(self):
+        """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        responses.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_group_json(group.name, "member")],
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
