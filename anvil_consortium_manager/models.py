@@ -494,10 +494,12 @@ class ManagedGroup(TimeStampedModel):
         """
         api_client = AnVILAPIClient()
         audit_results = anvil_audit.ManagedGroupMembershipAuditResults()
-        response = api_client.get_group(self.name)
+        response = api_client.get_group_members(self.name)
         # Convert to case-insensitive emails.
-        members_in_anvil = [x.lower() for x in response.json()["membersEmails"]]
-        admins_in_anvil = [x.lower() for x in response.json()["adminsEmails"]]
+        members_in_anvil = [x.lower() for x in response.json()]
+        response = api_client.get_group_admins(self.name)
+        # Convert to case-insensitive emails.
+        admins_in_anvil = [x.lower() for x in response.json()]
         # Remove the service account as admin.
         admins_in_anvil.remove(
             api_client.auth_session.credentials.service_account_email.lower()

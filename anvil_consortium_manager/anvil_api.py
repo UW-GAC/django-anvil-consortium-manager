@@ -117,6 +117,34 @@ class AnVILAPIClient:
         url = self.sam_entry_point + "/api/groups/v1"
         return self.auth_session.get(url, 200)
 
+    def get_group_members(self, group_name):
+        """Get group members on AnVIL.
+
+        Calls the /api/groups/{group_name}/member GET method.
+
+        Args:
+            group_name (str): Name of the AnVIL group to get information about.
+
+        Returns:
+            requests.Response
+        """
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        return self.auth_session.get(url, 200)
+
+    def get_group_admins(self, group_name):
+        """Get group admins on AnVIL.
+
+        Calls the /api/groups/{group_name}/admin GET method.
+
+        Args:
+            group_name (str): Name of the AnVIL group to get information about.
+
+        Returns:
+            requests.Response
+        """
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        return self.auth_session.get(url, 200)
+
     def get_group(self, group_name):
         """Get information about a group on AnVIL.
 

@@ -5580,21 +5580,27 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         }
         return json_data
 
-    def get_api_group_members_url(self, group_name):
+    def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
-        return self.api_client.firecloud_entry_point + "/api/groups/" + group_name
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        )
 
-    def get_api_group_members_json_response(self, admins=[], members=[]):
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        )
+
+    def get_api_json_response_admins(self, emails=[]):
         """Return json data about groups in the API format."""
-        json_data = {
-            "adminsEmails": [
-                anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
-            ]
-            + admins,
-            # "groupEmail": group_name + "@firecloud.org",
-            "membersEmails": members,
-        }
-        return json_data
+        return [
+            anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
+        ] + emails
+
+    def get_api_json_response_members(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return emails
 
     def get_view(self):
         """Return the view being tested."""
@@ -5669,11 +5675,19 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_group_json(group.name, "Admin")],
         )
         # Group membership API call.
+        api_url_members = self.get_api_url_members(group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -5749,11 +5763,19 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_group_json(group.name, "Admin")],
         )
         # Group membership API call.
+        api_url_members = self.get_api_url_members(group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -5803,21 +5825,27 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             "anvil_consortium_manager:managed_groups:audit_membership", args=args
         )
 
-    def get_api_group_members_url(self, group_name):
+    def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
-        return self.api_client.firecloud_entry_point + "/api/groups/" + group_name
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        )
 
-    def get_api_group_members_json_response(self, admins=[], members=[]):
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        )
+
+    def get_api_json_response_admins(self, emails=[]):
         """Return json data about groups in the API format."""
-        json_data = {
-            "adminsEmails": [
-                anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
-            ]
-            + admins,
-            # "groupEmail": group_name + "@firecloud.org",
-            "membersEmails": members,
-        }
-        return json_data
+        return [
+            anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
+        ] + emails
+
+    def get_api_json_response_members(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return emails
 
     def get_view(self):
         """Return the view being tested."""
@@ -5833,12 +5861,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5856,12 +5891,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_template(self):
         """Template loads successfully."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5869,12 +5911,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_verified(self):
         """audit_verified is in the context data."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5884,14 +5933,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
         membership = factories.GroupAccountMembershipFactory.create(group=self.group)
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(
-                members=[membership.account.email]
-            ),
+            json=self.get_api_json_response_members(emails=[membership.account.email]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5900,12 +5954,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5916,14 +5977,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         """audit_errors with one error record."""
         membership = factories.GroupAccountMembershipFactory.create(group=self.group)
         # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(
-                admins=[membership.account.email]
-            ),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[membership.account.email]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5932,12 +5998,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5946,12 +6019,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5960,12 +6040,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5974,12 +6061,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_ok_is_not_ok(self):
         """audit_ok when audit_results.ok() is False."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Not in app
-            json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
