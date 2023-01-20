@@ -1140,7 +1140,7 @@ class GroupGroupMembership(TimeStampedModel):
     def anvil_delete(self):
         """Remove the child group from the parent on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.parent_group.name, self.role, self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.get_email()
         )
 
 
@@ -1193,7 +1193,7 @@ class GroupAccountMembership(TimeStampedModel):
     def anvil_delete(self):
         """Remove the account from the group on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.group.name, self.role, self.account.email
+            self.group.name, self.role.lower(), self.account.email
         )
 
 

@@ -217,7 +217,7 @@ class AnVILAPIClient:
         Calls the /api/groups/v1/{group_name}/{role}/{user_email} DELETE method.
 
         Args:
-            group_name (str): Name of the group to remvoe this user from.
+            group_name (str): Name of the group to remove this user from.
             role (str): Role that this user should be removed from (either MEMBER or ADMIN).
             user_email (str): AnVIL email account of the user to add.
 
@@ -225,8 +225,8 @@ class AnVILAPIClient:
             requests.Response
         """
         url = (
-            self.firecloud_entry_point
-            + "/api/groups/"
+            self.sam_entry_point
+            + "/api/groups/v1/"
             + group_name
             + "/"
             + role

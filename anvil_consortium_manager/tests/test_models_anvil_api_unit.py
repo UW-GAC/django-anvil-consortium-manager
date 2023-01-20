@@ -357,10 +357,10 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name):
         return (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
             + group_name
-            + "/MEMBER/"
+            + "/member/"
             + self.object.email
         )
 
@@ -5559,8 +5559,8 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             + "/api/groups/v1/parent-group/member/child-group@firecloud.org"
         )
         self.api_url_delete = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/parent-group/MEMBER/child-group@firecloud.org"
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/parent-group/member/child-group@firecloud.org"
         )
 
     def test_anvil_create_successful(self):
@@ -5675,8 +5675,8 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             + "/api/groups/v1/test-group/member/test-account@example.com"
         )
         self.api_url_delete = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/test-group/MEMBER/test-account@example.com"
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/test-group/member/test-account@example.com"
         )
 
     def test_anvil_create_successful(self):

@@ -3068,10 +3068,10 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name, account_email):
         return (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
             + group_name
-            + "/MEMBER/"
+            + "/member/"
             + account_email
         )
 
@@ -3304,10 +3304,10 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name, account_email):
         return (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
             + group_name
-            + "/MEMBER/"
+            + "/member/"
             + account_email
         )
 
@@ -13494,6 +13494,18 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipDelete.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -13557,23 +13569,17 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create(
             role=models.GroupGroupMembership.MEMBER
         )
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
         self.assertEqual(obj.history.latest().history_type, "-")
@@ -13583,16 +13589,10 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create(
             role=models.GroupGroupMembership.MEMBER
         )
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name, obj.child_group.name),
@@ -13608,16 +13608,10 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         obj = factories.GroupGroupMembershipFactory.create()
         other_object = factories.GroupGroupMembershipFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
@@ -13628,22 +13622,16 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         obj = factories.GroupGroupMembershipFactory.create()
         parent_group = obj.parent_group
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
         response = self.client.post(
@@ -13651,24 +13639,18 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, parent_group.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         obj = factories.GroupGroupMembershipFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership delete test error"},
         )
@@ -13684,7 +13666,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership delete test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
@@ -13736,29 +13718,113 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue - covered by model fields")
-    def test_api_no_permission_for_parent_group(self):
-        self.fail(
-            "Trying to remove a child group from a parent group that you don't have permission for returns a successful code."  # noqa
+    def test_api_error_400(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=400,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_child_group_exists_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to remove a group that exists from a group that doesn't exist returns a successful code."
+    def test_api_error_403(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=403,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to remove a group that doesn't exist from a group that doesn't exist returns a successful code."
+    def test_api_error_404(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=404,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_child_group_does_not_exist_parent_group_exists(self):
-        self.fail(
-            "Trying to remove a group that doesn't exist from a group that exists returns a successful code."
+    def test_api_error_500(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=500,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
 
 class GroupAccountMembershipDetailTest(TestCase):
@@ -16349,6 +16415,18 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipDelete.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -16404,23 +16482,17 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -16428,16 +16500,10 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid),
@@ -16455,16 +16521,10 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.GroupAccountMembershipFactory.create()
         other_object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
@@ -16475,30 +16535,23 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupAccountMembershipFactory.create()
         group = object.group
-        # Need to use the client instead of RequestFactory to check redirection url.
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, group.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_redirect_group_not_managed_by_app(self):
         """Redirect get when trying to delete GroupAccountMembership when the group is not managed by the app."""
@@ -16548,22 +16601,16 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership delete test error"},
         )
@@ -16579,33 +16626,96 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group account membership delete test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue - covered by model fields")
-    def test_api_no_permission_for_group(self):
-        self.fail(
-            "Trying to delete a user that exists to a group that you don't have permission for returns a successful code."  # noqa
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupAccountMembershipFactory.create()
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=400,
+            json={"message": "group account membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_user_exists_group_does_not_exist(self):
-        self.fail(
-            "Trying to delete a user that exists from a group that doesn't exist returns a successful code."
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupAccountMembershipFactory.create()
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=403,
+            json={"message": "group account membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_user_does_not_exist_group_does_not_exist(self):
-        self.fail(
-            "Trying to delete a user that doesn't exist from a group that doesn't exist returns a successful code."
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupAccountMembershipFactory.create()
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-
-    @skip("AnVIL API issue")
-    def test_api_user_does_not_exist_group_exists(self):
-        self.fail(
-            "Trying to delete a user that doesn't exist from a group that exists returns a successful code."
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=404,
+            json={"message": "group account membership delete test error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
 
 class WorkspaceGroupSharingDetailTest(TestCase):
