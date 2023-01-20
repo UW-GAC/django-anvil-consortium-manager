@@ -27,6 +27,8 @@ class AnVILAPIClient:
     Attributes:
         auth_session: An ``AnVILAPISession`` instance.
         firecloud_entry_point (str): The entry point for the Firecloud API.
+        rawls_entry_point (str): The entry point for the Rawls API.
+        sam_entry_point (str): The entry point for the SAM API.
     """
 
     # Class variable for auth session. Set in init method.
@@ -59,7 +61,7 @@ class AnVILAPIClient:
     def status(self):
         """Get the current AnVIL status.
 
-        Calls the /status GET method.
+        Calls the Firecloud /status GET method.
 
         Returns:
             requests.Response
@@ -70,7 +72,7 @@ class AnVILAPIClient:
     def me(self):
         """Get the current authenticated user.
 
-        Calls the /me GET method.
+        Calls the Firecloud /me GET method.
 
         Returns:
             requests.Response
@@ -81,7 +83,7 @@ class AnVILAPIClient:
     def get_user(self, email):
         """Get the subject IDs associated with a specific AnVIL account email.
 
-        Calls the /api/users/v1/{email} GET method.
+        Calls the Sam /api/users/v1/{email} GET method.
 
         Args:
             email (str): Email address associated with the AnVIL account
@@ -95,7 +97,7 @@ class AnVILAPIClient:
     def get_billing_project(self, billing_project):
         """Get information about the specified billing project.
 
-        Calls the /api/billing/v2 GET method.
+        Calls the Sam /api/billing/v2 GET method.
 
         Args:
             billing_project (str): Name of the billing project.
@@ -109,7 +111,7 @@ class AnVILAPIClient:
     def get_groups(self):
         """Get a list of groups that the authenticated account is part of.
 
-        Calls the /api/groups GET method.
+        Calls the Sam /api/groups GET method.
 
         Returns:
             requests.Response
@@ -120,7 +122,7 @@ class AnVILAPIClient:
     def get_group_members(self, group_name):
         """Get group members on AnVIL.
 
-        Calls the /api/groups/{group_name}/member GET method.
+        Calls the Sam /api/groups/{group_name}/member GET method.
 
         Args:
             group_name (str): Name of the AnVIL group to get information about.
@@ -134,7 +136,7 @@ class AnVILAPIClient:
     def get_group_admins(self, group_name):
         """Get group admins on AnVIL.
 
-        Calls the /api/groups/{group_name}/admin GET method.
+        Calls the Sam /api/groups/{group_name}/admin GET method.
 
         Args:
             group_name (str): Name of the AnVIL group to get information about.
@@ -148,7 +150,7 @@ class AnVILAPIClient:
     def get_group_email(self, group_name):
         """Get the email of a group on AnVIL.
 
-        Calls the /api/groups/v1/{group_name} GET method.
+        Calls the Sam /api/groups/v1/{group_name} GET method.
 
         Args:
             group_name (str): Name of the AnVIL group whose email should be retrieved.
@@ -162,7 +164,7 @@ class AnVILAPIClient:
     def create_group(self, group_name):
         """Create a new group on AnVIL.
 
-        Calls the /api/groups/v1/{group_name} POST method.
+        Calls the Sam /api/groups/v1/{group_name} POST method.
 
         Args:
             group_name (str): Name of the AnVIL group to create.
@@ -176,7 +178,7 @@ class AnVILAPIClient:
     def delete_group(self, group_name):
         """Delete a group on AnVIL.
 
-        Calls the /api/groups/v1/{group_name} DELETE method.
+        Calls the Sam /api/groups/v1/{group_name} DELETE method.
 
         Args:
             group_name (str): Name of the group to delete. You must be an admin of the group to use this method.
@@ -190,7 +192,7 @@ class AnVILAPIClient:
     def add_user_to_group(self, group_name, role, user_email):
         """Add a user to a group on AnVIL. You must be an admin of the group to use this method.
 
-        Calls the /api/groups/v1/{group_name}/{role}/{user_email} PUT method.
+        Calls the Sam /api/groups/v1/{group_name}/{role}/{user_email} PUT method.
 
         Args:
             group_name (str): Name of the group to add this user to.
@@ -214,7 +216,7 @@ class AnVILAPIClient:
     def remove_user_from_group(self, group_name, role, user_email):
         """Remove a user from a group on AnVIL. You must be an admin of the group to use this method.
 
-        Calls the /api/groups/v1/{group_name}/{role}/{user_email} DELETE method.
+        Calls the Sam /api/groups/v1/{group_name}/{role}/{user_email} DELETE method.
 
         Args:
             group_name (str): Name of the group to remove this user from.
@@ -238,7 +240,7 @@ class AnVILAPIClient:
     def list_workspaces(self, fields=None):
         """Get a list of workspaces that you have access to on AnVIL.
 
-        Calls the /api/workspaces GET method.
+        Calls the Rawls /api/workspaces GET method.
 
         Args:
             fields (list): List of strings indicating which fields to return. See API documentation
@@ -256,7 +258,7 @@ class AnVILAPIClient:
     def get_workspace(self, workspace_namespace, workspace_name):
         """Get information about a specific workspace on AnVIL.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name} GET method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name} GET method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace.
@@ -357,7 +359,7 @@ class AnVILAPIClient:
     def delete_workspace(self, workspace_namespace, workspace_name):
         """Delete a workspace on AnVIL. You must be an owner of the workspace to use this method.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name} DELETE method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name} DELETE method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace to be deleted.
@@ -380,7 +382,7 @@ class AnVILAPIClient:
         This list includes both users and groups that have access.
         You must be an owner of this workspace to use this method.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name}/acl GET method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name}/acl GET method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace.
@@ -403,7 +405,7 @@ class AnVILAPIClient:
         """Update the access controls for a workspace for a set of users and/or groups.
         You must be an owner of the workspace to use this method.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name} PATCH method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name} PATCH method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace.
