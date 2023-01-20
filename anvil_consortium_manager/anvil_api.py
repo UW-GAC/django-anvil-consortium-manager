@@ -176,7 +176,7 @@ class AnVILAPIClient:
     def delete_group(self, group_name):
         """Delete a group on AnVIL.
 
-        Calls the /api/groups/{group_name} DELETE method.
+        Calls the /api/groups/v1/{group_name} DELETE method.
 
         Args:
             group_name (str): Name of the group to delete. You must be an admin of the group to use this method.
@@ -184,7 +184,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.firecloud_entry_point + "/api/groups/" + group_name
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name
         return self.auth_session.delete(url, 204)
 
     def add_user_to_group(self, group_name, role, user_email):

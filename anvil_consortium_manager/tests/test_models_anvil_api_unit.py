@@ -689,126 +689,143 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
         self.object = factories.ManagedGroupFactory()
-        self.url = (
+        self.api_url_exists = (
             self.api_client.firecloud_entry_point + "/api/groups/" + self.object.name
+        )
+        self.api_url_create = (
+            self.api_client.firecloud_entry_point + "/api/groups/" + self.object.name
+        )
+        self.api_url_delete = (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + self.object.name
         )
 
     def test_anvil_exists_does_exist(self):
-        responses.add(responses.GET, self.url, status=200)
+        responses.add(
+            responses.GET, self.api_url_exists, status=200, json=self.object.get_email()
+        )
         self.assertIs(self.object.anvil_exists(), True)
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_exists, 1)
 
     def test_anvil_exists_does_not_exist(self):
         responses.add(
-            responses.GET, self.url, status=404, json={"message": "mock message"}
+            responses.GET,
+            self.api_url_exists,
+            status=404,
+            json={"message": "mock message"},
         )
         self.assertIs(self.object.anvil_exists(), False)
-        responses.assert_call_count(self.url, 1)
-
-    def test_anvil_exists_forbidden(self):
-        responses.add(
-            responses.GET, self.url, status=403, json={"message": "mock message"}
-        )
-        with self.assertRaises(anvil_api.AnVILAPIError403):
-            self.object.anvil_exists()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_exists, 1)
 
     def test_anvil_exists_internal_error(self):
         responses.add(
-            responses.GET, self.url, status=500, json={"message": "mock message"}
+            responses.GET,
+            self.api_url_exists,
+            status=500,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError500):
             self.object.anvil_exists()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_exists, 1)
 
     def test_anvil_create_successful(self):
         responses.add(
-            responses.POST, self.url, status=201, json={"message": "mock message"}
+            responses.POST,
+            self.api_url_create,
+            status=201,
+            json={"message": "mock message"},
         )
         self.object.anvil_create()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_create, 1)
 
     def test_anvil_create_already_exists(self):
         """Returns documented response code when a group already exists. Unfortunately the actual return code is 201."""
         responses.add(
-            responses.POST, self.url, status=409, json={"message": "mock message"}
+            responses.POST,
+            self.api_url_create,
+            status=409,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError409):
             self.object.anvil_create()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_create, 1)
 
     def test_anvil_create_internal_error(
         self,
     ):
         responses.add(
-            responses.POST, self.url, status=500, json={"message": "mock message"}
+            responses.POST,
+            self.api_url_create,
+            status=500,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError500):
             self.object.anvil_create()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_create, 1)
 
     def test_anvil_create_other(self):
         responses.add(
-            responses.POST, self.url, status=499, json={"message": "mock message"}
+            responses.POST,
+            self.api_url_create,
+            status=499,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError):
             self.object.anvil_create()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_create, 1)
 
     def test_anvil_delete_existing(self):
         responses.add(
-            responses.DELETE, self.url, status=204, json={"message": "mock message"}
-        )
-        responses.add(
-            responses.GET, self.url, status=404, json={"message": "mock message"}
+            responses.DELETE,
+            self.api_url_delete,
+            status=204,
+            json={"message": "mock message"},
         )
         self.object.anvil_delete()
-        responses.assert_call_count(self.url, 2)
-
-    def test_anvil_delete_existing_not_actually_deleted_on_anvil(self):
-        """anvil_delete raises exception with successful API response but group was not actually deleted.
-
-        The AnVIL group delete API is buggy and often returns a successful API response when it should return an error.
-        """
-        responses.add(
-            responses.DELETE, self.url, status=204, json={"message": "mock message"}
-        )
-        responses.add(responses.GET, self.url, status=200)
-        with self.assertRaises(exceptions.AnVILGroupDeletionError):
-            self.object.anvil_delete()
-        responses.assert_call_count(self.url, 2)
+        responses.assert_call_count(self.api_url_delete, 1)
 
     def test_anvil_delete_forbidden(self):
         responses.add(
-            responses.DELETE, self.url, status=403, json={"message": "mock message"}
+            responses.DELETE,
+            self.api_url_delete,
+            status=403,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError403):
             self.object.anvil_delete()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_delete, 1)
 
     def test_anvil_delete_not_found(self):
         responses.add(
-            responses.DELETE, self.url, status=404, json={"message": "mock message"}
+            responses.DELETE,
+            self.api_url_delete,
+            status=404,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError404):
             self.object.anvil_delete()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_delete, 1)
 
     def test_anvil_delete_in_use(self):
         responses.add(
-            responses.DELETE, self.url, status=409, json={"message": "mock message"}
+            responses.DELETE,
+            self.api_url_delete,
+            status=409,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError409):
             self.object.anvil_delete()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_delete, 1)
 
     def test_anvil_delete_other(self):
         responses.add(
-            responses.DELETE, self.url, status=499, json={"message": "mock message"}
+            responses.DELETE,
+            self.api_url_delete,
+            status=499,
+            json={"message": "mock message"},
         )
         with self.assertRaises(anvil_api.AnVILAPIError):
             self.object.anvil_delete()
-        responses.assert_call_count(self.url, 1)
+        responses.assert_call_count(self.api_url_delete, 1)
 
 
 class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):

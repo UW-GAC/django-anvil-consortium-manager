@@ -96,13 +96,13 @@ class AnVILAPIClientTest(TestCase):
             self.client.get_group("test-group")
 
         # Try to delete a group that doesn't exist.
-        # EXPECTED behavior:
-        # with self.assertRaises(anvil_api.AnVILAPIError404):
-        #     self.client.delete_group(test_group)
-        # ACTUAL behavior:
-        response = self.client.delete_group(test_group)
-        self.assertEqual(response.status_code, 204)
-        self.assertEqual(response.text, "")
+        # EXPECTED behavior: FIXED IN SAM
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            self.client.delete_group(test_group)
+        # # ACTUAL behavior:
+        # response = self.client.delete_group(test_group)
+        # self.assertEqual(response.status_code, 204)
+        # self.assertEqual(response.text, "")
 
         # Try to create the group.
         response = self.client.create_group(test_group)
@@ -152,12 +152,12 @@ class AnVILAPIClientTest(TestCase):
 
         # Try to delete a group that already exists and someone else owns.
         # This one already exists on AnVIL and we are not admins.
-        # EXPECTED behavior:
-        # with self.assertRaises(anvil_api.AnVILAPIError403):
-        #     self.client.delete_group("test-group")
-        # ACTUAL behavior:
-        response = self.client.delete_group("test-group")
-        self.assertEqual(response.status_code, 204)
+        # EXPECTED behavior: - FIXED IN SAM
+        with self.assertRaises(anvil_api.AnVILAPIError403):
+            self.client.delete_group("test-group")
+        # # ACTUAL behavior:
+        # response = self.client.delete_group("test-group")
+        # self.assertEqual(response.status_code, 204)
 
     def test_group_membership(self):
         test_group_1 = "django-anvil-project-manager-integration-test-group-1"

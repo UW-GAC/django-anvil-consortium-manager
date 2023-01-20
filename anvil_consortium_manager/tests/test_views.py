@@ -4999,6 +4999,10 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:managed_groups:delete", args=args)
 
+    def get_api_url(self, group_name):
+        url = self.api_client.sam_entry_point + "/api/groups/v1/" + group_name
+        return url
+
     def get_view(self):
         """Return the view being tested."""
         return views.ManagedGroupDelete.as_view()
@@ -5053,14 +5057,13 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -5068,9 +5071,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.name), {"submit": ""}, follow=True
@@ -5084,9 +5086,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.ManagedGroupFactory.create()
         other_object = factories.ManagedGroupFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
@@ -5095,43 +5096,13 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.ManagedGroup.objects.all(),
             models.ManagedGroup.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 2)
-
-    def test_delete_successful_not_actually_deleted_on_anvil(self):
-        """anvil_delete raises exception with successful API response but group was not actually deleted.
-
-        The AnVIL group delete API is buggy and often returns a successful API response when it should return an error.
-        """
-        object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        # Group was not actually deleted on AnVIL.
-        responses.add(responses.GET, url, status=200)
-        # Need to use a client for messages.
-        self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(object.name), {"submit": ""}, follow=True
-        )
-        self.assertRedirects(response, object.get_absolute_url())
-        # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(
-            views.ManagedGroupDelete.message_could_not_delete_group_from_anvil,
-            str(messages[0]),
-        )
-        # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroup.objects.count(), 1)
-        models.ManagedGroup.objects.get(pk=object.pk)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.ManagedGroupFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.name), {"submit": ""})
@@ -5139,7 +5110,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:managed_groups:list")
         )
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_redirect_group_is_a_member_of_another_group(self):
         """Redirect get request when trying to delete a group that is a member of another group.
@@ -5298,9 +5269,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + parent.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(parent.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(parent.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
@@ -5312,7 +5282,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         models.ManagedGroup.objects.get(pk=child.pk)
         # The group membership was deleted.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
         # History is added for the GroupGroupMembership.
         self.assertEqual(models.GroupGroupMembership.history.count(), 2)
         self.assertEqual(models.GroupGroupMembership.history.latest().history_type, "-")
@@ -5322,9 +5292,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + group.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(group.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(group.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
@@ -5334,7 +5303,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         # The account still exists.
         models.Account.objects.get(pk=account.pk)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
         # History is added for GroupAccountMemberships.
         self.assertEqual(models.GroupAccountMembership.history.count(), 2)
         self.assertEqual(
@@ -5345,10 +5314,10 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.ManagedGroupFactory.create()
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + object.name
+        api_url = self.get_api_url(object.name)
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "group delete test error"},
         )
@@ -5359,7 +5328,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: group delete test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
