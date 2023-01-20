@@ -1134,7 +1134,7 @@ class GroupGroupMembership(TimeStampedModel):
     def anvil_create(self):
         """Add the child group to the parent group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.parent_group.name, self.role, self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.get_email()
         )
 
     def anvil_delete(self):
@@ -1187,7 +1187,7 @@ class GroupAccountMembership(TimeStampedModel):
     def anvil_create(self):
         """Add the account to the group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.group.name, self.role, self.account.email
+            self.group.name, self.role.lower(), self.account.email
         )
 
     def anvil_delete(self):

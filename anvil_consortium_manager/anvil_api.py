@@ -190,7 +190,7 @@ class AnVILAPIClient:
     def add_user_to_group(self, group_name, role, user_email):
         """Add a user to a group on AnVIL. You must be an admin of the group to use this method.
 
-        Calls the /api/groups/{group_name}/{role}/{user_email} PUT method.
+        Calls the /api/groups/v1/{group_name}/{role}/{user_email} PUT method.
 
         Args:
             group_name (str): Name of the group to add this user to.
@@ -201,8 +201,8 @@ class AnVILAPIClient:
             requests.Response
         """
         url = (
-            self.firecloud_entry_point
-            + "/api/groups/"
+            self.sam_entry_point
+            + "/api/groups/v1/"
             + group_name
             + "/"
             + role
@@ -214,7 +214,7 @@ class AnVILAPIClient:
     def remove_user_from_group(self, group_name, role, user_email):
         """Remove a user from a group on AnVIL. You must be an admin of the group to use this method.
 
-        Calls the /api/groups/{group_name}/{role}/{user_email} DELETE method.
+        Calls the /api/groups/v1/{group_name}/{role}/{user_email} DELETE method.
 
         Args:
             group_name (str): Name of the group to remvoe this user from.

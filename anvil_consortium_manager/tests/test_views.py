@@ -3605,12 +3605,12 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.AccountReactivate.as_view()
 
-    def get_api_remove_from_group_url(self, group_name, account_email):
+    def get_api_add_to_group_url(self, group_name, account_email):
         return (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
             + group_name
-            + "/MEMBER/"
+            + "/member/"
             + account_email
         )
 
@@ -3764,7 +3764,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         group = membership.group
         object.status = object.INACTIVE_STATUS
         object.save()
-        add_to_group_url = self.get_api_remove_from_group_url(group.name, object.email)
+        add_to_group_url = self.get_api_add_to_group_url(group.name, object.email)
         responses.add(responses.PUT, add_to_group_url, status=204)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.uuid), {"submit": ""})
@@ -3783,13 +3783,9 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         group_1 = memberships[0].group
         group_2 = memberships[1].group
-        add_to_group_url_1 = self.get_api_remove_from_group_url(
-            group_1.name, object.email
-        )
+        add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name, object.email)
         responses.add(responses.PUT, add_to_group_url_1, status=204)
-        add_to_group_url_2 = self.get_api_remove_from_group_url(
-            group_2.name, object.email
-        )
+        add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name, object.email)
         responses.add(responses.PUT, add_to_group_url_2, status=204)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.uuid), {"submit": ""})
@@ -3810,13 +3806,9 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         group_1 = memberships[0].group
         group_2 = memberships[1].group
-        add_to_group_url_1 = self.get_api_remove_from_group_url(
-            group_1.name, object.email
-        )
+        add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name, object.email)
         responses.add(responses.PUT, add_to_group_url_1, status=204)
-        add_to_group_url_2 = self.get_api_remove_from_group_url(
-            group_2.name, object.email
-        )
+        add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name, object.email)
         responses.add(
             responses.PUT,
             add_to_group_url_2,
@@ -11127,6 +11119,18 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreate.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -11179,14 +11183,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/MEMBER/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11200,7 +11198,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -11209,14 +11207,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/MEMBER/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11236,14 +11228,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/ADMIN/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "admin", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11257,34 +11243,28 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/ADMIN/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:group_group_membership:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -11343,14 +11323,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=group_1
         )
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + parent.name
-            + "/MEMBER/"
-            + group_2.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent.name, "member", group_2.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11362,7 +11336,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_add_a_child_group_to_two_parents(self):
         group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
@@ -11371,14 +11345,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=group_1, child_group=child
         )
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group_2.name
-            + "/MEMBER/"
-            + child.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group_2.name, "member", child.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11390,7 +11358,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_invalid_input_child(self):
         """Posting invalid data to child_group field does not create an object."""
@@ -11601,16 +11569,10 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/MEMBER/"
-            + child_group.get_email()
-        )
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -11631,33 +11593,133 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_parent_group(self):
-        self.fail(
-            "Trying to add a child group to a parent group that you don't have permission for returns a successful code."  # noqa
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_child_group_exists_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a group that exists to a group that doesn't exist returns a successful code."
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a group that doesn't exist to a group that doesn't exist returns a successful code."
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_exists(self):
-        self.fail(
-            "Trying to add a group that doesn't exist to a group that exists returns a successful code."
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
 
 class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
@@ -11693,6 +11755,18 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreateByParent.as_view()
+
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.parent_group.name
+            + "/"
+            + role
+            + "/"
+            + self.child_group.get_email()
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -11756,14 +11830,8 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
@@ -11779,21 +11847,15 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
@@ -11813,14 +11875,8 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
@@ -11834,32 +11890,26 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response,
             models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -12088,18 +12138,12 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -12120,7 +12164,97 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
@@ -12158,6 +12292,18 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreateByChild.as_view()
+
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.parent_group.name
+            + "/"
+            + role
+            + "/"
+            + self.child_group.get_email()
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -12221,14 +12367,8 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
@@ -12244,21 +12384,15 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
@@ -12278,14 +12412,8 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
@@ -12299,32 +12427,26 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response,
             models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -12512,18 +12634,12 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("circular", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -12544,7 +12660,97 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
@@ -12583,6 +12789,18 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
     def get_view(self):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreateByParentChild.as_view()
+
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.parent_group.name
+            + "/"
+            + role
+            + "/"
+            + self.child_group.get_email()
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -12669,14 +12887,8 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -12693,21 +12905,15 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name, self.child_group.name),
@@ -12727,14 +12933,8 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name, self.child_group.name),
@@ -12748,32 +12948,26 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name, self.child_group.name),
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response,
             models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_duplicate_object_redirect_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -13070,18 +13264,12 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         )
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -13102,7 +13290,97 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
@@ -13625,6 +13903,18 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipCreate.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -13677,14 +13967,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group.name
-            + "/MEMBER/"
-            + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13698,7 +13982,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -13707,14 +13991,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group.name
-            + "/MEMBER/"
-            + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13736,14 +14014,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group.name
-            + "/ADMIN/"
-            + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "admin", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13757,34 +14029,28 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group.name
-            + "/ADMIN/"
-            + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:group_account_membership:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with the same role."""
@@ -13841,14 +14107,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group_2.name
-            + "/MEMBER/"
-            + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group_2.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13860,21 +14120,15 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_add_two_accounts_to_one_group(self):
         group = factories.ManagedGroupFactory.create()
         account_1 = factories.AccountFactory.create(email="test_1@example.com")
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
         factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group.name
-            + "/MEMBER/"
-            + account_2.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account_2.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13886,7 +14140,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_invalid_input_account(self):
         """Posting invalid data to account field does not create an object."""
@@ -14028,18 +14282,12 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + group.name
-            + "/MEMBER/"
-            + account.email
-        )
+        api_url = self.get_api_url(group.name, "member", account.email)
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
-            json={"message": "group account membership create test error"},
+            json={"message": "other error"},
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -14055,10 +14303,10 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn(
-            "AnVIL API Error: group account membership create test error",
+            "AnVIL API Error: other error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -14097,29 +14345,129 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(active_account, form.fields["account"].queryset)
         self.assertNotIn(inactive_account, form.fields["account"].queryset)
 
-    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):
-        self.fail(
-            "Trying to add a user to a group that you don't have permission for returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_user_exists_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a user that exists to a group that doesn't exist returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a user that doesn't exist to a group that doesn't exist returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_exists(self):
-        self.fail(
-            "Trying to add a user that doesn't exist to a group that exists returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
 
 class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
@@ -14156,14 +14504,17 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipCreateByGroup.as_view()
 
-    def get_api_json_response(
-        self, invites_sent=[], users_not_found=[], users_updated=[]
-    ):
-        return {
-            "invitesSent": invites_sent,
-            "usersNotFound": users_not_found,
-            "usersUpdated": users_updated,
-        }
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.group.name
+            + "/"
+            + role
+            + "/"
+            + self.account.email
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -14232,14 +14583,8 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
@@ -14255,18 +14600,12 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
@@ -14286,14 +14625,8 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
@@ -14309,31 +14642,25 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
@@ -14523,18 +14850,12 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership create test error"},
         )
@@ -14555,7 +14876,97 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group account membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -14613,14 +15024,17 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         """Return the view being tested."""
         return views.GroupAccountMembershipCreateByAccount.as_view()
 
-    def get_api_json_response(
-        self, invites_sent=[], users_not_found=[], users_updated=[]
-    ):
-        return {
-            "invitesSent": invites_sent,
-            "usersNotFound": users_not_found,
-            "usersUpdated": users_updated,
-        }
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.group.name
+            + "/"
+            + role
+            + "/"
+            + self.account.email
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -14692,14 +15106,8 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
@@ -14715,18 +15123,12 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
@@ -14746,14 +15148,8 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
@@ -14769,31 +15165,25 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
@@ -14964,18 +15354,12 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership create test error"},
         )
@@ -14996,7 +15380,97 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             "AnVIL API Error: group account membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -15057,14 +15531,17 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         """Return the view being tested."""
         return views.GroupAccountMembershipCreateByGroupAccount.as_view()
 
-    def get_api_json_response(
-        self, invites_sent=[], users_not_found=[], users_updated=[]
-    ):
-        return {
-            "invitesSent": invites_sent,
-            "usersNotFound": users_not_found,
-            "usersUpdated": users_updated,
-        }
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.group.name
+            + "/"
+            + role
+            + "/"
+            + self.account.email
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -15149,14 +15626,8 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
@@ -15172,18 +15643,12 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
@@ -15203,14 +15668,8 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
@@ -15226,31 +15685,25 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_duplicate_object(self):
         """Redirects to detail view if object already exists."""
@@ -15462,18 +15915,12 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.assertIn("valid choice", form.errors["group"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.api_client.firecloud_entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership create test error"},
         )
@@ -15494,7 +15941,97 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             "AnVIL API Error: group account membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
