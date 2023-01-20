@@ -298,6 +298,11 @@ class AccountImport(
     message_account_does_not_exist = "This account does not exist on AnVIL."
     """A string that can be displayed if the account does not exist on AnVIL."""
 
+    message_email_associated_with_group = (
+        "This email is associated with a group, not a user."
+    )
+    """A string that can be displayed if the account does not exist on AnVIL."""
+
     form_class = forms.AccountImportForm
     """A string that can be displayed if the account does not exist on AnVIL."""
 
@@ -310,10 +315,9 @@ class AccountImport(
         try:
             account_exists = object.anvil_exists()
         except AnVILAPIError as e:
+            msg = "AnVIL API Error: " + str(e)
             # If the API call failed for some other reason, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, msg)
             return self.render_to_response(self.get_context_data(form=form))
         if not account_exists:
             messages.add_message(
@@ -936,13 +940,6 @@ class ManagedGroupDelete(
                 self.request,
                 messages.ERROR,
                 self.message_could_not_delete_group_from_app,
-            )
-            response = HttpResponseRedirect(self.object.get_absolute_url())
-        except exceptions.AnVILGroupDeletionError:
-            messages.add_message(
-                self.request,
-                messages.ERROR,
-                self.message_could_not_delete_group_from_anvil,
             )
             response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:

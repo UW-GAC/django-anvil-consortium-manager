@@ -12,7 +12,7 @@ from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import anvil_audit, exceptions
 from .adapters.workspace import workspace_adapter_registry
-from .anvil_api import AnVILAPIClient, AnVILAPIError404
+from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
 
 
@@ -147,9 +147,14 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     def anvil_account_exists(self):
         """Check if this account exists on AnVIL."""
         try:
-            AnVILAPIClient().get_proxy_group(self.email)
+            AnVILAPIClient().get_user(self.email)
         except AnVILAPIError404:
             return False
+        except AnVILAPIError as e:
+            if e.status_code == 204:
+                return False
+            else:
+                raise
         return True
 
     def save(self, *args, **kwargs):
@@ -331,9 +336,14 @@ class Account(TimeStampedModel, ActivatorModel):
             Boolean indicator of whether ``email`` is associated with an account on AnVIL.
         """
         try:
-            AnVILAPIClient().get_proxy_group(self.email)
+            AnVILAPIClient().get_user(self.email)
         except AnVILAPIError404:
             return False
+        except AnVILAPIError as e:
+            if e.status_code == 204:
+                return False
+            else:
+                raise
         return True
 
     def anvil_remove_from_groups(self):
@@ -428,7 +438,7 @@ class ManagedGroup(TimeStampedModel):
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""
         try:
-            response = AnVILAPIClient().get_group(self.name)
+            response = AnVILAPIClient().get_group_email(self.name)
         except AnVILAPIError404:
             # The group was not found on AnVIL.
             return False
@@ -440,17 +450,9 @@ class ManagedGroup(TimeStampedModel):
 
     def anvil_delete(self):
         """Deletes the group on AnVIL."""
-        # Try to delete the group.
+        # The firecloud API occasionally returend successful codes when a group could not be deleted.
+        # Switching to the SAM API seems to have fixed this.
         AnVILAPIClient().delete_group(self.name)
-        # The API for deleting groups is buggy, so verify that it was actually deleted.
-        try:
-            AnVILAPIClient().get_group(self.name)
-        except AnVILAPIError404:
-            # The group was actually deleted, as requested.
-            pass
-        else:
-            # No exception was raised, so the group still exists. Raise a specific exception for this.
-            raise exceptions.AnVILGroupDeletionError(self.name)
 
     @classmethod
     def anvil_import(cls, group_name, **kwargs):
@@ -471,7 +473,7 @@ class ManagedGroup(TimeStampedModel):
         except StopIteration:
             raise exceptions.AnVILNotGroupMemberError
         # Check if we're an admin.
-        if group_details["role"] == "Admin":
+        if group_details["role"].lower() == "admin":
             group.is_managed_by_app = True
         group.save()
         return group
@@ -484,10 +486,12 @@ class ManagedGroup(TimeStampedModel):
         """
         api_client = AnVILAPIClient()
         audit_results = anvil_audit.ManagedGroupMembershipAuditResults()
-        response = api_client.get_group(self.name)
+        response = api_client.get_group_members(self.name)
         # Convert to case-insensitive emails.
-        members_in_anvil = [x.lower() for x in response.json()["membersEmails"]]
-        admins_in_anvil = [x.lower() for x in response.json()["adminsEmails"]]
+        members_in_anvil = [x.lower() for x in response.json()]
+        response = api_client.get_group_admins(self.name)
+        # Convert to case-insensitive emails.
+        admins_in_anvil = [x.lower() for x in response.json()]
         # Remove the service account as admin.
         admins_in_anvil.remove(
             api_client.auth_session.credentials.service_account_email.lower()
@@ -574,7 +578,7 @@ class ManagedGroup(TimeStampedModel):
         groups_on_anvil = {}
         for group_details in response.json():
             group_name = group_details["groupName"]
-            role = group_details["role"]
+            role = group_details["role"].lower()
             try:
                 groups_on_anvil[group_name] = groups_on_anvil[group_name] + [role]
             except KeyError:
@@ -588,7 +592,7 @@ class ManagedGroup(TimeStampedModel):
             else:
                 # Check role.
                 if group.is_managed_by_app:
-                    if "Admin" not in group_roles:
+                    if "admin" not in group_roles:
                         audit_results.add_error(
                             group, audit_results.ERROR_DIFFERENT_ROLE
                         )
@@ -597,7 +601,7 @@ class ManagedGroup(TimeStampedModel):
                             audit_results.add_error(
                                 group, audit_results.ERROR_GROUP_MEMBERSHIP
                             )
-                elif not group.is_managed_by_app and "Admin" in group_roles:
+                elif not group.is_managed_by_app and "admin" in group_roles:
                     audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
 
             try:
@@ -1130,13 +1134,13 @@ class GroupGroupMembership(TimeStampedModel):
     def anvil_create(self):
         """Add the child group to the parent group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.parent_group.name, self.role, self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.get_email()
         )
 
     def anvil_delete(self):
         """Remove the child group from the parent on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.parent_group.name, self.role, self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.get_email()
         )
 
 
@@ -1183,13 +1187,13 @@ class GroupAccountMembership(TimeStampedModel):
     def anvil_create(self):
         """Add the account to the group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.group.name, self.role, self.account.email
+            self.group.name, self.role.lower(), self.account.email
         )
 
     def anvil_delete(self):
         """Remove the account from the group on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.group.name, self.role, self.account.email
+            self.group.name, self.role.lower(), self.account.email
         )
 
 

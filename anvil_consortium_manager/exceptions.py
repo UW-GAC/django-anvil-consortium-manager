@@ -21,9 +21,5 @@ class AnVILRemoveAccountFromGroupError(Exception):
     """Exception to be raised when an account cannot be removed from a group on AnVIL."""
 
 
-class AnVILGroupDeletionError(Exception):
-    """Exception to be raised when a group was not properly deleted on AnVIL."""
-
-
 class AnVILGroupNotFound(Exception):
     """Exception to be raised when a group is not found on AnVIL."""

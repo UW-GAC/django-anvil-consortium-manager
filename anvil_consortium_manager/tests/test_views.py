@@ -256,9 +256,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
@@ -278,9 +278,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_anvil_status_ok(self):
         """Context data contains anvil_status."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET, url_status, status=200, json=self.get_json_status_data()
         )
@@ -295,9 +295,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_anvil_status_not_ok(self):
         """Context data contains anvil_status."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET,
             url_status,
@@ -315,10 +315,10 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_status_api_error(self):
         """Page still loads if there is an AnVIL API error in the status call."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=200, json=self.get_json_me_data())
         # Error in status API
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -332,9 +332,9 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_status_me_error(self):
         """Page still loads if there is an AnVIL API error in the me call."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=499)
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(
             responses.GET,
             url_status,
@@ -353,10 +353,10 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_context_data_both_api_error(self):
         """Page still loads if there is an AnVIL API error in both the status and me call."""
-        url_me = self.entry_point + "/me?userDetailsOnly=true"
+        url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
         responses.add(responses.GET, url_me, status=499)
         # Error in status API
-        url_status = self.entry_point + "/status"
+        url_status = self.api_client.firecloud_entry_point + "/status"
         responses.add(responses.GET, url_status, status=499)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -390,7 +390,11 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/billing/v2/" + billing_project_name
+        return (
+            self.api_client.rawls_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
+        )
 
     def get_api_json_response(self):
         return {
@@ -1051,7 +1055,11 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:billing_projects:audit", args=args)
 
     def get_api_url(self, billing_project_name):
-        return self.entry_point + "/api/billing/v2/" + billing_project_name
+        return (
+            self.api_client.rawls_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
+        )
 
     def get_api_json_response(self):
         return {
@@ -1410,11 +1418,19 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:accounts:import", args=args)
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def get_view(self):
         """Return the view being tested."""
@@ -1469,7 +1485,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
@@ -1484,7 +1505,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_an_object_with_note(self):
         """Posting valid data with a note field to the form creates an object."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(
@@ -1498,7 +1524,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
         self.assertIn("messages", response.context)
@@ -1510,7 +1541,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
         new_object = models.Account.objects.latest("pk")
@@ -1575,7 +1611,12 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_create_service_account(self):
         """Can create a service account."""
         email = "test@example.com"
-        responses.add(responses.GET, self.get_api_url(email), status=200)
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=200,
+            json=self.get_api_json_response(email),
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(
@@ -1611,6 +1652,31 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountImport.message_account_does_not_exist
+        )
+        # No accounts were created.
+        self.assertEqual(models.Account.objects.count(), 0)
+
+    def test_email_is_associated_with_group(self):
+        """Does not create a new Account if the API returns a code associated with a group."""
+        email = "test@example.com"
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=204,
+        )
+        # Need the client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but there was some error from the API.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountImport.message_account_does_not_exist, str(messages[0])
         )
         # No accounts were created.
         self.assertEqual(models.Account.objects.count(), 0)
@@ -1770,7 +1836,15 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def get_view(self):
         """Return the view being tested."""
@@ -1800,7 +1874,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form works as expected."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -1831,7 +1907,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """A success message is added."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
@@ -1844,7 +1922,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """View redirects to the correct URL."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
@@ -1858,7 +1938,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """An email is sent when the form is submitted correctly."""
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         self.client.force_login(self.user)
         self.client.post(self.get_url(), {"email": email})
@@ -1928,7 +2010,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             user=self.user, email=email, date_verification_email_sent=original_date
         )
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         timestamp_lower_limit = timezone.now()
         self.client.force_login(self.user)
@@ -2066,7 +2150,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         email = "test@example.com"
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -2122,7 +2208,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             user=other_user, email=email, date_verification_email_sent=other_timestamp
         )
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -2182,7 +2270,9 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         # API call will be made with the existing entry.
         api_url = self.get_api_url(email_entry.email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         # Need a client because messages are added.
         timestamp_lower_limit = timezone.now()
         self.client.force_login(self.user)
@@ -2239,6 +2329,33 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_email_associated_with_group(self):
+        """Does not create a new entry or send email if the email is associated with a group."""
+        email = "test@example.com"
+        responses.add(
+            responses.GET,
+            self.get_api_url(email),
+            status=204,
+        )
+        # Need the client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        form = response.context["form"]
+        # The form is valid...
+        self.assertTrue(form.is_valid())
+        # ...but there was some error from the API.
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.AccountLink.message_account_does_not_exist, str(messages[0])
+        )
+        # No accounts were created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
+
 
 class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the AccountLinkVerify view."""
@@ -2260,7 +2377,15 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, email):
         """Get the AnVIL API url that is called by the anvil_exists method."""
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -2279,7 +2404,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         timestamp_threshold = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
@@ -2473,6 +2600,34 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # API call to AnVIL was made.
         responses.assert_call_count(api_url, 1)
 
+    def test_email_associated_with_group(self):
+        """The email is associated with a group on AnVIL."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        api_url = self.get_api_url(email_entry.email)
+        responses.add(responses.GET, api_url, status=204)
+        token = account_verification_token.make_token(email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        # No accounts are created.
+        self.assertEqual(models.Account.objects.count(), 0)
+        # The email_entry object was not updated.
+        email_entry.refresh_from_db()
+        self.assertIsNone(email_entry.date_verified)
+        with self.assertRaises(ObjectDoesNotExist):
+            email_entry.verified_account
+        # A message is added.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]), views.AccountLinkVerify.message_account_does_not_exist
+        )
+        # API call to AnVIL was made.
+        responses.assert_call_count(api_url, 1)
+
     def test_api_call_fails(self):
         """The API call to AnVIL fails."""
         email_entry = factories.UserEmailEntryFactory.create()
@@ -2509,7 +2664,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
@@ -2519,13 +2676,15 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="test@example.com")
     def test_notification_email(self):
         """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
-        email = "test@example.com"
+        email = "test1@example.com"
         email_entry = factories.UserEmailEntryFactory.create(
             user=self.user, email=email
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
@@ -2543,7 +2702,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         )
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)
-        responses.add(responses.GET, api_url, status=200)
+        responses.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
@@ -2907,7 +3068,11 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name, account_email):
         return (
-            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/member/"
+            + account_email
         )
 
     def test_view_redirect_not_logged_in(self):
@@ -3139,7 +3304,11 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_remove_from_group_url(self, group_name, account_email):
         return (
-            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/member/"
+            + account_email
         )
 
     def test_view_redirect_not_logged_in(self):
@@ -3436,9 +3605,13 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.AccountReactivate.as_view()
 
-    def get_api_remove_from_group_url(self, group_name, account_email):
+    def get_api_add_to_group_url(self, group_name, account_email):
         return (
-            self.entry_point + "/api/groups/" + group_name + "/MEMBER/" + account_email
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/member/"
+            + account_email
         )
 
     def test_view_redirect_not_logged_in(self):
@@ -3591,7 +3764,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         group = membership.group
         object.status = object.INACTIVE_STATUS
         object.save()
-        add_to_group_url = self.get_api_remove_from_group_url(group.name, object.email)
+        add_to_group_url = self.get_api_add_to_group_url(group.name, object.email)
         responses.add(responses.PUT, add_to_group_url, status=204)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.uuid), {"submit": ""})
@@ -3610,13 +3783,9 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         group_1 = memberships[0].group
         group_2 = memberships[1].group
-        add_to_group_url_1 = self.get_api_remove_from_group_url(
-            group_1.name, object.email
-        )
+        add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name, object.email)
         responses.add(responses.PUT, add_to_group_url_1, status=204)
-        add_to_group_url_2 = self.get_api_remove_from_group_url(
-            group_2.name, object.email
-        )
+        add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name, object.email)
         responses.add(responses.PUT, add_to_group_url_2, status=204)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.uuid), {"submit": ""})
@@ -3637,13 +3806,9 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.save()
         group_1 = memberships[0].group
         group_2 = memberships[1].group
-        add_to_group_url_1 = self.get_api_remove_from_group_url(
-            group_1.name, object.email
-        )
+        add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name, object.email)
         responses.add(responses.PUT, add_to_group_url_1, status=204)
-        add_to_group_url_2 = self.get_api_remove_from_group_url(
-            group_2.name, object.email
-        )
+        add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name, object.email)
         responses.add(
             responses.PUT,
             add_to_group_url_2,
@@ -3886,7 +4051,15 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:accounts:audit", args=args)
 
     def get_api_url(self, email):
-        return self.entry_point + "/api/proxyGroup/" + email
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
 
     def get_view(self):
         """Return the view being tested."""
@@ -3937,6 +4110,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
+            json=self.get_api_json_response(account.email),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -3980,6 +4154,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
+            json=self.get_api_json_response(account.email),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -4420,6 +4595,9 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.ManagedGroupCreate.as_view()
 
+    def get_api_url(self, group_name):
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -4470,23 +4648,23 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
-        url = self.entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.name, "test-group")
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_can_create_an_object_with_note(self):
         """Posting valid data including note to the form creates an object."""
-        url = self.entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(), {"name": "test-group", "note": "test note"}
@@ -4495,15 +4673,12 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.note, "test note")
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = self.entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"}, follow=True)
         self.assertIn("messages", response.context)
@@ -4514,13 +4689,13 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = self.entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two groups with the same name."""
@@ -4580,9 +4755,12 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_api_error_message(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = self.entry_point + "/api/groups/" + "test-group"
+        api_url = self.get_api_url("test-group")
         responses.add(
-            responses.POST, url, status=500, json={"message": "group create test error"}
+            responses.POST,
+            api_url,
+            status=500,
+            json={"message": "group create test error"},
         )
         # Need a client to check messages.
         self.client.force_login(self.user)
@@ -4593,15 +4771,27 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: group create test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that no object is created.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_group_already_exists(self):
-        self.fail(
-            "AnVIL API returns 201 instead of ??? when trying to create a group that already exists."
+        api_url = self.get_api_url("test-group")
+        responses.add(
+            responses.POST, api_url, status=409, json={"message": "other error"}
         )
+        # Need a client to check messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: other error", str(messages[0]))
+        responses.assert_call_count(api_url, 1)
+        # Make sure that no object is created.
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
 
 class ManagedGroupUpdateTest(TestCase):
@@ -4816,6 +5006,10 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:managed_groups:delete", args=args)
 
+    def get_api_url(self, group_name):
+        url = self.api_client.sam_entry_point + "/api/groups/v1/" + group_name
+        return url
+
     def get_view(self):
         """Return the view being tested."""
         return views.ManagedGroupDelete.as_view()
@@ -4870,14 +5064,13 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -4885,9 +5078,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.name), {"submit": ""}, follow=True
@@ -4901,9 +5093,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.ManagedGroupFactory.create()
         other_object = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
@@ -4912,43 +5103,13 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.ManagedGroup.objects.all(),
             models.ManagedGroup.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 2)
-
-    def test_delete_successful_not_actually_deleted_on_anvil(self):
-        """anvil_delete raises exception with successful API response but group was not actually deleted.
-
-        The AnVIL group delete API is buggy and often returns a successful API response when it should return an error.
-        """
-        object = factories.ManagedGroupFactory.create(name="test-group")
-        url = self.entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        # Group was not actually deleted on AnVIL.
-        responses.add(responses.GET, url, status=200)
-        # Need to use a client for messages.
-        self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(object.name), {"submit": ""}, follow=True
-        )
-        self.assertRedirects(response, object.get_absolute_url())
-        # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(
-            views.ManagedGroupDelete.message_could_not_delete_group_from_anvil,
-            str(messages[0]),
-        )
-        # Make sure that the object still exists.
-        self.assertEqual(models.ManagedGroup.objects.count(), 1)
-        models.ManagedGroup.objects.get(pk=object.pk)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/groups/" + object.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.name), {"submit": ""})
@@ -4956,7 +5117,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:managed_groups:list")
         )
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_redirect_group_is_a_member_of_another_group(self):
         """Redirect get request when trying to delete a group that is a member of another group.
@@ -5115,9 +5276,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=child
         )
-        url = self.entry_point + "/api/groups/" + parent.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(parent.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(parent.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
@@ -5129,7 +5289,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         models.ManagedGroup.objects.get(pk=child.pk)
         # The group membership was deleted.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
         # History is added for the GroupGroupMembership.
         self.assertEqual(models.GroupGroupMembership.history.count(), 2)
         self.assertEqual(models.GroupGroupMembership.history.latest().history_type, "-")
@@ -5139,9 +5299,8 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
-        url = self.entry_point + "/api/groups/" + group.name
-        responses.add(responses.DELETE, url, status=self.api_success_code)
-        responses.add(responses.GET, url, status=404, json={"message": "mock message"})
+        api_url = self.get_api_url(group.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(group.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
@@ -5151,7 +5310,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         # The account still exists.
         models.Account.objects.get(pk=account.pk)
-        responses.assert_call_count(url, 2)
+        responses.assert_call_count(api_url, 1)
         # History is added for GroupAccountMemberships.
         self.assertEqual(models.GroupAccountMembership.history.count(), 2)
         self.assertEqual(
@@ -5162,10 +5321,10 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/groups/" + object.name
+        api_url = self.get_api_url(object.name)
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "group delete test error"},
         )
@@ -5176,7 +5335,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: group delete test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
 
@@ -5386,7 +5545,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
-        return self.entry_point + "/api/groups"
+        return self.api_client.sam_entry_point + "/api/groups/v1"
 
     def get_api_group_json(self, group_name, role):
         """Return json data about groups in the API format."""
@@ -5397,21 +5556,27 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         }
         return json_data
 
-    def get_api_group_members_url(self, group_name):
+    def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
-        return self.entry_point + "/api/groups/" + group_name
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        )
 
-    def get_api_group_members_json_response(self, admins=[], members=[]):
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        )
+
+    def get_api_json_response_admins(self, emails=[]):
         """Return json data about groups in the API format."""
-        json_data = {
-            "adminsEmails": [
-                anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
-            ]
-            + admins,
-            # "groupEmail": group_name + "@firecloud.org",
-            "membersEmails": members,
-        }
-        return json_data
+        return [
+            anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
+        ] + emails
+
+    def get_api_json_response_members(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return emails
 
     def get_view(self):
         """Return the view being tested."""
@@ -5486,11 +5651,19 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_group_json(group.name, "Admin")],
         )
         # Group membership API call.
+        api_url_members = self.get_api_url_members(group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -5566,11 +5739,19 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_group_json(group.name, "Admin")],
         )
         # Group membership API call.
+        api_url_members = self.get_api_url_members(group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -5620,21 +5801,27 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             "anvil_consortium_manager:managed_groups:audit_membership", args=args
         )
 
-    def get_api_group_members_url(self, group_name):
+    def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
-        return self.entry_point + "/api/groups/" + group_name
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        )
 
-    def get_api_group_members_json_response(self, admins=[], members=[]):
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        )
+
+    def get_api_json_response_admins(self, emails=[]):
         """Return json data about groups in the API format."""
-        json_data = {
-            "adminsEmails": [
-                anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
-            ]
-            + admins,
-            # "groupEmail": group_name + "@firecloud.org",
-            "membersEmails": members,
-        }
-        return json_data
+        return [
+            anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
+        ] + emails
+
+    def get_api_json_response_members(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return emails
 
     def get_view(self):
         """Return the view being tested."""
@@ -5650,12 +5837,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5673,12 +5867,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_template(self):
         """Template loads successfully."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5686,12 +5887,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_verified(self):
         """audit_verified is in the context data."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5701,14 +5909,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
         membership = factories.GroupAccountMembershipFactory.create(group=self.group)
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(
-                members=[membership.account.email]
-            ),
+            json=self.get_api_json_response_members(emails=[membership.account.email]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5717,12 +5930,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
-        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5733,14 +5953,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         """audit_errors with one error record."""
         membership = factories.GroupAccountMembershipFactory.create(group=self.group)
         # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(
-                admins=[membership.account.email]
-            ),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[membership.account.email]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5749,12 +5974,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5763,12 +5995,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5777,12 +6016,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Admin insetad of member.
-            json=self.get_api_group_members_json_response(),
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -5791,12 +6037,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_ok_is_not_ok(self):
         """audit_ok when audit_results.ok() is False."""
+        api_url_members = self.get_api_url_members(self.group.name)
         responses.add(
             responses.GET,
-            self.get_api_group_members_url(self.group.name),
+            api_url_members,
             status=200,
-            # Not in app
-            json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        responses.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
@@ -6111,6 +6364,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
         self.workspace_type = DefaultWorkspaceAdapter.type
+        self.api_url = self.api_client.rawls_entry_point + "/api/workspaces"
 
     def tearDown(self):
         """Clean up after tests."""
@@ -6206,7 +6460,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6214,7 +6467,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6238,7 +6491,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             new_object.workspace_type,
             DefaultWorkspaceAdapter().get_type(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -6248,7 +6501,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6256,7 +6508,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6278,14 +6530,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.Workspace.objects.latest("pk")
         self.assertIsInstance(new_object, models.Workspace)
         self.assertEqual(new_object.note, "test note")
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_creates_default_workspace_data(self):
         """Posting valid data to the form creates the default workspace data object."""
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6293,7 +6544,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6321,7 +6572,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6329,7 +6579,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6356,7 +6606,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6364,7 +6613,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6383,7 +6632,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         new_object = models.Workspace.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two workspaces with the same billing project and name."""
@@ -6416,7 +6665,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-name-1"
         )
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-name-2",
@@ -6424,7 +6672,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6447,7 +6695,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         models.Workspace.objects.get(
             billing_project=billing_project, name="test-name-2"
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_can_create_workspace_with_same_name_different_billing_project(self):
         """Can create a workspace with the same name in a different billing project."""
@@ -6457,7 +6705,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project_1, name=workspace_name
         )
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project_2.name,
             "name": "test-name",
@@ -6465,7 +6712,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6488,7 +6735,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         models.Workspace.objects.get(
             billing_project=billing_project_2, name=workspace_name
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_invalid_input_name(self):
         """Posting invalid data to name field does not create an object."""
@@ -6568,7 +6815,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error_message(self):
         """Shows a method if an AnVIL API error occurs."""
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": billing_project.name,
             "name": "test-workspace",
@@ -6576,7 +6822,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=500,
             match=[responses.matchers.json_params_matcher(json_data)],
             json={"message": "workspace create test error"},
@@ -6601,7 +6847,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
         # Make sure that no object is created.
         self.assertEqual(models.Workspace.objects.count(), 0)
 
@@ -6611,7 +6857,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6620,7 +6865,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6643,7 +6888,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.Workspace)
         self.assertEqual(len(new_object.authorization_domains.all()), 1)
         self.assertIn(auth_domain, new_object.authorization_domains.all())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -6660,7 +6905,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         auth_domain_1 = factories.ManagedGroupFactory.create(name="auth1")
         auth_domain_2 = factories.ManagedGroupFactory.create(name="auth2")
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6672,7 +6916,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6696,14 +6940,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(new_object.authorization_domains.all()), 2)
         self.assertIn(auth_domain_1, new_object.authorization_domains.all())
         self.assertIn(auth_domain_2, new_object.authorization_domains.all())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_invalid_auth_domain(self):
         """Does not create a workspace when an invalid authorization domain is specified."""
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
@@ -6727,14 +6970,13 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # No object was created.
         self.assertEqual(len(models.Workspace.objects.all()), 0)
         # No API calls made.
-        responses.assert_call_count(url, 0)
+        responses.assert_call_count(self.api_url, 0)
 
     def test_one_valid_one_invalid_auth_domain(self):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
@@ -6758,7 +7000,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # No object was created.
         self.assertEqual(len(models.Workspace.objects.all()), 0)
         # No API calls made.
-        responses.assert_call_count(url, 0)
+        responses.assert_call_count(self.api_url, 0)
 
     def test_auth_domain_does_not_exist_on_anvil(self):
         """No workspace is displayed if the auth domain group doesn't exist on AnVIL."""
@@ -6766,7 +7008,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6777,7 +7018,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=400,
             json={"message": "api error"},
             match=[responses.matchers.json_params_matcher(json_data)],
@@ -6808,7 +7049,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_not_admin_of_auth_domain_on_anvil(self):
         """No workspace is displayed if we are not the admins of the auth domain on AnVIL."""
@@ -6816,7 +7057,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         auth_domain = factories.ManagedGroupFactory.create()
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6827,7 +7067,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=400,
             json={"message": "api error"},
             match=[responses.matchers.json_params_matcher(json_data)],
@@ -6858,7 +7098,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_not_user_of_billing_project(self):
         """Posting a billing project where we are not users does not create an object."""
@@ -6914,7 +7154,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6922,7 +7161,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -6953,7 +7192,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace_data = app_models.TestWorkspaceData.objects.latest("pk")
         self.assertEqual(new_workspace_data.workspace, new_workspace)
         self.assertEqual(new_workspace_data.study_name, "test study")
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(self.api_url, 1)
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
@@ -6964,7 +7203,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -6972,7 +7210,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         }
         responses.add(
             responses.POST,
-            url,
+            self.api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -7031,6 +7269,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
+        self.workspace_list_url = self.api_client.rawls_entry_point + "/api/workspaces"
 
     def tearDown(self):
         """Clean up after tests."""
@@ -7046,7 +7285,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url(self, billing_project_name, workspace_name):
         return (
-            self.entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"
@@ -7087,10 +7326,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7146,10 +7384,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a form."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7167,10 +7404,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a formset for the workspace_data model."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7189,10 +7425,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_no_available_workspaces(self):
         """Choices are populated correctly with one available workspace."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7218,10 +7453,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_one_available_workspace(self):
         """Choices are populated correctly with one available workspace."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7242,10 +7476,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_choices_two_available_workspaces(self):
         """Choices are populated correctly with two available workspaces."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7274,10 +7507,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceFactory.create(
             billing_project=billing_project, name="ws-imported"
         )
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7306,10 +7538,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_form_does_not_show_workspaces_not_owner(self):
         """The form does not show workspaces where we aren't owners in the choices."""
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7336,10 +7567,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7350,7 +7580,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
+            self.api_client.rawls_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
         )
         responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
@@ -7398,12 +7630,14 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_can_import_workspace_with_note(self):
         """Sets note when specified when importing a workspace."""
         billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name=billing_project_name
+        )
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7412,11 +7646,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_json_response(billing_project_name, workspace_name)],
         )
-        # Billing project API call.
-        billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
-        )
-        responses.add(responses.GET, billing_project_url, status=200)
         url = self.get_api_url(billing_project_name, workspace_name)
         responses.add(
             responses.GET,
@@ -7440,49 +7669,41 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         # Created a billing project.
         self.assertEqual(models.BillingProject.objects.count(), 1)
-        new_billing_project = models.BillingProject.objects.latest("pk")
-        self.assertEqual(new_billing_project.name, billing_project_name)
-        self.assertEqual(new_billing_project.has_app_as_user, True)
         # Created a workspace.
         self.assertEqual(models.Workspace.objects.count(), 1)
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, workspace_name)
         self.assertEqual(new_workspace.note, "test note")
+        self.assertEqual(new_workspace.billing_project, billing_project)
 
     def test_creates_default_workspace_data_without_custom_adapter(self):
         """The default workspace data object is created if no custom aadpter is used."""
-        billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create()
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
                 )
             ],
             status=200,
-            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
         )
-        # Billing project API call.
-        billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
-        )
-        responses.add(responses.GET, billing_project_url, status=200)
-        url = self.get_api_url(billing_project_name, workspace_name)
+        url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             url,
             status=self.api_success_code,
-            json=self.get_api_json_response(billing_project_name, workspace_name),
+            json=self.get_api_json_response(billing_project.name, workspace_name),
         )
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
             {
-                "workspace": billing_project_name + "/" + workspace_name,
+                "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 0,
@@ -7500,38 +7721,32 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_success_message(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
-        billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create()
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
                 )
             ],
             status=200,
-            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
         )
-        # Billing project API call.
-        billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
-        )
-        responses.add(responses.GET, billing_project_url, status=200)
-        url = self.get_api_url(billing_project_name, workspace_name)
+        url = self.get_api_url(billing_project.name, workspace_name)
         responses.add(
             responses.GET,
             url,
             status=self.api_success_code,
-            json=self.get_api_json_response(billing_project_name, workspace_name),
+            json=self.get_api_json_response(billing_project.name, workspace_name),
         )
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.workspace_type),
             {
-                "workspace": billing_project_name + "/" + workspace_name,
+                "workspace": billing_project.name + "/" + workspace_name,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 0,
@@ -7550,10 +7765,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7564,7 +7778,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Billing project API call.
         billing_project_url = (
-            self.entry_point + "/api/billing/v2/" + billing_project_name
+            self.api_client.rawls_entry_point
+            + "/api/billing/v2/"
+            + billing_project_name
         )
         responses.add(
             responses.GET, billing_project_url, status=404, json={"message": "other"}
@@ -7612,10 +7828,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7667,10 +7882,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             workspace_name,
             authorization_domains=[auth_domain.name],
         )
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7720,10 +7934,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "workspace"
         auth_domain_name = "auth-group"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7750,7 +7963,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             ),
         )
         # Add Response for the auth domain group.
-        group_url = self.entry_point + "/api/groups"
+        group_url = self.api_client.sam_entry_point + "/api/groups/v1"
         responses.add(
             responses.GET,
             group_url,
@@ -7807,10 +8020,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7846,10 +8058,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Does not import a workspace that already exists in Django."""
         workspace = factories.WorkspaceFactory.create()
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7889,10 +8100,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_invalid_workspace_name(self):
         """Does not create an object if workspace name is invalid."""
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7927,10 +8137,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -7962,23 +8171,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
-            match=[
-                responses.matchers.query_param_matcher(
-                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
-                )
-            ],
-            status=200,
-            json=[self.get_api_json_response(billing_project_name, workspace_name)],
-        )
-        # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
-        responses.add(
-            responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8024,7 +8219,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Available workspaces API call.
         responses.add(
             responses.GET,
-            self.entry_point + "/api/workspaces",
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8052,7 +8247,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Available workspaces API call.
         responses.add(
             responses.GET,
-            self.entry_point + "/api/workspaces",
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8098,10 +8293,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8129,10 +8323,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8186,10 +8379,9 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
-        workspace_list_url = self.entry_point + "/api/workspaces"
         responses.add(
             responses.GET,
-            workspace_list_url,
+            self.workspace_list_url,
             match=[
                 responses.matchers.query_param_matcher(
                     {"fields": "workspace.namespace,workspace.name,accessLevel"}
@@ -8259,9 +8451,12 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
         self.workspace_to_clone = factories.WorkspaceFactory.create()
-        self.api_url = self.entry_point + "/api/workspaces/{}/{}/clone".format(
-            self.workspace_to_clone.billing_project.name,
-            self.workspace_to_clone.name,
+        self.api_url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/{}/{}/clone".format(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+            )
         )
         self.workspace_type = DefaultWorkspaceAdapter.type
 
@@ -9251,7 +9446,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
-        url = self.entry_point + "/api/workspaces"
+        url = self.api_client.firecloud_entry_point + "/api/workspaces"
         json_data = {
             "namespace": "test-billing-project",
             "name": "test-workspace",
@@ -9856,6 +10051,15 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:workspaces:delete", args=args)
 
+    def get_api_url(self, billing_project_name, workspace_name):
+        return (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+        )
+
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceDelete.as_view()
@@ -9914,15 +10118,15 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -9935,8 +10139,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         object = factories.WorkspaceFactory.create(
             billing_project=billing_project, name="test-workspace"
         )
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name),
@@ -9952,14 +10156,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.WorkspaceFactory.create()
         other_object = factories.WorkspaceFactory.create()
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -9970,7 +10168,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.Workspace.objects.all(),
             models.Workspace.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_delete_workspace_with_auth_domain(self):
         """A workspace can be deleted if it has an auth domain, and the auth domain group is not deleted."""
@@ -9985,8 +10183,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             workspace=object, group=auth_domain
         )
         # object.authorization_domains.add(auth_domain)
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -9997,7 +10195,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The auth domain group still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=auth_domain.pk)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added for workspace.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -10015,8 +10213,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         group = factories.ManagedGroupFactory.create(name="test-group")
         factories.WorkspaceGroupSharingFactory.create(workspace=object, group=group)
-        url = self.entry_point + "/api/workspaces/test-billing-project/test-workspace"
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -10027,7 +10225,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # The group still exists.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         models.ManagedGroup.objects.get(pk=group.pk)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added for workspace.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -10041,14 +10239,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Redirects to the expected page."""
         object = factories.WorkspaceFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -10061,7 +10253,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 args=[DefaultWorkspaceAdapter().get_type()],
             ),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_adapter_success_url(self):
         """Redirects to the expected page."""
@@ -10071,14 +10263,8 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             workspace_type=TestWorkspaceAdapter().get_type()
         )
         # Need to use the client instead of RequestFactory to check redirection url.
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        api_url = self.get_api_url(object.billing_project.name, object.name)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
@@ -10091,22 +10277,16 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 args=[TestWorkspaceAdapter().get_type()],
             ),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.WorkspaceFactory.create()
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + object.billing_project.name
-            + "/"
-            + object.name
-        )
+        api_url = self.get_api_url(object.billing_project.name, object.name)
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace delete test error"},
         )
@@ -10119,7 +10299,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace delete test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.Workspace.objects.count(), 1)
 
@@ -10301,7 +10481,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         return reverse("anvil_consortium_manager:workspaces:audit", args=args)
 
     def get_api_url(self):
-        return self.entry_point + "/api/workspaces"
+        return self.api_client.rawls_entry_point + "/api/workspaces"
 
     def get_api_workspace_json(
         self, billing_project_name, workspace_name, access, auth_domains=[]
@@ -10318,7 +10498,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_workspace_acl_url(self, billing_project_name, workspace_name):
         return (
-            self.entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + billing_project_name
             + "/"
@@ -10555,7 +10735,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a workspace for use in tests.
         self.workspace = factories.WorkspaceFactory.create()
         self.api_url = (
-            self.entry_point
+            self.api_client.rawls_entry_point
             + "/api/workspaces/"
             + self.workspace.billing_project.name
             + "/"
@@ -10939,6 +11119,18 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreate.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -10991,14 +11183,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/MEMBER/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11012,7 +11198,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -11021,14 +11207,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/MEMBER/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11048,14 +11228,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/ADMIN/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "admin", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11069,34 +11243,28 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/ADMIN/"
-            + child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:group_group_membership:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -11155,14 +11323,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=group_1
         )
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + parent.name
-            + "/MEMBER/"
-            + group_2.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(parent.name, "member", group_2.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11174,7 +11336,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_add_a_child_group_to_two_parents(self):
         group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
@@ -11183,14 +11345,8 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=group_1, child_group=child
         )
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + group_2.name
-            + "/MEMBER/"
-            + child.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group_2.name, "member", child.get_email())
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -11202,7 +11358,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_invalid_input_child(self):
         """Posting invalid data to child_group field does not create an object."""
@@ -11413,16 +11569,10 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + parent_group.name
-            + "/MEMBER/"
-            + child_group.get_email()
-        )
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -11443,33 +11593,133 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_parent_group(self):
-        self.fail(
-            "Trying to add a child group to a parent group that you don't have permission for returns a successful code."  # noqa
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_child_group_exists_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a group that exists to a group that doesn't exist returns a successful code."
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a group that doesn't exist to a group that doesn't exist returns a successful code."
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_child_group_does_not_exist_parent_group_exists(self):
-        self.fail(
-            "Trying to add a group that doesn't exist to a group that exists returns a successful code."
+        parent_group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "parent_group": parent_group.pk,
+                "child_group": child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
 
 class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
@@ -11505,6 +11755,18 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreateByParent.as_view()
+
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.parent_group.name
+            + "/"
+            + role
+            + "/"
+            + self.child_group.get_email()
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -11568,14 +11830,8 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
@@ -11591,21 +11847,15 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
@@ -11625,14 +11875,8 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
@@ -11646,32 +11890,26 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name),
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response,
             models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -11900,18 +12138,12 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -11932,7 +12164,97 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
@@ -11970,6 +12292,18 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreateByChild.as_view()
+
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.parent_group.name
+            + "/"
+            + role
+            + "/"
+            + self.child_group.get_email()
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -12033,14 +12367,8 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
@@ -12056,21 +12384,15 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
@@ -12090,14 +12412,8 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
@@ -12111,32 +12427,26 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.child_group.name),
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response,
             models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -12324,18 +12634,12 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("circular", form.non_field_errors()[0])
         self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -12356,7 +12660,97 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
@@ -12395,6 +12789,18 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
     def get_view(self):
         """Return the view being tested."""
         return views.GroupGroupMembershipCreateByParentChild.as_view()
+
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.parent_group.name
+            + "/"
+            + role
+            + "/"
+            + self.child_group.get_email()
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -12481,14 +12887,8 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         self.client.force_login(self.user)
         response = self.client.post(
@@ -12505,21 +12905,15 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name, self.child_group.name),
@@ -12539,14 +12933,8 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name, self.child_group.name),
@@ -12560,32 +12948,26 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
         self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/ADMIN/"
-            + self.child_group.get_email()
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.parent_group.name, self.child_group.name),
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response,
             models.GroupGroupMembership.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_duplicate_object_redirect_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
@@ -12882,18 +13264,12 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         )
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.parent_group.name
-            + "/MEMBER/"
-            + self.child_group.get_email()
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership create test error"},
         )
@@ -12914,7 +13290,97 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             "AnVIL API Error: group group membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group group membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.parent_group.name, self.child_group.name),
+            {
+                "parent_group": self.parent_group.pk,
+                "child_group": self.child_group.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
 
@@ -13028,6 +13494,18 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupGroupMembershipDelete.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -13091,23 +13569,17 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create(
             role=models.GroupGroupMembership.MEMBER
         )
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
         self.assertEqual(obj.history.latest().history_type, "-")
@@ -13117,16 +13589,10 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create(
             role=models.GroupGroupMembership.MEMBER
         )
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name, obj.child_group.name),
@@ -13142,16 +13608,10 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         obj = factories.GroupGroupMembershipFactory.create()
         other_object = factories.GroupGroupMembershipFactory.create()
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
@@ -13162,22 +13622,16 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         obj = factories.GroupGroupMembershipFactory.create()
         parent_group = obj.parent_group
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
         response = self.client.post(
@@ -13185,24 +13639,18 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, parent_group.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         obj = factories.GroupGroupMembershipFactory.create()
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + obj.parent_group.name
-            + "/"
-            + obj.role
-            + "/"
-            + obj.child_group.get_email()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "group group membership delete test error"},
         )
@@ -13218,7 +13666,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group group membership delete test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
@@ -13270,29 +13718,113 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue - covered by model fields")
-    def test_api_no_permission_for_parent_group(self):
-        self.fail(
-            "Trying to remove a child group from a parent group that you don't have permission for returns a successful code."  # noqa
+    def test_api_error_400(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=400,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_child_group_exists_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to remove a group that exists from a group that doesn't exist returns a successful code."
+    def test_api_error_403(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=403,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
-        self.fail(
-            "Trying to remove a group that doesn't exist from a group that doesn't exist returns a successful code."
+    def test_api_error_404(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=404,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_child_group_does_not_exist_parent_group_exists(self):
-        self.fail(
-            "Trying to remove a group that doesn't exist from a group that exists returns a successful code."
+    def test_api_error_500(self):
+        obj = factories.GroupGroupMembershipFactory.create()
+        api_url = self.get_api_url(
+            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=500,
+            json={"message": "group group membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            "AnVIL API Error: group group membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
 
 
 class GroupAccountMembershipDetailTest(TestCase):
@@ -13437,6 +13969,18 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipCreate.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -13489,10 +14033,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        url = (
-            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13506,7 +14048,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -13515,10 +14057,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        url = (
-            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13540,8 +14080,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         group = factories.ManagedGroupFactory.create(name="test-group")
         account = factories.AccountFactory.create(email="email@example.com")
-        url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "admin", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13555,28 +14095,28 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
-        url = self.entry_point + "/api/groups/" + group.name + "/ADMIN/" + account.email
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:group_account_membership:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with the same role."""
@@ -13633,14 +14173,8 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + group_2.name
-            + "/MEMBER/"
-            + account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group_2.name, "member", account.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13652,21 +14186,15 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_add_two_accounts_to_one_group(self):
         group = factories.ManagedGroupFactory.create()
         account_1 = factories.AccountFactory.create(email="test_1@example.com")
         account_2 = factories.AccountFactory.create(email="test_2@example.com")
         factories.GroupAccountMembershipFactory.create(group=group, account=account_1)
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + group.name
-            + "/MEMBER/"
-            + account_2.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url(group.name, "member", account_2.email)
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
@@ -13678,7 +14206,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_invalid_input_account(self):
         """Posting invalid data to account field does not create an object."""
@@ -13820,14 +14348,12 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
-        url = (
-            self.entry_point + "/api/groups/" + group.name + "/MEMBER/" + account.email
-        )
+        api_url = self.get_api_url(group.name, "member", account.email)
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
-            json={"message": "group account membership create test error"},
+            json={"message": "other error"},
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -13843,10 +14369,10 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertIn(
-            "AnVIL API Error: group account membership create test error",
+            "AnVIL API Error: other error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -13885,29 +14411,129 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(active_account, form.fields["account"].queryset)
         self.assertNotIn(inactive_account, form.fields["account"].queryset)
 
-    @skip("AnVIL API issue - covered by model fields")
     def test_api_no_permission_for_group(self):
-        self.fail(
-            "Trying to add a user to a group that you don't have permission for returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_user_exists_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a user that exists to a group that doesn't exist returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_does_not_exist(self):
-        self.fail(
-            "Trying to add a user that doesn't exist to a group that doesn't exist returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_user_does_not_exist_group_exists(self):
-        self.fail(
-            "Trying to add a user that doesn't exist to a group that exists returns a successful code."
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        api_url = self.get_api_url(group.name, "member", account.email)
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "other error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "account": account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: other error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
 
 class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
@@ -13944,14 +14570,17 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipCreateByGroup.as_view()
 
-    def get_api_json_response(
-        self, invites_sent=[], users_not_found=[], users_updated=[]
-    ):
-        return {
-            "invitesSent": invites_sent,
-            "usersNotFound": users_not_found,
-            "usersUpdated": users_updated,
-        }
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.group.name
+            + "/"
+            + role
+            + "/"
+            + self.account.email
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -14020,14 +14649,8 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
@@ -14043,18 +14666,12 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
@@ -14074,14 +14691,8 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
@@ -14097,31 +14708,25 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
@@ -14311,18 +14916,12 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership create test error"},
         )
@@ -14343,7 +14942,97 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group account membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -14401,14 +15090,17 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         """Return the view being tested."""
         return views.GroupAccountMembershipCreateByAccount.as_view()
 
-    def get_api_json_response(
-        self, invites_sent=[], users_not_found=[], users_updated=[]
-    ):
-        return {
-            "invitesSent": invites_sent,
-            "usersNotFound": users_not_found,
-            "usersUpdated": users_updated,
-        }
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.group.name
+            + "/"
+            + role
+            + "/"
+            + self.account.email
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -14480,14 +15172,8 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
@@ -14503,18 +15189,12 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
@@ -14534,14 +15214,8 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
@@ -14557,31 +15231,25 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupAccountMembership object for the same account and group with a different role."""
@@ -14752,18 +15420,12 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.assertIn("required", form.errors["role"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership create test error"},
         )
@@ -14784,7 +15446,97 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             "AnVIL API Error: group account membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -14845,14 +15597,17 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         """Return the view being tested."""
         return views.GroupAccountMembershipCreateByGroupAccount.as_view()
 
-    def get_api_json_response(
-        self, invites_sent=[], users_not_found=[], users_updated=[]
-    ):
-        return {
-            "invitesSent": invites_sent,
-            "usersNotFound": users_not_found,
-            "usersUpdated": users_updated,
-        }
+    def get_api_url(self, role):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + self.group.name
+            + "/"
+            + role
+            + "/"
+            + self.account.email
+        )
+        return url
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -14937,14 +15692,8 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
 
     def test_can_create_an_object_member(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
@@ -14960,18 +15709,12 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
@@ -14991,14 +15734,8 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("admin")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
@@ -15014,31 +15751,25 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/ADMIN/"
-            + self.account.email
-        )
-        responses.add(responses.PUT, url, status=self.api_success_code)
+        api_url = self.get_api_url("member")
+        responses.add(responses.PUT, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_duplicate_object(self):
         """Redirects to detail view if object already exists."""
@@ -15250,18 +15981,12 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.assertIn("valid choice", form.errors["group"][0])
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + self.group.name
-            + "/MEMBER/"
-            + self.account.email
-        )
+        api_url = self.get_api_url("member")
         responses.add(
             responses.PUT,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership create test error"},
         )
@@ -15282,7 +16007,97 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             "AnVIL API Error: group account membership create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=400,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=403,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object was not created.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        api_url = self.get_api_url("member")
+        responses.add(
+            responses.PUT,
+            api_url,
+            status=404,
+            json={"message": "group account membership create test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, self.account.uuid),
+            {
+                "group": self.group.pk,
+                "account": self.account.pk,
+                "role": models.GroupGroupMembership.MEMBER,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership create test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
@@ -15600,6 +16415,18 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.GroupAccountMembershipDelete.as_view()
 
+    def get_api_url(self, group_name, role, email):
+        url = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + email
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -15655,23 +16482,17 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
         object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(object.history.count(), 2)
         self.assertEqual(object.history.latest().history_type, "-")
@@ -15679,16 +16500,10 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_success_message(self):
         """Response includes a success message if successful."""
         object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid),
@@ -15706,16 +16521,10 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """View only deletes the specified pk."""
         object = factories.GroupAccountMembershipFactory.create()
         other_object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
@@ -15726,30 +16535,23 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
         object = factories.GroupAccountMembershipFactory.create()
         group = object.group
-        # Need to use the client instead of RequestFactory to check redirection url.
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-        responses.add(responses.DELETE, url, status=self.api_success_code)
+        responses.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, group.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_redirect_group_not_managed_by_app(self):
         """Redirect get when trying to delete GroupAccountMembership when the group is not managed by the app."""
@@ -15799,22 +16601,16 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that the object still exists.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    def test_api_error(self):
+    def test_api_error_500(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         object = factories.GroupAccountMembershipFactory.create()
-        url = (
-            self.entry_point
-            + "/api/groups/"
-            + object.group.name
-            + "/"
-            + object.role
-            + "/"
-            + object.account.email
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
         responses.add(
             responses.DELETE,
-            url,
+            api_url,
             status=500,
             json={"message": "group account membership delete test error"},
         )
@@ -15830,33 +16626,96 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: group account membership delete test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object still exists.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue - covered by model fields")
-    def test_api_no_permission_for_group(self):
-        self.fail(
-            "Trying to delete a user that exists to a group that you don't have permission for returns a successful code."  # noqa
+    def test_api_error_400(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupAccountMembershipFactory.create()
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=400,
+            json={"message": "group account membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_user_exists_group_does_not_exist(self):
-        self.fail(
-            "Trying to delete a user that exists from a group that doesn't exist returns a successful code."
+    def test_api_error_403(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupAccountMembershipFactory.create()
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=403,
+            json={"message": "group account membership delete test error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
-    @skip("AnVIL API issue")
-    def test_api_user_does_not_exist_group_does_not_exist(self):
-        self.fail(
-            "Trying to delete a user that doesn't exist from a group that doesn't exist returns a successful code."
+    def test_api_error_404(self):
+        """Shows a message if an AnVIL API error occurs."""
+        # Need a client to check messages.
+        object = factories.GroupAccountMembershipFactory.create()
+        api_url = self.get_api_url(
+            object.group.name, object.role.lower(), object.account.email
         )
-
-    @skip("AnVIL API issue")
-    def test_api_user_does_not_exist_group_exists(self):
-        self.fail(
-            "Trying to delete a user that doesn't exist from a group that exists returns a successful code."
+        responses.add(
+            responses.DELETE,
+            api_url,
+            status=404,
+            json={"message": "group account membership delete test error"},
         )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.group.name, object.account.uuid), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn(
+            "AnVIL API Error: group account membership delete test error",
+            str(messages[0]),
+        )
+        responses.assert_call_count(api_url, 1)
+        # Make sure that the object still exists.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
 
 class WorkspaceGroupSharingDetailTest(TestCase):
@@ -16017,6 +16876,17 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreate.as_view()
 
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
+
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
     ):
@@ -16091,13 +16961,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url("test-billing-project", "test-workspace")
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16116,7 +16983,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -16138,13 +17005,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url("test-billing-project", "test-workspace")
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16164,10 +17028,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -16186,13 +17047,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url("test-billing-project", "test-workspace")
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16227,17 +17085,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16257,7 +17108,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -16271,17 +17122,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16300,7 +17144,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -16315,17 +17159,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16343,7 +17180,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:workspace_group_sharing:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
@@ -16416,17 +17253,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16443,7 +17273,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_have_two_groups_for_one_workspace(self):
         group = factories.ManagedGroupFactory.create()
@@ -16460,17 +17290,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace_2.billing_project.name
-            + "/"
-            + workspace_2.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace_2.billing_project.name, workspace_2.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16487,7 +17310,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 2)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_invalid_input_group(self):
         """Posting invalid data to group field does not create an object."""
@@ -16657,17 +17480,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16700,13 +17516,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -16734,7 +17547,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -16743,17 +17556,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -16774,7 +17580,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -16818,6 +17624,17 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreateByWorkspace.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -16961,13 +17778,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -16989,7 +17803,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -17011,13 +17825,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": True,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17040,7 +17851,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -17062,13 +17873,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17107,17 +17915,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17140,7 +17941,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -17154,17 +17955,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17186,7 +17980,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -17201,17 +17995,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17233,7 +18020,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             response,
             models.WorkspaceGroupSharing.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
@@ -17488,13 +18275,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -17525,7 +18309,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -17534,17 +18318,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -17568,7 +18345,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -17612,6 +18389,17 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreateByGroup.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -17745,13 +18533,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17774,7 +18559,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
         self.assertEqual(new_object.workspace, workspace)
         self.assertEqual(new_object.group, group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -17796,13 +18581,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17822,10 +18604,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -17844,13 +18623,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17886,17 +18662,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17918,7 +18687,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -17932,17 +18701,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -17963,7 +18725,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -17978,17 +18740,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18009,7 +18764,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             response,
             models.WorkspaceGroupSharing.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object_with_same_access(self):
         """Cannot create a second object for the same workspace and group with the same access level."""
@@ -18222,13 +18977,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -18258,7 +19010,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -18267,17 +19019,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -18300,7 +19045,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -18346,6 +19091,17 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingCreateByWorkspaceGroup.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -18515,13 +19271,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18544,7 +19297,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.READER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -18566,13 +19319,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": True,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18596,10 +19346,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, True)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
@@ -18618,13 +19365,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18664,17 +19408,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18698,7 +19435,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(new_object.can_compute, False)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_can_create_an_object_owner(self):
         """Posting valid data to the form creates an object."""
@@ -18712,17 +19449,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18745,7 +19475,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         new_object = models.WorkspaceGroupSharing.objects.latest("pk")
         self.assertIsInstance(new_object, models.WorkspaceGroupSharing)
         self.assertEqual(new_object.access, models.WorkspaceGroupSharing.OWNER)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -18760,17 +19490,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -18793,7 +19516,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             response,
             models.WorkspaceGroupSharing.objects.latest("pk").get_absolute_url(),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_get_duplicate_object(self):
         """Redirects to detail view if object already exists."""
@@ -19084,13 +19807,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_not_found=json_data),
@@ -19122,7 +19842,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             views.WorkspaceGroupSharingCreate.message_group_not_found,
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -19131,17 +19851,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # Need a client to check messages.
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + workspace.billing_project.name
-            + "/"
-            + workspace.name
-            + "/acl?inviteUsersNotFound=false"
-        )
+        api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access create test error"},
         )
@@ -19166,7 +19879,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             "AnVIL API Error: workspace group access create test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
@@ -19207,6 +19920,17 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingUpdate.as_view()
+
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
 
     def get_api_json_response(
         self, invites_sent=[], users_not_found=[], users_updated=[]
@@ -19325,13 +20049,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19372,13 +20095,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19394,9 +20116,6 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         obj.refresh_from_db()
         self.assertEqual(obj.access, models.WorkspaceGroupSharing.WRITER)
         self.assertEqual(obj.can_compute, True)
-        # History is added.
-        self.assertEqual(obj.history.count(), 2)
-        self.assertEqual(obj.history.latest().history_type, "~")
 
     def test_invalid_reader_can_compute(self):
         """The form is not valid when trying to update a READER's can_compute value to True."""
@@ -19450,13 +20169,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19492,17 +20210,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19517,7 +20230,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertRedirects(response, obj.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_post_blank_data_access(self):
         """Posting blank data to the access field does not update the object."""
@@ -19559,13 +20272,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19617,17 +20329,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19645,7 +20352,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.group, original_group)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_post_workspace_pk(self):
         """Posting a workspace pk has no effect."""
@@ -19662,17 +20369,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
             json=self.get_api_json_response(users_updated=json_data),
@@ -19690,7 +20392,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         obj.refresh_from_db()
         self.assertEqual(obj.workspace, original_workspace)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
@@ -19698,17 +20400,12 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.WorkspaceGroupSharingFactory.create(
             access=models.WorkspaceGroupSharing.READER
         )
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access update test error"},
         )
@@ -19729,7 +20426,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access update test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
         obj.refresh_from_db()
@@ -19852,6 +20549,17 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.WorkspaceGroupSharingDelete.as_view()
 
+    def get_api_url(self, billing_project_name, workspace_name):
+        url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl?inviteUsersNotFound=false"
+        )
+        return url
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -19949,13 +20657,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -19968,7 +20675,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(obj.history.count(), 2)
         self.assertEqual(obj.history.latest().history_type, "-")
@@ -19993,13 +20700,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20030,17 +20736,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20057,7 +20758,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=other_object.pk),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_delete_with_can_compute(self):
         """Can delete a record with can_compute=True."""
@@ -20081,13 +20782,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": True,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20100,10 +20800,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(obj.history.count(), 2)
-        self.assertEqual(obj.history.latest().history_type, "-")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_url(self):
         """Redirects to the expected page."""
@@ -20116,17 +20813,12 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 "canCompute": False,
             }
         ]
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
@@ -20142,23 +20834,18 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertRedirects(
             response, reverse("anvil_consortium_manager:workspace_group_sharing:list")
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_api_error(self):
         """Shows a message if an AnVIL API error occurs."""
         # Need a client to check messages.
         obj = factories.WorkspaceGroupSharingFactory.create()
-        url = (
-            self.entry_point
-            + "/api/workspaces/"
-            + obj.workspace.billing_project.name
-            + "/"
-            + obj.workspace.name
-            + "/acl?inviteUsersNotFound=false"
+        api_url = self.get_api_url(
+            obj.workspace.billing_project.name, obj.workspace.name
         )
         responses.add(
             responses.PATCH,
-            url,
+            api_url,
             status=500,
             json={"message": "workspace group access delete test error"},
         )
@@ -20177,7 +20864,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             "AnVIL API Error: workspace group access delete test error",
             str(messages[0]),
         )
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that the object was not created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
 
