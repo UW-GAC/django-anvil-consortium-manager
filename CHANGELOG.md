@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Update `anvil_api` to use Rawls and Sam APIs for most API calls. These APIs were recommended over the Firecloud API by Terra support.
+
 ## 0.9 (2023-01-09)
 
 - Bug fix: Do not allow `ManagedGroup` or `Workspace` instances to be deleted if referenced in another model by a protected foreign key.
