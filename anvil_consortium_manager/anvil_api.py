@@ -162,7 +162,7 @@ class AnVILAPIClient:
     def create_group(self, group_name):
         """Create a new group on AnVIL.
 
-        Calls the /api/groups/{group_name} POST method.
+        Calls the /api/groups/v1/{group_name} POST method.
 
         Args:
             group_name (str): Name of the AnVIL group to create.
@@ -170,7 +170,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.firecloud_entry_point + "/api/groups/" + group_name
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name
         return self.auth_session.post(url, 201)
 
     def delete_group(self, group_name):

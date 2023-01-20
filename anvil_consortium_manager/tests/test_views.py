@@ -4603,6 +4603,9 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Return the view being tested."""
         return views.ManagedGroupCreate.as_view()
 
+    def get_api_url(self, group_name):
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -4653,23 +4656,23 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_can_create_an_object(self):
         """Posting valid data to the form creates an object."""
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.name, "test-group")
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
 
     def test_can_create_an_object_with_note(self):
         """Posting valid data including note to the form creates an object."""
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(), {"name": "test-group", "note": "test note"}
@@ -4678,15 +4681,12 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.note, "test note")
-        responses.assert_call_count(url, 1)
-        # History is added.
-        self.assertEqual(new_object.history.count(), 1)
-        self.assertEqual(new_object.history.latest().history_type, "+")
+        responses.assert_call_count(api_url, 1)
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"}, follow=True)
         self.assertIn("messages", response.context)
@@ -4697,13 +4697,13 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
-        responses.add(responses.POST, url, status=self.api_success_code)
+        api_url = self.get_api_url("test-group")
+        responses.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"})
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertRedirects(response, new_object.get_absolute_url())
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two groups with the same name."""
@@ -4763,9 +4763,12 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_api_error_message(self):
         """Shows a message if an AnVIL API error occurs."""
-        url = self.api_client.firecloud_entry_point + "/api/groups/" + "test-group"
+        api_url = self.get_api_url("test-group")
         responses.add(
-            responses.POST, url, status=500, json={"message": "group create test error"}
+            responses.POST,
+            api_url,
+            status=500,
+            json={"message": "group create test error"},
         )
         # Need a client to check messages.
         self.client.force_login(self.user)
@@ -4776,15 +4779,27 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: group create test error", str(messages[0]))
-        responses.assert_call_count(url, 1)
+        responses.assert_call_count(api_url, 1)
         # Make sure that no object is created.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
-    @skip("AnVIL API issue")
     def test_api_group_already_exists(self):
-        self.fail(
-            "AnVIL API returns 201 instead of ??? when trying to create a group that already exists."
+        api_url = self.get_api_url("test-group")
+        responses.add(
+            responses.POST, api_url, status=409, json={"message": "other error"}
         )
+        # Need a client to check messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: other error", str(messages[0]))
+        responses.assert_call_count(api_url, 1)
+        # Make sure that no object is created.
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
 
 class ManagedGroupUpdateTest(TestCase):

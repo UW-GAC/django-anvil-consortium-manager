@@ -693,7 +693,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.api_client.firecloud_entry_point + "/api/groups/" + self.object.name
         )
         self.api_url_create = (
-            self.api_client.firecloud_entry_point + "/api/groups/" + self.object.name
+            self.api_client.sam_entry_point + "/api/groups/v1/" + self.object.name
         )
         self.api_url_delete = (
             self.api_client.sam_entry_point + "/api/groups/v1/" + self.object.name
@@ -738,7 +738,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         responses.assert_call_count(self.api_url_create, 1)
 
     def test_anvil_create_already_exists(self):
-        """Returns documented response code when a group already exists. Unfortunately the actual return code is 201."""
+        """Returns documented response code when a group already exists."""
         responses.add(
             responses.POST,
             self.api_url_create,
