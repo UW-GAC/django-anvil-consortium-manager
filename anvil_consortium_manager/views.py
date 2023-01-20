@@ -315,11 +315,7 @@ class AccountImport(
         try:
             account_exists = object.anvil_exists()
         except AnVILAPIError as e:
-            if e.status_code == 204:
-                # 204 indicates that it is associated with a group.
-                msg = "AnVIL API Error: " + self.message_email_associated_with_group
-            else:
-                msg = "AnVIL API Error: " + str(e)
+            msg = "AnVIL API Error: " + str(e)
             # If the API call failed for some other reason, rerender the page with the responses and show a message.
             messages.add_message(self.request, messages.ERROR, msg)
             return self.render_to_response(self.get_context_data(form=form))
@@ -944,13 +940,6 @@ class ManagedGroupDelete(
                 self.request,
                 messages.ERROR,
                 self.message_could_not_delete_group_from_app,
-            )
-            response = HttpResponseRedirect(self.object.get_absolute_url())
-        except exceptions.AnVILGroupDeletionError:
-            messages.add_message(
-                self.request,
-                messages.ERROR,
-                self.message_could_not_delete_group_from_anvil,
             )
             response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:

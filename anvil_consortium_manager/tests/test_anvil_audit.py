@@ -64,6 +64,17 @@ class AnVILAuditTest(TestCase):
         self.assertIn("not an allowed error", str(e.exception))
         self.assertEqual(self.audit_results.get_errors(), {})
 
+    def test_add_error_when_instance_is_verified(self):
+        """add_error raises a ValueError if the mdoel instance is already verified."""
+        obj = self.model_factory.create()
+        self.audit_results.add_verified(obj)
+        with self.assertRaises(ValueError) as e:
+            self.audit_results.add_error(obj, self.audit_results.TEST_ERROR_1)
+        self.assertIn("already verified", str(e.exception))
+        print(self.audit_results.get_verified())
+        self.assertEqual(self.audit_results.get_verified(), set([obj]))
+        self.assertEqual(self.audit_results.get_errors(), {})
+
     def test_add_not_in_app(self):
         """Can add a record with add_not_in_app"""
         self.audit_results.add_not_in_app("foo")
