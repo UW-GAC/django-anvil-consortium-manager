@@ -159,20 +159,6 @@ class AnVILAPIClient:
         url = self.sam_entry_point + "/api/groups/v1/" + group_name
         return self.auth_session.get(url, 200)
 
-    def get_group(self, group_name):
-        """Get information about a group on AnVIL.
-
-        Calls the /api/groups/{group_name} GET method.
-
-        Args:
-            group_name (str): Name of the AnVIL group to get information about.
-
-        Returns:
-            requests.Response
-        """
-        url = self.firecloud_entry_point + "/api/groups/" + group_name
-        return self.auth_session.get(url, 200)
-
     def create_group(self, group_name):
         """Create a new group on AnVIL.
 
