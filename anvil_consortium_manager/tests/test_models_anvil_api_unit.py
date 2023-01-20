@@ -690,7 +690,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         super().setUp()
         self.object = factories.ManagedGroupFactory()
         self.api_url_exists = (
-            self.api_client.firecloud_entry_point + "/api/groups/" + self.object.name
+            self.api_client.sam_entry_point + "/api/groups/v1/" + self.object.name
         )
         self.api_url_create = (
             self.api_client.sam_entry_point + "/api/groups/v1/" + self.object.name

@@ -438,7 +438,7 @@ class ManagedGroup(TimeStampedModel):
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""
         try:
-            response = AnVILAPIClient().get_group(self.name)
+            response = AnVILAPIClient().get_group_email(self.name)
         except AnVILAPIError404:
             # The group was not found on AnVIL.
             return False

@@ -145,6 +145,20 @@ class AnVILAPIClient:
         url = self.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
         return self.auth_session.get(url, 200)
 
+    def get_group_email(self, group_name):
+        """Get the email of a group on AnVIL.
+
+        Calls the /api/groups/v1/{group_name} GET method.
+
+        Args:
+            group_name (str): Name of the AnVIL group whose email should be retrieved.
+
+        Returns:
+            requests.Response
+        """
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name
+        return self.auth_session.get(url, 200)
+
     def get_group(self, group_name):
         """Get information about a group on AnVIL.
 
