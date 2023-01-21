@@ -355,7 +355,16 @@ class Account(TimeStampedModel, ActivatorModel):
         return audit_results
 
     def get_accessible_workspaces(self):
-        """Get a list of workspaces an Account has access to"""
+        """Get a list of workspaces an Account has access to.
+
+        To be considered accessible, two criteria must be met:
+        1. The workspace is shared the Account via a group (or parent group).
+        2. The Account must be part of all groups used as the authorization domain for the workspace,
+        either directly or indirectly.
+
+        Returns:
+            A list of workspaces that are accessible to the account.
+        """
         # get a list of all groups that an Account is in, directly and indirectly;
         group_memberships = self.groupaccountmembership_set.all()
         groups = []
