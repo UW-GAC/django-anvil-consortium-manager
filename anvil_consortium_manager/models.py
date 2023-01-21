@@ -1024,6 +1024,7 @@ class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""
 
     workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
+    history = HistoricalRecords(inherit=True)
 
     class Meta:
         abstract = True
