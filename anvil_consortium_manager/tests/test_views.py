@@ -1477,6 +1477,7 @@ class AccountDetailTest(TestCase):
         self.assertIn("accessible_workspace_table", response.context_data)
         self.assertEqual(
             len(response.context_data["accessible_workspace_table"].rows), 2
+        )
 
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
