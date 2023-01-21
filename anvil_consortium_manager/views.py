@@ -251,7 +251,6 @@ class SingleAccountMixin(object):
 
 class AccountDetail(
     auth.AnVILConsortiumManagerViewRequired,
-    SingleTableMixin,
     SingleAccountMixin,
     DetailView,
 ):
