@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     # Your stuff: custom apps go here
     "anvil_consortium_manager",
     # Test app
-    "anvil_consortium_manager.tests.adapter_app",
+    "anvil_consortium_manager.tests.test_app",
 ]
 
 
@@ -128,3 +128,6 @@ ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "account activation"
 ANVIL_WORKSPACE_ADAPTERS = [
     "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
+ANVIL_ACCOUNT_ADAPTER = (
+    "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
+)

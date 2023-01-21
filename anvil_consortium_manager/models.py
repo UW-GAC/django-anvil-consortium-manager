@@ -12,7 +12,7 @@ from simple_history.models import HistoricalRecords, HistoricForeignKey
 
 from . import anvil_audit, exceptions
 from .adapters.workspace import workspace_adapter_registry
-from .anvil_api import AnVILAPIClient, AnVILAPIError404
+from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
 
 
@@ -39,8 +39,12 @@ class AnVILProjectManagerAccess(models.Model):
 class BillingProject(TimeStampedModel):
     """A model to store information about AnVIL billing projects."""
 
-    name = models.SlugField(max_length=64, unique=True)
-    has_app_as_user = models.BooleanField()
+    name = models.SlugField(
+        max_length=64, unique=True, help_text="Name of the Billing Project on AnVIL."
+    )
+    has_app_as_user = models.BooleanField(
+        help_text="Indicator of whether the app is a user in this BillingProject."
+    )
     note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
@@ -143,9 +147,14 @@ class UserEmailEntry(TimeStampedModel, models.Model):
     def anvil_account_exists(self):
         """Check if this account exists on AnVIL."""
         try:
-            AnVILAPIClient().get_proxy_group(self.email)
+            AnVILAPIClient().get_user(self.email)
         except AnVILAPIError404:
             return False
+        except AnVILAPIError as e:
+            if e.status_code == 204:
+                return False
+            else:
+                raise
         return True
 
     def save(self, *args, **kwargs):
@@ -217,32 +226,36 @@ class Account(TimeStampedModel, ActivatorModel):
     )
 
     # TODO: Consider using CIEmailField if using postgres.
-    email = models.EmailField(unique=True)
-    """Email associated with this account on AnVIL."""
-
-    is_service_account = models.BooleanField()
-    """Indicator of whether this account is a service account or a user account."""
-
-    uuid = models.UUIDField(default=uuid.uuid4)
-    """UUID for use in urls."""
+    email = models.EmailField(
+        unique=True, help_text="""Email associated with this account on AnVIL."""
+    )
+    is_service_account = models.BooleanField(
+        help_text="""Indicator of whether this account is a service account or a user account."""
+    )
+    uuid = models.UUIDField(default=uuid.uuid4, help_text="""UUID for use in urls.""")
     # Use on_delete=PROTECT here because additional things need to happen when an account is deleted,
     # and we're not sure what that should be. Deactivate the account or and/or remove it from groups?
     # I think it's unlikely we will be deleting users frequently, and we can revisit this if necessary.
     # So table it for later.
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        help_text="User linked to this AnVIL account.",
     )
-    is_service_account = models.BooleanField()
-
+    is_service_account = models.BooleanField(
+        help_text="Indicator of whether this Account is a service account."
+    )
     verified_email_entry = models.OneToOneField(
         UserEmailEntry,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
         related_name="verified_account",
+        help_text="""The UserEmailEntry object used to verify the email,
+        if the account was created by a user linking their email.""",
     )
-    """The UserEmailEntry object used to verify the email, if the account was created by a user linking their email."""
-
     note = models.TextField(blank=True, help_text="Additional notes.")
 
     history = HistoricalRecords()
@@ -323,9 +336,14 @@ class Account(TimeStampedModel, ActivatorModel):
             Boolean indicator of whether ``email`` is associated with an account on AnVIL.
         """
         try:
-            AnVILAPIClient().get_proxy_group(self.email)
+            AnVILAPIClient().get_user(self.email)
         except AnVILAPIError404:
             return False
+        except AnVILAPIError as e:
+            if e.status_code == 204:
+                return False
+            else:
+                raise
         return True
 
     def anvil_remove_from_groups(self):
@@ -389,8 +407,12 @@ class Account(TimeStampedModel, ActivatorModel):
 class ManagedGroup(TimeStampedModel):
     """A model to store information about AnVIL Managed Groups."""
 
-    name = models.SlugField(max_length=64, unique=True)
-    is_managed_by_app = models.BooleanField(default=True)
+    name = models.SlugField(
+        max_length=64, unique=True, help_text="Name of the group on AnVIL."
+    )
+    is_managed_by_app = models.BooleanField(
+        default=True, help_text="Indicator of whether this group is managed by the app."
+    )
     note = models.TextField(blank=True, help_text="Additional notes.")
     history = HistoricalRecords()
 
@@ -447,7 +469,7 @@ class ManagedGroup(TimeStampedModel):
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""
         try:
-            response = AnVILAPIClient().get_group(self.name)
+            response = AnVILAPIClient().get_group_email(self.name)
         except AnVILAPIError404:
             # The group was not found on AnVIL.
             return False
@@ -459,17 +481,9 @@ class ManagedGroup(TimeStampedModel):
 
     def anvil_delete(self):
         """Deletes the group on AnVIL."""
-        # Try to delete the group.
+        # The firecloud API occasionally returend successful codes when a group could not be deleted.
+        # Switching to the SAM API seems to have fixed this.
         AnVILAPIClient().delete_group(self.name)
-        # The API for deleting groups is buggy, so verify that it was actually deleted.
-        try:
-            AnVILAPIClient().get_group(self.name)
-        except AnVILAPIError404:
-            # The group was actually deleted, as requested.
-            pass
-        else:
-            # No exception was raised, so the group still exists. Raise a specific exception for this.
-            raise exceptions.AnVILGroupDeletionError(self.name)
 
     @classmethod
     def anvil_import(cls, group_name, **kwargs):
@@ -490,7 +504,7 @@ class ManagedGroup(TimeStampedModel):
         except StopIteration:
             raise exceptions.AnVILNotGroupMemberError
         # Check if we're an admin.
-        if group_details["role"] == "Admin":
+        if group_details["role"].lower() == "admin":
             group.is_managed_by_app = True
         group.save()
         return group
@@ -503,10 +517,12 @@ class ManagedGroup(TimeStampedModel):
         """
         api_client = AnVILAPIClient()
         audit_results = anvil_audit.ManagedGroupMembershipAuditResults()
-        response = api_client.get_group(self.name)
+        response = api_client.get_group_members(self.name)
         # Convert to case-insensitive emails.
-        members_in_anvil = [x.lower() for x in response.json()["membersEmails"]]
-        admins_in_anvil = [x.lower() for x in response.json()["adminsEmails"]]
+        members_in_anvil = [x.lower() for x in response.json()]
+        response = api_client.get_group_admins(self.name)
+        # Convert to case-insensitive emails.
+        admins_in_anvil = [x.lower() for x in response.json()]
         # Remove the service account as admin.
         admins_in_anvil.remove(
             api_client.auth_session.credentials.service_account_email.lower()
@@ -593,7 +609,7 @@ class ManagedGroup(TimeStampedModel):
         groups_on_anvil = {}
         for group_details in response.json():
             group_name = group_details["groupName"]
-            role = group_details["role"]
+            role = group_details["role"].lower()
             try:
                 groups_on_anvil[group_name] = groups_on_anvil[group_name] + [role]
             except KeyError:
@@ -607,7 +623,7 @@ class ManagedGroup(TimeStampedModel):
             else:
                 # Check role.
                 if group.is_managed_by_app:
-                    if "Admin" not in group_roles:
+                    if "admin" not in group_roles:
                         audit_results.add_error(
                             group, audit_results.ERROR_DIFFERENT_ROLE
                         )
@@ -616,7 +632,7 @@ class ManagedGroup(TimeStampedModel):
                             audit_results.add_error(
                                 group, audit_results.ERROR_GROUP_MEMBERSHIP
                             )
-                elif not group.is_managed_by_app and "Admin" in group_roles:
+                elif not group.is_managed_by_app and "admin" in group_roles:
                     audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
 
             try:
@@ -654,18 +670,28 @@ class Workspace(TimeStampedModel):
     # NB: In the APIs some documentation, this is also referred to as "namespace".
     # In other places, it is "billing project".
     # For internal consistency, call it "billing project" here.
-    billing_project = models.ForeignKey("BillingProject", on_delete=models.PROTECT)
-    name = models.SlugField(max_length=64)
+    billing_project = models.ForeignKey(
+        "BillingProject",
+        on_delete=models.PROTECT,
+        help_text="Billing project associated with this Workspace.",
+    )
+    name = models.SlugField(
+        max_length=64,
+        help_text="Name of the workspace on AnVIL, not including billing project name.",
+    )
     # This makes it possible to easily select the authorization domains in the WorkspaceCreateForm.
     # However, it does not create a record in django-simple-history for creating the many-to-many field.
     authorization_domains = models.ManyToManyField(
-        "ManagedGroup", through="WorkspaceAuthorizationDomain", blank=True
+        "ManagedGroup",
+        through="WorkspaceAuthorizationDomain",
+        blank=True,
+        help_text="Authorization domain(s) for this workspace.",
     )
-    note = models.TextField(blank=True)
-
+    note = models.TextField(blank=True, help_text="Additional notes.")
     # If this doesn't work easily, we could switch to using generic relationships.
-    workspace_type = models.CharField(max_length=255)
-    """Workspace data type as indicated in an adapter."""
+    workspace_type = models.CharField(
+        max_length=255, help_text="""Workspace data type as indicated by an adapter."""
+    )
 
     history = HistoricalRecords()
 
@@ -1029,9 +1055,13 @@ class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""
 
     workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
+    history = HistoricalRecords(inherit=True)
 
     class Meta:
         abstract = True
+
+    def __str__(self):
+        return str(self.workspace)
 
     def get_absolute_url(self):
         return self.workspace.get_absolute_url()
@@ -1046,8 +1076,16 @@ class DefaultWorkspaceData(BaseWorkspaceData):
 class WorkspaceAuthorizationDomain(TimeStampedModel):
     """Through table for the Workspace authorization_domains field."""
 
-    group = models.ForeignKey(ManagedGroup, on_delete=models.PROTECT)
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE)
+    group = models.ForeignKey(
+        ManagedGroup,
+        on_delete=models.PROTECT,
+        help_text="Group used as an authorization domain.",
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        help_text="Workspace for which this group is an authorization domain.",
+    )
     history = HistoricalRecords()
 
     class Meta:
@@ -1131,13 +1169,13 @@ class GroupGroupMembership(TimeStampedModel):
     def anvil_create(self):
         """Add the child group to the parent group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.parent_group.name, self.role, self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.get_email()
         )
 
     def anvil_delete(self):
         """Remove the child group from the parent on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.parent_group.name, self.role, self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.get_email()
         )
 
 
@@ -1184,13 +1222,13 @@ class GroupAccountMembership(TimeStampedModel):
     def anvil_create(self):
         """Add the account to the group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.group.name, self.role, self.account.email
+            self.group.name, self.role.lower(), self.account.email
         )
 
     def anvil_delete(self):
         """Remove the account from the group on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.group.name, self.role, self.account.email
+            self.group.name, self.role.lower(), self.account.email
         )
 
 
@@ -1213,17 +1251,31 @@ class WorkspaceGroupSharing(TimeStampedModel):
     ]
     """Allowed choices for the ``access`` field."""
 
-    group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT)
-    """ManagedGroup that has access to the Workspace in ``workspace``."""
-
-    workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
-    """Workspace that the ManagedGroup ``group`` has access to."""
-
-    access = models.CharField(max_length=10, choices=ACCESS_CHOICES, default=READER)
-    """Access type that this ``ManagedGroup`` has to this ``Workspace``."""
-
-    can_compute = models.BooleanField(default=False)
-    """Indicator of whether the group has ``can_compute`` permission. "READERS" cannot be granted compute permission."""
+    group = models.ForeignKey(
+        "ManagedGroup",
+        on_delete=models.PROTECT,
+        help_text="""ManagedGroup that has access to this Workspace.""",
+    )
+    workspace = models.ForeignKey(
+        "Workspace",
+        on_delete=models.CASCADE,
+        help_text="""Workspace that the ManagedGroup has access to.""",
+    )
+    access = models.CharField(
+        max_length=10,
+        choices=ACCESS_CHOICES,
+        default=READER,
+        help_text="""Access level that this ManagedGroup has to this Workspace.
+            A "Reader" can see data int the workspace.
+            A "Writer" can add or remove data in the workspace.
+            An "Owner" can share the workspace with others or delete the workspace.""",
+    )
+    can_compute = models.BooleanField(
+        default=False,
+        verbose_name="Allow compute in this workspace?",
+        help_text="""Indicator of whether the group is able to perform compute in this workspace.
+        "READERS" cannot be granted compute permission.""",
+    )
 
     history = HistoricalRecords()
     """Historical records from django-simple-history."""

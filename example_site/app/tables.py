@@ -12,5 +12,6 @@ class ExampleWorkspaceDataTable(tables.Table):
         fields = (
             "exampleworkspacedata__study_name",
             "exampleworkspacedata__consent_code",
+            "billing_project",
             "name",
         )

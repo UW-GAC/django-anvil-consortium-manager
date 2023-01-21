@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
+from django.db.models import ProtectedError, RestrictedError
 from django.forms import Form, HiddenInput, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
@@ -23,6 +24,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import __version__, anvil_api, auth, exceptions, forms, models, tables
+from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 from .tokens import account_verification_token
@@ -196,6 +198,7 @@ class BillingProjectDetail(
 class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
+    ordering = ("name",)
 
 
 class BillingProjectAutocomplete(
@@ -298,6 +301,11 @@ class AccountImport(
     message_account_does_not_exist = "This account does not exist on AnVIL."
     """A string that can be displayed if the account does not exist on AnVIL."""
 
+    message_email_associated_with_group = (
+        "This email is associated with a group, not a user."
+    )
+    """A string that can be displayed if the account does not exist on AnVIL."""
+
     form_class = forms.AccountImportForm
     """A string that can be displayed if the account does not exist on AnVIL."""
 
@@ -310,10 +318,9 @@ class AccountImport(
         try:
             account_exists = object.anvil_exists()
         except AnVILAPIError as e:
+            msg = "AnVIL API Error: " + str(e)
             # If the API call failed for some other reason, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, msg)
             return self.render_to_response(self.get_context_data(form=form))
         if not account_exists:
             messages.add_message(
@@ -513,13 +520,25 @@ class AccountLinkVerify(LoginRequiredMixin, RedirectView):
 
 
 class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+    """View to display a list of Accounts.
+
+    The table class can be customized using in a custom Account adapter."""
+
     model = models.Account
-    table_class = tables.AccountTable
+    ordering = ("email",)
+
+    def get_table_class(self):
+        adapter = get_account_adapter()
+        return adapter().get_list_table_class()
 
 
 class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
-    table_class = tables.AccountTable
+    ordering = ("email",)
+
+    def get_table_class(self):
+        adapter = get_account_adapter()
+        return adapter().get_list_table_class()
 
     def get_queryset(self):
         return self.model.objects.active()
@@ -527,7 +546,11 @@ class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView
 
 class AccountInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.Account
-    table_class = tables.AccountTable
+    ordering = ("email",)
+
+    def get_table_class(self):
+        adapter = get_account_adapter()
+        return adapter().get_list_table_class()
 
     def get_queryset(self):
         return self.model.objects.inactive()
@@ -693,6 +716,14 @@ class AccountAutocomplete(
 ):
     """View to provide autocompletion for Accounts. Only active accounts are included."""
 
+    def get_result_label(self, item):
+        adapter = get_account_adapter()
+        return adapter().get_autocomplete_label(item)
+
+    def get_selected_result_label(self, item):
+        adapter = get_account_adapter()
+        return adapter().get_autocomplete_label(item)
+
     def get_queryset(self):
         # Only active accounts.
         qs = models.Account.objects.filter(
@@ -700,8 +731,9 @@ class AccountAutocomplete(
         ).order_by("email")
 
         if self.q:
-            # When Accounts are linked to users, we'll want to figure out how to filter on fields in the user model.
-            qs = qs.filter(email__icontains=self.q)
+            # Use the account adapter to process the query.
+            adapter = get_account_adapter()
+            qs = adapter().get_autocomplete_queryset(qs, self.q)
 
         return qs
 
@@ -803,6 +835,7 @@ class ManagedGroupUpdate(
 class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
+    ordering = ("name",)
 
 
 class ManagedGroupDelete(
@@ -823,7 +856,10 @@ class ManagedGroupDelete(
         "Cannot delete group because it has access to at least one workspace."
     )
     # In some cases the AnVIL API returns a successful code but the group is not deleted.
-    message_could_not_delete_group = (
+    message_could_not_delete_group_from_app = (
+        "Cannot delete group from app due to foreign key restrictions."
+    )
+    message_could_not_delete_group_from_anvil = (
         "Cannot not delete group from AnVIL - unknown reason."
     )
     success_msg = "Successfully deleted Group on AnVIL."
@@ -897,20 +933,26 @@ class ManagedGroupDelete(
             return HttpResponseRedirect(self.object.get_absolute_url())
 
         try:
-            self.object.anvil_delete()
-        except exceptions.AnVILGroupDeletionError:
+            with transaction.atomic():
+                self.object.delete()
+                self.object.anvil_delete()
+                self.add_success_message()
+                response = HttpResponseRedirect(self.get_success_url())
+        except (ProtectedError, RestrictedError):
             messages.add_message(
-                self.request, messages.ERROR, self.message_could_not_delete_group
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_group_from_app,
             )
-            return HttpResponseRedirect(self.object.get_absolute_url())
+            response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             # Rerender the same page with an error message.
-            return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+            response = self.render_to_response(self.get_context_data())
+        return response
 
 
 class ManagedGroupAutocomplete(
@@ -1583,6 +1625,10 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
 
     model = models.Workspace
     table_class = tables.WorkspaceTable
+    ordering = (
+        "billing_project__name",
+        "name",
+    )
 
 
 class WorkspaceListByType(
@@ -1591,6 +1637,10 @@ class WorkspaceListByType(
     """Display a list of workspaces of the given ``workspace_type``."""
 
     model = models.Workspace
+    ordering = (
+        "billing_project__name",
+        "name",
+    )
 
     def get_queryset(self):
         return self.model.objects.filter(workspace_type=self.adapter.get_type())
@@ -1606,6 +1656,9 @@ class WorkspaceDelete(
 ):
     model = models.Workspace
     success_msg = "Successfully deleted Workspace on AnVIL."
+    message_could_not_delete_workspace_from_app = (
+        "Cannot delete workspace from app due to foreign key restrictions."
+    )
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1642,15 +1695,26 @@ class WorkspaceDelete(
         """
         self.object = self.get_object()
         try:
-            self.object.anvil_delete()
+            with transaction.atomic():
+                self.object.delete()
+                self.object.anvil_delete()
+                self.add_success_message()
+                response = HttpResponseRedirect(self.get_success_url())
+        except (ProtectedError, RestrictedError):
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_could_not_delete_workspace_from_app,
+            )
+            response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
             messages.add_message(
                 self.request, messages.ERROR, "AnVIL API Error: " + str(e)
             )
             # Rerender the same page with an error message.
-            return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+            response = self.render_to_response(self.get_context_data())
+        return response
 
 
 class WorkspaceAudit(
@@ -1983,6 +2047,10 @@ class GroupGroupMembershipList(
 ):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
+    ordering = (
+        "parent_group__name",
+        "child_group__name",
+    )
 
 
 class GroupGroupMembershipDelete(
@@ -2313,6 +2381,10 @@ class GroupAccountMembershipList(
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+    ordering = (
+        "group__name",
+        "account__email",
+    )
 
 
 class GroupAccountMembershipActiveList(
@@ -2322,6 +2394,10 @@ class GroupAccountMembershipActiveList(
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+    ordering = (
+        "group__name",
+        "account__email",
+    )
 
     def get_queryset(self):
         return self.model.objects.filter(account__status=models.Account.ACTIVE_STATUS)
@@ -2334,6 +2410,10 @@ class GroupAccountMembershipInactiveList(
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
+    ordering = (
+        "group__name",
+        "account__email",
+    )
 
     def get_queryset(self):
         return self.model.objects.filter(account__status=models.Account.INACTIVE_STATUS)
@@ -2745,6 +2825,11 @@ class WorkspaceGroupSharingList(
 ):
     model = models.WorkspaceGroupSharing
     table_class = tables.WorkspaceGroupSharingTable
+    ordering = (
+        "workspace__billing_project__name",
+        "workspace__name",
+        "group__name",
+    )
 
 
 class WorkspaceGroupSharingDelete(

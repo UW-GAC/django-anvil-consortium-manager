@@ -1,11 +1,18 @@
 """Default adapters for the app."""
 
 from .. import forms, models, tables
+from .account import BaseAccountAdapter
 from .workspace import BaseWorkspaceAdapter
 
 
+class DefaultAccountAdapter(BaseAccountAdapter):
+    """Default account adapter for use with the app."""
+
+    list_table_class = tables.AccountTable
+
+
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
-    """Default adapter for use with the app."""
+    """Default workspace adapter for use with the app."""
 
     name = "Workspace"
     type = "workspace"

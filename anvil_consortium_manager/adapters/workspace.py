@@ -59,7 +59,9 @@ class BaseWorkspaceAdapter(ABC):
     def get_list_table_class(self):
         """Return the table class to use for the WorkspaceListByType view."""
         if not self.list_table_class:
-            raise ImproperlyConfigured("Set `list_table_class`.")
+            raise ImproperlyConfigured(
+                "Set `list_table_class` in `{}`.".format(type(self))
+            )
         return self.list_table_class
 
     def get_workspace_data_model(self):

@@ -26,10 +26,17 @@ class AnVILAPIClient:
 
     Attributes:
         auth_session: An ``AnVILAPISession`` instance.
+        firecloud_entry_point (str): The entry point for the Firecloud API.
+        rawls_entry_point (str): The entry point for the Rawls API.
+        sam_entry_point (str): The entry point for the SAM API.
     """
 
-    # Class variable for auth session.
+    # Class variable for auth session. Set in init method.
     auth_session = None
+    firecloud_entry_point = "https://api.firecloud.org"
+    # Terra support recommended that we use these APIs instead of the Firecloud API.
+    rawls_entry_point = "https://rawls.dsde-prod.broadinstitute.org"
+    sam_entry_point = "https://sam.dsde-prod.broadinstitute.org"
 
     def __init__(self):
         """Initialize a new AnVILAPIClient instance.
@@ -54,29 +61,29 @@ class AnVILAPIClient:
     def status(self):
         """Get the current AnVIL status.
 
-        Calls the /status GET method.
+        Calls the Firecloud /status GET method.
 
         Returns:
             requests.Response
         """
-        method = "status"
-        return self.auth_session.get(method, 200)
+        url = self.firecloud_entry_point + "/status"
+        return self.auth_session.get(url, 200)
 
     def me(self):
         """Get the current authenticated user.
 
-        Calls the /me GET method.
+        Calls the Firecloud /me GET method.
 
         Returns:
             requests.Response
         """
-        method = "me?userDetailsOnly=true"
-        return self.auth_session.get(method, 200)
+        url = self.firecloud_entry_point + "/me?userDetailsOnly=true"
+        return self.auth_session.get(url, 200)
 
-    def get_proxy_group(self, email):
-        """Get the proxy group created for a specific AnVIL account email.
+    def get_user(self, email):
+        """Get the subject IDs associated with a specific AnVIL account email.
 
-        Calls the /api/proxyGroup GET method.
+        Calls the Sam /api/users/v1/{email} GET method.
 
         Args:
             email (str): Email address associated with the AnVIL account
@@ -84,13 +91,13 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/proxyGroup/" + email
-        return self.auth_session.get(method, 200)
+        url = self.sam_entry_point + "/api/users/v1/" + email
+        return self.auth_session.get(url, 200)
 
     def get_billing_project(self, billing_project):
         """Get information about the specified billing project.
 
-        Calls the /api/billing/v2 GET method.
+        Calls the Sam /api/billing/v2 GET method.
 
         Args:
             billing_project (str): Name of the billing project.
@@ -98,24 +105,24 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/billing/v2/" + billing_project
-        return self.auth_session.get(method, 200)
+        url = self.rawls_entry_point + "/api/billing/v2/" + billing_project
+        return self.auth_session.get(url, 200)
 
     def get_groups(self):
         """Get a list of groups that the authenticated account is part of.
 
-        Calls the /api/groups GET method.
+        Calls the Sam /api/groups GET method.
 
         Returns:
             requests.Response
         """
-        method = "api/groups"
-        return self.auth_session.get(method, 200)
+        url = self.sam_entry_point + "/api/groups/v1"
+        return self.auth_session.get(url, 200)
 
-    def get_group(self, group_name):
-        """Get information about a group on AnVIL.
+    def get_group_members(self, group_name):
+        """Get group members on AnVIL.
 
-        Calls the /api/groups/{group_name} GET method.
+        Calls the Sam /api/groups/{group_name}/member GET method.
 
         Args:
             group_name (str): Name of the AnVIL group to get information about.
@@ -123,13 +130,41 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/groups/" + group_name
-        return self.auth_session.get(method, 200)
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        return self.auth_session.get(url, 200)
+
+    def get_group_admins(self, group_name):
+        """Get group admins on AnVIL.
+
+        Calls the Sam /api/groups/{group_name}/admin GET method.
+
+        Args:
+            group_name (str): Name of the AnVIL group to get information about.
+
+        Returns:
+            requests.Response
+        """
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        return self.auth_session.get(url, 200)
+
+    def get_group_email(self, group_name):
+        """Get the email of a group on AnVIL.
+
+        Calls the Sam /api/groups/v1/{group_name} GET method.
+
+        Args:
+            group_name (str): Name of the AnVIL group whose email should be retrieved.
+
+        Returns:
+            requests.Response
+        """
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name
+        return self.auth_session.get(url, 200)
 
     def create_group(self, group_name):
         """Create a new group on AnVIL.
 
-        Calls the /api/groups/{group_name} POST method.
+        Calls the Sam /api/groups/v1/{group_name} POST method.
 
         Args:
             group_name (str): Name of the AnVIL group to create.
@@ -137,13 +172,13 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/groups/" + group_name
-        return self.auth_session.post(method, 201)
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name
+        return self.auth_session.post(url, 201)
 
     def delete_group(self, group_name):
         """Delete a group on AnVIL.
 
-        Calls the /api/groups/{group_name} DELETE method.
+        Calls the Sam /api/groups/v1/{group_name} DELETE method.
 
         Args:
             group_name (str): Name of the group to delete. You must be an admin of the group to use this method.
@@ -151,13 +186,13 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/groups/" + group_name
-        return self.auth_session.delete(method, 204)
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name
+        return self.auth_session.delete(url, 204)
 
     def add_user_to_group(self, group_name, role, user_email):
         """Add a user to a group on AnVIL. You must be an admin of the group to use this method.
 
-        Calls the /api/groups/{group_name}/{role}/{user_email} PUT method.
+        Calls the Sam /api/groups/v1/{group_name}/{role}/{user_email} PUT method.
 
         Args:
             group_name (str): Name of the group to add this user to.
@@ -167,29 +202,45 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/groups/" + group_name + "/" + role + "/" + user_email
-        return self.auth_session.put(method, 204)
+        url = (
+            self.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + user_email
+        )
+        return self.auth_session.put(url, 204)
 
     def remove_user_from_group(self, group_name, role, user_email):
         """Remove a user from a group on AnVIL. You must be an admin of the group to use this method.
 
-        Calls the /api/groups/{group_name}/{role}/{user_email} DELETE method.
+        Calls the Sam /api/groups/v1/{group_name}/{role}/{user_email} DELETE method.
 
         Args:
-            group_name (str): Name of the group to remvoe this user from.
+            group_name (str): Name of the group to remove this user from.
             role (str): Role that this user should be removed from (either MEMBER or ADMIN).
             user_email (str): AnVIL email account of the user to add.
 
         Returns:
             requests.Response
         """
-        method = "api/groups/" + group_name + "/" + role + "/" + user_email
-        return self.auth_session.delete(method, 204)
+        url = (
+            self.sam_entry_point
+            + "/api/groups/v1/"
+            + group_name
+            + "/"
+            + role
+            + "/"
+            + user_email
+        )
+        return self.auth_session.delete(url, 204)
 
     def list_workspaces(self, fields=None):
         """Get a list of workspaces that you have access to on AnVIL.
 
-        Calls the /api/workspaces GET method.
+        Calls the Rawls /api/workspaces GET method.
 
         Args:
             fields (list): List of strings indicating which fields to return. See API documentation
@@ -198,16 +249,16 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/workspaces"
+        url = self.rawls_entry_point + "/api/workspaces"
         if fields:
-            return self.auth_session.get(method, 200, params={"fields": fields})
+            return self.auth_session.get(url, 200, params={"fields": fields})
         else:
-            return self.auth_session.get(method, 200)
+            return self.auth_session.get(url, 200)
 
     def get_workspace(self, workspace_namespace, workspace_name):
         """Get information about a specific workspace on AnVIL.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name} GET method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name} GET method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace.
@@ -216,8 +267,14 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/workspaces/" + workspace_namespace + "/" + workspace_name
-        return self.auth_session.get(method, 200)
+        url = (
+            self.rawls_entry_point
+            + "/api/workspaces/"
+            + workspace_namespace
+            + "/"
+            + workspace_name
+        )
+        return self.auth_session.get(url, 200)
 
     def create_workspace(
         self, workspace_namespace, workspace_name, authorization_domains=[]
@@ -235,7 +292,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/workspaces"
+        url = self.rawls_entry_point + "/api/workspaces"
         body = {
             "namespace": workspace_namespace,
             "name": workspace_name,
@@ -249,7 +306,7 @@ class AnVILAPIClient:
             auth_domain = [{"membersGroupName": g} for g in authorization_domains]
             body["authorizationDomain"] = auth_domain
 
-        return self.auth_session.post(method, 201, json=body)
+        return self.auth_session.post(url, 201, json=body)
 
     def clone_workspace(
         self,
@@ -277,9 +334,12 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/workspaces/{namespace}/{name}/clone".format(
-            namespace=existing_workspace_namespace,
-            name=existing_workspace_name,
+        url = (
+            self.rawls_entry_point
+            + "/api/workspaces/{namespace}/{name}/clone".format(
+                namespace=existing_workspace_namespace,
+                name=existing_workspace_name,
+            )
         )
         body = {
             "namespace": cloned_workspace_namespace,
@@ -294,12 +354,12 @@ class AnVILAPIClient:
             auth_domain = [{"membersGroupName": g} for g in authorization_domains]
             body["authorizationDomain"] = auth_domain
 
-        return self.auth_session.post(method, 201, json=body)
+        return self.auth_session.post(url, 201, json=body)
 
     def delete_workspace(self, workspace_namespace, workspace_name):
         """Delete a workspace on AnVIL. You must be an owner of the workspace to use this method.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name} DELETE method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name} DELETE method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace to be deleted.
@@ -308,15 +368,21 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/workspaces/" + workspace_namespace + "/" + workspace_name
-        return self.auth_session.delete(method, 202)
+        url = (
+            self.rawls_entry_point
+            + "/api/workspaces/"
+            + workspace_namespace
+            + "/"
+            + workspace_name
+        )
+        return self.auth_session.delete(url, 202)
 
     def get_workspace_acl(self, workspace_namespace, workspace_name):
         """Get the list of access controls for the workspace.
         This list includes both users and groups that have access.
         You must be an owner of this workspace to use this method.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name}/acl GET method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name}/acl GET method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace.
@@ -325,14 +391,21 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = "api/workspaces/" + workspace_namespace + "/" + workspace_name + "/acl"
-        return self.auth_session.get(method, 200)
+        url = (
+            self.rawls_entry_point
+            + "/api/workspaces/"
+            + workspace_namespace
+            + "/"
+            + workspace_name
+            + "/acl"
+        )
+        return self.auth_session.get(url, 200)
 
     def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
         """Update the access controls for a workspace for a set of users and/or groups.
         You must be an owner of the workspace to use this method.
 
-        Calls the /api/workspaces/{workspace_namespace}/{workspace_name} PATCH method.
+        Calls the Rawls /api/workspaces/{workspace_namespace}/{workspace_name} PATCH method.
 
         Args:
             workspace_namespace (str): The namespace (or billing project) of the workspace.
@@ -343,8 +416,8 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        method = (
-            "api/workspaces/"
+        url = self.rawls_entry_point + (
+            "/api/workspaces/"
             + workspace_namespace
             + "/"
             + workspace_name
@@ -353,7 +426,7 @@ class AnVILAPIClient:
         # False here means do not invite unregistered users.
         updates = json.dumps(acl_updates)
         return self.auth_session.patch(
-            method, 200, headers={"Content-type": "application/json"}, data=updates
+            url, 200, headers={"Content-type": "application/json"}, data=updates
         )
 
 
@@ -364,10 +437,7 @@ class AnVILAPISession(AuthorizedSession):
         entry_point (str): The API entry point.
     """
 
-    # May eventually want to make this a setting?
-    entry_point = "https://api.firecloud.org/"
-
-    def get(self, method, success_code=None, *args, **kwargs):
+    def get(self, url, success_code=None, *args, **kwargs):
         """Make a get request to the specified method after prepending ``entry_point``.
 
         Add the request and the response to the log.
@@ -376,7 +446,7 @@ class AnVILAPISession(AuthorizedSession):
         match, raise an ``AnVILAPIError`` exception (or one of its subclasses).
 
         Args:
-            method (str): the API method to call (e.g., "/api/get_groups")
+            url (str): the API url to call
             success_code (int, optional): The
             *args: Passed to ``AuthorizedSession.get``
             **kwargs: Passed to ``AuthorizedSession.get``
@@ -388,7 +458,6 @@ class AnVILAPISession(AuthorizedSession):
             AnVILAPIError: If the response code is not the expected ``success_code``. May be a subclass based on the
             response code (e.g., ``AnVILAPIError404``).
         """
-        url = self.entry_point + method
         self._log_request("GET", url, *args, **kwargs)
         response = super().get(url, *args, **kwargs)
         self._log_response(response)
@@ -396,7 +465,7 @@ class AnVILAPISession(AuthorizedSession):
             self._handle_response(success_code, response)
         return response
 
-    def post(self, method, success_code=None, *args, **kwargs):
+    def post(self, url, success_code=None, *args, **kwargs):
         """Make a post request to the specified method after prepending ``entry_point``.
 
         Add the request and the response to the log.
@@ -405,7 +474,7 @@ class AnVILAPISession(AuthorizedSession):
         match, raise an ``AnVILAPIError`` exception (or one of its subclasses).
 
         Args:
-            method (str): the API method to call (e.g., "/api/get_groups")
+            method (str): the API method to call
             success_code (int, optional): The
             *args: Passed to ``AuthorizedSession.post``
             **kwargs: Passed to ``AuthorizedSession.post``
@@ -417,7 +486,6 @@ class AnVILAPISession(AuthorizedSession):
             AnVILAPIError: If the response code is not the expected ``success_code``. May be a subclass based on the
             response code (e.g., ``AnVILAPIError404``).
         """
-        url = self.entry_point + method
         self._log_request("POST", url, *args, **kwargs)
         response = super().post(url, *args, **kwargs)
         self._log_response(response)
@@ -425,7 +493,7 @@ class AnVILAPISession(AuthorizedSession):
             self._handle_response(success_code, response)
         return response
 
-    def delete(self, method, success_code=None, *args, **kwargs):
+    def delete(self, url, success_code=None, *args, **kwargs):
         """Make a delete request to the specified method after prepending ``entry_point``.
 
         Add the request and the response to the log.
@@ -434,7 +502,7 @@ class AnVILAPISession(AuthorizedSession):
         match, raise an ``AnVILAPIError`` exception (or one of its subclasses).
 
         Args:
-            method (str): the API method to call (e.g., "/api/get_groups")
+            method (str): the API method to call
             success_code (int, optional): The
             *args: Passed to ``AuthorizedSession.delete``
             **kwargs: Passed to ``AuthorizedSession.delete``
@@ -446,7 +514,6 @@ class AnVILAPISession(AuthorizedSession):
             AnVILAPIError: If the response code is not the expected ``success_code``. May be a subclass based on the
             response code (e.g., ``AnVILAPIError404``).
         """
-        url = self.entry_point + method
         self._log_request("DELETE", url, *args, **kwargs)
         response = super().delete(url, *args, **kwargs)
         self._log_response(response)
@@ -454,7 +521,7 @@ class AnVILAPISession(AuthorizedSession):
             self._handle_response(success_code, response)
         return response
 
-    def patch(self, method, success_code=None, *args, **kwargs):
+    def patch(self, url, success_code=None, *args, **kwargs):
         """Make a patch request to the specified method after prepending ``entry_point``.
 
         Add the request and the response to the log.
@@ -463,7 +530,7 @@ class AnVILAPISession(AuthorizedSession):
         match, raise an ``AnVILAPIError`` exception (or one of its subclasses).
 
         Args:
-            method (str): the API method to call (e.g., "/api/get_groups")
+            method (str): the API url to call
             success_code (int, optional): The
             *args: Passed to ``AuthorizedSession.patch``
             **kwargs: Passed to ``AuthorizedSession.patch``
@@ -475,7 +542,6 @@ class AnVILAPISession(AuthorizedSession):
             AnVILAPIError: If the response code is not the expected ``success_code``. May be a subclass based on the
             response code (e.g., ``AnVILAPIError404``).
         """
-        url = self.entry_point + method
         self._log_request("PATCH", url, *args, **kwargs)
         response = super().patch(url, *args, **kwargs)
         self._log_response(response)
@@ -483,14 +549,14 @@ class AnVILAPISession(AuthorizedSession):
             self._handle_response(success_code, response)
         return response
 
-    def put(self, method, success_code=None, *args, **kwargs):
+    def put(self, url, success_code=None, *args, **kwargs):
         """Make a put request to the specified method after prepending ``entry_point``.
 
         If ``success_code`` is not ``None``, check that the response code matches ``success_code``. If they do not
         match, raise an ``AnVILAPIError`` exception (or one of its subclasses).
 
         Args:
-            method (str): the API method to call (e.g., "/api/get_groups")
+            method (str): the API url to call
             success_code (int, optional): The
             *args: Passed to ``AuthorizedSession.put``
             **kwargs: Passed to ``AuthorizedSession.put``
@@ -502,7 +568,6 @@ class AnVILAPISession(AuthorizedSession):
             AnVILAPIError: If the response code is not the expected ``success_code``. May be a subclass based on the
             response code (e.g., ``AnVILAPIError404``).
         """
-        url = self.entry_point + method
         self._log_request("PUT", url, *args, **kwargs)
         response = super().put(url, *args, **kwargs)
         self._log_response(response)

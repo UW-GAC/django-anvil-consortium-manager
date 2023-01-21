@@ -1,15 +1,27 @@
 # Change log
 
-# Devel
+## Devel
 
+- Update `anvil_api` to use Rawls and Sam APIs for most API calls. These APIs were recommended over the Firecloud API by Terra support.
+- Modify `AnVILAPIMockTestMixin` to use the `responses.RequestMock` object instead of just adding to `responses`.
+- In tests, require that all registered requests are actually requested.
+- Add a default `__str__` method to `BaseWorkspaceData`.
+- Add a django-simple-history `history` field to `BaseWorkspaceData`. Any model inheriting from `BaseWorkspaceData` to have history, which is consistent with other models in the app.
 - Add the `Account.get_accessible_workspaces` method.
 - Show the workspaces accessible to an Account in the `AccountDetail` view.
 
-## 0.8 (unreleased)
+## 0.9 (2023-01-09)
+
+- Bug fix: Do not allow `ManagedGroup` or `Workspace` instances to be deleted if referenced in another model by a protected foreign key.
+- Add a customizable adapter for `Accounts`. This requires setting the `ANVIL_ACCOUNT_ADAPTER` setting in your settings file.
+- Various UI updates: the detail box on object detail pages now uses a description list instead of an unordered list.
+
+## 0.8 (2022-12-27)
 
 - Change `Workspace` link on AnVIL to use `anvil.terra.bio` instead of `app.terra.bio`
 - Add ability to send a notification email when a user links their AnVIL account.
 - Display the linked user in the `AccountTable` table.
+- Show a link to the linked user on the `AccountDetail` page.
 
 ## 0.7 (2022-12-07)
 
@@ -22,7 +34,7 @@
 
 ## 0.5 (2022-11-22)
 
-- Add an optional note field to the `BillingProject`, `Account`, `ManagedGroup`, and `Workspace` models.
+- Add an optional note field to the  `BillingProject`, `Account`, `ManagedGroup`, and `Workspace` models.
 - Add a user guide to the documentation.
 
 ## 0.4 (2022-11-09)

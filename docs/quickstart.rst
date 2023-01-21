@@ -17,8 +17,8 @@ Configure
 
 You will need a service account credentials file that is registered with Terra. XXX Get info from Ben about this.
 
-Settings
-~~~~~~~~
+Required Settings
+~~~~~~~~~~~~~~~~~
 
 1. Add ``anvil_consortium_manager`` to your ``INSTALLED_APPS``.
 
@@ -39,13 +39,16 @@ Settings
 
   Alternatively, if you would like to browse the app without making any API, just set this to a random string (e.g., ``"foo"``).
 
-3. Set the default workspace type in your settings file.
+3. Set the default account and workspace adapters in your settings file.
 
   .. code-block:: python
 
-      ANVIL_WORKSPACE_ADAPTERS=["anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter"]
+      ANVIL_WORKSPACE_ADAPTERS = ["anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter"]
+      ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
 
-  See the :ref:`Advanced Usage` section for information about customized workspace types.
+  See the :ref:`Advanced Usage` section for information about customizing Accounts and Workspaces.
+  Note that you can have multiple Workspace adapters, but only one Account adapter.
+
 
 4. If you would like to use the templates provided with the app, add the ``"anvil_consortium_manager.context_processors.workspace_adapter"`` context processor to your settings file. This allows the templates to know about which types of workspace adapters that are registered (step 3), and then display links to the correct URLs.
 
