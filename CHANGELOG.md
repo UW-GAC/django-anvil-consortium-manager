@@ -1,5 +1,10 @@
 # Change log
 
+# Devel
+
+- Add the `Account.get_accessible_workspaces` method.
+- Show the workspaces accessible to an Account in the `AccountDetail` view.
+
 ## 0.8 (unreleased)
 
 - Change `Workspace` link on AnVIL to use `anvil.terra.bio` instead of `app.terra.bio`
