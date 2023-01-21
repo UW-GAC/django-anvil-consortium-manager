@@ -1386,6 +1386,99 @@ class AccountDetailTest(TestCase):
             ),
         )
 
+    def test_accessible_workspace_table(self):
+        """The accessible workspace table exists."""
+        obj = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["accessible_workspace_table"],
+            tables.WorkspaceGroupSharingTable,
+        )
+
+    def test_accessible_workspace_none(self):
+        """No accessible_workspaces are shown if there are no accessible workspace for the account."""
+        account = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 0
+        )
+
+    def test_accessible_workspace_one(self):
+        """One accessible_workspace is shown if there is one accessible workspace for the account."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 1
+        )
+
+    def test_accessible_workspace_two(self):
+        """Two accessible_workspaces are shown if there are two accessible workspaces for the account."""
+        account = factories.AccountFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace_2, group=group
+        )
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace_1, group=group
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 2
+        )
+
+    def test_accessible_workspace_for_only_that_user(self):
+        """Only shows accessible_workspace that is accessible to the account."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 0
+        )
+
+    def test_accessible_workspace_one_workspace_shared_twice(self):
+        """Two records are shown for the same workspace if it is shared with an account twice."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
+        factories.GroupAccountMembershipFactory.create(group=group_2, account=account)
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace,
+            group=group_1,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace,
+            group=group_2,
+            access=models.WorkspaceGroupSharing.WRITER,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 2
+        )
+
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
         # Dynamically set the get_absolute_url method. This is hacky...

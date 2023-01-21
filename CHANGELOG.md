@@ -7,6 +7,8 @@
 - In tests, require that all registered requests are actually requested.
 - Add a default `__str__` method to `BaseWorkspaceData`.
 - Add a django-simple-history `history` field to `BaseWorkspaceData`. Any model inheriting from `BaseWorkspaceData` to have history, which is consistent with other models in the app.
+- Add the `Account.get_accessible_workspaces` method.
+- Show the workspaces accessible to an Account in the `AccountDetail` view.
 
 ## 0.9 (2023-01-09)
 

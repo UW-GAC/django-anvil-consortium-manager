@@ -69,6 +69,25 @@
       </div>
     </div>
   </div>
+
+  <div class="my-3">
+    <div class="accordion" id="accordionAccessibleWorkspaces">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingAccessibleWorkspacesOne">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAccessibleWorkspacesOne" aria-expanded="false" aria-controls="collapseAccessibleWorkspacesOne">
+            <span class="fa-solid fa-user-group mx-2"></span>
+            View workspaces that this account can access
+            <span class="badge mx-2 bg-secondary pill"> {{ accessible_workspace_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseAccessibleWorkspacesOne" class="accordion-collapse collapse" aria-labelledby="headingAccessibleWorkspacesOne" data-bs-parent="#accordionAccessibleWorkspaces">
+          <div class="accordion-body">
+            {% render_table accessible_workspace_table %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock after_panel %}
 
 

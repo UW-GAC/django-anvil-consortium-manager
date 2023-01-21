@@ -372,6 +372,37 @@ class Account(TimeStampedModel, ActivatorModel):
                 audit_results.add_verified(account)
         return audit_results
 
+    def get_accessible_workspaces(self):
+        """Get a list of workspaces an Account has access to.
+
+        To be considered accessible, two criteria must be met:
+        1. The workspace is shared the Account via a group (or parent group).
+        2. The Account must be part of all groups used as the authorization domain for the workspace,
+        either directly or indirectly.
+
+        Returns:
+            A list of workspaces that are accessible to the account.
+        """
+        # get a list of all groups that an Account is in, directly and indirectly;
+        group_memberships = self.groupaccountmembership_set.all()
+        groups = []
+        for membership in group_memberships:
+            groups.append(membership.group)
+            parents = membership.group.get_all_parents()
+
+            for group in parents:
+                groups.append(group)
+        # check what workspaces have been shared with any of those groups;
+        workspaces = WorkspaceGroupSharing.objects.filter(group__in=groups)
+        # check if all the auth domains for each workspace are in the Account's set of groups.
+        accessible_workspaces = set()
+        for ws in workspaces:
+            authorized_domains = list(ws.workspace.authorization_domains.all())
+            # import ipdb; ipdb.set_trace()
+            if len(set(authorized_domains).difference(set(groups))) == 0:
+                accessible_workspaces.add(ws.workspace)
+        return accessible_workspaces
+
 
 class ManagedGroup(TimeStampedModel):
     """A model to store information about AnVIL Managed Groups."""
