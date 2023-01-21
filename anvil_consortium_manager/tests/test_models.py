@@ -1460,6 +1460,11 @@ class WorkspaceDataTest(TestCase):
             workspace_data.get_absolute_url(), workspace.get_absolute_url()
         )
 
+    def test_str(self):
+        workspace = factories.WorkspaceFactory.create()
+        workspace_data = DefaultWorkspaceData(workspace=workspace)
+        self.assertEqual(str(workspace_data), str(workspace))
+
 
 class WorkspaceAuthorizationDomainTestCase(TestCase):
     def test_model_saving(self):
