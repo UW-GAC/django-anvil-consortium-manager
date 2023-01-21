@@ -276,7 +276,7 @@ class AccountDetail(
         )
 
         context["accessible_workspace_table"] = tables.WorkspaceTable(
-            self.object.get_accessible_workspaces(),
+            self.object.get_accessible_workspaces(), exclude=["number_groups"]
         )
         return context
 
