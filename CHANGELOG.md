@@ -5,6 +5,8 @@
 - Update `anvil_api` to use Rawls and Sam APIs for most API calls. These APIs were recommended over the Firecloud API by Terra support.
 - Modify `AnVILAPIMockTestMixin` to use the `responses.RequestMock` object instead of just adding to `responses`.
 - In tests, require that all registered requests are actually requested.
+- Add a default `__str__` method to `BaseWorkspaceData`.
+- Add a django-simple-history `history` field to `BaseWorkspaceData`. Any model inheriting from `BaseWorkspaceData` to have history, which is consistent with other models in the app.
 
 ## 0.9 (2023-01-09)
 
