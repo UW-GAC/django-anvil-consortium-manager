@@ -371,7 +371,8 @@ class Account(TimeStampedModel, ActivatorModel):
         accessible_workspaces = set()
         for ws in workspaces:
             authorized_domains = list(ws.workspace.authorization_domains.all())
-            if all(x in groups for x in authorized_domains):
+            # import ipdb; ipdb.set_trace()
+            if len(set(authorized_domains).difference(set(groups))) == 0:
                 accessible_workspaces.add(ws.workspace)
         return accessible_workspaces
 
