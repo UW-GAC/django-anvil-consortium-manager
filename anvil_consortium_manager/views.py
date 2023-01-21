@@ -275,8 +275,12 @@ class AccountDetail(
             exclude=["account", "is_service_account"],
         )
 
-        context["accessible_workspace_table"] = tables.WorkspaceTable(
-            self.object.get_accessible_workspaces(), exclude=["number_groups"]
+        workspace_sharing = models.WorkspaceGroupSharing.objects.filter(
+            workspace__in=self.object.get_accessible_workspaces()
+        ).order_by("workspace", "group")
+
+        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingTable(
+            workspace_sharing
         )
         return context
 

@@ -1369,7 +1369,8 @@ class AccountDetailTest(TestCase):
         response = self.client.get(self.get_url(obj.uuid))
         self.assertIn("accessible_workspace_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["accessible_workspace_table"], tables.WorkspaceTable
+            response.context_data["accessible_workspace_table"],
+            tables.WorkspaceGroupSharingTable,
         )
 
     def test_accessible_workspace_none(self):
@@ -1427,6 +1428,31 @@ class AccountDetailTest(TestCase):
         self.assertIn("accessible_workspace_table", response.context_data)
         self.assertEqual(
             len(response.context_data["accessible_workspace_table"].rows), 0
+        )
+
+    def test_accessible_workspace_one_workspace_shared_twice(self):
+        """Two records are shown for the same workspace if it is shared with an account twice."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
+        factories.GroupAccountMembershipFactory.create(group=group_2, account=account)
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace,
+            group=group_1,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace,
+            group=group_2,
+            access=models.WorkspaceGroupSharing.WRITER,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertEqual(
+            len(response.context_data["accessible_workspace_table"].rows), 2
         )
 
 
