@@ -1028,6 +1028,9 @@ class BaseWorkspaceData(models.Model):
     class Meta:
         abstract = True
 
+    def __str__(self):
+        return str(self.workspace)
+
     def get_absolute_url(self):
         return self.workspace.get_absolute_url()
 
