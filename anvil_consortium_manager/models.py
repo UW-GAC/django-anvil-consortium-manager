@@ -1024,9 +1024,13 @@ class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""
 
     workspace = models.OneToOneField(Workspace, on_delete=models.CASCADE)
+    history = HistoricalRecords(inherit=True)
 
     class Meta:
         abstract = True
+
+    def __str__(self):
+        return str(self.workspace)
 
     def get_absolute_url(self):
         return self.workspace.get_absolute_url()
