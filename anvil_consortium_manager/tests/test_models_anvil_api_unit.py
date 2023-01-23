@@ -20,11 +20,11 @@ class BillingProjectAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_anvil_exists_does_exist(self):
-        self.response_mock.add(responses.GET, self.url, status=200)
+        self.anvil_response_mock.add(responses.GET, self.url, status=200)
         self.assertIs(self.object.anvil_exists(), True)
 
     def test_anvil_exists_does_not_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET, self.url, status=404, json={"message": "mock message"}
         )
         self.assertIs(self.object.anvil_exists(), False)
@@ -48,7 +48,7 @@ class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
     def test_can_import_billing_project_where_we_are_users(self):
         """A BillingProject is created if there if we are users of the billing project on AnVIL."""
         billing_project_name = "test-billing-project"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name),
             status=200,
@@ -68,7 +68,7 @@ class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
     def test_cannot_import_billing_project_where_we_are_not_users(self):
         """No BillingProjects are created if there if we are not users of the billing project."""
         billing_project_name = "test-billing-project"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name),
             status=404,
@@ -94,7 +94,7 @@ class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
     def test_anvil_import_api_internal_error(self):
         """No BillingProjects are created if there is an internal error from the AnVIL API."""
         billing_project_name = "test-billing-project"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name),
             status=500,  # error response code.
@@ -108,7 +108,7 @@ class BillingProjectAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase)
     def test_anvil_import_api_error_other(self):
         """No BillingProjects are created if there is some other error from the AnVIL API."""
         billing_project_name = "test-billing-project"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name),
             status=499,  # error response code.
@@ -156,7 +156,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if one billing project exists in the app and in AnVIL."""
         billing_project = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url = self.get_api_url(billing_project.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -173,7 +173,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception with one billing project exists in the app but not on AnVIL."""
         billing_project = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url = self.get_api_url(billing_project.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=404,
@@ -193,7 +193,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit returns None if there are two billing projects and both exist on AnVIL."""
         billing_project_1 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_1 = self.get_api_url(billing_project_1.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_1,
             status=200,
@@ -201,7 +201,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         billing_project_2 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_2 = self.get_api_url(billing_project_2.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_2,
             status=200,
@@ -220,7 +220,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if two billing projects exist in the app but the first is not on AnVIL."""
         billing_project_1 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_1 = self.get_api_url(billing_project_1.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_1,
             status=404,
@@ -228,7 +228,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         billing_project_2 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_2 = self.get_api_url(billing_project_2.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_2,
             status=200,
@@ -248,7 +248,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if there are two billing projects that exist in the app but not in AnVIL."""
         billing_project_1 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_1 = self.get_api_url(billing_project_1.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_1,
             status=404,
@@ -256,7 +256,7 @@ class BillingProjectAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         billing_project_2 = factories.BillingProjectFactory.create(has_app_as_user=True)
         api_url_2 = self.get_api_url(billing_project_2.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_2,
             status=404,
@@ -306,7 +306,7 @@ class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         }
 
     def test_anvil_account_exists_does_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -315,13 +315,13 @@ class UserEmailEntryAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIs(self.object.anvil_account_exists(), True)
 
     def test_anvil_account_exists_does_not_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET, self.api_url, status=404, json={"message": "mock message"}
         )
         self.assertIs(self.object.anvil_account_exists(), False)
 
     def test_anvil_account_exists_associated_with_group(self):
-        self.response_mock.add(responses.GET, self.api_url, status=204)
+        self.anvil_response_mock.add(responses.GET, self.api_url, status=204)
         self.assertIs(self.object.anvil_account_exists(), False)
 
 
@@ -360,7 +360,7 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         }
 
     def test_anvil_exists_does_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -369,13 +369,13 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIs(self.object.anvil_exists(), True)
 
     def test_anvil_exists_does_not_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET, self.api_url, status=404, json={"message": "mock message"}
         )
         self.assertIs(self.object.anvil_exists(), False)
 
     def test_anvil_exists_email_is_group(self):
-        self.response_mock.add(responses.GET, self.api_url, status=204)
+        self.anvil_response_mock.add(responses.GET, self.api_url, status=204)
         self.assertIs(self.object.anvil_exists(), False)
 
     def test_anvil_remove_from_groups_in_no_groups(self):
@@ -388,7 +388,9 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         membership = factories.GroupAccountMembershipFactory.create(account=self.object)
         group = membership.group
         remove_from_group_url = self.get_api_remove_from_group_url(group.name)
-        self.response_mock.add(responses.DELETE, remove_from_group_url, status=204)
+        self.anvil_response_mock.add(
+            responses.DELETE, remove_from_group_url, status=204
+        )
         self.object.anvil_remove_from_groups()
         # The membership was removed.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
@@ -402,8 +404,12 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_2 = memberships[1].group
         remove_from_group_url_1 = self.get_api_remove_from_group_url(group_1.name)
         remove_from_group_url_2 = self.get_api_remove_from_group_url(group_2.name)
-        self.response_mock.add(responses.DELETE, remove_from_group_url_1, status=204)
-        self.response_mock.add(responses.DELETE, remove_from_group_url_2, status=204)
+        self.anvil_response_mock.add(
+            responses.DELETE, remove_from_group_url_1, status=204
+        )
+        self.anvil_response_mock.add(
+            responses.DELETE, remove_from_group_url_2, status=204
+        )
         self.object.anvil_remove_from_groups()
         # The membership was removed.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
@@ -415,8 +421,10 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_2 = self.object.groupaccountmembership_set.all()[1].group
         remove_from_group_url_1 = self.get_api_remove_from_group_url(group_1.name)
         remove_from_group_url_2 = self.get_api_remove_from_group_url(group_2.name)
-        self.response_mock.add(responses.DELETE, remove_from_group_url_1, status=204)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
+            responses.DELETE, remove_from_group_url_1, status=204
+        )
+        self.anvil_response_mock.add(
             responses.DELETE,
             remove_from_group_url_2,
             status=409,
@@ -439,7 +447,9 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         membership = factories.GroupAccountMembershipFactory.create(account=self.object)
         group = membership.group
         remove_from_group_url = self.get_api_remove_from_group_url(group.name)
-        self.response_mock.add(responses.DELETE, remove_from_group_url, status=204)
+        self.anvil_response_mock.add(
+            responses.DELETE, remove_from_group_url, status=204
+        )
         self.object.deactivate()
         self.object.refresh_from_db()
         self.assertEqual(self.object.status, self.object.INACTIVE_STATUS)
@@ -455,8 +465,12 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_2 = memberships[1].group
         remove_from_group_url_1 = self.get_api_remove_from_group_url(group_1.name)
         remove_from_group_url_2 = self.get_api_remove_from_group_url(group_2.name)
-        self.response_mock.add(responses.DELETE, remove_from_group_url_1, status=204)
-        self.response_mock.add(responses.DELETE, remove_from_group_url_2, status=204)
+        self.anvil_response_mock.add(
+            responses.DELETE, remove_from_group_url_1, status=204
+        )
+        self.anvil_response_mock.add(
+            responses.DELETE, remove_from_group_url_2, status=204
+        )
         self.object.deactivate()
         self.object.refresh_from_db()
         self.assertEqual(self.object.status, self.object.INACTIVE_STATUS)
@@ -479,7 +493,7 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         membership = factories.GroupAccountMembershipFactory.create(account=self.object)
         group = membership.group
         add_to_group_url = self.get_api_add_to_group_url(group.name)
-        self.response_mock.add(responses.PUT, add_to_group_url, status=204)
+        self.anvil_response_mock.add(responses.PUT, add_to_group_url, status=204)
         self.object.reactivate()
         self.object.refresh_from_db()
         self.assertEqual(self.object.status, self.object.ACTIVE_STATUS)
@@ -497,8 +511,8 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_2 = memberships[1].group
         add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name)
         add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name)
-        self.response_mock.add(responses.PUT, add_to_group_url_1, status=204)
-        self.response_mock.add(responses.PUT, add_to_group_url_2, status=204)
+        self.anvil_response_mock.add(responses.PUT, add_to_group_url_1, status=204)
+        self.anvil_response_mock.add(responses.PUT, add_to_group_url_2, status=204)
         self.object.reactivate()
         self.object.refresh_from_db()
         self.assertEqual(self.object.status, self.object.ACTIVE_STATUS)
@@ -533,7 +547,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
         account = factories.AccountFactory.create()
         api_url = self.get_api_url(account.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -549,7 +563,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if one billing project exists in the app but not on AnVIL."""
         account = factories.AccountFactory.create()
         api_url = self.get_api_url(account.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=404,
@@ -567,7 +581,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit returns None if if two accounts exist in both the app and AnVIL."""
         account_1 = factories.AccountFactory.create()
         api_url_1 = self.get_api_url(account_1.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_1,
             status=200,
@@ -575,7 +589,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         account_2 = factories.AccountFactory.create()
         api_url_2 = self.get_api_url(account_2.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_2,
             status=200,
@@ -591,7 +605,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if two accounts exist in the app but the first is not not on AnVIL."""
         account_1 = factories.AccountFactory.create()
         api_url_1 = self.get_api_url(account_1.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_1,
             status=404,
@@ -599,7 +613,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         account_2 = factories.AccountFactory.create()
         api_url_2 = self.get_api_url(account_2.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_2,
             status=200,
@@ -617,7 +631,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if there are two accounts that exist in the app but not in AnVIL."""
         account_1 = factories.AccountFactory.create()
         api_url_1 = self.get_api_url(account_1.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_1,
             status=404,
@@ -625,7 +639,7 @@ class AccountAnVILAuditAnVILAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         account_2 = factories.AccountFactory.create()
         api_url_2 = self.get_api_url(account_2.email)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_2,
             status=404,
@@ -670,13 +684,13 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_anvil_exists_does_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET, self.api_url_exists, status=200, json=self.object.get_email()
         )
         self.assertIs(self.object.anvil_exists(), True)
 
     def test_anvil_exists_does_not_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url_exists,
             status=404,
@@ -685,7 +699,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIs(self.object.anvil_exists(), False)
 
     def test_anvil_exists_internal_error(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url_exists,
             status=500,
@@ -695,7 +709,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_exists()
 
     def test_anvil_create_successful(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.api_url_create,
             status=201,
@@ -705,7 +719,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_create_already_exists(self):
         """Returns documented response code when a group already exists."""
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.api_url_create,
             status=409,
@@ -717,7 +731,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_create_internal_error(
         self,
     ):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.api_url_create,
             status=500,
@@ -727,7 +741,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_create_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.api_url_create,
             status=499,
@@ -737,7 +751,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_delete_existing(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=204,
@@ -746,7 +760,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.anvil_delete()
 
     def test_anvil_delete_forbidden(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=403,
@@ -756,7 +770,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_not_found(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=404,
@@ -766,7 +780,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_in_use(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=409,
@@ -776,7 +790,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=499,
@@ -808,7 +822,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_admin_on_anvil(self):
         group_name = "test-group"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(),
             status=200,  # successful response code.
@@ -831,7 +845,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_admin_on_anvil_lowercase(self):
         group_name = "test-group"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(),
             status=200,  # successful response code.
@@ -854,7 +868,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_member_on_anviL(self):
         group_name = "test-group"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(),
             status=200,  # successful response code.
@@ -877,7 +891,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_member_on_anvil_lowercase(self):
         group_name = "test-group"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(),
             status=200,  # successful response code.
@@ -900,7 +914,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_not_member_or_admin(self):
         group_name = "test-group"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(),
             status=200,  # successful response code.
@@ -934,7 +948,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_api_internal_error(self):
         group_name = "test-group"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(),
             status=500,
@@ -994,7 +1008,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_audit_no_groups(self):
         """anvil_audit works correct if there are no ManagedGroups in the app."""
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1011,21 +1025,21 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
             json=[self.get_api_group_json(group.name, "admin")],
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1042,21 +1056,21 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
             json=[self.get_api_group_json(group.name, "admin")],
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1073,7 +1087,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1090,7 +1104,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1107,7 +1121,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
         group = factories.ManagedGroupFactory.create()
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1126,7 +1140,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if one group exists in the app as an admin but the role on AnVIL is member."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1145,7 +1159,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if one group exists in the app as an member but the role on AnVIL is admin."""
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1165,7 +1179,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_1 = factories.ManagedGroupFactory.create()
         group_2 = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1175,14 +1189,14 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         api_url_members = self.get_api_url_members(group_1.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group_1.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1200,7 +1214,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_1 = factories.ManagedGroupFactory.create()
         group_2 = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1210,14 +1224,14 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         api_url_members = self.get_api_url_members(group_1.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group_1.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1235,21 +1249,21 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_1 = factories.ManagedGroupFactory.create()
         group_2 = factories.ManagedGroupFactory.create()
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
             json=[self.get_api_group_json(group_2.name, "admin")],
         )
         api_url_members = self.get_api_url_members(group_2.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group_2.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1269,7 +1283,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group_1 = factories.ManagedGroupFactory.create()
         group_2 = factories.ManagedGroupFactory.create()
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1291,7 +1305,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_audit_one_group_member_missing_in_app(self):
         """anvil_audit works correctly if the service account is a member of a group not in the app."""
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1307,7 +1321,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_audit_one_group_admin_missing_in_app(self):
         """anvil_audit works correctly if the service account is an admin of a group not in the app."""
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1323,7 +1337,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_audit_two_groups_missing_in_app(self):
         """anvil_audit works correctly if there are two groups in AnVIL that aren't in the app."""
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -1347,21 +1361,21 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group)
         api_url = self.get_api_groups_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
             json=[self.get_api_group_json(group.name, "Admin")],
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1412,14 +1426,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has no members."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1439,14 +1453,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[membership.account.email]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1467,7 +1481,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         membership_1 = factories.GroupAccountMembershipFactory.create(group=group)
         membership_2 = factories.GroupAccountMembershipFactory.create(group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -1476,7 +1490,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1498,14 +1512,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupAccountMembershipFactory.create(group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1529,14 +1543,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         membership_1 = factories.GroupAccountMembershipFactory.create(group=group)
         membership_2 = factories.GroupAccountMembershipFactory.create(group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1561,14 +1575,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has one account member not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=["test-member@example.com"]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1589,7 +1603,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has two account member not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -1598,7 +1612,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1628,14 +1642,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             group=group, account__email="tEsT-mEmBeR@example.com"
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=["Test-Member@example.com"]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1657,14 +1671,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             group=group, role=models.GroupAccountMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1689,14 +1703,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             group=group, role=models.GroupAccountMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1722,14 +1736,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             group=group, role=models.GroupAccountMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1757,14 +1771,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             group=group, role=models.GroupAccountMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1789,14 +1803,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has one account member not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1817,14 +1831,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has two account admin not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1853,14 +1867,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             role=models.GroupAccountMembership.ADMIN,
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1882,14 +1896,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             group=group, role=models.GroupAccountMembership.MEMBER
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1914,7 +1928,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupGroupMembershipFactory.create(parent_group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -1923,7 +1937,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1944,7 +1958,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         membership_1 = factories.GroupGroupMembershipFactory.create(parent_group=group)
         membership_2 = factories.GroupGroupMembershipFactory.create(parent_group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -1956,7 +1970,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -1978,14 +1992,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         group = factories.ManagedGroupFactory.create()
         membership = factories.GroupGroupMembershipFactory.create(parent_group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2009,14 +2023,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         membership_1 = factories.GroupGroupMembershipFactory.create(parent_group=group)
         membership_2 = factories.GroupGroupMembershipFactory.create(parent_group=group)
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2041,7 +2055,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has one group member not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -2050,7 +2064,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2071,7 +2085,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has two group member not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -2080,7 +2094,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2110,7 +2124,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             parent_group=group, child_group__name="tEsT-mEmBeR"
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -2119,7 +2133,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2141,14 +2155,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             parent_group=group, role=models.GroupGroupMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2175,14 +2189,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             parent_group=group, role=models.GroupGroupMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2211,14 +2225,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             parent_group=group, role=models.GroupGroupMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2246,14 +2260,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             parent_group=group, role=models.GroupGroupMembership.ADMIN
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2278,14 +2292,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has one group member not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2306,14 +2320,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """anvil_audit works correctly if this group has two group admin not in the app."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2347,14 +2361,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             role=models.GroupGroupMembership.ADMIN,
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2376,14 +2390,14 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             parent_group=group, role=models.GroupGroupMembership.MEMBER
         )
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
             json=self.get_api_json_response_members(emails=[]),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2410,7 +2424,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         """No errors are reported when the service account is both a member and an admin of a group."""
         group = factories.ManagedGroupFactory.create()
         api_url_members = self.get_api_url_members(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
@@ -2419,7 +2433,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             ),
         )
         api_url_admins = self.get_api_url_admins(group.name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
@@ -2449,11 +2463,11 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_anvil_exists_does_exist(self):
-        self.response_mock.add(responses.GET, self.url_workspace, status=200)
+        self.anvil_response_mock.add(responses.GET, self.url_workspace, status=200)
         self.assertIs(self.object.anvil_exists(), True)
 
     def test_anvil_exists_does_not_exist(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.url_workspace,
             status=404,
@@ -2462,7 +2476,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIs(self.object.anvil_exists(), False)
 
     def test_anvil_exists_forbidden(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.url_workspace,
             status=403,
@@ -2472,7 +2486,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_exists()
 
     def test_anvil_exists_internal_error(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.url_workspace,
             status=500,
@@ -2487,7 +2501,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=201,
@@ -2502,7 +2516,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=400,
@@ -2519,7 +2533,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=403,
@@ -2536,7 +2550,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=404,
@@ -2553,7 +2567,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=409,
@@ -2569,7 +2583,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=422,
@@ -2585,7 +2599,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=500,
@@ -2601,7 +2615,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "name": self.object.name,
             "attributes": {},
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=404,
@@ -2621,7 +2635,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "attributes": {},
             "authorizationDomain": [{"membersGroupName": auth_domain.name}],
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=201,
@@ -2645,7 +2659,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 {"membersGroupName": auth_domain_2.name},
             ],
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=201,
@@ -2664,7 +2678,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             "attributes": {},
             "authorizationDomain": [{"membersGroupName": auth_domain.name}],
         }
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.url_create,
             status=400,
@@ -2675,11 +2689,11 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_delete_existing(self):
-        self.response_mock.add(responses.DELETE, self.url_workspace, status=202)
+        self.anvil_response_mock.add(responses.DELETE, self.url_workspace, status=202)
         self.object.anvil_delete()
 
     def test_anvil_delete_forbidden(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.url_workspace,
             status=403,
@@ -2689,7 +2703,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_not_found(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.url_workspace,
             status=404,
@@ -2699,7 +2713,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_in_use(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.url_workspace,
             status=500,
@@ -2709,7 +2723,7 @@ class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.url_workspace,
             status=499,
@@ -2748,7 +2762,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         """Can clone a workspace with no auth domains."""
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2774,7 +2788,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.authorization_domains.add(auth_domain)
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2799,7 +2813,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.authorization_domains.add(auth_domain_1, auth_domain_2)
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2825,7 +2839,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         auth_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2854,7 +2868,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         auth_domain_2 = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2886,7 +2900,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         new_auth_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2919,7 +2933,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         new_auth_domain_2 = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2951,7 +2965,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.authorization_domains.add(auth_domain)
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=201,  # successful response code.
@@ -2988,7 +3002,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         """Error when the workspace to be cloned already exists in AnVIL but is not in the app."""
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=409,  # already exists
@@ -3013,7 +3027,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         """Error the workspace to clone does not exist on AnVIL."""
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=404,  # already exists
@@ -3039,7 +3053,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create()
         new_auth_domain = factories.ManagedGroupFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=404,  # resource not found
@@ -3071,7 +3085,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
         """Error when the response is an error for an unknown reason."""
         billing_project = factories.BillingProjectFactory.create()
         # Add response.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.POST,
             self.get_api_url(self.workspace.billing_project.name, self.workspace.name),
             status=500,  # other
@@ -3133,7 +3147,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "test-workspace"
         billing_project = factories.BillingProjectFactory.create()
         # No API call for billing projects.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project.name, workspace_name),
             status=200,  # successful response code.
@@ -3159,7 +3173,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "test-workspace"
         billing_project = factories.BillingProjectFactory.create()
         # No API call for billing projects.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project.name, workspace_name),
             status=200,  # successful response code.
@@ -3185,13 +3199,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         # Response from checking the billing project.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_billing_project_api_url(billing_project_name),
             status=200,
         )
         # Response from checking the workspace.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
@@ -3220,14 +3234,14 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         # Response from checking the billing project.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_billing_project_api_url(billing_project_name),
             status=404,  # billing project does not exist.
             json={"message": "other"},
         )
         # Response from checking the workspace.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
@@ -3256,7 +3270,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         # No billing project API calls.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
@@ -3283,7 +3297,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         workspace_name = "test-workspace"
         # No billing project API calls.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project.name, workspace_name),
             status=200,  # successful response code.
@@ -3308,7 +3322,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         # No API call for billing projects.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=404,  # successful response code.
@@ -3337,7 +3351,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         workspace_name = "test-workspace"
         # No API call for billing projects.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project.name, workspace_name),
             status=404,  # successful response code.
@@ -3377,7 +3391,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is an internal error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=500,
@@ -3397,7 +3411,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is some other error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=499,
@@ -3417,14 +3431,14 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is an internal error from the AnVIL API for the billing project call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
         # Error in billing project call.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_billing_project_api_url(billing_project_name),
             status=500,  # error
@@ -3444,14 +3458,14 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is another error from the AnVIL API for the billing project call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
         # Error in billing project call.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_billing_project_api_url(billing_project_name),
             status=499,
@@ -3502,12 +3516,12 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             billing_project=other_billing_project, name=workspace_name
         )
         billing_project_name = "billing-project-2"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_billing_project_api_url(billing_project_name),
             status=200,  # successful response code.
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
@@ -3535,7 +3549,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             billing_project=billing_project, name="test-workspace-1"
         )
         # No billing project API calls.
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project.name, workspace_name),
             status=200,  # successful response code.
@@ -3561,7 +3575,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "test-workspace"
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project.name, workspace_name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
@@ -3571,7 +3585,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for group query.
         group_url = self.api_client.sam_entry_point + "/api/groups/v1"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             group_url,
             status=200,
@@ -3612,7 +3626,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(name="auth-group")
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project.name, workspace_name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
@@ -3646,7 +3660,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "test-workspace"
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project.name, workspace_name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
@@ -3656,7 +3670,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for group query.
         group_url = self.api_client.sam_entry_point + "/api/groups/v1"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             group_url,
             status=200,
@@ -3696,7 +3710,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "test-workspace"
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project.name, workspace_name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
@@ -3708,7 +3722,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for group query.
         group_url = self.api_client.sam_entry_point + "/api/groups/v1"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             group_url,
             status=200,
@@ -3753,12 +3767,12 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_name = "test-workspace"
         # Response for billing project query.
         billing_project_url = self.get_billing_project_api_url(billing_project_name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET, billing_project_url, status=200  # successful response code.
         )
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project_name, workspace_name)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_url,
             status=200,  # successful response code.
@@ -3768,7 +3782,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for group query.
         group_url = self.api_client.sam_entry_point + "/api/groups/v1"
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             group_url,
             status=500,
@@ -3844,7 +3858,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_audit_no_workspaces(self):
         """anvil_audit works correct if there are no Workspaces in the app."""
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -3861,7 +3875,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works correct if there is one workspace in the app and it exists on AnVIL."""
         workspace = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -3875,7 +3889,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -3892,7 +3906,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
         workspace = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -3912,7 +3926,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if one workspace exists in the app but the access on AnVIL is READER."""
         workspace = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -3936,7 +3950,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit raises exception if one workspace exists in the app but the access on AnVIL is WRITER."""
         workspace = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -3961,7 +3975,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -3978,7 +3992,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_1 = self.get_api_workspace_acl_url(
             workspace_1.billing_project.name, workspace_1.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
             status=200,
@@ -3988,7 +4002,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_2 = self.get_api_workspace_acl_url(
             workspace_2.billing_project.name, workspace_2.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
             status=200,
@@ -4006,7 +4020,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4023,7 +4037,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_1 = self.get_api_workspace_acl_url(
             workspace_1.billing_project.name, workspace_1.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
             status=200,
@@ -4033,7 +4047,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_2 = self.get_api_workspace_acl_url(
             workspace_2.billing_project.name, workspace_2.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
             status=200,
@@ -4051,7 +4065,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4065,7 +4079,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_2 = self.get_api_workspace_acl_url(
             workspace_2.billing_project.name, workspace_2.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
             status=200,
@@ -4086,7 +4100,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4103,7 +4117,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_2 = self.get_api_workspace_acl_url(
             workspace_2.billing_project.name, workspace_2.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
             status=200,
@@ -4124,7 +4138,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4146,7 +4160,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_audit_one_workspace_missing_in_app(self):
         """anvil_audit returns not_in_app info if a workspace exists on AnVIL but not in the app."""
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4161,7 +4175,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_audit_two_workspaces_missing_in_app(self):
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4186,7 +4200,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             billing_project__name="test-bp-app", name="test-ws"
         )
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4204,7 +4218,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_ignores_workspaces_where_app_is_reader_on_anvil(self):
         """Audit ignores workspaces on AnVIL where app is a READER on AnVIL."""
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4220,7 +4234,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_ignores_workspaces_where_app_is_writer_on_anvil(self):
         """Audit ignores workspaces on AnVIL where app is a WRITER on AnVIL."""
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4237,7 +4251,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works properly when there is one workspace with one auth domain."""
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4254,7 +4268,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             auth_domain.workspace.billing_project.name, auth_domain.workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4277,7 +4291,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             workspace=workspace
         )
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4294,7 +4308,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4319,7 +4333,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             workspace=workspace, group__name="zz"
         )
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4336,7 +4350,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4355,7 +4369,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works properly when there is one workspace with no auth domain in the app but one on AnVIL."""
         workspace = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4372,7 +4386,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4392,7 +4406,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works properly when there is one workspace with one auth domain in the app but none on AnVIL."""
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4409,7 +4423,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             auth_domain.workspace.billing_project.name, auth_domain.workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4429,7 +4443,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit works properly when there is one workspace with no auth domain in the app but two on AnVIL."""
         workspace = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4446,7 +4460,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4468,7 +4482,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4485,7 +4499,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4509,7 +4523,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4526,7 +4540,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4548,7 +4562,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             group__name="app"
         )
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4565,7 +4579,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             auth_domain.workspace.billing_project.name, auth_domain.workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4586,7 +4600,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4609,7 +4623,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_1 = self.get_api_workspace_acl_url(
             workspace_1.billing_project.name, workspace_1.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
             status=200,
@@ -4619,7 +4633,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_2 = self.get_api_workspace_acl_url(
             workspace_2.billing_project.name, workspace_2.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
             status=200,
@@ -4640,7 +4654,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_1 = factories.WorkspaceFactory.create()
         workspace_2 = factories.WorkspaceFactory.create()
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4663,7 +4677,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_1 = self.get_api_workspace_acl_url(
             workspace_1.billing_project.name, workspace_1.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
             status=200,
@@ -4673,7 +4687,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url_2 = self.get_api_workspace_acl_url(
             workspace_2.billing_project.name, workspace_2.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
             status=200,
@@ -4697,7 +4711,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4728,7 +4742,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
         # Response for the main call about workspaces.
         api_url = self.get_api_url()
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
@@ -4744,7 +4758,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         workspace_acl_url = self.get_api_workspace_acl_url(
             workspace.billing_project.name, workspace.name
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
             status=200,
@@ -4799,7 +4813,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
 
     def test_no_access(self):
         """anvil_audit works correctly if this workspace is not shared with any groups."""
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4818,7 +4832,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         """anvil_audit works correctly if this group has one group member."""
         access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.update_api_response(access.group.get_email(), access.access)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4840,7 +4854,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         )
         self.update_api_response(access_1.group.get_email(), "READER")
         self.update_api_response(access_2.group.get_email(), "READER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4855,7 +4869,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
     def test_one_group_reader_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has one group reader not in anvil."""
         access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4878,7 +4892,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4899,7 +4913,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
     def test_one_group_readers_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group reader not in the app."""
         self.update_api_response("test-member@firecloud.org", "READER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4917,7 +4931,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         """anvil_audit works correctly if this workspace has two group readers not in the app."""
         self.update_api_response("test-member-1@firecloud.org", "READER")
         self.update_api_response("test-member-2@firecloud.org", "READER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4943,7 +4957,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             workspace=self.workspace, group__name="tEsT-mEmBeR"
         )
         self.update_api_response("Test-Member@firecloud.org", "READER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4961,7 +4975,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         self.update_api_response(access.group.get_email(), "WRITER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -4983,7 +4997,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         )
         self.update_api_response(access_1.group.get_email(), "WRITER")
         self.update_api_response(access_2.group.get_email(), "WRITER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5000,7 +5014,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5025,7 +5039,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5046,7 +5060,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
     def test_one_group_writer_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group writer not in the app."""
         self.update_api_response("test-writer@firecloud.org", "WRITER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5064,7 +5078,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         """anvil_audit works correctly if this workspace has two group writers not in the app."""
         self.update_api_response("test-writer-1@firecloud.org", "WRITER")
         self.update_api_response("test-writer-2@firecloud.org", "WRITER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5092,7 +5106,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             access=models.WorkspaceGroupSharing.WRITER,
         )
         self.update_api_response("Test-Writer@firecloud.org", "WRITER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5110,7 +5124,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
         self.update_api_response(access.group.get_email(), "OWNER", can_share=True)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5132,7 +5146,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         )
         self.update_api_response(access_1.group.get_email(), "OWNER", can_share=True)
         self.update_api_response(access_2.group.get_email(), "OWNER", can_share=True)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5149,7 +5163,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5174,7 +5188,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5195,7 +5209,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
     def test_one_group_owner_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group owner not in the app."""
         self.update_api_response("test-writer@firecloud.org", "OWNER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5213,7 +5227,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         """anvil_audit works correctly if this workspace has two group owners not in the app."""
         self.update_api_response("test-writer-1@firecloud.org", "OWNER")
         self.update_api_response("test-writer-2@firecloud.org", "OWNER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5241,7 +5255,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             access=models.WorkspaceGroupSharing.OWNER,
         )
         self.update_api_response("Test-Owner@firecloud.org", "OWNER", can_share=True)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5259,7 +5273,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             workspace=self.workspace, access=models.WorkspaceGroupSharing.READER
         )
         self.update_api_response(access.group.get_email(), "WRITER")
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5281,7 +5295,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.update_api_response(
             access.group.get_email(), "OWNER", can_compute=True, can_share=True
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5309,7 +5323,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             can_compute=True,
         )
         self.update_api_response(access.group.get_email(), "WRITER", can_compute=False)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5329,7 +5343,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
         self.update_api_response(access.group.get_email(), "WRITER", can_share=True)
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5348,7 +5362,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.update_api_response(
             self.service_account_email, "OWNER", can_compute=True, can_share=True
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5370,7 +5384,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.update_api_response(
             access.group.get_email(), "OWNER", can_compute=True, can_share=True
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5392,7 +5406,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.update_api_response(
             access.group.get_email(), "WRITER", can_compute=True, can_share=True
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5417,7 +5431,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         self.update_api_response(
             access.group.get_email(), "READER", can_compute=False, can_share=True
         )
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
             status=200,
@@ -5453,11 +5467,11 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_anvil_create_successful(self):
-        self.response_mock.add(responses.PUT, self.api_url_create, status=204)
+        self.anvil_response_mock.add(responses.PUT, self.api_url_create, status=204)
         self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_403(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=403,
@@ -5467,7 +5481,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_404(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=404,
@@ -5477,7 +5491,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_500(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=500,
@@ -5487,7 +5501,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=499,
@@ -5497,11 +5511,11 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_delete_successful(self):
-        self.response_mock.add(responses.DELETE, self.api_url_delete, status=204)
+        self.anvil_response_mock.add(responses.DELETE, self.api_url_delete, status=204)
         self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_403(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=403,
@@ -5511,7 +5525,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_404(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=404,
@@ -5521,7 +5535,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_500(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=500,
@@ -5531,7 +5545,7 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=499,
@@ -5559,11 +5573,11 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def test_anvil_create_successful(self):
-        self.response_mock.add(responses.PUT, self.api_url_create, status=204)
+        self.anvil_response_mock.add(responses.PUT, self.api_url_create, status=204)
         self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_403(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=403,
@@ -5573,7 +5587,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_404(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=404,
@@ -5583,7 +5597,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_500(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=500,
@@ -5593,7 +5607,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_create_unsuccessful_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PUT,
             self.api_url_create,
             status=499,
@@ -5603,7 +5617,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create()
 
     def test_anvil_delete_successful(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=204,
@@ -5612,7 +5626,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_403(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=403,
@@ -5622,7 +5636,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_404(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=404,
@@ -5632,7 +5646,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_500(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=500,
@@ -5642,7 +5656,7 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.DELETE,
             self.api_url_delete,
             status=499,
@@ -5697,7 +5711,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         }
 
     def test_anvil_create_or_update_successful(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=200,
@@ -5711,7 +5725,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.can_compute = True
         self.object.save()
         self.data_add[0]["canCompute"] = True
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=200,
@@ -5721,7 +5735,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.anvil_create_or_update()
 
     def test_anvil_create_or_update_unsuccessful_400(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=400,
@@ -5732,7 +5746,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create_or_update()
 
     def test_anvil_create_or_update_unsuccessful_403(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=403,
@@ -5743,7 +5757,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create_or_update()
 
     def test_anvil_create_or_update_unsuccessful_workspace_not_found(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=404,
@@ -5754,7 +5768,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create_or_update()
 
     def test_anvil_create_or_update_unsuccessful_internal_error(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=500,
@@ -5765,7 +5779,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create_or_update()
 
     def test_anvil_create_or_update_unsuccessful_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=499,
@@ -5776,7 +5790,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create_or_update()
 
     def test_anvil_create_or_update_group_not_found_on_anvil(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=200,
@@ -5788,7 +5802,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_create_or_update()
 
     def test_anvil_delete_successful(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=200,
@@ -5801,7 +5815,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.can_compute = True
         self.object.save()
         self.data_delete[0]["canCompute"] = True
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=200,
@@ -5811,7 +5825,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_400(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=400,
@@ -5822,7 +5836,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_workspace_not_found(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=404,
@@ -5833,7 +5847,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_internal_error(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=500,
@@ -5844,7 +5858,7 @@ class WorkspaceGroupSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.object.anvil_delete()
 
     def test_anvil_delete_unsuccessful_other(self):
-        self.response_mock.add(
+        self.anvil_response_mock.add(
             responses.PATCH,
             self.url,
             status=499,
