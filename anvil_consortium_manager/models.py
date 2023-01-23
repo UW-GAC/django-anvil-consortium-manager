@@ -1266,7 +1266,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         choices=ACCESS_CHOICES,
         default=READER,
         help_text="""Access level that this ManagedGroup has to this Workspace.
-            A "Reader" can see data int the workspace.
+            A "Reader" can see data in the workspace.
             A "Writer" can add or remove data in the workspace.
             An "Owner" can share the workspace with others or delete the workspace.""",
     )
