@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.10 (2023-01-23)
 
 - Update `anvil_api` to use Rawls and Sam APIs for most API calls. These APIs were recommended over the Firecloud API by Terra support.
 - Modify `AnVILAPIMockTestMixin` to use the `responses.RequestMock` object instead of just adding to `responses`.
