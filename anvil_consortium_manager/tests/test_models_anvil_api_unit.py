@@ -2773,6 +2773,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "namespace": billing_project.name,
                         "name": "test-workspace",
                         "attributes": {},
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -2800,6 +2801,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "name": "test-workspace",
                         "attributes": {},
                         "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -2828,6 +2830,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                             {"membersGroupName": auth_domain_1.name},
                             {"membersGroupName": auth_domain_2.name},
                         ],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -2851,6 +2854,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "name": "test-workspace",
                         "attributes": {},
                         "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -2883,6 +2887,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                             {"membersGroupName": auth_domain_1.name},
                             {"membersGroupName": auth_domain_2.name},
                         ],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -2915,6 +2920,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                             {"membersGroupName": auth_domain.name},
                             {"membersGroupName": new_auth_domain.name},
                         ],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -2949,6 +2955,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                             {"membersGroupName": new_auth_domain_1.name},
                             {"membersGroupName": new_auth_domain_2.name},
                         ],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -2977,6 +2984,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "name": "test-workspace",
                         "attributes": {},
                         "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -3013,6 +3021,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "namespace": billing_project.name,
                         "name": "test-workspace",
                         "attributes": {},
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -3038,6 +3047,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "namespace": billing_project.name,
                         "name": "test-workspace",
                         "attributes": {},
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -3067,6 +3077,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "authorizationDomain": [
                             {"membersGroupName": new_auth_domain.name}
                         ],
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
@@ -3096,6 +3107,7 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
                         "namespace": billing_project.name,
                         "name": "test-workspace",
                         "attributes": {},
+                        "copyFilesWithPrefix": "notebooks",
                     }
                 )
             ],
