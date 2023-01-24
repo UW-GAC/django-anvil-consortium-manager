@@ -8697,6 +8697,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": "test-billing-project",
             "name": "test-workspace",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -8744,6 +8745,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "name": "test-workspace",
             "attributes": {},
             "authorizationDomain": [{"membersGroupName": auth_domain.name}],
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -8795,6 +8797,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
                 {"membersGroupName": auth_domain.name},
                 {"membersGroupName": new_auth_domain.name},
             ],
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -8837,6 +8840,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": "test-billing-project",
             "name": "test-workspace",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -8876,6 +8880,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": billing_project.name,
             "name": "test-workspace",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -8914,6 +8919,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": billing_project.name,
             "name": "test-workspace",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -8979,6 +8985,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": billing_project.name,
             "name": "test-name-2",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -9022,6 +9029,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": billing_project_2.name,
             "name": "test-name",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -9160,6 +9168,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": billing_project.name,
             "name": "test-workspace",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -9275,6 +9284,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "authorizationDomain": [
                 {"membersGroupName": auth_domain.name},
             ],
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -9328,6 +9338,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "authorizationDomain": [
                 {"membersGroupName": auth_domain.name},
             ],
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -9437,6 +9448,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": "test-billing-project",
             "name": "test-workspace",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,
@@ -9527,6 +9539,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             "namespace": billing_project.name,
             "name": "test-workspace",
             "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
         }
         self.anvil_response_mock.add(
             responses.POST,

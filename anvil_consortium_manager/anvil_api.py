@@ -315,6 +315,7 @@ class AnVILAPIClient:
         cloned_workspace_namespace,
         cloned_workspace_name,
         authorization_domains=[],
+        copy_files_with_prefix=None,
     ):
         """Clone an existing workspace on AnVIL.
 
@@ -348,6 +349,9 @@ class AnVILAPIClient:
         }
         if not isinstance(authorization_domains, list):
             raise ValueError("authorization_domains must be a list.")
+
+        if copy_files_with_prefix:
+            body["copyFilesWithPrefix"] = copy_files_with_prefix
 
         # Add authorization domains.
         if authorization_domains:

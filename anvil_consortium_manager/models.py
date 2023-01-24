@@ -819,6 +819,7 @@ class Workspace(TimeStampedModel):
             billing_project.name,
             workspace_name,
             authorization_domains=auth_domains,
+            copy_files_with_prefix="notebooks",
         )
         # Do not create the cloned workspace - it can be imported or created elsewhere.
         # That way, the workspace_type can be set.
