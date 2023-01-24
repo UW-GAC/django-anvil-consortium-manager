@@ -963,13 +963,6 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests forthe ManagedGroup.anvil_audit method."""
 
-    def setUp(self):
-        super().setUp()
-        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            fake.email()
-        )
-
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
         return self.api_client.sam_entry_point + "/api/groups/v1"
@@ -1393,14 +1386,6 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
 class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests forthe ManagedGroup.anvil_audit method."""
-
-    def setUp(self):
-        super().setUp()
-        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
 
     def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
@@ -3124,11 +3109,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def setUp(self):
         super().setUp()
-        # Set the auth session service account email here, since the anvil_import function will need it.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
         self.api_json_response_acl = {"acl": {}}
         self.add_api_json_response_acl(
             self.service_account_email, "OWNER", can_compute=True, can_share=True
@@ -4198,13 +4178,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the Workspace.anvil_audit method."""
 
-    def setUp(self):
-        super().setUp()
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
-
     def get_api_url(self):
         return self.api_client.rawls_entry_point + "/api/workspaces"
 
@@ -5168,11 +5141,6 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
 
     def setUp(self):
         super().setUp()
-        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
         self.api_response = {"acl": {}}

@@ -5626,10 +5626,6 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        # Set the auth session service account email here, since it is used in the audit.
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            fake.email()
-        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -5880,10 +5876,6 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             Permission.objects.get(
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
-        )
-        # Set the auth session service account email here, since it is used in the audit.
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            fake.email()
         )
         self.group = factories.ManagedGroupFactory.create()
 
@@ -7337,11 +7329,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
         self.workspace_list_url = self.api_client.rawls_entry_point + "/api/workspaces"
-        # Set the auth session service account email here, since the anvil_import function will need it.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
+        # Object to hold API response for ACL call.
         self.api_json_response_acl = {"acl": {}}
         self.add_api_json_response_acl(
             self.service_account_email, "OWNER", can_compute=True, can_share=True
@@ -10736,11 +10724,6 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        # Set the auth session service account email here, since it is used in the audit.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -10986,11 +10969,6 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             Permission.objects.get(
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
-        )
-        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
         )
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
