@@ -202,6 +202,18 @@ class UserEmailEntryFormTest(TestCase):
         self.assertEqual(len(form.errors["email"]), 1)
         self.assertIn("required", form.errors["email"][0])
 
+    def test_service_account_email(self):
+        """Raises ValidationError if a service account email is entered."""
+        form_data = {
+            "email": "test_email@TEST.iam.gserviceaccount.com",
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("service account", form.errors["email"][0])
+
 
 class ManagedGroupCreateFormTest(TestCase):
     """Tests for the ManagedGroupCreateForm class."""

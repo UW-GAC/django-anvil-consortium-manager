@@ -4,6 +4,7 @@
 
 - Copy notebooks when cloning a workspace.
 - Links to workspaces on AnVIL open in a new tab.
+- Prevent users from linking a Google service account to their user account.
 
 ## 0.10 (2023-01-23)
 

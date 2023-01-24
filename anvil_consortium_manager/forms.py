@@ -65,6 +65,15 @@ class UserEmailEntryForm(forms.Form):
         label="Email", help_text="Enter the email associated with your AnVIL account."
     )
 
+    def clean_email(self):
+        """Custom validation.
+
+        - Do not allow service accounts."""
+        email = self.cleaned_data["email"]
+        if email.endswith("iam.gserviceaccount.com"):
+            raise ValidationError("Cannot link a service account to a user.")
+        return email
+
 
 class ManagedGroupCreateForm(forms.ModelForm):
     """Form to create a ManagedGroup on AnVIL."""
