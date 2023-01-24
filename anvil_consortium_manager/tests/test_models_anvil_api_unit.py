@@ -963,13 +963,6 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests forthe ManagedGroup.anvil_audit method."""
 
-    def setUp(self):
-        super().setUp()
-        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            fake.email()
-        )
-
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
         return self.api_client.sam_entry_point + "/api/groups/v1"
@@ -1393,14 +1386,6 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
 class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests forthe ManagedGroup.anvil_audit method."""
-
-    def setUp(self):
-        super().setUp()
-        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
 
     def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
@@ -3122,6 +3107,13 @@ class WorkspaceAnVILCloneTest(AnVILAPIMockTestMixin, TestCase):
 class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the Workspace.anvil_import method."""
 
+    def setUp(self):
+        super().setUp()
+        self.api_json_response_acl = {"acl": {}}
+        self.add_api_json_response_acl(
+            self.service_account_email, "OWNER", can_compute=True, can_share=True
+        )
+
     def get_billing_project_api_url(self, billing_project_name):
         return (
             self.api_client.rawls_entry_point
@@ -3153,6 +3145,27 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         }
         return json_data
 
+    def get_api_url_acl(self, billing_project_name, workspace_name):
+        return (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl"
+        )
+
+    def add_api_json_response_acl(
+        self, email, access, can_compute=False, can_share=False
+    ):
+        """Add a record to the API response for the workspace ACL call."""
+        self.api_json_response_acl["acl"][email] = {
+            "accessLevel": access,
+            "canCompute": can_compute,
+            "canShare": False,
+            "pending": False,
+        }
+
     def test_anvil_import_billing_project_already_exists_in_django_db(self):
         """Can import a workspace if we are user of the billing project and already exists in Django."""
         """A workspace can be imported from AnVIL if we are owners and if the billing project exists."""
@@ -3164,6 +3177,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.get_api_url(billing_project.name, workspace_name),
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
         )
         workspace = models.Workspace.anvil_import(
             billing_project.name,
@@ -3190,6 +3210,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.get_api_url(billing_project.name, workspace_name),
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
         )
         workspace = models.Workspace.anvil_import(
             billing_project.name,
@@ -3222,6 +3249,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
         )
         workspace = models.Workspace.anvil_import(
             billing_project_name,
@@ -3258,6 +3292,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.get_api_url(billing_project_name, workspace_name),
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
         )
         workspace = models.Workspace.anvil_import(
             billing_project_name,
@@ -3539,6 +3580,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project_name, workspace_name),
         )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
         workspace = models.Workspace.anvil_import(
             billing_project_name,
             workspace_name,
@@ -3566,6 +3614,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             self.get_api_url(billing_project.name, workspace_name),
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
         )
         workspace = models.Workspace.anvil_import(
             billing_project.name,
@@ -3610,6 +3665,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 }
             ],
         )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
         # A workspace was created.
         workspace = models.Workspace.anvil_import(
             billing_project.name,
@@ -3646,6 +3708,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 billing_project.name, workspace_name, auth_domains=["auth-group"]
             ),
         )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
         # A workspace was created.
         workspace = models.Workspace.anvil_import(
             billing_project.name,
@@ -3679,6 +3748,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response(
                 billing_project.name, workspace_name, auth_domains=["auth-group"]
             ),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
         )
         # Response for group query.
         group_url = self.api_client.sam_entry_point + "/api/groups/v1"
@@ -3720,6 +3796,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             name="test-billing-project"
         )
         workspace_name = "test-workspace"
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
         # Response for workspace query.
         workspace_url = self.get_api_url(billing_project.name, workspace_name)
         self.anvil_response_mock.add(
@@ -3817,16 +3900,283 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # No auth domains were recorded.
         self.assertEqual(models.WorkspaceAuthorizationDomain.objects.count(), 0)
 
+    def test_imports_group_sharing_one_group_in_app_reader(self):
+        """Imports a WorkspaceGroupSharing record if workspace is shared with a group in the app."""
+        workspace_name = "test-workspace"
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.add_api_json_response_acl(
+            group.get_email(), "READER", can_compute=False, can_share=False
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        # Check workspace sharing.
+        self.assertEqual(workspace.workspacegroupsharing_set.count(), 1)
+        object = workspace.workspacegroupsharing_set.all()[0]
+        self.assertEqual(object.workspace, workspace)
+        self.assertEqual(object.group, group)
+        self.assertEqual(object.access, models.WorkspaceGroupSharing.READER)
+        self.assertFalse(object.can_compute)
+
+    def test_imports_group_sharing_one_group_in_app_writer(self):
+        workspace_name = "test-workspace"
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.add_api_json_response_acl(
+            group.get_email(), "WRITER", can_compute=False, can_share=False
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        # Check workspace sharing.
+        self.assertEqual(workspace.workspacegroupsharing_set.count(), 1)
+        object = workspace.workspacegroupsharing_set.all()[0]
+        self.assertEqual(object.workspace, workspace)
+        self.assertEqual(object.group, group)
+        self.assertEqual(object.access, models.WorkspaceGroupSharing.WRITER)
+        self.assertFalse(object.can_compute)
+
+    def test_imports_group_sharing_one_group_in_app_owner(self):
+        workspace_name = "test-workspace"
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.add_api_json_response_acl(
+            group.get_email(), "OWNER", can_compute=False, can_share=False
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        # Check workspace sharing.
+        self.assertEqual(workspace.workspacegroupsharing_set.count(), 1)
+        object = workspace.workspacegroupsharing_set.all()[0]
+        self.assertEqual(object.workspace, workspace)
+        self.assertEqual(object.group, group)
+        self.assertEqual(object.access, models.WorkspaceGroupSharing.OWNER)
+        self.assertFalse(object.can_compute)
+
+    def test_imports_group_sharing_one_group_in_app_case_insensitive(self):
+        workspace_name = "test-workspace"
+        group = factories.ManagedGroupFactory.create(name="test-group")
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.add_api_json_response_acl(
+            group.get_email(), "reader", can_compute=False, can_share=False
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        # Check workspace sharing.
+        self.assertEqual(workspace.workspacegroupsharing_set.count(), 1)
+        object = workspace.workspacegroupsharing_set.all()[0]
+        self.assertEqual(object.workspace, workspace)
+        self.assertEqual(object.group, group)
+        self.assertEqual(object.access, models.WorkspaceGroupSharing.READER)
+        self.assertFalse(object.can_compute)
+
+    def test_imports_group_sharing_two_groups_in_app(self):
+        workspace_name = "test-workspace"
+        group_1 = factories.ManagedGroupFactory.create(name="test-group-1")
+        group_2 = factories.ManagedGroupFactory.create(name="test-group-2")
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.add_api_json_response_acl(
+            group_1.get_email(), "READER", can_compute=False, can_share=False
+        )
+        self.add_api_json_response_acl(
+            group_2.get_email(), "WRITER", can_compute=False, can_share=False
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        # Check workspace sharing.
+        self.assertEqual(workspace.workspacegroupsharing_set.count(), 2)
+        object = workspace.workspacegroupsharing_set.all()[0]
+        self.assertEqual(object.workspace, workspace)
+        self.assertEqual(object.group, group_1)
+        self.assertEqual(object.access, models.WorkspaceGroupSharing.READER)
+        self.assertFalse(object.can_compute)
+        object = workspace.workspacegroupsharing_set.all()[1]
+        self.assertEqual(object.workspace, workspace)
+        self.assertEqual(object.group, group_2)
+        self.assertEqual(object.access, models.WorkspaceGroupSharing.WRITER)
+        self.assertFalse(object.can_compute)
+
+    def test_imports_group_sharing_group_not_in_app(self):
+        workspace_name = "test-workspace"
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.add_api_json_response_acl(
+            "foobar@firecloud.org", "READER", can_compute=False, can_share=False
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        # Check workspace sharing.
+        self.assertEqual(workspace.workspacegroupsharing_set.count(), 0)
+
+    def test_imports_group_sharing_shared_with_user(self):
+        workspace_name = "test-workspace"
+        billing_project = factories.BillingProjectFactory.create()
+        # No API call for billing projects.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.add_api_json_response_acl(
+            "test_email@example.com", "READER", can_compute=False, can_share=False
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        # Check workspace sharing.
+        self.assertEqual(workspace.workspacegroupsharing_set.count(), 0)
+
+    def test_acl_api_error(self):
+        """Nothing is added when there is an API error on the workspace ACL call."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        factories.ManagedGroupFactory.create()
+        # Response for billing project query.
+        billing_project_url = self.get_billing_project_api_url(billing_project_name)
+        self.anvil_response_mock.add(
+            responses.GET, billing_project_url, status=200  # successful response code.
+        )
+        # Response for workspace query.
+        workspace_url = self.get_api_url(billing_project_name, workspace_name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_url,
+            status=200,  # successful response code.
+            json=self.get_api_json_response(billing_project_name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=500,  # successful response code.
+            json={"message": "api error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            models.Workspace.anvil_import(
+                billing_project_name,
+                workspace_name,
+                workspace_type=DefaultWorkspaceAdapter().get_type(),
+            )
+        # No billing projects were created.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        # No workspaces were imported.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        # No workspace group sharing objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
 
 class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the Workspace.anvil_audit method."""
-
-    def setUp(self):
-        super().setUp()
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
 
     def get_api_url(self):
         return self.api_client.rawls_entry_point + "/api/workspaces"
@@ -4791,11 +5141,6 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
 
     def setUp(self):
         super().setUp()
-        # Set the auth session service account email here, since the anvil_audit_membership function will need it.
-        self.service_account_email = fake.email()
-        anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
         self.api_response = {"acl": {}}

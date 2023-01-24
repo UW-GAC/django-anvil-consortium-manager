@@ -5,6 +5,7 @@
 - Copy notebooks when cloning a workspace.
 - Links to workspaces on AnVIL open in a new tab.
 - Prevent users from linking a Google service account to their user account.
+- When importing a workspace, create `WorkspaceGroupSharing` records if the workspace is shared with a group and that group is already in the app.
 
 ## 0.10 (2023-01-23)
 
