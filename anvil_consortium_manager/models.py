@@ -920,6 +920,28 @@ class Workspace(TimeStampedModel):
                     WorkspaceAuthorizationDomain.objects.create(
                         workspace=workspace, group=group
                     )
+
+                # Get the list of groups that it is shared with and create records for them.
+                response = AnVILAPIClient().get_workspace_acl(
+                    workspace.billing_project.name, workspace.name
+                )
+                # import ipdb; ipdb.set_trace()
+                acl = response.json()["acl"]
+                for email, item in acl.items():
+                    if email.endswith("@firecloud.org"):
+                        try:
+                            group = ManagedGroup.objects.get(name=email.split("@")[0])
+                            WorkspaceGroupSharing.objects.create(
+                                workspace=workspace,
+                                group=group,
+                                access=item["accessLevel"].upper(),
+                                can_compute=item["canCompute"],
+                            )
+                        except ManagedGroup.DoesNotExist:
+                            # The group doesn't exist in the app - don't do anything.
+                            pass
+                print(response.json()["acl"])
+
         except Exception:
             # If it fails for any reason we haven't already handled, we don't want the transaction to happen.
             raise
