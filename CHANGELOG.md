@@ -3,6 +3,7 @@
 ## Devel
 
 - Copy notebooks when cloning a workspace.
+- Links to workspaces on AnVIL open in a new tab.
 
 ## 0.10 (2023-01-23)
 
