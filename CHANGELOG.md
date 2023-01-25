@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.11 (2023-02-24)
 
 - Copy notebooks when cloning a workspace.
 - Links to workspaces on AnVIL open in a new tab.
