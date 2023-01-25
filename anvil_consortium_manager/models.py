@@ -940,7 +940,6 @@ class Workspace(TimeStampedModel):
                         except ManagedGroup.DoesNotExist:
                             # The group doesn't exist in the app - don't do anything.
                             pass
-                print(response.json()["acl"])
 
         except Exception:
             # If it fails for any reason we haven't already handled, we don't want the transaction to happen.

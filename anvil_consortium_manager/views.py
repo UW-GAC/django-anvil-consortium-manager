@@ -1481,7 +1481,6 @@ class WorkspaceClone(
                 workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL.
                 authorization_domains = self.new_workspace.authorization_domains.all()
-                print(authorization_domains)
                 self.object.anvil_clone(
                     self.new_workspace.billing_project,
                     self.new_workspace.name,

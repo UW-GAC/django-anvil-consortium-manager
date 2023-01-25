@@ -71,7 +71,6 @@ class AnVILAuditTest(TestCase):
         with self.assertRaises(ValueError) as e:
             self.audit_results.add_error(obj, self.audit_results.TEST_ERROR_1)
         self.assertIn("already verified", str(e.exception))
-        print(self.audit_results.get_verified())
         self.assertEqual(self.audit_results.get_verified(), set([obj]))
         self.assertEqual(self.audit_results.get_errors(), {})
 

@@ -236,7 +236,6 @@ class WorkspaceCloneForm(forms.ModelForm):
                     "name", flat=True
                 )
             )
-            print(auth_domain_names)
             extra_text = " You must also include the authorization domain(s) from the original workspace ({}).".format(
                 ", ".join(auth_domain_names)
             )

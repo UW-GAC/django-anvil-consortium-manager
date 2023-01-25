@@ -8857,7 +8857,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_get_workspace_not_found(self):
         """Raises a 404 error when workspace does not exist."""
-        print(self.get_url("foo", "bar", self.workspace_type))
         request = self.factory.get(self.get_url("foo", "bar", self.workspace_type))
         request.user = self.user
         with self.assertRaises(Http404):
