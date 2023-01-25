@@ -46,12 +46,6 @@ class SuccessMessageMixin:
         self.add_success_message()
         return super().form_valid(form)
 
-    def delete(self, request, *args, **kwargs):
-        """Add a success message to the request when deleting an object."""
-        # Should this be self.request or request?
-        self.add_success_message()
-        return super().delete(request, *args, **kwargs)
-
 
 class AnVILAuditMixin:
     """Mixin to display AnVIL audit results."""
@@ -227,7 +221,7 @@ class BillingProjectAudit(
         self.audit_results = models.BillingProject.anvil_audit()
 
 
-class SingleAccountMixin(object):
+class SingleAccountMixin(SingleObjectMixin):
     """Retrieve an account using the uuid field."""
 
     model = models.Account
@@ -565,6 +559,7 @@ class AccountDeactivate(
 ):
     """Deactivate an account and remove it from all groups on AnVIL."""
 
+    form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
     context_table_name = "group_table"
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
@@ -592,7 +587,7 @@ class AccountDeactivate(
             return HttpResponseRedirect(self.object.get_absolute_url())
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL to remove the account from all groups and then set status to inactive.
         """
@@ -609,7 +604,7 @@ class AccountDeactivate(
             self.object.deactivate()
         except AnVILAPIError as e:
             msg = self.message_error_removing_from_groups.format(e)
-            messages.add_message(request, messages.ERROR, msg)
+            messages.add_message(self.request, messages.ERROR, msg)
             # Rerender the same page with an error message.
             return HttpResponseRedirect(self.object.get_absolute_url())
         else:
@@ -695,7 +690,7 @@ class AccountDelete(
     def get_success_url(self):
         return reverse("anvil_consortium_manager:accounts:list")
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL to remove the account from all groups and then delete it from the app.
         """
@@ -704,11 +699,11 @@ class AccountDelete(
             self.object.anvil_remove_from_groups()
         except AnVILAPIError as e:
             msg = self.message_error_removing_from_groups.format(e)
-            messages.add_message(request, messages.ERROR, msg)
+            messages.add_message(self.request, messages.ERROR, msg)
             # Rerender the same page with an error message.
             return HttpResponseRedirect(self.object.get_absolute_url())
         else:
-            return super().delete(request, *args, **kwargs)
+            return super().form_valid(form)
 
 
 class AccountAutocomplete(
@@ -899,7 +894,7 @@ class ManagedGroupDelete(
         # Otherwise, return the response.
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -1688,7 +1683,7 @@ class WorkspaceDelete(
             args=[self.object.workspace_type],
         )
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -2102,7 +2097,7 @@ class GroupGroupMembershipDelete(
         # Otherwise, return the response.
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -2127,7 +2122,7 @@ class GroupGroupMembershipDelete(
             )
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
 
 
 class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
@@ -2464,7 +2459,7 @@ class GroupAccountMembershipDelete(
         # Otherwise, return the response.
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -2487,7 +2482,7 @@ class GroupAccountMembershipDelete(
             )
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
 
 
 class WorkspaceGroupSharingDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
@@ -2866,7 +2861,7 @@ class WorkspaceGroupSharingDelete(
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_sharing:list")
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -2880,4 +2875,4 @@ class WorkspaceGroupSharingDelete(
             )
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
