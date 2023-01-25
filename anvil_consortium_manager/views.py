@@ -1,4 +1,5 @@
 from dal import autocomplete
+from django import VERSION as DJANGO_VERSION
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,16 +12,22 @@ from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.views.generic import CreateView
+from django.views.generic import DeleteView as DjangoDeleteView
 from django.views.generic import (
-    CreateView,
-    DeleteView,
     DetailView,
     FormView,
     RedirectView,
     TemplateView,
     UpdateView,
 )
-from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.detail import (
+    BaseDetailView,
+    SingleObjectMixin,
+    SingleObjectTemplateResponseMixin,
+)
+from django.views.generic.edit import BaseDeleteView as DjangoBaseDeleteView
+from django.views.generic.edit import DeletionMixin, FormMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import __version__, anvil_api, auth, exceptions, forms, models, tables
@@ -28,6 +35,49 @@ from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 from .tokens import account_verification_token
+
+# Based on Wagtail: https://github.com/wagtail/wagtail/blob/main/wagtail/admin/views/generic/models.py
+if DJANGO_VERSION >= (4, 0):
+    BaseDeleteView = DjangoBaseDeleteView
+    DeleteView = DjangoDeleteView
+else:
+    # As of Django 4.0 BaseDeleteView has switched to a new implementation based on FormMixin
+    # where custom deletion logic now lives in form_valid:
+    # https://docs.djangoproject.com/en/4.0/releases/4.0/#deleteview-changes
+    # Here we define BaseDeleteView and DeleteView to match the Django 4.0 implementation to keep it
+    # consistent across all versions.
+    class BaseDeleteView(DeletionMixin, FormMixin, BaseDetailView):
+        """
+        Base view for deleting an object.
+        Using this base class requires subclassing to provide a response mixin.
+        """
+
+        form_class = Form
+
+        def post(self, request, *args, **kwargs):
+            # Set self.object before the usual form processing flow.
+            # Inlined because having DeletionMixin as the first base, for
+            # get_success_url(), makes leveraging super() with ProcessFormView
+            # overly complex.
+            self.object = self.get_object()
+            form = self.get_form()
+            if form.is_valid():
+                return self.form_valid(form)
+            else:
+                return self.form_invalid(form)
+
+        def form_valid(self, form):
+            success_url = self.get_success_url()
+            self.object.delete()
+            return HttpResponseRedirect(success_url)
+
+    class DeleteView(SingleObjectTemplateResponseMixin, BaseDeleteView):
+        """
+        View for deleting an object retrieved with self.get_object(), with a
+        response rendered by a template.
+        """
+
+        template_name_suffix = "_confirm_delete"
 
 
 class SuccessMessageMixin:
