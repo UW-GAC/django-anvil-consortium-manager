@@ -147,7 +147,10 @@ class WorkspaceCreateForm(forms.ModelForm):
         # DJANGO <4.1 on mysql:
         # Check for the same case insensitive name in the same billing project.
         is_mysql = settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql"
-        if not is_mysql or DJANGO_VERSION < (4, 1):
+        if is_mysql and DJANGO_VERSION >= (4, 1):
+            # This is handled by the model full_clean method with case-insensitive collation.
+            pass
+        else:
             billing_project = self.cleaned_data.get("billing_project", None)
             name = self.cleaned_data.get("name", None)
             if (
