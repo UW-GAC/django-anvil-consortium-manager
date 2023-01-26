@@ -16,14 +16,6 @@ on:
 
 
 jobs:
-  mysql:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 5
-      matrix:
-        python-version: ['3.8', '3.9', '3.10']
-#         mariadb-version: ["10.3", "10.5"]
 
   sqlite:
     runs-on: ubuntu-latest
