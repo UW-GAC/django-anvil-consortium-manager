@@ -504,7 +504,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.BillingProjectImport.success_msg, str(messages[0]))
+        self.assertEqual(views.BillingProjectImport.success_message, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -726,7 +726,7 @@ class BillingProjectUpdateTest(TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.BillingProjectUpdate.success_msg, str(messages[0]))
+        self.assertEqual(views.BillingProjectUpdate.success_message, str(messages[0]))
 
     def test_redirects_to_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -1636,7 +1636,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.AccountImport.success_msg, str(messages[0]))
+        self.assertEqual(views.AccountImport.success_message, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -1910,7 +1910,7 @@ class AccountUpdateTest(TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.AccountUpdate.success_msg, str(messages[0]))
+        self.assertEqual(views.AccountUpdate.success_message, str(messages[0]))
 
     def test_redirects_to_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -2016,7 +2016,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(str(messages[0]), views.AccountLink.success_msg)
+        self.assertEqual(str(messages[0]), views.AccountLink.success_message)
 
     def test_redirect(self):
         """View redirects to the correct URL."""
@@ -3239,7 +3239,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.AccountDelete.success_msg, str(messages[0]))
+        self.assertEqual(views.AccountDelete.success_message, str(messages[0]))
 
     def test_view_deletes_object_service_account(self):
         """Posting submit to the form successfully deletes the service account object."""
@@ -3490,7 +3490,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.AccountDeactivate.success_msg, str(messages[0]))
+        self.assertEqual(views.AccountDeactivate.success_message, str(messages[0]))
 
     def test_view_deactivates_object_service_account(self):
         """Posting submit to the form successfully deactivates a service account object."""
@@ -3804,7 +3804,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.AccountReactivate.success_msg, str(messages[0]))
+        self.assertEqual(views.AccountReactivate.success_message, str(messages[0]))
 
     def test_view_reactivates_object_service_account(self):
         """Posting submit to the form successfully reactivates a service account object."""
@@ -4771,7 +4771,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.ManagedGroupCreate.success_msg, str(messages[0]))
+        self.assertEqual(views.ManagedGroupCreate.success_message, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -4981,7 +4981,7 @@ class ManagedGroupUpdateTest(TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.ManagedGroupUpdate.success_msg, str(messages[0]))
+        self.assertEqual(views.ManagedGroupUpdate.success_message, str(messages[0]))
 
     def test_redirects_to_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -5176,7 +5176,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.ManagedGroupDelete.success_msg, str(messages[0]))
+        self.assertEqual(views.ManagedGroupDelete.success_message, str(messages[0]))
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -6682,7 +6682,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceCreate.success_msg, str(messages[0]))
+        self.assertEqual(views.WorkspaceCreate.success_message, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -7869,7 +7869,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceImport.success_msg, str(messages[0]))
+        self.assertEqual(views.WorkspaceImport.success_message, str(messages[0]))
 
     def test_can_import_workspace_and_billing_project_as_not_user(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are not users."""
@@ -8857,7 +8857,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_get_workspace_not_found(self):
         """Raises a 404 error when workspace does not exist."""
-        print(self.get_url("foo", "bar", self.workspace_type))
         request = self.factory.get(self.get_url("foo", "bar", self.workspace_type))
         request.user = self.user
         with self.assertRaises(Http404):
@@ -9118,7 +9117,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceCreate.success_msg, str(messages[0]))
+        self.assertEqual(views.WorkspaceCreate.success_message, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -9935,7 +9934,7 @@ class WorkspaceUpdateTest(TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceUpdate.success_msg, str(messages[0]))
+        self.assertEqual(views.WorkspaceUpdate.success_message, str(messages[0]))
 
     def test_redirects_to_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -10400,7 +10399,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceDelete.success_msg, str(messages[0]))
+        self.assertEqual(views.WorkspaceDelete.success_message, str(messages[0]))
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -11469,7 +11468,9 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupGroupMembershipCreate.success_msg, str(messages[0]))
+        self.assertEqual(
+            views.GroupGroupMembershipCreate.success_message, str(messages[0])
+        )
 
     def test_can_create_an_object_admin(self):
         """Posting valid data to the form creates an object."""
@@ -12119,7 +12120,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupGroupMembershipCreateByParent.success_msg, str(messages[0])
+            views.GroupGroupMembershipCreateByParent.success_message, str(messages[0])
         )
 
     def test_can_create_an_object_admin(self):
@@ -12657,7 +12658,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupGroupMembershipCreateByParent.success_msg, str(messages[0])
+            views.GroupGroupMembershipCreateByParent.success_message, str(messages[0])
         )
 
     def test_can_create_an_object_admin(self):
@@ -13179,7 +13180,8 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupGroupMembershipCreateByParentChild.success_msg, str(messages[0])
+            views.GroupGroupMembershipCreateByParentChild.success_message,
+            str(messages[0]),
         )
 
     def test_can_create_an_object_admin(self):
@@ -13854,7 +13856,9 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("messages", response.context)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.GroupGroupMembershipDelete.success_msg, str(messages[0]))
+        self.assertEqual(
+            views.GroupGroupMembershipDelete.success_message, str(messages[0])
+        )
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
@@ -14325,7 +14329,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupAccountMembershipCreate.success_msg, str(messages[0])
+            views.GroupAccountMembershipCreate.success_message, str(messages[0])
         )
 
     def test_can_create_an_object_admin(self):
@@ -14940,7 +14944,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupAccountMembershipCreate.success_msg, str(messages[0])
+            views.GroupAccountMembershipCreate.success_message, str(messages[0])
         )
 
     def test_can_create_an_object_admin(self):
@@ -15464,7 +15468,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupAccountMembershipCreate.success_msg, str(messages[0])
+            views.GroupAccountMembershipCreate.success_message, str(messages[0])
         )
 
     def test_can_create_an_object_admin(self):
@@ -15985,7 +15989,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupAccountMembershipCreate.success_msg, str(messages[0])
+            views.GroupAccountMembershipCreate.success_message, str(messages[0])
         )
 
     def test_can_create_an_object_admin(self):
@@ -16771,7 +16775,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.GroupAccountMembershipDelete.success_msg, str(messages[0])
+            views.GroupAccountMembershipDelete.success_message, str(messages[0])
         )
 
     def test_only_deletes_specified_pk(self):
@@ -17323,7 +17327,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceGroupSharingCreate.success_msg, str(messages[0])
+            views.WorkspaceGroupSharingCreate.success_message, str(messages[0])
         )
 
     def test_can_create_an_object_writer(self):
@@ -18143,7 +18147,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_msg,
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_message,
             str(messages[0]),
         )
 
@@ -18883,7 +18887,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_msg,
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_message,
             str(messages[0]),
         )
 
@@ -19622,7 +19626,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_msg,
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_message,
             str(messages[0]),
         )
 
@@ -20418,7 +20422,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceGroupSharingUpdate.success_msg, str(messages[0])
+            views.WorkspaceGroupSharingUpdate.success_message, str(messages[0])
         )
 
     def test_redirects_to_detail(self):
@@ -20941,7 +20945,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = list(response.context["messages"])
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceGroupSharingDelete.success_msg, str(messages[0])
+            views.WorkspaceGroupSharingDelete.success_message, str(messages[0])
         )
 
     def test_only_deletes_specified_pk(self):

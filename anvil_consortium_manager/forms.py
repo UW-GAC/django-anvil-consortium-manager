@@ -1,7 +1,9 @@
 """Forms classes for the anvil_consortium_manager app."""
 
 from dal import autocomplete
+from django import VERSION as DJANGO_VERSION
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from . import models
@@ -142,21 +144,27 @@ class WorkspaceCreateForm(forms.ModelForm):
         }
 
     def clean(self):
+        # DJANGO <4.1 on mysql:
         # Check for the same case insensitive name in the same billing project.
-        billing_project = self.cleaned_data.get("billing_project", None)
-        name = self.cleaned_data.get("name", None)
-        if (
-            billing_project
-            and name
-            and models.Workspace.objects.filter(
-                billing_project=billing_project,
-                name__iexact=name,
-            ).exists()
-        ):
-            # The workspace already exists - raise a Validation error.
-            raise ValidationError(
-                "Workspace with this Billing Project and Name already exists."
-            )
+        is_mysql = settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql"
+        if is_mysql and DJANGO_VERSION >= (4, 1):
+            # This is handled by the model full_clean method with case-insensitive collation.
+            pass
+        else:
+            billing_project = self.cleaned_data.get("billing_project", None)
+            name = self.cleaned_data.get("name", None)
+            if (
+                billing_project
+                and name
+                and models.Workspace.objects.filter(
+                    billing_project=billing_project,
+                    name__iexact=name,
+                ).exists()
+            ):
+                # The workspace already exists - raise a Validation error.
+                raise ValidationError(
+                    "Workspace with this Billing Project and Name already exists."
+                )
         return self.cleaned_data
 
 
@@ -236,7 +244,6 @@ class WorkspaceCloneForm(forms.ModelForm):
                     "name", flat=True
                 )
             )
-            print(auth_domain_names)
             extra_text = " You must also include the authorization domain(s) from the original workspace ({}).".format(
                 ", ".join(auth_domain_names)
             )

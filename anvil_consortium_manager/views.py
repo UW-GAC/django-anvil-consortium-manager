@@ -1,7 +1,9 @@
 from dal import autocomplete
+from django import VERSION as DJANGO_VERSION
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
@@ -11,16 +13,22 @@ from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.views.generic import CreateView
+from django.views.generic import DeleteView as DjangoDeleteView
 from django.views.generic import (
-    CreateView,
-    DeleteView,
     DetailView,
     FormView,
     RedirectView,
     TemplateView,
     UpdateView,
 )
-from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.detail import (
+    BaseDetailView,
+    SingleObjectMixin,
+    SingleObjectTemplateResponseMixin,
+)
+from django.views.generic.edit import BaseDeleteView as DjangoBaseDeleteView
+from django.views.generic.edit import DeletionMixin, FormMixin
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import __version__, anvil_api, auth, exceptions, forms, models, tables
@@ -29,28 +37,48 @@ from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 from .tokens import account_verification_token
 
+# Based on Wagtail: https://github.com/wagtail/wagtail/blob/main/wagtail/admin/views/generic/models.py
+if DJANGO_VERSION >= (4, 0):
+    BaseDeleteView = DjangoBaseDeleteView
+    DeleteView = DjangoDeleteView
+else:
+    # As of Django 4.0 BaseDeleteView has switched to a new implementation based on FormMixin
+    # where custom deletion logic now lives in form_valid:
+    # https://docs.djangoproject.com/en/4.0/releases/4.0/#deleteview-changes
+    # Here we define BaseDeleteView and DeleteView to match the Django 4.0 implementation to keep it
+    # consistent across all versions.
+    class BaseDeleteView(DeletionMixin, FormMixin, BaseDetailView):
+        """
+        Base view for deleting an object.
+        Using this base class requires subclassing to provide a response mixin.
+        """
 
-class SuccessMessageMixin:
-    """Mixin to add a success message to views."""
+        form_class = Form
 
-    @property
-    def success_msg(self):
-        return NotImplemented
+        def post(self, request, *args, **kwargs):
+            # Set self.object before the usual form processing flow.
+            # Inlined because having DeletionMixin as the first base, for
+            # get_success_url(), makes leveraging super() with ProcessFormView
+            # overly complex.
+            self.object = self.get_object()
+            form = self.get_form()
+            if form.is_valid():
+                return self.form_valid(form)
+            else:
+                return self.form_invalid(form)
 
-    def add_success_message(self):
-        """Add a success message to the request."""
-        messages.success(self.request, self.success_msg)
+        def form_valid(self, form):
+            success_url = self.get_success_url()
+            self.object.delete()
+            return HttpResponseRedirect(success_url)
 
-    def form_valid(self, form):
-        """Automatically add a success message when the form is valid."""
-        self.add_success_message()
-        return super().form_valid(form)
+    class DeleteView(SingleObjectTemplateResponseMixin, BaseDeleteView):
+        """
+        View for deleting an object retrieved with self.get_object(), with a
+        response rendered by a template.
+        """
 
-    def delete(self, request, *args, **kwargs):
-        """Add a success message to the request when deleting an object."""
-        # Should this be self.request or request?
-        self.add_success_message()
-        return super().delete(request, *args, **kwargs)
+        template_name_suffix = "_confirm_delete"
 
 
 class AnVILAuditMixin:
@@ -133,7 +161,7 @@ class BillingProjectImport(
     message_not_users_of_billing_project = (
         "Not a user of requested billing project or it doesn't exist on AnVIL."
     )
-    success_msg = "Successfully imported Billing Project from AnVIL."
+    success_message = "Successfully imported Billing Project from AnVIL."
 
     def form_valid(self, form):
         """If the form is valid, check that we can access the BillingProject on AnVIL and save the associated model."""
@@ -155,7 +183,7 @@ class BillingProjectImport(
             )
             return self.render_to_response(self.get_context_data(form=form))
 
-        messages.add_message(self.request, messages.SUCCESS, self.success_msg)
+        messages.add_message(self.request, messages.SUCCESS, self.success_message)
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -168,7 +196,7 @@ class BillingProjectUpdate(
     slug_field = "name"
     form_class = forms.BillingProjectUpdateForm
     template_name = "anvil_consortium_manager/billingproject_update.html"
-    success_msg = "Successfully updated Billing Project."
+    success_message = "Successfully updated Billing Project."
 
 
 class BillingProjectDetail(
@@ -227,7 +255,7 @@ class BillingProjectAudit(
         self.audit_results = models.BillingProject.anvil_audit()
 
 
-class SingleAccountMixin(object):
+class SingleAccountMixin(SingleObjectMixin):
     """Retrieve an account using the uuid field."""
 
     model = models.Account
@@ -309,7 +337,7 @@ class AccountImport(
     form_class = forms.AccountImportForm
     """A string that can be displayed if the account does not exist on AnVIL."""
 
-    success_msg = "Successfully imported Account from AnVIL."
+    success_message = "Successfully imported Account from AnVIL."
     """A string that can be displayed if the account was imported successfully."""
 
     def form_valid(self, form):
@@ -343,7 +371,7 @@ class AccountUpdate(
     model = models.Account
     form_class = forms.AccountUpdateForm
     template_name = "anvil_consortium_manager/account_update.html"
-    success_msg = "Successfully updated Account."
+    success_message = "Successfully updated Account."
 
 
 class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
@@ -358,7 +386,7 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
         "An AnVIL Account with this email already exists in this app."
     )
     form_class = forms.UserEmailEntryForm
-    success_msg = (
+    success_message = (
         "To complete linking the account, check your email for a verification link."
     )
 
@@ -565,11 +593,12 @@ class AccountDeactivate(
 ):
     """Deactivate an account and remove it from all groups on AnVIL."""
 
+    form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
     context_table_name = "group_table"
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
     message_already_inactive = "This Account is already inactive."
-    success_msg = "Successfully deactivated Account in app."
+    success_message = "Successfully deactivated Account in app."
 
     def get_table(self):
         return tables.GroupAccountMembershipTable(
@@ -592,7 +621,7 @@ class AccountDeactivate(
             return HttpResponseRedirect(self.object.get_absolute_url())
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL to remove the account from all groups and then set status to inactive.
         """
@@ -609,12 +638,12 @@ class AccountDeactivate(
             self.object.deactivate()
         except AnVILAPIError as e:
             msg = self.message_error_removing_from_groups.format(e)
-            messages.add_message(request, messages.ERROR, msg)
+            messages.add_message(self.request, messages.ERROR, msg)
             # Rerender the same page with an error message.
             return HttpResponseRedirect(self.object.get_absolute_url())
         else:
             # Need to add the message because we're not calling the super method.
-            messages.success(self.request, self.success_msg)
+            messages.success(self.request, self.success_message)
             return HttpResponseRedirect(self.get_success_url())
 
 
@@ -633,7 +662,7 @@ class AccountReactivate(
     template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
     message_error_adding_to_groups = "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
     message_already_active = "This Account is already active."
-    success_msg = "Successfully reactivated Account in app."
+    success_message = "Successfully reactivated Account in app."
 
     def get_success_url(self):
         return self.object.get_absolute_url()
@@ -690,12 +719,12 @@ class AccountDelete(
 ):
     model = models.Account
     message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
-    success_msg = "Successfully deleted Account from app."
+    success_message = "Successfully deleted Account from app."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:accounts:list")
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL to remove the account from all groups and then delete it from the app.
         """
@@ -704,11 +733,11 @@ class AccountDelete(
             self.object.anvil_remove_from_groups()
         except AnVILAPIError as e:
             msg = self.message_error_removing_from_groups.format(e)
-            messages.add_message(request, messages.ERROR, msg)
+            messages.add_message(self.request, messages.ERROR, msg)
             # Rerender the same page with an error message.
             return HttpResponseRedirect(self.object.get_absolute_url())
         else:
-            return super().delete(request, *args, **kwargs)
+            return super().form_valid(form)
 
 
 class AccountAutocomplete(
@@ -799,7 +828,7 @@ class ManagedGroupCreate(
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     template_name = "anvil_consortium_manager/managedgroup_create.html"
-    success_msg = "Successfully created Managed Group on AnVIL."
+    success_message = "Successfully created Managed Group on AnVIL."
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -829,7 +858,7 @@ class ManagedGroupUpdate(
     form_class = forms.ManagedGroupUpdateForm
     slug_field = "name"
     template_name = "anvil_consortium_manager/managedgroup_update.html"
-    success_msg = "Successfully updated ManagedGroup."
+    success_message = "Successfully updated ManagedGroup."
 
 
 class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
@@ -862,7 +891,7 @@ class ManagedGroupDelete(
     message_could_not_delete_group_from_anvil = (
         "Cannot not delete group from AnVIL - unknown reason."
     )
-    success_msg = "Successfully deleted Group on AnVIL."
+    success_message = "Successfully deleted Group on AnVIL."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:managed_groups:list")
@@ -899,7 +928,7 @@ class ManagedGroupDelete(
         # Otherwise, return the response.
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -936,7 +965,9 @@ class ManagedGroupDelete(
             with transaction.atomic():
                 self.object.delete()
                 self.object.anvil_delete()
-                self.add_success_message()
+                success_message = self.get_success_message(form.cleaned_data)
+                if success_message:
+                    messages.success(self.request, success_message)
                 response = HttpResponseRedirect(self.get_success_url())
         except (ProtectedError, RestrictedError):
             messages.add_message(
@@ -1113,7 +1144,7 @@ class WorkspaceCreate(
     FormView,
 ):
     form_class = forms.WorkspaceCreateForm
-    success_msg = "Successfully created Workspace on AnVIL."
+    success_message = "Successfully created Workspace on AnVIL."
     template_name = "anvil_consortium_manager/workspace_create.html"
 
     def get_workspace_data_formset(self):
@@ -1227,7 +1258,7 @@ class WorkspaceImport(
     message_workspace_exists = "This workspace already exists in the web app."
     message_error_fetching_workspaces = "Unable to fetch workspaces from AnVIL."
     message_no_available_workspaces = "No workspaces available for import from AnVIL."
-    success_msg = "Successfully imported Workspace from AnVIL."
+    success_message = "Successfully imported Workspace from AnVIL."
     # Set in a method.
     workspace_choices = None
 
@@ -1368,7 +1399,7 @@ class WorkspaceClone(
 ):
     model = models.Workspace
     form_class = forms.WorkspaceCloneForm
-    success_msg = "Successfully created Workspace on AnVIL."
+    success_message = "Successfully created Workspace on AnVIL."
     template_name = "anvil_consortium_manager/workspace_clone.html"
 
     def get_object(self, queryset=None):
@@ -1481,7 +1512,6 @@ class WorkspaceClone(
                 workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL.
                 authorization_domains = self.new_workspace.authorization_domains.all()
-                print(authorization_domains)
                 self.object.anvil_clone(
                     self.new_workspace.billing_project,
                     self.new_workspace.name,
@@ -1523,7 +1553,7 @@ class WorkspaceUpdate(
     form_class = forms.WorkspaceUpdateForm
     slug_field = "name"
     template_name = "anvil_consortium_manager/workspace_update.html"
-    success_msg = "Successfully updated Workspace."
+    success_message = "Successfully updated Workspace."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1655,7 +1685,7 @@ class WorkspaceDelete(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
 ):
     model = models.Workspace
-    success_msg = "Successfully deleted Workspace on AnVIL."
+    success_message = "Successfully deleted Workspace on AnVIL."
     message_could_not_delete_workspace_from_app = (
         "Cannot delete workspace from app due to foreign key restrictions."
     )
@@ -1689,7 +1719,7 @@ class WorkspaceDelete(
             args=[self.object.workspace_type],
         )
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -1698,7 +1728,9 @@ class WorkspaceDelete(
             with transaction.atomic():
                 self.object.delete()
                 self.object.anvil_delete()
-                self.add_success_message()
+                success_message = self.get_success_message(form.cleaned_data)
+                if success_message:
+                    messages.success(self.request, success_message)
                 response = HttpResponseRedirect(self.get_success_url())
         except (ProtectedError, RestrictedError):
             messages.add_message(
@@ -1830,7 +1862,7 @@ class GroupGroupMembershipCreate(
 ):
     model = models.GroupGroupMembership
     form_class = forms.GroupGroupMembershipForm
-    success_msg = "Successfully created group membership."
+    success_message = "Successfully created group membership."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:group_group_membership:list")
@@ -2057,7 +2089,7 @@ class GroupGroupMembershipDelete(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
 ):
     model = models.GroupGroupMembership
-    success_msg = "Successfully deleted group membership on AnVIL."
+    success_message = "Successfully deleted group membership on AnVIL."
 
     message_parent_group_not_managed_by_app = (
         "Cannot remove members from parent group because it is not managed by this app."
@@ -2103,7 +2135,7 @@ class GroupGroupMembershipDelete(
         # Otherwise, return the response.
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -2128,7 +2160,7 @@ class GroupGroupMembershipDelete(
             )
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
 
 
 class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
@@ -2171,7 +2203,7 @@ class GroupAccountMembershipCreate(
 ):
     model = models.GroupAccountMembership
     form_class = forms.GroupAccountMembershipForm
-    success_msg = "Successfully added account membership."
+    success_message = "Successfully added account membership."
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:group_account_membership:list")
@@ -2423,7 +2455,7 @@ class GroupAccountMembershipDelete(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
 ):
     model = models.GroupAccountMembership
-    success_msg = "Successfully deleted account membership on AnVIL."
+    success_message = "Successfully deleted account membership on AnVIL."
 
     message_group_not_managed_by_app = (
         "Cannot remove members from group because it is not managed by this app."
@@ -2465,7 +2497,7 @@ class GroupAccountMembershipDelete(
         # Otherwise, return the response.
         return response
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -2488,7 +2520,7 @@ class GroupAccountMembershipDelete(
             )
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
 
 
 class WorkspaceGroupSharingDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
@@ -2538,7 +2570,7 @@ class WorkspaceGroupSharingCreate(
 
     model = models.WorkspaceGroupSharing
     form_class = forms.WorkspaceGroupSharingForm
-    success_msg = "Successfully shared Workspace with Group."
+    success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     message_group_not_found = "Managed Group not found on AnVIL."
@@ -2578,7 +2610,7 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
     template_name = (
         "anvil_consortium_manager/workspacegroupsharing_form_byworkspace.html"
     )
-    success_msg = "Successfully shared Workspace with Group."
+    success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     message_group_not_found = "Managed Group not found on AnVIL."
@@ -2633,7 +2665,7 @@ class WorkspaceGroupSharingCreateByGroup(WorkspaceGroupSharingCreate):
     model = models.WorkspaceGroupSharing
     form_class = forms.WorkspaceGroupSharingForm
     template_name = "anvil_consortium_manager/workspacegroupsharing_form_bygroup.html"
-    success_msg = "Successfully shared Workspace with Group."
+    success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     message_group_not_found = "Managed Group not found on AnVIL."
@@ -2687,7 +2719,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     template_name = (
         "anvil_consortium_manager/workspacegroupsharing_form_byworkspacegroup.html"
     )
-    success_msg = "Successfully shared Workspace with Group."
+    success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     message_group_not_found = "Managed Group not found on AnVIL."
@@ -2774,7 +2806,7 @@ class WorkspaceGroupSharingUpdate(
         "can_compute",
     )
     template_name = "anvil_consortium_manager/workspacegroupsharing_update.html"
-    success_msg = "Successfully updated Workspace sharing."
+    success_message = "Successfully updated Workspace sharing."
     """Message to display when the WorkspaceGroupSharing object was successfully updated."""
 
     def get_object(self, queryset=None):
@@ -2836,7 +2868,7 @@ class WorkspaceGroupSharingDelete(
     auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
 ):
     model = models.WorkspaceGroupSharing
-    success_msg = "Successfully removed workspace sharing on AnVIL."
+    success_message = "Successfully removed workspace sharing on AnVIL."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -2867,7 +2899,7 @@ class WorkspaceGroupSharingDelete(
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_sharing:list")
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         """
         Make an API call to AnVIL and then call the delete method on the object.
         """
@@ -2881,4 +2913,4 @@ class WorkspaceGroupSharingDelete(
             )
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)

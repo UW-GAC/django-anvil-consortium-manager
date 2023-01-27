@@ -1,6 +1,7 @@
 """
 Base test settings file.
 """
+import os
 
 # GENERAL
 # ------------------------------------------------------------------------------
@@ -20,17 +21,24 @@ SECRET_KEY = "w5S8S9eqW5ZqWXPnsCpgbOkcOtajCMmRDjakwXR39lbmVDSunZPwiSV80jSaVBdL"
 # https://docs.djangoproject.com/en/dev/ref/settings/#test-runner
 TEST_RUNNER = "django.test.runner.DiscoverRunner"
 
+INTERNAL_IPS = ["127.0.0.1"]
 # DATABASES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "db.sqlite3",
+        "ENGINE": "django.db.backends.{}".format(
+            os.getenv("DBBACKEND", default="sqlite3")
+        ),
+        "NAME": os.getenv("DBNAME", default="anvil_consortium_manager"),
+        "USER": os.getenv("DBUSER", default="django"),
+        "PASSWORD": os.getenv("DBPASSWORD", default="password"),
+        "HOST": os.getenv("DBHOST", default="127.0.0.1"),
+        "PORT": os.getenv("DBPORT", default="3306"),
     }
 }
-
+print(DATABASES["default"]["ENGINE"])
 # URLS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
