@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Support Django 4.1.*
+
 ## 0.11 (2023-02-24)
 
 - Copy notebooks when cloning a workspace.
