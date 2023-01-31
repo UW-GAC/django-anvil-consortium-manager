@@ -11331,6 +11331,20 @@ class GroupGroupMembershipDetailTest(TestCase):
             ),
         )
 
+    def test_detail_page_links(self):
+        """Links to other urls appear correctly."""
+        self.client.force_login(self.user)
+        obj = factories.GroupGroupMembershipFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        html = """<a href="{url}">{text}</a>""".format(
+            url=obj.parent_group.get_absolute_url(), text=str(obj.parent_group)
+        )
+        self.assertContains(response, html)
+        html = """<a href="{url}">{text}</a>""".format(
+            url=obj.child_group.get_absolute_url(), text=str(obj.child_group)
+        )
+        self.assertContains(response, html)
+
 
 class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
@@ -14188,6 +14202,20 @@ class GroupAccountMembershipDetailTest(TestCase):
                 },
             ),
         )
+
+    def test_detail_page_links(self):
+        """Links to other object detail pages appear correctly."""
+        self.client.force_login(self.user)
+        obj = factories.GroupAccountMembershipFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        html = """<a href="{url}">{text}</a>""".format(
+            url=obj.group.get_absolute_url(), text=str(obj.group)
+        )
+        self.assertContains(response, html)
+        html = """<a href="{url}">{text}</a>""".format(
+            url=obj.account.get_absolute_url(), text=str(obj.account)
+        )
+        self.assertContains(response, html)
 
 
 class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
