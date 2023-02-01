@@ -3,7 +3,8 @@
 ## Devel
 
 - Support Django 4.1.*.
-- Fix broken links in group membership deatil pages.
+- Fix broken links in group membership detail pages.
+- Add last update date to GroupGroupMembership, GroupAccountMembership, and WorkspaceGroupSharing tables.
 
 ## 0.11 (2023-02-24)
 
