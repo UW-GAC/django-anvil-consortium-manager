@@ -2079,10 +2079,6 @@ class GroupGroupMembershipList(
 ):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
-    ordering = (
-        "parent_group__name",
-        "child_group__name",
-    )
 
 
 class GroupGroupMembershipDelete(
@@ -2413,10 +2409,6 @@ class GroupAccountMembershipList(
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
-    ordering = (
-        "group__name",
-        "account__email",
-    )
 
 
 class GroupAccountMembershipActiveList(
@@ -2857,11 +2849,6 @@ class WorkspaceGroupSharingList(
 ):
     model = models.WorkspaceGroupSharing
     table_class = tables.WorkspaceGroupSharingTable
-    ordering = (
-        "workspace__billing_project__name",
-        "workspace__name",
-        "group__name",
-    )
 
 
 class WorkspaceGroupSharingDelete(
