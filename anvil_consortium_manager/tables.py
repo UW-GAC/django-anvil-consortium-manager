@@ -113,6 +113,7 @@ class GroupGroupMembershipTable(tables.Table):
     parent_group = tables.Column(linkify=True)
     child_group = tables.Column(linkify=True)
     role = tables.Column()
+    last_update = tables.DateTimeColumn(verbose_name="Last update", accessor="modified")
 
     class Meta:
         models = models.GroupAccountMembership
@@ -131,6 +132,7 @@ class GroupAccountMembershipTable(tables.Table):
     status = tables.Column(accessor="account__status")
     group = tables.Column(linkify=True)
     role = tables.Column()
+    last_update = tables.DateTimeColumn(verbose_name="Last update", accessor="modified")
 
     class Meta:
         models = models.GroupAccountMembership
@@ -147,6 +149,8 @@ class WorkspaceGroupSharingTable(tables.Table):
     workspace = tables.Column(linkify=True)
     group = tables.Column(linkify=True)
     access = tables.Column()
+    can_compute = tables.BooleanColumn(verbose_name="Compute allowed?")
+    last_update = tables.DateTimeColumn(verbose_name="Last update", accessor="modified")
 
     class Meta:
         model = models.WorkspaceGroupSharing
