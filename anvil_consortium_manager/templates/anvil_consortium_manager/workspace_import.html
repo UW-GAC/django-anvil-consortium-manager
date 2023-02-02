@@ -14,3 +14,8 @@
     <button type="submit" class="btn btn-success">Import</button>
   </form>
 {% endblock %}
+
+{% block inline_javascript %}
+  {{ form.media }}
+  {{ workspace_data_formset.media }}
+{% endblock inline_javascript %}
