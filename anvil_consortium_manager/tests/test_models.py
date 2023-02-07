@@ -1,21 +1,30 @@
+import datetime
+import time
 from unittest import skip
 
-from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+from django.core import mail
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
+from freezegun import freeze_time
 
+from ..adapters.default import DefaultWorkspaceAdapter
 from ..models import (
     Account,
     BillingProject,
+    DefaultWorkspaceData,
     GroupAccountMembership,
     GroupGroupMembership,
     ManagedGroup,
+    UserEmailEntry,
     Workspace,
     WorkspaceAuthorizationDomain,
-    WorkspaceGroupAccess,
+    WorkspaceGroupSharing,
 )
+from ..tokens import account_verification_token
 from . import factories
 
 
@@ -25,6 +34,12 @@ class BillingProjectTest(TestCase):
         instance = BillingProject(name="my_project", has_app_as_user=True)
         instance.save()
         self.assertIsInstance(instance, BillingProject)
+
+    def test_note_field(self):
+        instance = BillingProject(name="my_project", has_app_as_user=True, note="foo")
+        instance.save()
+        self.assertIsInstance(instance, BillingProject)
+        self.assertEqual(instance.note, "foo")
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -77,12 +92,134 @@ class BillingProjectTest(TestCase):
             instance.save()
 
 
+class UserEmailEntryTest(TestCase):
+    """Tests for the UserEmailEntry model."""
+
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
+    def test_save_unique_email_case_insensitive(self):
+        """Email uniqueness does not depend on case."""
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        instance.save()
+        instance2 = UserEmailEntry(
+            email="EMAIL@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now(),
+        )
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_verified(self):
+        user = get_user_model().objects.create_user(username="testuser")
+        instance = UserEmailEntry(
+            email="email@example.com",
+            user=user,
+            date_verification_email_sent=timezone.now() - datetime.timedelta(days=30),
+            date_verified=timezone.now(),
+        )
+        instance.save()
+        self.assertIsInstance(instance, UserEmailEntry)
+
+    def test_verified_account_deleted(self):
+        """A verified account linked to the entry is deleted."""
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
+        account.delete()
+        # Make sure it still exists.
+        obj.refresh_from_db()
+        with self.assertRaises(ObjectDoesNotExist):
+            obj.verified_account
+
+    def test_user_deleted(self):
+        """The user linked to the entry is deleted."""
+        user = factories.UserFactory.create()
+        obj = factories.UserEmailEntryFactory.create(user=user)
+        user.delete()
+        with self.assertRaises(UserEmailEntry.DoesNotExist):
+            obj.refresh_from_db()
+
+    def test_cannot_delete_if_verified_account(self):
+        """Cannot delete a UserEmailEntry object if it is linked to an Account."""
+        account = factories.AccountFactory.create(verified=True)
+        obj = account.verified_email_entry
+        with self.assertRaises(ProtectedError):
+            obj.delete()
+
+    # This test occasionally fails if the time flips one second between sending the email and
+    # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
+    # this spurious failure.
+    @freeze_time("2022-11-22 03:12:34")
+    def test_send_verification_email(self):
+        """Verification email is correct."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_verification_email("www.test.com")
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "account activation")
+        # The contents are correct.
+        email_body = mail.outbox[0].body
+        self.assertIn("http://www.test.com", email_body)
+        self.assertIn(email_entry.user.username, email_body)
+        self.assertIn(account_verification_token.make_token(email_entry), email_body)
+        self.assertIn(str(email_entry.uuid), email_body)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="notify@example.com")
+    def test_send_notification_email(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set"""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_not_send_notification_email(self):
+        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL=None)
+    def test_send_notification_email_none(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="  ")
+    def test_send_notification_email_spaces(self):
+        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set to only spaces."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_notification_email()
+        self.assertEqual(len(mail.outbox), 0)
+
+
 class AccountTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         instance = Account(email="email@example.com", is_service_account=False)
         instance.save()
         self.assertIsInstance(instance, Account)
+
+    def test_note_field(self):
+        instance = Account(
+            email="email@example.com", is_service_account=False, note="foo"
+        )
+        instance.save()
+        self.assertIsInstance(instance, Account)
+        self.assertEqual(instance.note, "foo")
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -158,6 +295,490 @@ class AccountTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_user_has_unique_account(self):
+        """User links to more than one ANVIL account email fails"""
+        user = get_user_model().objects.create_user(username="testuser")
+        email = "email1@example.com"
+        email2 = "email2@example.com"
+        instance = Account(email=email, user=user, is_service_account=False)
+        instance.save()
+        instance2 = Account(email=email2, user=user, is_service_account=False)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_linked_user_deleted(self):
+        """Cannot delete a user if they have a linked account."""
+        user = factories.UserFactory.create()
+        factories.AccountFactory.create(user=user)
+        with self.assertRaises(ProtectedError):
+            user.delete()
+
+    def test_clean_no_verified_email_entry_no_user(self):
+        """The clean method succeeds if there is no verified_email_entry and no user."""
+        account = factories.AccountFactory.build()
+        account.full_clean()
+
+    def test_clean_user_no_verified_email_entry(self):
+        """The clean method fails if there is a user but no verified_email_entry."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.build(user=user)
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("verified_email_entry", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["verified_email_entry"]), 1)
+        self.assertIn(
+            Account.ERROR_USER_WITHOUT_VERIFIED_EMAIL_ENTRY,
+            e.exception.error_dict["verified_email_entry"][0].message,
+        )
+
+    def test_clean_no_user_verified_email_entry(self):
+        """The clean method fails if there is no user but a verified_email_entry."""
+        email_entry = factories.UserEmailEntryFactory.create(
+            date_verified=timezone.now()
+        )
+        account = factories.AccountFactory.build(
+            email=email_entry.email, verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("user", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["user"]), 1)
+        self.assertIn(
+            Account.ERROR_VERIFIED_EMAIL_ENTRY_WITHOUT_USER,
+            e.exception.error_dict["user"][0].message,
+        )
+
+    def test_clean_unverified_verified_email_entry(self):
+        """The clean method fails if the verified_email_entry is actually unverified."""
+        email_entry = factories.UserEmailEntryFactory.create(date_verified=None)
+        account = factories.AccountFactory.build(
+            user=email_entry.user,
+            email=email_entry.email,
+            verified_email_entry=email_entry,
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("verified_email_entry", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["verified_email_entry"]), 1)
+        self.assertIn(
+            Account.ERROR_UNVERIFIED_VERIFIED_EMAIL_ENTRY,
+            e.exception.error_dict["verified_email_entry"][0].message,
+        )
+
+    def test_clean_account_verified_email_entry_email_mismatch(self):
+        """The clean method fails if the verified_email_entry and the account have different emails."""
+        email_entry = factories.UserEmailEntryFactory.create(
+            date_verified=timezone.now(), email="foo@bar.com"
+        )
+        account = factories.AccountFactory.build(
+            user=email_entry.user, email="bar@foo.com", verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("email", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["email"]), 1)
+        self.assertIn(
+            Account.ERROR_MISMATCHED_EMAIL, e.exception.error_dict["email"][0].message
+        )
+
+    def test_clean_account_verified_email_entry_user_mismatch(self):
+        """The clean method fails if the verified_email_entry and the account have different users."""
+        user_1 = factories.UserFactory.create()
+        user_2 = factories.UserFactory.create()
+        email_entry = factories.UserEmailEntryFactory.create(
+            user=user_1, date_verified=timezone.now()
+        )
+        account = factories.AccountFactory.build(
+            user=user_2, email=email_entry.email, verified_email_entry=email_entry
+        )
+        with self.assertRaises(ValidationError) as e:
+            account.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn("user", e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict["user"]), 1)
+        self.assertIn(
+            Account.ERROR_MISMATCHED_USER, e.exception.error_dict["user"][0].message
+        )
+
+    def test_get_accessible_workspaces_shared(self):
+        """One workspace when the account is a member of a group and the workspace is shared with that group."""
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        # Set up group membership.
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_not_shared(self):
+        """One workspace when the account is a member of a group and the workspace is not shared with that group."""
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        factories.WorkspaceFactory.create()
+        # Set up group membership.
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        # Set up workspace sharing.
+        # Tests.
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
+    def test_get_accessible_workspaces_not_in_group_shared(self):
+        """No workspaces when the account is not a member of the group and a workspace is shared with that group."""
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        # Set up group membership.
+        group = factories.ManagedGroupFactory.create()
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        # Tests.
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
+    def test_get_accessible_workspaces_not_in_group_not_shared(self):
+        """No workspaces when the account is not in the group and a workspace is not shared with that group."""
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        factories.WorkspaceFactory.create()
+        # Set up group membership.
+        factories.ManagedGroupFactory.create()
+        # Set up workspace sharing.
+        # Tests.
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
+    def test_get_accessible_workspaces_shared_with_parent(self):
+        """One workspace when the account is in a group and the workspace is shared with a parent of that group."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        # Set up group membership.
+        child_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            child_group=child_group, parent_group=parent_group
+        )
+        factories.GroupAccountMembershipFactory.create(
+            group=child_group, account=account
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=parent_group
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_shared_with_grandparent(self):
+        """One workspace when the account is in a group and the workspace is shared with a grandparent of that group."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        # Set up group membership.
+        child_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        grandparent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            child_group=parent_group, parent_group=grandparent_group
+        )
+        factories.GroupGroupMembershipFactory.create(
+            child_group=child_group, parent_group=parent_group
+        )
+        factories.GroupAccountMembershipFactory.create(
+            group=child_group, account=account
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=grandparent_group
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_in_auth_domain_shared(self):
+        """One workspace when the workspace has an auth domain, the account is part of the auth domain, and the workspace is shared with the auth domain."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain, account=account
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=auth_domain
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_in_auth_domain_shared_with_different_group(self):
+        """One workspace when the workspace has an auth domain, the account is part of the auth domain, and the workspace is shared with a different group that the account is in."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain, account=account
+        )
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_in_auth_domain_not_shared(self):
+        """No workspaces when account is part of the auth domain but the workspace is not shared."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain, account=account
+        )
+        # Set up workspace sharing.
+        # Tests.
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
+    def test_get_accessible_workspaces_not_in_auth_domain_shared(self):
+        """No workspaces when account is not part of the auth domain and the workspace is shared with the auth domain."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=auth_domain
+        )
+        # Tests.
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
+    def test_get_accessible_workspaces_in_auth_domain_as_parent_shared(self):
+        """One workspace when account is part of the auth domain via a child group and the workspace is shared with the auth domain."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            child_group=group, parent_group=auth_domain
+        )
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=auth_domain
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_in_auth_domain_as_grandparent_shared(self):
+        """One workspace when account is part of the auth domain via a grandchild group and the workspace is shared with the auth domain."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        child_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            child_group=child_group, parent_group=parent_group
+        )
+        factories.GroupGroupMembershipFactory.create(
+            child_group=parent_group, parent_group=auth_domain
+        )
+        factories.GroupAccountMembershipFactory.create(
+            group=child_group, account=account
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=auth_domain
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_in_auth_domain_shared_with_different_parent(
+        self,
+    ):
+        """One workspace when account is part of the auth domain, the account is in a different group, and the workspace is shared a parent of that group."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain, account=account
+        )
+        child_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            child_group=child_group, parent_group=parent_group
+        )
+        factories.GroupAccountMembershipFactory.create(
+            group=child_group, account=account
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=parent_group
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_worspaces_in_auth_domain_shared_with_different_grandparent(
+        self,
+    ):
+        """One workspace when account is part of the auth domain, the account is in a different group, and the workspace is shared a grandparent of that group."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain, account=account
+        )
+        child_group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(
+            group=child_group, account=account
+        )
+        parent_group = factories.ManagedGroupFactory.create()
+        grandparent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            child_group=child_group, parent_group=parent_group
+        )
+        factories.GroupGroupMembershipFactory.create(
+            child_group=parent_group, parent_group=grandparent_group
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=grandparent_group
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_two_auth_domains_in_both_shared_with_one(self):
+        """One workspace when a workspace has two auth domains, the account is part of both auth domains, and the group is shared with one of them."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain_1, auth_domain_2)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain_1, account=account
+        )
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain_2, account=account
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=auth_domain_1
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_two_auth_domains_in_one_shared(self):
+        """No workspaces are returned when a workspace has two auth domains, the account is in only one of the auth domains, and the group is shared with that auth domain."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain_1, auth_domain_2)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            group=auth_domain_1, account=account
+        )
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=auth_domain_1
+        )
+        # Tests.
+        self.assertEqual(len(account.get_accessible_workspaces()), 0)
+
+    def test_get_accessible_workspaces_two_auth_domains_in_both_shared_different_group(
+        self,
+    ):
+        """One workspace when a workspace has two auth domains, the account is part of both auth domains, the account is in a different group, and the group is shared with that group."""  # noqa: E501
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        workspace.authorization_domains.add(auth_domain_1, auth_domain_2)
+        # Set up group membership.
+        factories.GroupAccountMembershipFactory.create(
+            account=account, group=auth_domain_1
+        )
+        factories.GroupAccountMembershipFactory.create(
+            account=account, group=auth_domain_2
+        )
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
+    def test_get_accessible_workspaces_workspace_only_appears_once(self):
+        """A workspace only appears once in the returned list."""
+        account = factories.AccountFactory.create()
+        # Set up workspace.
+        workspace = factories.WorkspaceFactory.create()
+        # Set up group membership.
+        group_1 = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group_1, account=account)
+        group_2 = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group_2, account=account)
+        # Set up workspace sharing.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=group_1
+        )
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=group_2
+        )
+        # Tests.
+        accessible_workspaces = account.get_accessible_workspaces()
+        self.assertEqual(len(accessible_workspaces), 1)
+        self.assertIn(workspace, accessible_workspaces)
+
 
 class ManagedGroupTest(TestCase):
     def test_model_saving(self):
@@ -165,6 +786,13 @@ class ManagedGroupTest(TestCase):
         instance = ManagedGroup(name="my_group")
         instance.save()
         self.assertIsInstance(instance, ManagedGroup)
+
+    def test_note_field(self):
+        """Creation using the model constructor and .save() works with a note field."""
+        instance = ManagedGroup(name="my_group", note="test note")
+        instance.save()
+        self.assertIsInstance(instance, ManagedGroup)
+        self.assertEqual(instance.note, "test note")
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -277,15 +905,15 @@ class ManagedGroupTest(TestCase):
         """Group cannot be deleted if it has access to a workspace.
 
         This is a behavior enforced by AnVIL."""
-        access = factories.WorkspaceGroupAccessFactory.create()
+        access = factories.WorkspaceGroupSharingFactory.create()
         with self.assertRaises(ProtectedError):
             access.group.delete()
         # The group still exists.
         self.assertEqual(ManagedGroup.objects.count(), 1)
         ManagedGroup.objects.get(pk=access.group.pk)
         # The access still exists.
-        self.assertEqual(WorkspaceGroupAccess.objects.count(), 1)
-        WorkspaceGroupAccess.objects.get(pk=access.pk)
+        self.assertEqual(WorkspaceGroupSharing.objects.count(), 1)
+        WorkspaceGroupSharing.objects.get(pk=access.pk)
 
     def test_get_direct_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
@@ -739,7 +1367,7 @@ class ManagedGroupTest(TestCase):
         group = factories.ManagedGroupFactory.create(name="other-group")
         self.assertEqual(group.get_all_children().count(), 0)
 
-    def test_cannot_delete_group_used_as_auth_domain(self):
+    def test_cannot_delete_group_used_as_is_in_authorization_domain(self):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
@@ -758,15 +1386,34 @@ class WorkspaceTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         billing_project = factories.BillingProjectFactory.create()
-        instance = Workspace(billing_project=billing_project, name="my-name")
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
         instance.save()
         self.assertIsInstance(instance, Workspace)
 
+    def test_note_field(self):
+        """Creation using the model constructor and .save() works when note is set."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            note="test note",
+        )
+        instance.save()
+        self.assertIsInstance(instance, Workspace)
+        self.assertEqual(instance.note, "test note")
+
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        billing_project = factories.BillingProjectFactory.create(name="my-project")
-        instance = Workspace(billing_project=billing_project, name="my-name")
-        instance.save()
+        instance = factories.WorkspaceFactory.build(
+            billing_project__name="my-project",
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my-project/my-name")
 
@@ -803,7 +1450,7 @@ class WorkspaceTest(TestCase):
             Workspace.history.all()[1].billing_project_id, billing_project_pk
         )
 
-    def test_workspace_on_delete_auth_domain(self):
+    def test_workspace_on_delete_is_in_authorization_domain(self):
         """Workspace can be deleted if it has an authorization domain."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
@@ -817,20 +1464,11 @@ class WorkspaceTest(TestCase):
         """Workspace can be deleted if a group has access to it."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupAccessFactory(group=group, workspace=workspace)
+        factories.WorkspaceGroupSharingFactory(group=group, workspace=workspace)
         workspace.delete()
         self.assertEqual(Workspace.objects.count(), 0)
         # Also deletes the relationship.
-        self.assertEqual(WorkspaceGroupAccess.objects.count(), 0)
-
-    def test_name_validation_case_insensitivity(self):
-        """Cannot validate two models with the same case-insensitive name in the same billing project."""
-        billing_project = factories.BillingProjectFactory.create()
-        name = "AbAbA"
-        factories.WorkspaceFactory.create(billing_project=billing_project, name=name)
-        instance = Workspace(billing_project=billing_project, name=name.lower())
-        with self.assertRaises(ValidationError):
-            instance.full_clean()
+        self.assertEqual(WorkspaceGroupSharing.objects.count(), 0)
 
     @skip("Add this constraint.")
     def test_name_save_case_insensitivity(self):
@@ -887,45 +1525,49 @@ class WorkspaceTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance.save()
 
-    def test_one_auth_domain(self):
+    def test_one_is_in_authorization_domain(self):
         """Can create a workspace with one authorization domain."""
-        auth_domain = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
         instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 1)
-        self.assertIn(auth_domain, instance.authorization_domains.all())
+        self.assertIn(is_in_authorization_domain, instance.authorization_domains.all())
 
-    def test_two_auth_domains(self):
+    def test_two_is_in_authorization_domains(self):
         """Can create a workspace with two authorization domains."""
-        auth_domain_1 = factories.ManagedGroupFactory.create()
-        auth_domain_2 = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain_1 = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain_2 = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
         instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 2)
-        self.assertIn(auth_domain_1, instance.authorization_domains.all())
-        self.assertIn(auth_domain_2, instance.authorization_domains.all())
+        self.assertIn(
+            is_in_authorization_domain_1, instance.authorization_domains.all()
+        )
+        self.assertIn(
+            is_in_authorization_domain_2, instance.authorization_domains.all()
+        )
 
-    def test_auth_domain_unique(self):
+    def test_is_in_authorization_domain_unique(self):
         """Adding the same auth domain twice does nothing."""
-        auth_domain = factories.ManagedGroupFactory.create()
+        is_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.add(auth_domain)
-        instance.authorization_domains.add(auth_domain)
+        instance.authorization_domains.add(is_in_authorization_domain)
+        instance.authorization_domains.add(is_in_authorization_domain)
         self.assertEqual(len(instance.authorization_domains.all()), 1)
-        self.assertIn(auth_domain, instance.authorization_domains.all())
+        self.assertIn(is_in_authorization_domain, instance.authorization_domains.all())
 
-    def test_can_delete_workspace_with_auth_domain(self):
-        auth_domain = factories.ManagedGroupFactory.create()
+    def test_can_delete_workspace_with_is_in_authorization_domain(self):
+        is_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.add(auth_domain)
+        instance.authorization_domains.add(is_in_authorization_domain)
         instance.save()
         # Now try to delete it.
         instance.refresh_from_db()
@@ -933,12 +1575,270 @@ class WorkspaceTest(TestCase):
         self.assertEqual(len(Workspace.objects.all()), 0)
         self.assertEqual(len(WorkspaceAuthorizationDomain.objects.all()), 0)
         # The group has not been deleted.
-        self.assertIn(auth_domain, ManagedGroup.objects.all())
+        self.assertIn(is_in_authorization_domain, ManagedGroup.objects.all())
 
     def test_get_anvil_url(self):
         """get_anvil_url returns a string."""
         instance = factories.WorkspaceFactory.create()
         self.assertIsInstance(instance.get_anvil_url(), str)
+
+    def test_workspace_type_not_registered(self):
+        """A ValidationError is raised if the workspace_type is not a registered adapter type."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = factories.WorkspaceFactory.build(
+            billing_project=billing_project, workspace_type="foo"
+        )
+        with self.assertRaises(ValidationError) as e:
+            instance.clean_fields()
+        self.assertIn("not a registered adapter type", str(e.exception))
+
+
+class WorkspaceGroupSharingMethodsTest(TestCase):
+    """Tests for the is_in_authorization_domain, is_shared, and has_access Workspace and ManagedGroup methods."""
+
+    def setUp(self):
+        super().setUp()
+        self.workspace = factories.WorkspaceFactory.create()
+        self.auth_domain = factories.ManagedGroupFactory.create()
+        self.group = factories.ManagedGroupFactory.create()
+
+    def test_is_in_authorization_domain_no_auth_domain(self):
+        """is_in_authorization_domain returns False when group is not in the auth domain."""
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_authorization_domain_not_in_domain(self):
+        """is_in_authorization_domain returns False when group is not in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_authorization_domain_in_domain(self):
+        """is_in_authorization_domain returns True when group is in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_authorization_domain_parent_group_in_domain(self):
+        """is_in_authorization_domain returns True when the parent group is in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=parent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_authorization_domain_grandparent_group_in_domain(self):
+        """is_in_authorization_domain returns True when a grandparent group is in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        grandparent_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=grandparent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group,
+            child_group=parent_group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_auth_domain_two_auth_domains_in_both(self):
+        """is_in_authorization_domain returns True when a workspace has two auth domains and the group is in both."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain_2)
+        # Add the group to both auth domains.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain,
+            child_group=self.group,
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=auth_domain_2,
+            child_group=self.group,
+        )
+        self.assertTrue(self.workspace.is_in_authorization_domain(self.group))
+        self.assertTrue(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_auth_domain_two_auth_domains_in_one(self):
+        """is_in_authorization_domain returns True when a workspace has two auth domains and the group is in one."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain_2)
+        # Add the group to one auth domains.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=auth_domain_2,
+            child_group=self.group,
+        )
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_auth_domain_two_auth_domains_in_none(self):
+        """is_in_authorization_domain returns True when a workspace has two auth domains and a group is in neither."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace.authorization_domains.add(auth_domain_2)
+        # Do not add the group to either auth domain.
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_in_auth_domain_child(self):
+        """is_in_auth_domain returns False when a child group is in the auth domain but not the group."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        child_group = factories.ManagedGroupFactory.create()
+        # Add the child group to the auth domain.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain, child_group=child_group
+        )
+        # Add the child group to the group.
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.group, child_group=child_group
+        )
+        # Do not add the group itself to the auth domain.
+        self.assertFalse(self.workspace.is_in_authorization_domain(self.group))
+        self.assertFalse(self.group.is_in_authorization_domain(self.workspace))
+
+    def test_is_shared_not_shared(self):
+        """Returns False when the workspace is not shared with the group."""
+        self.assertFalse(self.workspace.is_shared(self.group))
+        self.assertFalse(self.group.is_shared(self.workspace))
+
+    def test_is_shared_is_shared(self):
+        """Returns True when the workspace is shared with the group."""
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=self.group
+        )
+        self.assertTrue(self.workspace.is_shared(self.group))
+        self.assertTrue(self.group.is_shared(self.workspace))
+
+    def test_is_shared_shared_with_parent(self):
+        """Returns False when the workspace is shared with a parent group."""
+        # Create the parent group structure.
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=self.group
+        )
+        # Share with the parent.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=parent_group
+        )
+        self.assertTrue(self.workspace.is_shared(self.group))
+        self.assertTrue(self.group.is_shared(self.workspace))
+
+    def test_is_shared_shared_with_grandparent(self):
+        """Returns False when the workspace is shared with the grandparent group."""
+        # Create the grandparent group structure.
+        grandparent_group = factories.ManagedGroupFactory.create()
+        parent_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group, child_group=parent_group
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group, child_group=self.group
+        )
+        # Share with the grandparent.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=grandparent_group
+        )
+        self.assertTrue(self.workspace.is_shared(self.group))
+        self.assertTrue(self.group.is_shared(self.workspace))
+
+    def test_is_shared_shared_with_child(self):
+        """Returns False when the workspace is shared with a child group but not the group itself."""
+        child_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.group, child_group=child_group
+        )
+        # Share with the child.
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=child_group
+        )
+        self.assertFalse(self.workspace.is_shared(self.group))
+        self.assertFalse(self.group.is_shared(self.workspace))
+
+    def test_has_access_shared_no_auth_domain(self):
+        """Returns True when the group is shared and there is no auth domain."""
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=self.group
+        )
+        self.assertTrue(self.workspace.has_access(self.group))
+        self.assertTrue(self.group.has_access(self.workspace))
+
+    def test_has_access_not_shared_no_auth_domain(self):
+        """Returns False when the group is not shared and there is no auth domain."""
+        self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
+
+    def test_has_access_shared_in_auth_domain(self):
+        """Returns True when the group is shared and in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain, child_group=self.group
+        )
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=self.group
+        )
+        self.assertTrue(self.workspace.has_access(self.group))
+        self.assertTrue(self.group.has_access(self.workspace))
+
+    def test_has_access_shared_not_in_auth_domain(self):
+        """Returns False when the group is shared but not in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=self.group
+        )
+        self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
+
+    def test_has_access_not_shared_in_auth_domain(self):
+        """Returns False when the group is not shared but in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=self.auth_domain, child_group=self.group
+        )
+        self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
+
+    def test_has_access_not_shared_not_in_auth_domain(self):
+        """Returns False when the group is not shared and not in the auth domain."""
+        self.workspace.authorization_domains.add(self.auth_domain)
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=self.workspace, group=self.group
+        )
+        self.assertFalse(self.workspace.has_access(self.group))
+        self.assertFalse(self.group.has_access(self.workspace))
+
+
+class WorkspaceDataTest(TestCase):
+    """Tests for the WorkspaceData models (default and base)."""
+
+    def test_get_absolute_url(self):
+        """get_absolute_url returns the url of the workspace."""
+        workspace = factories.WorkspaceFactory.create()
+        workspace_data = DefaultWorkspaceData(workspace=workspace)
+        self.assertEqual(
+            workspace_data.get_absolute_url(), workspace.get_absolute_url()
+        )
+
+    def test_str(self):
+        workspace = factories.WorkspaceFactory.create()
+        workspace_data = DefaultWorkspaceData(workspace=workspace)
+        self.assertEqual(str(workspace_data), str(workspace))
 
 
 class WorkspaceAuthorizationDomainTestCase(TestCase):
@@ -1278,15 +2178,17 @@ class GroupAccountMembershipTest(TestCase):
             account=account, group=group, role=GroupAccountMembership.MEMBER
         )
         # Timestamp
-        time = timezone.now()
+        current_time = timezone.now()
+        # Sleep a tiny bit so are history records are sure to not have the same timestamp
+        time.sleep(0.1)
         # Mark the account as inactive.
         account.status = account.INACTIVE_STATUS
         account.save()
         # Check the history at timestamp to make sure the account shows active.
-        record = obj.history.as_of(time)
-        # import ipdb; ipdb.set_trace()
+        record = obj.history.as_of(current_time)
+
         self.assertEqual(
-            account.history.as_of(time).status, record.account.ACTIVE_STATUS
+            account.history.as_of(current_time).status, record.account.ACTIVE_STATUS
         )
         self.assertEqual(record.account.status, record.account.ACTIVE_STATUS)
 
@@ -1339,15 +2241,18 @@ class GroupAccountMembershipTest(TestCase):
             instance_2.save()
 
 
-class WorkspaceGroupAccessTest(TestCase):
+class WorkspaceGroupSharingTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
-        instance = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+        instance = WorkspaceGroupSharing(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupSharing.READER,
+            can_compute=False,
         )
-        self.assertIsInstance(instance, WorkspaceGroupAccess)
+        self.assertIsInstance(instance, WorkspaceGroupSharing)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
@@ -1359,8 +2264,8 @@ class WorkspaceGroupAccessTest(TestCase):
         workspace = factories.WorkspaceFactory(
             billing_project=billing_project, name=workspace_name
         )
-        instance = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+        instance = WorkspaceGroupSharing(
+            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
         )
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
@@ -1369,57 +2274,94 @@ class WorkspaceGroupAccessTest(TestCase):
 
     def test_get_absolute_url(self):
         """The get_absolute_url() method works."""
-        instance = factories.WorkspaceGroupAccessFactory()
+        instance = factories.WorkspaceGroupSharingFactory()
         self.assertIsInstance(instance.get_absolute_url(), str)
+
+    def test_clean_reader_can_compute(self):
+        """Clean method raises a ValidationError if a READER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupSharing(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupSharing.READER,
+            can_compute=True,
+        )
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+    def test_clean_writer_can_compute(self):
+        """Clean method succeeds if a WRITER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupSharing(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupSharing.WRITER,
+            can_compute=True,
+        )
+        instance.full_clean()
+
+    def test_clean_owner_can_compute(self):
+        """Clean method succeeds if an OWNER has can_compute=True"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupSharing(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupSharing.OWNER,
+            can_compute=True,
+        )
+        instance.full_clean()
 
     def test_history(self):
         """A simple history record is created when model is updated."""
-        obj = factories.WorkspaceGroupAccessFactory.create(
-            access=WorkspaceGroupAccess.READER
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            access=WorkspaceGroupSharing.READER
         )
         # History was created.
         self.assertEqual(obj.history.count(), 1)
         # A new entry was created after update.
-        obj.access = WorkspaceGroupAccess.WRITER
+        obj.access = WorkspaceGroupSharing.WRITER
         obj.save()
         self.assertEqual(obj.history.count(), 2)
         # An entry is created upon deletion.
         obj.delete()
-        self.assertEqual(WorkspaceGroupAccess.history.count(), 3)
+        self.assertEqual(WorkspaceGroupSharing.history.count(), 3)
 
     def test_history_foreign_key_workspace(self):
         """History is retained when a workspace foreign key object is deleted."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         # History was created.
-        self.assertEqual(WorkspaceGroupAccess.history.count(), 1)
+        self.assertEqual(WorkspaceGroupSharing.history.count(), 1)
         # Entries are retained when the foreign key is deleted.
         workspace_pk = obj.workspace.pk
         obj.workspace.delete()
-        self.assertEqual(WorkspaceGroupAccess.history.count(), 2)
+        self.assertEqual(WorkspaceGroupSharing.history.count(), 2)
         # Make sure you can access it.
         self.assertEqual(
-            WorkspaceGroupAccess.history.earliest().workspace_id, workspace_pk
+            WorkspaceGroupSharing.history.earliest().workspace_id, workspace_pk
         )
 
     def test_history_foreign_key_group(self):
         """History is retained when a group foreign key object is deleted."""
-        obj = factories.WorkspaceGroupAccessFactory.create()
+        obj = factories.WorkspaceGroupSharingFactory.create()
         # Entries are retained when the foreign key is deleted.
         group_pk = obj.group.pk
         obj.delete()  # Delete because of a on_delete=PROTECT foreign key.
         obj.group.delete()
-        self.assertEqual(WorkspaceGroupAccess.history.count(), 2)
+        self.assertEqual(WorkspaceGroupSharing.history.count(), 2)
         # Make sure you can access it.
-        self.assertEqual(WorkspaceGroupAccess.history.earliest().group_id, group_pk)
+        self.assertEqual(WorkspaceGroupSharing.history.earliest().group_id, group_pk)
 
     def test_same_group_in_two_workspaces(self):
         """The same group can have access to two workspaces."""
         group = factories.ManagedGroupFactory()
         workspace_1 = factories.WorkspaceFactory(name="workspace-1")
         workspace_2 = factories.WorkspaceFactory(name="workspace-2")
-        instance = WorkspaceGroupAccess(group=group, workspace=workspace_1)
+        instance = WorkspaceGroupSharing(group=group, workspace=workspace_1)
         instance.save()
-        instance = WorkspaceGroupAccess(group=group, workspace=workspace_2)
+        instance = WorkspaceGroupSharing(group=group, workspace=workspace_2)
         instance.save()
 
     def test_two_groups_and_same_workspace(self):
@@ -1427,21 +2369,21 @@ class WorkspaceGroupAccessTest(TestCase):
         group_1 = factories.ManagedGroupFactory(name="group-1")
         group_2 = factories.ManagedGroupFactory(name="group-2")
         workspace = factories.WorkspaceFactory()
-        instance = WorkspaceGroupAccess(group=group_1, workspace=workspace)
+        instance = WorkspaceGroupSharing(group=group_1, workspace=workspace)
         instance.save()
-        instance = WorkspaceGroupAccess(group=group_2, workspace=workspace)
+        instance = WorkspaceGroupSharing(group=group_2, workspace=workspace)
         instance.save()
 
     def test_cannot_have_duplicated_account_and_group_with_same_access(self):
         """Cannot have the same account in the same group with the same access levels twice."""
         group = factories.ManagedGroupFactory()
         workspace = factories.WorkspaceFactory()
-        instance_1 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+        instance_1 = WorkspaceGroupSharing(
+            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
         )
         instance_1.save()
-        instance_2 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+        instance_2 = WorkspaceGroupSharing(
+            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
@@ -1452,12 +2394,12 @@ class WorkspaceGroupAccessTest(TestCase):
         """Cannot have the same account in the same group with different access levels twice."""
         group = factories.ManagedGroupFactory()
         workspace = factories.WorkspaceFactory()
-        instance_1 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.READER
+        instance_1 = WorkspaceGroupSharing(
+            group=group, workspace=workspace, access=WorkspaceGroupSharing.READER
         )
         instance_1.save()
-        instance_2 = WorkspaceGroupAccess(
-            group=group, workspace=workspace, access=WorkspaceGroupAccess.WRITER
+        instance_2 = WorkspaceGroupSharing(
+            group=group, workspace=workspace, access=WorkspaceGroupSharing.WRITER
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()

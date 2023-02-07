@@ -1,0 +1,30 @@
+{% extends "anvil_consortium_manager/account_detail.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Update Account{% endblock title %}
+
+{% block panel %}
+<dl class="row">
+  <dt class="col-sm-2">Email</dt> <dd class="col-sm-10">{{ object.email }}</dd>
+  <dt class="col-sm-2">Status</dt> <dd class="col-sm-10">{{ object.get_status_display }}</dd>
+  <dt class="col-sm-2">User</dt> <dd class="col-sm-10">{% if object.verified_email_entry %}{{ object.verified_email_entry.user }}{% else %} &mdash; {% endif %}</dd>
+  <dt class="col-sm-2">Date verified</dt> <dd class="col-sm-10">{% if object.verified_email_entry %}{{ object.verified_email_entry.date_verified }}{% else %} &mdash; {% endif %}</dd>
+  <dt class="col-sm-2">Date created</dt> <dd class="col-sm-10">{{ object.created }}</dd>
+  <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
+
+</dl>
+{% endblock panel %}
+
+
+{% block after_panel %}
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">Cancel</a>
+  </form>
+{% endblock after_panel %}
+
+
+{% block action_buttons %}
+{% endblock action_buttons %}

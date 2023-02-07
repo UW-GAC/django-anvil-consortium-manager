@@ -1,0 +1,15 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create a new Managed Group{% endblock title %}
+
+{% block content %}
+
+<h2>Create a new Managed Group on AnVIL</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-success">Create</button>
+  </form>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "anvil_consortium_manager/audit.html" %}
+{% block title %}Audit Workspace sharing{% endblock %}
+
+{% block main_header %}
+<h1>Workspace sharing audit results</h1>
+<h3>for <a href="{{ object.get_absolute_url }}">{{ object }}</a></h3>
+{% endblock main_header %}
+
+{% block audit_explanation %}
+
+<p>
+  Each sharing record for a managed workspace is considered to be "Verified" if the following are true:
+  <ul>
+    <li>The workspace is shared with the group on AnVIL.</li>
+    <li>The group that the workspace is shared with in the app has the same access in AnVIL.</li>
+    <li>The "can_compute" value is the same in the app and on AnVIL.</li>
+    <li>The "can_share" value is the same in the app and on AnVIL.</li>
+  </ul>
+
+</p>
+
+<ol>
+</ol>
+
+<p>
+  Otherwise, one or more errors will be reported for that membership in the "Errors" table.
+</p>
+
+<p>
+  The audit also checks for any group or account that has access and is not recorded in the app.
+  If any exist, they will be reported in the "Not in app" section.
+</p>
+{% endblock audit_explanation %}

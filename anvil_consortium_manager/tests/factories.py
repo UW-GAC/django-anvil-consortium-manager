@@ -1,7 +1,10 @@
-from factory import Faker, SubFactory
+from django.contrib.auth.models import User
+from django.utils import timezone
+from factory import Faker, SelfAttribute, Sequence, SubFactory, Trait
 from factory.django import DjangoModelFactory
 
-from anvil_consortium_manager import models
+from .. import models
+from ..adapters.default import DefaultWorkspaceAdapter
 
 
 class BillingProjectFactory(DjangoModelFactory):
@@ -15,6 +18,41 @@ class BillingProjectFactory(DjangoModelFactory):
         django_get_or_create = ["name"]
 
 
+class UserFactory(DjangoModelFactory):
+    """A factory to create a user."""
+
+    username = Sequence(lambda n: "testuser%d" % n)
+    password = "password"
+
+    class Meta:
+        model = User
+        django_get_or_create = ["username"]
+
+
+class UserEmailEntryFactory(DjangoModelFactory):
+    """A factory for the UserEmailEntry model."""
+
+    email = Faker("email")
+    user = SubFactory(UserFactory)
+    date_verification_email_sent = Faker(
+        "date_time", tzinfo=timezone.get_current_timezone()
+    )
+
+    class Meta:
+        model = models.UserEmailEntry
+
+    # class Params:
+    #     verified = Trait(
+    #         date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
+    #         # Create an Account with the same user.
+    #         verified_account=SubFactory(
+    #             AccountFactory,
+    #             user=SelfAttribute("..user"),
+    #             email=SelfAttribute("..email"),
+    #         ),
+    #     )
+
+
 class AccountFactory(DjangoModelFactory):
     """A factory for the Account model."""
 
@@ -24,6 +62,19 @@ class AccountFactory(DjangoModelFactory):
     class Meta:
         model = models.Account
         django_get_or_create = ["email"]
+
+    class Params:
+        verified = Trait(
+            user=SubFactory(UserFactory),
+            verified_email_entry=SubFactory(
+                UserEmailEntryFactory,
+                email=SelfAttribute("..email"),
+                user=SelfAttribute("..user"),
+                date_verified=Faker(
+                    "date_time", tzinfo=timezone.get_current_timezone()
+                ),
+            ),
+        )
 
 
 class ManagedGroupFactory(DjangoModelFactory):
@@ -41,10 +92,33 @@ class WorkspaceFactory(DjangoModelFactory):
 
     billing_project = SubFactory(BillingProjectFactory)
     name = Faker("slug")
+    workspace_type = DefaultWorkspaceAdapter().get_type()
 
     class Meta:
         model = models.Workspace
         django_get_or_create = ["billing_project", "name"]
+
+
+class DefaultWorkspaceDataFactory(DjangoModelFactory):
+    """A factory for the DefaultWorkspaceData model."""
+
+    workspace = SubFactory(WorkspaceFactory)
+
+    class Meta:
+        model = models.DefaultWorkspaceData
+        django_get_or_create = [
+            "workspace",
+        ]
+
+
+class WorkspaceAuthorizationDomainFactory(DjangoModelFactory):
+    """A factory for the WorkspaceAuthorizationDomain model."""
+
+    workspace = SubFactory(WorkspaceFactory)
+    group = SubFactory(ManagedGroupFactory)
+
+    class Meta:
+        model = models.WorkspaceAuthorizationDomain
 
 
 class GroupGroupMembershipFactory(DjangoModelFactory):
@@ -71,13 +145,14 @@ class GroupAccountMembershipFactory(DjangoModelFactory):
         django_get_or_create = ["account", "group"]
 
 
-class WorkspaceGroupAccessFactory(DjangoModelFactory):
+class WorkspaceGroupSharingFactory(DjangoModelFactory):
     """A factory for the WorkspaceGroup model."""
 
     workspace = SubFactory(WorkspaceFactory)
     group = SubFactory(ManagedGroupFactory)
-    access = models.WorkspaceGroupAccess.READER
+    access = models.WorkspaceGroupSharing.READER
+    can_compute = False
 
     class Meta:
-        model = models.WorkspaceGroupAccess
+        model = models.WorkspaceGroupSharing
         django_get_or_create = ["workspace", "group"]

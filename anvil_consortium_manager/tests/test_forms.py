@@ -1,5 +1,6 @@
 """Test forms for the anvil_consortium_manager app."""
 
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.test import TestCase
 
 from .. import forms, models
@@ -16,6 +17,12 @@ class BillingProjectImportFormTest(TestCase):
         form_data = {
             "name": "foo",
         }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"name": "foo", "note": "test note"}
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
@@ -56,6 +63,24 @@ class BillingProjectImportFormTest(TestCase):
         self.assertIn("already exists", form.errors["name"][0])
 
 
+class BillingProjectUpdateFormTest(TestCase):
+    """Tests for the BillingProjectUpdateForm class."""
+
+    form_class = forms.BillingProjectUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+
 class AccountImportFormTest(TestCase):
     """Tests for the AccountImportForm class."""
 
@@ -66,6 +91,16 @@ class AccountImportFormTest(TestCase):
         form_data = {
             "email": "test_email@example.com",
             "is_service_account": True,
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_with_note(self):
+        """Form is valid with necessary input."""
+        form_data = {
+            "email": "test_email@example.com",
+            "is_service_account": True,
+            "note": "test note",
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
@@ -116,6 +151,70 @@ class AccountImportFormTest(TestCase):
         self.assertIn("already exists", form.errors["email"][0])
 
 
+class AccountUpdateFormTest(TestCase):
+    """Tests for the AccountUpdateForm class."""
+
+    form_class = forms.AccountUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+
+class UserEmailEntryFormTest(TestCase):
+    """Tests for the UserEmailEntryForm class."""
+
+    form_class = forms.UserEmailEntryForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {
+            "email": "test_email@example.com",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_invalid_email(self):
+        """Form is invalid when an invalid email is entered."""
+        form_data = {"email": "foo"}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("valid email", form.errors["email"][0])
+
+    def test_invalid_missing_email(self):
+        """Form is invalid when missing email."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("required", form.errors["email"][0])
+
+    def test_service_account_email(self):
+        """Raises ValidationError if a service account email is entered."""
+        form_data = {
+            "email": "test_email@TEST.iam.gserviceaccount.com",
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("email", form.errors)
+        self.assertEqual(len(form.errors["email"]), 1)
+        self.assertIn("service account", form.errors["email"][0])
+
+
 class ManagedGroupCreateFormTest(TestCase):
     """Tests for the ManagedGroupCreateForm class."""
 
@@ -125,6 +224,15 @@ class ManagedGroupCreateFormTest(TestCase):
         """Form is valid with necessary input."""
         form_data = {
             "name": "test-group-name",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_with_note(self):
+        """Form is valid with necessary input and note is specified."""
+        form_data = {
+            "name": "test-group-name",
+            "note": "test note",
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
@@ -176,6 +284,24 @@ class ManagedGroupCreateFormTest(TestCase):
         self.assertIn("already exists", form.errors["name"][0])
 
 
+class ManagedGroupUpdateFormTest(TestCase):
+    """Tests for the ManagedGroupUpdateForm class."""
+
+    form_class = forms.ManagedGroupUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+
 class WorkspaceCreateFormTest(TestCase):
     """Tests for the WorkspaceCreateForm class."""
 
@@ -187,6 +313,17 @@ class WorkspaceCreateFormTest(TestCase):
         form_data = {
             "billing_project": billing_project,
             "name": "test-workspace",
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_with_note(self):
+        """Form is valid with necessary input and note is specified."""
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "note": "test note",
         }
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
@@ -241,6 +378,37 @@ class WorkspaceCreateFormTest(TestCase):
         self.assertIn("billing_project", form.errors)
         self.assertEqual(len(form.errors), 1)
 
+    def test_invalid_case_insensitive_duplicate(self):
+        """Cannot validate with the same case-insensitive name in the same billing project as an existing workspace."""
+        billing_project = factories.BillingProjectFactory.create()
+        name = "AbAbA"
+        factories.WorkspaceFactory.create(billing_project=billing_project, name=name)
+        form_data = {"billing_project": billing_project, "name": name.lower()}
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn(NON_FIELD_ERRORS, form.errors)
+        self.assertEqual(len(form.errors[NON_FIELD_ERRORS]), 1)
+        self.assertIn("already exists", form.errors[NON_FIELD_ERRORS][0])
+
+
+class WorkspaceUpdateFormTest(TestCase):
+    """Tests for the ManagedGroupUpdateForm class."""
+
+    form_class = forms.WorkspaceUpdateForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_note(self):
+        """Form is valid with the note field."""
+        form_data = {"note": "test note"}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
 
 class WorkspaceImportFormTest(TestCase):
     form_class = forms.WorkspaceImportForm
@@ -249,6 +417,18 @@ class WorkspaceImportFormTest(TestCase):
         """Form is valid with necessary input."""
         form_data = {
             "workspace": "test-billing-project/test-workspace",
+        }
+        workspace_choices = [
+            ("test-billing-project/test-workspace", 1),
+        ]
+        form = self.form_class(workspace_choices=workspace_choices, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_with_note(self):
+        """Form is valid with necessary input and note is specified."""
+        form_data = {
+            "workspace": "test-billing-project/test-workspace",
+            "note": "test note",
         }
         workspace_choices = [
             ("test-billing-project/test-workspace", 1),
@@ -291,6 +471,222 @@ class WorkspaceImportFormTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("workspace", form.errors)
         self.assertEqual(len(form.errors), 1)
+
+
+class WorkspaceCloneFormTest(TestCase):
+    """Tests for the WorkspaceCloneForm."""
+
+    form_class = forms.WorkspaceCloneForm
+
+    def setUp(self):
+        """Create a workspace to clone for use in tests."""
+        self.workspace_to_clone = factories.WorkspaceFactory.create()
+
+    def test_valid_no_required_auth_domains(self):
+        """Form is valid with a workspace to clone with no auth domains, and no auth domains selected."""
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_no_required_auth_domains_with_one_selected_auth_domain(self):
+        """Form is valid with a workspace to clone with no auth domains, and one auth domain selected."""
+        billing_project = factories.BillingProjectFactory.create()
+        new_auth_domain = factories.ManagedGroupFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [new_auth_domain],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_no_required_auth_domains_with_two_selected_auth_domains(self):
+        """Form is valid with a workspace to clone with no auth domains, and two auth domains selected."""
+        billing_project = factories.BillingProjectFactory.create()
+        new_auth_domain_1 = factories.ManagedGroupFactory.create()
+        new_auth_domain_2 = factories.ManagedGroupFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [new_auth_domain_1, new_auth_domain_2],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_one_required_auth_domains(self):
+        """Form is valid with a workspace to clone with one auth domain, and that auth domain selected."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [auth_domain],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_one_required_auth_domains_no_auth_domains_selected(self):
+        """Form is not valid when no auth domains are selected but workspace to clone has one auth domain."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("authorization_domains", form.errors)
+        self.assertEqual(len(form.errors["authorization_domains"]), 1)
+        self.assertIn(
+            "contain all original workspace authorization domains",
+            form.errors["authorization_domains"][0],
+        )
+        self.assertIn(auth_domain.name, form.errors["authorization_domains"][0])
+
+    def test_invalid_one_required_auth_domains_different_auth_domains_selected(self):
+        """Form is not valid when no auth domains are selected but workspace to clone has one auth domain."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create()
+        other_auth_domain = factories.ManagedGroupFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [other_auth_domain],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("authorization_domains", form.errors)
+        self.assertEqual(len(form.errors["authorization_domains"]), 1)
+        self.assertIn(
+            "contain all original workspace authorization domains",
+            form.errors["authorization_domains"][0],
+        )
+        self.assertIn(auth_domain.name, form.errors["authorization_domains"][0])
+
+    def test_valid_one_required_auth_domains_with_extra_selected_auth_domain(self):
+        """Form is valid with a workspace to clone with one auth domains, and an extra auth domain selected."""
+        auth_domain = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create()
+        new_auth_domain = factories.ManagedGroupFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [auth_domain, new_auth_domain],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_valid_two_required_auth_domains(self):
+        """Form is valid with a workspace to clone with two auth domains, and both auth domains selected."""
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain_1, auth_domain_2)
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [auth_domain_1, auth_domain_2],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_two_required_auth_domains_no_auth_domains_selected(self):
+        """Form is not valid when no auth domains are selected but workspace to clone has two auth domain."""
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain_1, auth_domain_2)
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("authorization_domains", form.errors)
+        self.assertEqual(len(form.errors["authorization_domains"]), 1)
+        self.assertIn(
+            "contain all original workspace authorization domains",
+            form.errors["authorization_domains"][0],
+        )
+        self.assertIn(auth_domain_1.name, form.errors["authorization_domains"][0])
+        self.assertIn(auth_domain_2.name, form.errors["authorization_domains"][0])
+
+    def test_invalid_two_required_auth_domains_one_auth_domain_selected(self):
+        """Form is not valid when no auth domains are selected but workspace to clone has two auth domain."""
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain_1, auth_domain_2)
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [auth_domain_1],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("authorization_domains", form.errors)
+        self.assertEqual(len(form.errors["authorization_domains"]), 1)
+        self.assertIn(
+            "contain all original workspace authorization domains",
+            form.errors["authorization_domains"][0],
+        )
+        self.assertIn(auth_domain_1.name, form.errors["authorization_domains"][0])
+        self.assertIn(auth_domain_2.name, form.errors["authorization_domains"][0])
+
+    def test_invalid_two_required_auth_domains_different_auth_domains_selected(self):
+        """Form is not valid when different auth domains are selected but workspace to clone has two auth domains."""
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain_1, auth_domain_2)
+        billing_project = factories.BillingProjectFactory.create()
+        other_auth_domain_1 = factories.ManagedGroupFactory.create()
+        other_auth_domain_2 = factories.ManagedGroupFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [other_auth_domain_1, other_auth_domain_2],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("authorization_domains", form.errors)
+        self.assertEqual(len(form.errors["authorization_domains"]), 1)
+        self.assertIn(
+            "contain all original workspace authorization domains",
+            form.errors["authorization_domains"][0],
+        )
+        self.assertIn(auth_domain_1.name, form.errors["authorization_domains"][0])
+        self.assertIn(auth_domain_2.name, form.errors["authorization_domains"][0])
+
+    def test_valid_two_required_auth_domains_with_extra_selected_auth_domain(self):
+        """Form is valid with a workspace to clone with one auth domains, and an extra auth domain selected."""
+        auth_domain_1 = factories.ManagedGroupFactory.create()
+        auth_domain_2 = factories.ManagedGroupFactory.create()
+        self.workspace_to_clone.authorization_domains.add(auth_domain_1, auth_domain_2)
+        billing_project = factories.BillingProjectFactory.create()
+        new_auth_domain = factories.ManagedGroupFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [auth_domain_1, auth_domain_2, new_auth_domain],
+        }
+        form = self.form_class(self.workspace_to_clone, data=form_data)
+        self.assertTrue(form.is_valid())
 
 
 class GroupGroupMembershipFormTest(TestCase):

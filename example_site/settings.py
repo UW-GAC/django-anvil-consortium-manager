@@ -82,6 +82,12 @@ INSTALLED_APPS = [
     "simple_history",  # model history tracking - required for viewing in admin.
     # This app.
     "anvil_consortium_manager",
+    # Autocomplete.
+    # note these are supposed to come before django.contrib.admin.
+    "dal",
+    "dal_select2",
+    # The example app.
+    "example_site.app",
 ]
 
 
@@ -139,6 +145,7 @@ TEMPLATES = [
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
+                "anvil_consortium_manager.context_processors.workspace_adapter",
             ],
             "debug": False,
         },
@@ -150,7 +157,6 @@ TEMPLATES = [
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
 
 # LOGGING
 # ------------------------------------------------------------------------------
@@ -203,3 +209,19 @@ INTERNAL_IPS = ["127.0.0.1"]
 # ------------------------------------------------------------------------------
 # Specify the path to the service account to use for managing access on AnVIL.
 ANVIL_API_SERVICE_ACCOUNT_FILE = os.getenv("ANVIL_API_SERVICE_ACCOUNT_FILE")
+# Specify the URL for AccountLinkVerify view redirect
+ANVIL_ACCOUNT_LINK_REDIRECT = "home"
+# Specify the subject for AnVIL account verification emails.
+ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
+# If desired, specify the email address to send an email to after a user verifies an account.
+# ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
+
+# Workspace adapters.
+ANVIL_WORKSPACE_ADAPTERS = [
+    "example_site.app.adapters.ExampleWorkspaceAdapter",
+    # "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+]
+# Account adapter.
+ANVIL_ACCOUNT_ADAPTER = (
+    "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
+)

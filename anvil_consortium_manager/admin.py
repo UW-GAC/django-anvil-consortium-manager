@@ -14,12 +14,30 @@ class BillingProjectAdmin(SimpleHistoryAdmin):
     search_fields = ("name",)
 
 
+@admin.register(models.UserEmailEntry)
+class UserEmailEntryAdmin(SimpleHistoryAdmin):
+    """Admin class for the UserEmailEntry model."""
+
+    list_display = (
+        "email",
+        "user",
+        "date_verification_email_sent",
+        "date_verified",
+    )
+    list_filter = ()
+    search_fields = (
+        "email",
+        "user",
+    )
+
+
 @admin.register(models.Account)
 class AccountAdmin(SimpleHistoryAdmin):
     """Admin class for the Account model."""
 
     list_display = (
         "email",
+        "user",
         "is_service_account",
         "status",
     )
@@ -111,9 +129,9 @@ class GroupAccountMembershipAdmin(SimpleHistoryAdmin):
         return obj.account.get_status_display()
 
 
-@admin.register(models.WorkspaceGroupAccess)
-class WorkspaceGroupAccessAdmin(SimpleHistoryAdmin):
-    """Admin class for the WorkspaceGroupAccess model."""
+@admin.register(models.WorkspaceGroupSharing)
+class WorkspaceGroupSharingAdmin(SimpleHistoryAdmin):
+    """Admin class for the WorkspaceGroupSharing model."""
 
     list_display = (
         "pk",

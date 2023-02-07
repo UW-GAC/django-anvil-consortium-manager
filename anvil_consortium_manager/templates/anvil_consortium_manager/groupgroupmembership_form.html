@@ -1,4 +1,5 @@
 {% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}New Group Group Membership{% endblock title %}
@@ -10,6 +11,10 @@
   <form method="post">
     {% csrf_token %}
     {{ form|crispy }}
-    <button type="submit" class="btn btn-success">Save membership</button>
+    <button type="submit" class="btn btn-success">Add</button>
   </form>
 {% endblock %}
+
+{% block inline_javascript %}
+  {{ form.media }}
+{% endblock inline_javascript %}

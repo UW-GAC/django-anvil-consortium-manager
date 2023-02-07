@@ -1,14 +1,21 @@
 {% extends "anvil_consortium_manager/base.html" %}
 {% load crispy_forms_tags %}
 
-{% block title %}Import Workspace{% endblock title %}
-
-<h2>Import a workspace from AnVIL</h2>
+{% block title %}Import {{ workspace_type_display_name }}{% endblock title %}
 
 {% block content %}
+
+<h2>Import an existing {{ workspace_type_display_name }} from AnVIL</h2>
+
   <form method="post">
     {% csrf_token %}
+    {{ workspace_data_formset|crispy }}
     {{ form|crispy }}
-    <button type="submit" class="btn btn-success">Import workspace</button>
+    <button type="submit" class="btn btn-success">Import</button>
   </form>
 {% endblock %}
+
+{% block inline_javascript %}
+  {{ form.media }}
+  {{ workspace_data_formset.media }}
+{% endblock inline_javascript %}

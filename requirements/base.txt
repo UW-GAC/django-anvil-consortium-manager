@@ -5,8 +5,11 @@ crispy-bootstrap5==0.6  # https://github.com/django-crispy-forms/crispy-bootstra
 django-crispy-forms==1.14.0  # https://github.com/django-crispy-forms/django-crispy-forms
 django-extensions==3.1.5  # https://github.com/django-extensions/django-extensions
 django-tables2==2.4.1
-google-auth==2.6.0
+google-auth==2.16.0
 fontawesomefree==6.1.1
 
 # Model history tracking.
 django-simple-history==3.1.1  # https://github.com/jazzband/django-simple-history
+
+# Autocomplete
+django-autocomplete-light==3.9.4  # https://github.com/yourlabs/django-autocomplete-light

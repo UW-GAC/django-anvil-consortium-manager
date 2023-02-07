@@ -1,34 +1,31 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/__object_detail.html" %}
 {% load static %}
 
 {% load render_table from django_tables2 %}
 
+
 {% block title %}Managed Group: {{ object.name }}{% endblock %}
 
-{% block content %}
-
-<h2>
-  Managed Group Details
-    <a class="btn btn-light" href="{{ object.get_anvil_url }}" role="button">
-      <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
-      View on AnVIL
-    </a>
-</h2>
-
-{% if object.is_managed_by_app %}
-  <span class="badge bg-success">Managed by app</span>
-{% else %}
-  <span class="badge bg-secondary">Not managed by app</span>
-{% endif %}
-<div class="my-3 p-3 bg-light border rounded shadow-sm">
-  <ul>
-    <li>Name: {{ object.name }}</li>
-    <li>Date added: {{ object.created }}</li>
-    <li>Date modified: {{ object.modified }}</li>
-  </ul>
-</div>
+{% block pills %}
+  {% if object.is_managed_by_app %}
+    <span class="badge bg-success">Managed by app</span>
+  {% else %}
+    <span class="badge bg-secondary">Not managed by app</span>
+  {% endif %}
+{% endblock pills %}
 
 
+{% block panel %}
+<dl class="row">
+  <dt class="col-sm-2">Name</dt> <dd class="col-sm-10">{{ object.name }}</dd>
+  <dt class="col-sm-2">Date created</dt> <dd class="col-sm-10">{{ object.created }}</dd>
+  <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
+</dl>
+{% endblock panel %}
+
+
+
+{% block after_panel %}
 <div class="my-3">
   <div class="accordion" id="accordionGraph">
     <div class="accordion-item">
@@ -49,82 +46,141 @@
 
 
 <div class="my-3">
-  <div class="accordion" id="accordionWorkspaces">
+  <div class="accordion" id="accordionWorkspaceAuthDomains">
     <div class="accordion-item">
       <h2 class="accordion-header" id="headingWorkspacesOne">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspacesOne" aria-expanded="false" aria-controls="collapseWorkspacesOne">
-          <span class="fa-solid fa-computer mx-2"></span>
-          View workspaces that this group has access to
-          <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspaceAuthDomainsOne" aria-expanded="false" aria-controls="collapseWorkspaceAuthDomainsOne">
+          <span class="fa-solid fa-shield mx-2"></span>
+          View workspaces that this group is an authorization domain for
+          <span class="badge mx-2 bg-secondary pill"> {{ workspace_authorization_domain_table.rows|length }}</span>
         </button>
       </h2>
-      <div id="collapseWorkspacesOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspacesOne" data-bs-parent="#accordionWorkspaces">
+      <div id="collapseWorkspaceAuthDomainsOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAuthDomainsOne" data-bs-parent="#accordionWorkspaceAuthDomains">
         <div class="accordion-body">
-          {% render_table workspace_table %}
+          {% render_table workspace_authorization_domain_table %}
         </div>
       </div>
     </div>
   </div>
 </div>
 
+{% if object.is_managed_by_app %}
 
-
-<div class="my-3">
-  <div class="accordion" id="accordionMembers">
-
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingMembersOne">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersOne" aria-expanded="false" aria-controls="collapseMembersOne">
-          <span class="fa-solid fa-code-fork mx-2" data-fa-transform="flip-v"></span>
-          View group members
-          <span class="badge mx-2 bg-secondary pill"> {{ group_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseMembersOne" class="accordion-collapse collapse" aria-labelledby="headingMembersOne">
-        <div class="accordion-body">
-          {% render_table group_table %}
+  <div class="my-3">
+    <div class="accordion" id="accordionWorkspaceAccess">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingWorkspaceAccessOne">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkspaceAccessOne" aria-expanded="false" aria-controls="collapseWorkspaceAccessOne">
+            <span class="fa-solid fa-computer mx-2"></span>
+            View workspaces shared with this group
+            <span class="badge mx-2 bg-secondary pill"> {{ workspace_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseWorkspaceAccessOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAccessOne" data-bs-parent="#accordionWorkspaceAccess">
+          <div class="accordion-body">
+            {% render_table workspace_table %}
+          </div>
         </div>
       </div>
     </div>
-
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingMembersTwo">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersTwo" aria-expanded="false" aria-controls="collapseMembersTwo">
-          <span class="fa-solid fa-user-group mx-2"></span>
-          View active account members
-          <span class="badge mx-2 bg-secondary pill"> {{ active_account_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseMembersTwo" class="accordion-collapse collapse" aria-labelledby="headingMembersTwo">
-        <div class="accordion-body">
-          {% render_table active_account_table %}
-        </div>
-      </div>
-    </div>
-
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingMembersThree">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersThree" aria-expanded="false" aria-controls="collapseMembersTwo">
-          <span class="fa-solid fa-users-slash mx-2"></span>
-          View inactive account members
-          <span class="badge mx-2 bg-secondary pill"> {{ inactive_account_table.rows|length }}</span>
-        </button>
-      </h2>
-      <div id="collapseMembersThree" class="accordion-collapse collapse" aria-labelledby="headingMembersThree">
-        <div class="accordion-body">
-          {% render_table inactive_account_table %}
-        </div>
-      </div>
-    </div>
-
   </div>
-</div>
+
+  <div class="my-3">
+    <div class="accordion" id="accordionMembers">
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingParents">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseParents" aria-expanded="false" aria-controls="collapseParents">
+            <span class="fa-solid fa-code-fork mx-2" data-fa-transform="flip-v"></span>
+            View groups that this group is in
+            <span class="badge mx-2 bg-secondary pill"> {{ parent_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseParents" class="accordion-collapse collapse" aria-labelledby="headingParents">
+          <div class="accordion-body">
+            {% render_table parent_table %}
+          </div>
+        </div>
+      </div>
 
 
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMembersOne">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersOne" aria-expanded="false" aria-controls="collapseMembersOne">
+            <span class="fa-solid fa-code-fork mx-2" data-fa-transform="flip-v"></span>
+            View groups that are in this group
+            <span class="badge mx-2 bg-secondary pill"> {{ group_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseMembersOne" class="accordion-collapse collapse" aria-labelledby="headingMembersOne">
+          <div class="accordion-body">
+            {% render_table group_table %}
+          </div>
+        </div>
+      </div>
 
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMembersTwo">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersTwo" aria-expanded="false" aria-controls="collapseMembersTwo">
+            <span class="fa-solid fa-user-group mx-2"></span>
+            View active accounts in this group
+            <span class="badge mx-2 bg-secondary pill"> {{ active_account_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseMembersTwo" class="accordion-collapse collapse" aria-labelledby="headingMembersTwo">
+          <div class="accordion-body">
+            {% render_table active_account_table %}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMembersThree">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembersThree" aria-expanded="false" aria-controls="collapseMembersTwo">
+            <span class="fa-solid fa-users-slash mx-2"></span>
+            View inactive accounts in this group
+            <span class="badge mx-2 bg-secondary pill"> {{ inactive_account_table.rows|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseMembersThree" class="accordion-collapse collapse" aria-labelledby="headingMembersThree">
+          <div class="accordion-body">
+            {% render_table inactive_account_table %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {% endif %}
+
+{% endblock after_panel %}
+
+
+{% block action_buttons %}
+
+{% if object.is_managed_by_app %}
+{% if show_edit_links %}
+  <p>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:sharing:new' group_slug=object.name %}" class="btn btn-primary" role="button">Share a workspace with this group</a>
+  </p>
+
+  <p>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:member_accounts:new' group_slug=object.name %}" class="btn btn-primary" role="button">Add an account to this group</a>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:member_groups:new' parent_group_slug=object.name %}" class="btn btn-primary" role="button">Add a group to this group</a>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:add_to_group' group_slug=object.name %}" class="btn btn-primary" role="button">Add this group to another group</a>
+  </p>
+{% endif %}
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:managed_groups:delete' pk=object.pk %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  <a href="{% url 'anvil_consortium_manager:managed_groups:audit_membership' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
 </p>
+{% if show_edit_links %}
+  <p>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:update' slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
+    <a href="{% url 'anvil_consortium_manager:managed_groups:delete' slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+  </p>
+  {% endif %}
+{% endif %}
 
-{% endblock content %}
+{% endblock action_buttons %}

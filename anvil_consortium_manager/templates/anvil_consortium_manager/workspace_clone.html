@@ -1,0 +1,24 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Clone {{ object }}{% endblock title %}
+
+{% block content %}
+
+<h2>Clone {{ object }} on AnVIL</h2>
+
+  <form method="post">
+
+    {% csrf_token %}
+    {{ workspace_data_formset|crispy }}
+    {{ form|crispy }}
+
+    <button type="submit" class="btn btn-success">Clone workspace</button>
+  </form>
+{% endblock %}
+
+{% block inline_javascript %}
+  {{ form.media }}
+  {{ workspace_data_formset.media }}
+{% endblock inline_javascript %}

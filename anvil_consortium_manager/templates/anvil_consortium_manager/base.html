@@ -11,8 +11,12 @@
 
     <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}">
 
+    <!-- TEST COMMENT - app template -->
+
     {% block css %}
     <!-- Latest compiled and minified Bootstrap CSS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" ></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" integrity="sha512-GQGU0fMMi238uA+a/bdWJfpUGKUkBdgfFdgBm72SUQ6BeyWjoY/ton0tEjH+OSH9iP4Dfh+7HM0I9f5eR0L/4w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <!-- Your stuff: Third-party CSS libraries go here -->
@@ -32,6 +36,9 @@
 
       <!-- font awesome icons -->
       <script src="{% static 'fontawesomefree/js/all.min.js' %}"></script>
+
+      <!-- select2 bootstrap5 theme -->
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" />
 
     {% endblock javascript %}
 
@@ -59,6 +66,9 @@
       {% endblock content %}
 
     </div> <!-- /container -->
+
+    {% block inline_javascript %}
+    {% endblock inline_javascript %}
 
   </body>
 </html>
