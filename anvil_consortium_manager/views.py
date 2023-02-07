@@ -306,7 +306,8 @@ class AccountDetail(
         )
 
         workspace_sharing = models.WorkspaceGroupSharing.objects.filter(
-            workspace__in=self.object.get_accessible_workspaces()
+            workspace__in=self.object.get_accessible_workspaces(),
+            group__in=self.object.get_all_groups(),
         ).order_by("workspace", "group")
 
         context["accessible_workspace_table"] = tables.WorkspaceGroupSharingTable(
