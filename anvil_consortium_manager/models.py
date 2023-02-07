@@ -468,20 +468,21 @@ class ManagedGroup(TimeStampedModel):
         return "https://app.terra.bio/#groups/{group}".format(group=self.name)
 
     def _add_parents_to_graph(self, G):
-        for parent in self.get_direct_parents().distinct():
+        parent_memberships = self.parent_memberships.all()
+        for membership in parent_memberships:
             # Add a node and an edge.
-            G.add_node(parent.name)
-            G.add_edge(parent.name, self.name)
+            G.add_node(membership.parent_group.name)
+            G.add_edge(membership.parent_group.name, self.name, role=membership.role)
             # Get the parents of that parent.
-            parent._add_parents_to_graph(G)
+            membership.parent_group._add_parents_to_graph(G)
 
     def _add_children_to_graph(self, G):
-        for child in self.get_direct_children().distinct():
-            # Add a node and an edge.
-            G.add_node(child.name)
-            G.add_edge(self.name, child.name)
+        child_memberships = self.child_memberships.all()
+        for membership in child_memberships:
+            G.add_node(membership.child_group.name)
+            G.add_edge(self.name, membership.child_group.name, role=membership.role)
             # Get the parents of that parent.
-            child._add_children_to_graph(G)
+            membership.child_group._add_children_to_graph(G)
 
     def get_graph(self, G=None):
         """Return a networkx graph of the group structure for this group."""

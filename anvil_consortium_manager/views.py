@@ -162,12 +162,20 @@ class ManagedGroupGraphMixin:
             marker=dict(color=[], size=point_size, line_width=2),
         )
 
-        edge_x = []
-        edge_y = []
-        for edge in self.graph.edges():
+        edge_x_member = []
+        edge_y_member = []
+        edge_x_admin = []
+        edge_y_admin = []
+        for u, v, e in self.graph.edges(data=True):
             # Ignore direction.
-            x1, y1 = self.graph_layout[edge[1]]
-            x0, y0 = self.graph_layout[edge[0]]
+            x1, y1 = self.graph_layout[v]
+            x0, y0 = self.graph_layout[u]
+            if e["role"] == models.GroupGroupMembership.MEMBER:
+                edge_x = edge_x_member
+                edge_y = edge_y_member
+            elif e["role"] == models.GroupGroupMembership.ADMIN:
+                edge_x = edge_x_admin
+                edge_y = edge_y_admin
             edge_x.append(x0)
             edge_x.append(x1)
             edge_x.append(None)
@@ -175,10 +183,19 @@ class ManagedGroupGraphMixin:
             edge_y.append(y1)
             edge_y.append(None)
 
-        edge_trace = go.Scatter(
-            x=edge_x,
-            y=edge_y,
+        # Member relationships.
+        edge_trace_member = go.Scatter(
+            x=edge_x_member,
+            y=edge_y_member,
             line=dict(width=0.5, color="#888"),
+            hoverinfo="none",
+            mode="lines",
+        )
+        # Admin relationships.
+        edge_trace_admin = go.Scatter(
+            x=edge_x_admin,
+            y=edge_y_admin,
+            line=dict(width=2, color="#888"),
             hoverinfo="none",
             mode="lines",
         )
@@ -191,7 +208,8 @@ class ManagedGroupGraphMixin:
 
         # Create the figure.
         fig = go.Figure(layout=layout)
-        fig.add_trace(edge_trace)
+        fig.add_trace(edge_trace_member)
+        fig.add_trace(edge_trace_admin)
         fig.add_trace(node_trace)
         # Add group names as annotations.
         fig.update_layout({"annotations": node_annotations})
