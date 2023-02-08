@@ -129,6 +129,7 @@ class ManagedGroupGraphMixin:
 
         point_size = 10
 
+        # Group nodes as points.
         node_x = []
         node_y = []
         node_labels = []
@@ -160,8 +161,10 @@ class ManagedGroupGraphMixin:
             text=node_labels,
             textposition="top center",
             marker=dict(color=[], size=point_size, line_width=2),
+            name="managed groups",
         )
 
+        # Group memberships as lines.
         edge_x_member = []
         edge_y_member = []
         edge_x_admin = []
@@ -176,20 +179,26 @@ class ManagedGroupGraphMixin:
             elif e["role"] == models.GroupGroupMembership.ADMIN:
                 edge_x = edge_x_admin
                 edge_y = edge_y_admin
-            edge_x.append(x0)
             edge_x.append(x1)
+            edge_x.append(x0)
             edge_x.append(None)
-            edge_y.append(y0)
             edge_y.append(y1)
+            edge_y.append(y0)
             edge_y.append(None)
 
         # Member relationships.
         edge_trace_member = go.Scatter(
+            name="member role",
             x=edge_x_member,
             y=edge_y_member,
             line=dict(width=0.5, color="#888"),
             hoverinfo="none",
-            mode="lines",
+            mode="lines+markers",
+            marker=dict(
+                symbol="arrow",
+                size=15,
+                angleref="previous",
+            ),
         )
         # Admin relationships.
         edge_trace_admin = go.Scatter(
@@ -197,7 +206,13 @@ class ManagedGroupGraphMixin:
             y=edge_y_admin,
             line=dict(width=2, color="#888"),
             hoverinfo="none",
-            mode="lines",
+            mode="lines+markers",
+            marker=dict(
+                symbol="arrow",
+                size=15,
+                angleref="previous",
+            ),
+            name="admin role",
         )
 
         layout = go.Layout(
