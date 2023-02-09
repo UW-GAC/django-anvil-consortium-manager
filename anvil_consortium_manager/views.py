@@ -121,12 +121,11 @@ class ManagedGroupGraphMixin:
     def layout_graph(self):
         """Lay out the nodes in the graph."""
         # Layout from networkx/graphviz.
-        self.graph_layout = nx.drawing.nx_agraph.graphviz_layout(self.graph, prog="dot")
+        # self.graph_layout = nx.drawing.nx_agraph.graphviz_layout(self.graph, prog="dot")
+        self.graph_layout = nx.planar_layout(self.graph)
 
     def plot_graph(self):
         """Create a plotly figure of the graph."""
-        longest_path_length = len(nx.dag_longest_path(self.graph))
-
         point_size = 10
 
         # Group nodes as points.
@@ -216,7 +215,7 @@ class ManagedGroupGraphMixin:
         )
 
         layout = go.Layout(
-            showlegend=False,
+            # showlegend=False,
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         )
@@ -229,28 +228,8 @@ class ManagedGroupGraphMixin:
         # Add group names as annotations.
         fig.update_layout({"annotations": node_annotations})
 
-        # Add info about membership direction.
-        # make space for explanation / annotation
-        fig.update_layout(margin=dict(l=20, r=60, t=20, b=60))
-        # Add info about descending
-        fig.add_annotation(
-            dict(
-                font=dict(color="black", size=15),
-                x=1.02,
-                ax=0,
-                y=0.75,
-                ay=100,
-                showarrow=True,
-                arrowhead=1,
-                text="Membership",
-                textangle=90,
-                xanchor="left",
-                xref="paper",
-                yref="paper",
-            )
-        )
         # Set the height based on the longest path length.
-        fig.update_layout(height=200 * longest_path_length)
+        # fig.update_layout(height=200 * longest_path_length)
         return fig
 
     def get_context_data(self, **kwargs):
