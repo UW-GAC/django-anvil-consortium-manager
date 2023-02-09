@@ -1,4 +1,7 @@
+import math
+
 import networkx as nx
+import numpy as np
 import plotly
 import plotly.graph_objects as go
 from dal import autocomplete
@@ -133,11 +136,17 @@ class ManagedGroupGraphMixin:
         node_y = []
         node_labels = []
         node_annotations = []
-        for node in self.graph.nodes():
+        node_color = []
+        for node, d in self.graph.nodes(data=True):
             x, y = self.graph_layout[node]
             node_x.append(x)
             node_y.append(y)
-            node_labels.append(node)
+            node_labels.append(
+                node
+                + "<br>Number of groups: {}<br>Number of accounts: {}".format(
+                    d["n_groups"], d["n_accounts"]
+                )
+            )
             node_annotations.append(
                 go.layout.Annotation(
                     dict(
@@ -151,6 +160,8 @@ class ManagedGroupGraphMixin:
                     )
                 )
             )
+            print(d)
+            node_color.append(math.log10(max(1, d["n_groups"] + d["n_accounts"])))
 
         node_trace = go.Scatter(
             x=node_x,
@@ -159,7 +170,23 @@ class ManagedGroupGraphMixin:
             hoverinfo="text",
             text=node_labels,
             textposition="top center",
-            marker=dict(color=[], size=point_size, line_width=2),
+            marker=dict(
+                color=node_color,
+                size=point_size,
+                line_width=2,
+                showscale=True,
+                colorscale="YlGnBu",
+                colorbar=dict(
+                    thickness=15,
+                    title="Group or account members",
+                    xanchor="left",
+                    titleside="right",
+                    tickmode="array",
+                    tickvals=[np.min(node_color), np.max(node_color)],
+                    ticktext=["Fewer", "More"],
+                    ticks="outside",
+                ),
+            ),
             name="managed groups",
         )
 
@@ -178,6 +205,7 @@ class ManagedGroupGraphMixin:
             elif e["role"] == models.GroupGroupMembership.ADMIN:
                 edge_x = edge_x_admin
                 edge_y = edge_y_admin
+                # Reverse order so arrows go from child to parent instead of parent to child.
             edge_x.append(x1)
             edge_x.append(x0)
             edge_x.append(None)
@@ -218,6 +246,13 @@ class ManagedGroupGraphMixin:
             # showlegend=False,
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+            ),
         )
 
         # Create the figure.
@@ -1028,16 +1063,22 @@ class ManagedGroupVisualization(
     template_name = "anvil_consortium_manager/managedgroup_visualization.html"
 
     def get_graph(self):
-        # Get a list of nodes and edges.
-        nodes = models.ManagedGroup.objects.values_list("name", flat=True)
-        edges = models.GroupGroupMembership.objects.values_list(
-            "parent_group__name", "child_group__name"
-        )
-
         # Build the graph with nx.
         G = nx.DiGraph()
-        G.add_nodes_from(nodes)
-        G.add_edges_from(edges)
+        # Add nodes to the graph.
+        for node in models.ManagedGroup.objects.all():
+            G.add_node(
+                node.name,
+                n_groups=node.child_memberships.count(),
+                n_accounts=node.groupaccountmembership_set.count(),
+            )
+        # Add edges.
+        for membership in models.GroupGroupMembership.objects.all():
+            G.add_edge(
+                membership.parent_group.name,
+                membership.child_group.name,
+                role=membership.role,
+            )
         self.graph = G
 
 
