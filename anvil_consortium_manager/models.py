@@ -492,16 +492,21 @@ class ManagedGroup(TimeStampedModel):
             # Get the parents of that parent.
             membership.child_group._add_children_to_graph(G)
 
-    def get_graph(self, G=None):
-        """Return a networkx graph of the group structure for this group."""
+    def get_graph(self):
+        """Return a networkx graph of the group structure for this group.
+
+        The graph contains parents and children that can be reached from this group.
+
+        Returns:
+            A networkx.DiGraph object representing the group relationships.
+        """
         # Set up the graph.
-        if G is None:
-            G = nx.DiGraph()
-            G.add_node(
-                self.name,
-                n_groups=self.child_memberships.count(),
-                n_accounts=self.groupaccountmembership_set.count(),
-            )
+        G = nx.DiGraph()
+        G.add_node(
+            self.name,
+            n_groups=self.child_memberships.count(),
+            n_accounts=self.groupaccountmembership_set.count(),
+        )
         # Needs to be split up into subfunctions or else you get infinite recursion.
         self._add_parents_to_graph(G)
         self._add_children_to_graph(G)
