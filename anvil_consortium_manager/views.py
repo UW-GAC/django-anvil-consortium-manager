@@ -123,9 +123,11 @@ class ManagedGroupGraphMixin:
 
     def layout_graph(self):
         """Lay out the nodes in the graph."""
-        # Layout from networkx/graphviz.
-        # self.graph_layout = nx.drawing.nx_agraph.graphviz_layout(self.graph, prog="dot")
-        self.graph_layout = nx.planar_layout(self.graph)
+        # Networkx layout that requires graphviz:
+        # self.graph_layout = nx.drawing.nx_agraph.graphviz_layout(self.graph, prog="neato")
+        # Networkx layout that requires scipy:
+        # self.graph_layout = nx.kamada_kawai_layout(self.graph)
+        self.graph_layout = nx.spring_layout(self.graph)
 
     def plot_graph(self):
         """Create a plotly figure of the graph."""
@@ -243,6 +245,7 @@ class ManagedGroupGraphMixin:
         )
 
         layout = go.Layout(
+            height=700,
             # showlegend=False,
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -261,10 +264,12 @@ class ManagedGroupGraphMixin:
         fig.add_trace(edge_trace_admin)
         fig.add_trace(node_trace)
         # Add group names as annotations.
-        fig.update_layout({"annotations": node_annotations})
+        fig.update_layout(
+            {"annotations": node_annotations},
+            margin=dict(l=20, r=20, t=50, b=20),
+            plot_bgcolor="#eee",
+        )
 
-        # Set the height based on the longest path length.
-        # fig.update_layout(height=200 * longest_path_length)
         return fig
 
     def get_context_data(self, **kwargs):
