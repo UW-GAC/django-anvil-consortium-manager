@@ -507,6 +507,31 @@ class ManagedGroup(TimeStampedModel):
         self._add_children_to_graph(G)
         return G
 
+    @classmethod
+    def get_full_graph(cls):
+        """Return a networkx graph of the group structure for all ManagedGroups in the app.
+
+        Returns:
+            A networkx.DiGraph object representing the group relationships.
+        """
+        # Build the graph with nx.
+        G = nx.DiGraph()
+        # Add nodes to the graph.
+        for node in cls.objects.all():
+            G.add_node(
+                node.name,
+                n_groups=node.child_memberships.count(),
+                n_accounts=node.groupaccountmembership_set.count(),
+            )
+        # Add edges.
+        for membership in GroupGroupMembership.objects.all():
+            G.add_edge(
+                membership.parent_group.name,
+                membership.child_group.name,
+                role=membership.role,
+            )
+        return G
+
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""
         try:

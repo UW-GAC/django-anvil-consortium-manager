@@ -1063,22 +1063,7 @@ class ManagedGroupVisualization(
     template_name = "anvil_consortium_manager/managedgroup_visualization.html"
 
     def get_graph(self):
-        # Build the graph with nx.
-        G = nx.DiGraph()
-        # Add nodes to the graph.
-        for node in models.ManagedGroup.objects.all():
-            G.add_node(
-                node.name,
-                n_groups=node.child_memberships.count(),
-                n_accounts=node.groupaccountmembership_set.count(),
-            )
-        # Add edges.
-        for membership in models.GroupGroupMembership.objects.all():
-            G.add_edge(
-                membership.parent_group.name,
-                membership.child_group.name,
-                role=membership.role,
-            )
+        G = models.ManagedGroup.get_full_graph()
         self.graph = G
 
 
