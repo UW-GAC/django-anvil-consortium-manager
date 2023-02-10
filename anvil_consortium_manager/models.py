@@ -471,11 +471,12 @@ class ManagedGroup(TimeStampedModel):
         parent_memberships = self.parent_memberships.all()
         for membership in parent_memberships:
             # Add a node and an edge.
-            G.add_node(
-                membership.parent_group.name,
-                n_groups=membership.parent_group.child_memberships.count(),
-                n_accounts=membership.parent_group.groupaccountmembership_set.count(),
-            )
+            if membership.parent_group.name not in G.nodes:
+                G.add_node(
+                    membership.parent_group.name,
+                    n_groups=membership.parent_group.child_memberships.count(),
+                    n_accounts=membership.parent_group.groupaccountmembership_set.count(),
+                )
             G.add_edge(membership.parent_group.name, self.name, role=membership.role)
             # Get the parents of that parent.
             membership.parent_group._add_parents_to_graph(G)
@@ -483,11 +484,12 @@ class ManagedGroup(TimeStampedModel):
     def _add_children_to_graph(self, G):
         child_memberships = self.child_memberships.all()
         for membership in child_memberships:
-            G.add_node(
-                membership.child_group.name,
-                n_groups=membership.child_group.child_memberships.count(),
-                n_accounts=membership.child_group.groupaccountmembership_set.count(),
-            )
+            if membership.child_group.name not in G.nodes:
+                G.add_node(
+                    membership.child_group.name,
+                    n_groups=membership.child_group.child_memberships.count(),
+                    n_accounts=membership.child_group.groupaccountmembership_set.count(),
+                )
             G.add_edge(self.name, membership.child_group.name, role=membership.role)
             # Get the parents of that parent.
             membership.child_group._add_children_to_graph(G)
