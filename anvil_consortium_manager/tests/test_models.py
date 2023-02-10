@@ -786,6 +786,7 @@ class AccountTest(TestCase):
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
         groups = account.get_all_groups()
         self.assertEqual(len(groups), 1)
+        self.assertIn(group, groups)
 
     def test_get_all_groups_one_parent(self):
         """Two groups returned in the set"""
@@ -798,6 +799,8 @@ class AccountTest(TestCase):
         )
         groups = account.get_all_groups()
         self.assertEqual(len(groups), 2)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
 
     def test_get_all_groups_one_parent_account_in_both(self):
         """Two groups returned in the set when the account is in both child and parent groups"""
@@ -811,6 +814,8 @@ class AccountTest(TestCase):
         factories.GroupAccountMembershipFactory.create(group=parent, account=account)
         groups = account.get_all_groups()
         self.assertEqual(len(groups), 2)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
 
     def test_get_all_groups_one_grandparent(self):
         """Three groups returned in the set"""
@@ -827,6 +832,9 @@ class AccountTest(TestCase):
         )
         groups = account.get_all_groups()
         self.assertEqual(len(groups), 3)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+        self.assertIn(grandparent, groups)
 
     def test_get_all_groups_one_parent_two_grandparents(self):
         """Four groups returned in the set"""
@@ -847,6 +855,10 @@ class AccountTest(TestCase):
         )
         groups = account.get_all_groups()
         self.assertEqual(len(groups), 4)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+        self.assertIn(grandparent_1, groups)
+        self.assertIn(grandparent_2, groups)
 
     def test_get_all_groups_grandparent_is_also_parent(self):
         """Three groups returned when a child group has one parent and a grandparent.  The grandparent group is also a parent to the child's group"""  # noqa: E501
@@ -866,6 +878,9 @@ class AccountTest(TestCase):
         )
         groups = account.get_all_groups()
         self.assertEqual(len(groups), 3)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+        self.assertIn(grandparent, groups)
 
     def test_get_all_groups_one_child(self):
         """Child groups are not returned."""
