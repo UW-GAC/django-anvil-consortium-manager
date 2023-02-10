@@ -867,6 +867,19 @@ class AccountTest(TestCase):
         groups = account.get_all_groups()
         self.assertEqual(len(groups), 3)
 
+    def test_get_all_groups_one_child(self):
+        """Child groups are not returned."""
+        account = factories.AccountFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        factories.GroupAccountMembershipFactory.create(group=parent, account=account)
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 1)
+        self.assertIn(parent, groups)
+
 
 class ManagedGroupTest(TestCase):
     def test_model_saving(self):
