@@ -133,117 +133,7 @@ class ManagedGroupGraphMixin:
         """Create a plotly figure of the graph."""
         point_size = 10
 
-        # Group nodes as points.
-        node_x = []
-        node_y = []
-        node_labels = []
-        node_annotations = []
-        node_color = []
-        for node, d in self.graph.nodes(data=True):
-            x, y = self.graph_layout[node]
-            node_x.append(x)
-            node_y.append(y)
-            node_labels.append(
-                node
-                + "<br>Number of groups: {}<br>Number of accounts: {}".format(
-                    d["n_groups"], d["n_accounts"]
-                )
-            )
-            node_annotations.append(
-                go.layout.Annotation(
-                    dict(
-                        x=x,
-                        y=y,
-                        xref="x",
-                        yref="y",
-                        text=node,
-                        arrowhead=0,
-                        arrowcolor="#ccc",
-                    )
-                )
-            )
-            print(d)
-            node_color.append(math.log10(max(1, d["n_groups"] + d["n_accounts"])))
-
-        node_trace = go.Scatter(
-            x=node_x,
-            y=node_y,
-            mode="markers",
-            hoverinfo="text",
-            text=node_labels,
-            textposition="top center",
-            marker=dict(
-                color=node_color,
-                size=point_size,
-                line_width=2,
-                showscale=True,
-                colorscale="YlGnBu",
-                colorbar=dict(
-                    thickness=15,
-                    title="Group or account members",
-                    xanchor="left",
-                    titleside="right",
-                    tickmode="array",
-                    tickvals=[np.min(node_color), np.max(node_color)],
-                    ticktext=["Fewer", "More"],
-                    ticks="outside",
-                ),
-            ),
-            name="managed groups",
-        )
-
-        # Group memberships as lines.
-        edge_x_member = []
-        edge_y_member = []
-        edge_x_admin = []
-        edge_y_admin = []
-        for u, v, e in self.graph.edges(data=True):
-            # Ignore direction.
-            x1, y1 = self.graph_layout[v]
-            x0, y0 = self.graph_layout[u]
-            if e["role"] == models.GroupGroupMembership.MEMBER:
-                edge_x = edge_x_member
-                edge_y = edge_y_member
-            elif e["role"] == models.GroupGroupMembership.ADMIN:
-                edge_x = edge_x_admin
-                edge_y = edge_y_admin
-                # Reverse order so arrows go from child to parent instead of parent to child.
-            edge_x.append(x1)
-            edge_x.append(x0)
-            edge_x.append(None)
-            edge_y.append(y1)
-            edge_y.append(y0)
-            edge_y.append(None)
-
-        # Member relationships.
-        edge_trace_member = go.Scatter(
-            name="member role",
-            x=edge_x_member,
-            y=edge_y_member,
-            line=dict(width=0.5, color="#888"),
-            hoverinfo="none",
-            mode="lines+markers",
-            marker=dict(
-                symbol="arrow",
-                size=15,
-                angleref="previous",
-            ),
-        )
-        # Admin relationships.
-        edge_trace_admin = go.Scatter(
-            x=edge_x_admin,
-            y=edge_y_admin,
-            line=dict(width=2, color="#888"),
-            hoverinfo="none",
-            mode="lines+markers",
-            marker=dict(
-                symbol="arrow",
-                size=15,
-                angleref="previous",
-            ),
-            name="admin role",
-        )
-
+        # Set up the figure.
         layout = go.Layout(
             height=700,
             # showlegend=False,
@@ -260,15 +150,128 @@ class ManagedGroupGraphMixin:
 
         # Create the figure.
         fig = go.Figure(layout=layout)
-        fig.add_trace(edge_trace_member)
-        fig.add_trace(edge_trace_admin)
-        fig.add_trace(node_trace)
-        # Add group names as annotations.
-        fig.update_layout(
-            {"annotations": node_annotations},
-            margin=dict(l=20, r=20, t=50, b=20),
-            plot_bgcolor="#eee",
-        )
+
+        if self.graph:
+            # Group nodes as points.
+            node_x = []
+            node_y = []
+            node_labels = []
+            node_annotations = []
+            node_color = []
+            for node, d in self.graph.nodes(data=True):
+                x, y = self.graph_layout[node]
+                node_x.append(x)
+                node_y.append(y)
+                node_labels.append(
+                    node
+                    + "<br>Number of groups: {}<br>Number of accounts: {}".format(
+                        d["n_groups"], d["n_accounts"]
+                    )
+                )
+                node_annotations.append(
+                    go.layout.Annotation(
+                        dict(
+                            x=x,
+                            y=y,
+                            xref="x",
+                            yref="y",
+                            text=node,
+                            arrowhead=0,
+                            arrowcolor="#ccc",
+                        )
+                    )
+                )
+                node_color.append(math.log10(max(1, d["n_groups"] + d["n_accounts"])))
+
+            node_trace = go.Scatter(
+                x=node_x,
+                y=node_y,
+                mode="markers",
+                hoverinfo="text",
+                text=node_labels,
+                textposition="top center",
+                marker=dict(
+                    color=node_color,
+                    size=point_size,
+                    line_width=2,
+                    showscale=True,
+                    colorscale="YlGnBu",
+                    colorbar=dict(
+                        thickness=15,
+                        title="Group or account members",
+                        xanchor="left",
+                        titleside="right",
+                        tickmode="array",
+                        tickvals=[np.min(node_color), np.max(node_color)],
+                        ticktext=["Fewer", "More"],
+                        ticks="outside",
+                    ),
+                ),
+                name="managed groups",
+            )
+            fig.add_trace(node_trace)
+
+            # Group memberships as lines.
+            edge_x_member = []
+            edge_y_member = []
+            edge_x_admin = []
+            edge_y_admin = []
+            for u, v, e in self.graph.edges(data=True):
+                # Ignore direction.
+                x1, y1 = self.graph_layout[v]
+                x0, y0 = self.graph_layout[u]
+                if e["role"] == models.GroupGroupMembership.MEMBER:
+                    edge_x = edge_x_member
+                    edge_y = edge_y_member
+                elif e["role"] == models.GroupGroupMembership.ADMIN:
+                    edge_x = edge_x_admin
+                    edge_y = edge_y_admin
+                    # Reverse order so arrows go from child to parent instead of parent to child.
+                edge_x.append(x1)
+                edge_x.append(x0)
+                edge_x.append(None)
+                edge_y.append(y1)
+                edge_y.append(y0)
+                edge_y.append(None)
+
+            # Member relationships.
+            edge_trace_member = go.Scatter(
+                name="member role",
+                x=edge_x_member,
+                y=edge_y_member,
+                line=dict(width=0.5, color="#888"),
+                hoverinfo="none",
+                mode="lines+markers",
+                marker=dict(
+                    symbol="arrow",
+                    size=15,
+                    angleref="previous",
+                ),
+            )
+            fig.add_trace(edge_trace_member)
+
+            # Admin relationships.
+            edge_trace_admin = go.Scatter(
+                x=edge_x_admin,
+                y=edge_y_admin,
+                line=dict(width=2, color="#888"),
+                hoverinfo="none",
+                mode="lines+markers",
+                marker=dict(
+                    symbol="arrow",
+                    size=15,
+                    angleref="previous",
+                ),
+                name="admin role",
+            )
+            fig.add_trace(edge_trace_admin)
+
+            # Add group names as annotations.
+            fig.update_layout(
+                {"annotations": node_annotations},
+                margin=dict(l=20, r=20, t=50, b=20),
+                plot_bgcolor="#eee",
+            )
 
         return fig
 

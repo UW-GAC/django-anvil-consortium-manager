@@ -4647,6 +4647,17 @@ class ManagedGroupDetailTest(TestCase):
             ),
         )
 
+    def test_group_visualization(self):
+        factories.ManagedGroupFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=group, child_group=child
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name))
+        self.assertIn("graph", response.context_data)
+
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
 
@@ -6162,6 +6173,88 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, slug="foo")
+
+
+class ManagedGroupVisualizationTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:managed_groups:visualization", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ManagedGroupVisualization.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_status_code_with_existing_object_not_managed(self):
+        """Returns a successful status code for an existing object pk."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_no_groups(self):
+        """Visualization when there are no groups."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("graph", response.context_data)
+
+    def test_one_group(self):
+        """Visualization when there is one group."""
+        factories.ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("graph", response.context_data)
+
+    def test_two_groups(self):
+        """Visualization when there are two groups."""
+        factories.ManagedGroupFactory.create_batch(2)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("graph", response.context_data)
+
+    def test_group_visualization(self):
+        factories.ManagedGroupFactory.create()
+        grandparent = factories.ManagedGroupFactory.create()
+        parent_1 = factories.ManagedGroupFactory.create()
+        parent_2 = factories.ManagedGroupFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent_2
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_1, child_group=child
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("graph", response.context_data)
 
 
 class WorkspaceDetailTest(TestCase):
