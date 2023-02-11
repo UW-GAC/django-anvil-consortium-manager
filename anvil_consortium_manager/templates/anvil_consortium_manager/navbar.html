@@ -73,6 +73,9 @@
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:list' %}">List groups</a>
               </li>
+              <li>
+                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:visualization' %}">Group visualization</a>
+              </li>
               {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
               <li>
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:managed_groups:new' %}">Create a new group</a>
