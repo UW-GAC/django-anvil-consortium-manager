@@ -383,15 +383,7 @@ class Account(TimeStampedModel, ActivatorModel):
         Returns:
             A list of workspaces that are accessible to the account.
         """
-        # get a list of all groups that an Account is in, directly and indirectly;
-        group_memberships = self.groupaccountmembership_set.all()
-        groups = []
-        for membership in group_memberships:
-            groups.append(membership.group)
-            parents = membership.group.get_all_parents()
-
-            for group in parents:
-                groups.append(group)
+        groups = self.get_all_groups()
         # check what workspaces have been shared with any of those groups;
         workspaces = WorkspaceGroupSharing.objects.filter(group__in=groups)
         # check if all the auth domains for each workspace are in the Account's set of groups.
@@ -402,6 +394,18 @@ class Account(TimeStampedModel, ActivatorModel):
             if len(set(authorized_domains).difference(set(groups))) == 0:
                 accessible_workspaces.add(ws.workspace)
         return accessible_workspaces
+
+    def get_all_groups(self):
+        """get a list of all groups that an Account is in, directly and indirectly"""
+        groups = set()
+        group_memberships = self.groupaccountmembership_set.all()
+        for membership in group_memberships:
+            groups.add(membership.group)
+            parents = membership.group.get_all_parents()
+
+            for group in parents:
+                groups.add(group)
+        return groups
 
 
 class ManagedGroup(TimeStampedModel):

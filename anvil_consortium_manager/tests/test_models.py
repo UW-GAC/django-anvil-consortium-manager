@@ -779,6 +779,122 @@ class AccountTest(TestCase):
         self.assertEqual(len(accessible_workspaces), 1)
         self.assertIn(workspace, accessible_workspaces)
 
+    def test_get_all_groups_no_parents(self):
+        """One group returns in the set"""
+        account = factories.AccountFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 1)
+        self.assertIn(group, groups)
+
+    def test_get_all_groups_one_parent(self):
+        """Two groups returned in the set"""
+        account = factories.AccountFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=child, account=account)
+        parent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 2)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+
+    def test_get_all_groups_one_parent_account_in_both(self):
+        """Two groups returned in the set when the account is in both child and parent groups"""
+        account = factories.AccountFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=child, account=account)
+        parent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        factories.GroupAccountMembershipFactory.create(group=parent, account=account)
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 2)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+
+    def test_get_all_groups_one_grandparent(self):
+        """Three groups returned in the set"""
+        account = factories.AccountFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=child, account=account)
+        parent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        grandparent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 3)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+        self.assertIn(grandparent, groups)
+
+    def test_get_all_groups_one_parent_two_grandparents(self):
+        """Four groups returned in the set"""
+        account = factories.AccountFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=child, account=account)
+        parent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        grandparent_1 = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_1, child_group=parent
+        )
+        grandparent_2 = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_2, child_group=parent
+        )
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 4)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+        self.assertIn(grandparent_1, groups)
+        self.assertIn(grandparent_2, groups)
+
+    def test_get_all_groups_grandparent_is_also_parent(self):
+        """Three groups returned when a child group has one parent and a grandparent.  The grandparent group is also a parent to the child's group"""  # noqa: E501
+        account = factories.AccountFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=child, account=account)
+        parent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        grandparent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=parent
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent, child_group=child
+        )
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 3)
+        self.assertIn(parent, groups)
+        self.assertIn(child, groups)
+        self.assertIn(grandparent, groups)
+
+    def test_get_all_groups_one_child(self):
+        """Child groups are not returned."""
+        account = factories.AccountFactory.create()
+        child = factories.ManagedGroupFactory.create()
+        parent = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent, child_group=child
+        )
+        factories.GroupAccountMembershipFactory.create(group=parent, account=account)
+        groups = account.get_all_groups()
+        self.assertEqual(len(groups), 1)
+        self.assertIn(parent, groups)
+
 
 class ManagedGroupTest(TestCase):
     def test_model_saving(self):
