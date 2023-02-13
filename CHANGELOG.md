@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.12 (2023-02-13)
 
 - Support Django 4.1.*.
 - Fix broken links in group membership detail pages.
@@ -10,7 +10,7 @@
 - Add a view to show a graph-based visualization of ManagedGroups.
 - Show a graph-based visualization of group relationships in the ManagedGroupDetail view.
 
-## 0.11 (2023-02-24)
+## 0.11 (2023-01-24)
 
 - Copy notebooks when cloning a workspace.
 - Links to workspaces on AnVIL open in a new tab.

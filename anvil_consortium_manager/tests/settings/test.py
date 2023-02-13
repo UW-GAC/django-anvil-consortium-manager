@@ -120,6 +120,8 @@ LOGIN_URL = "test_login"
 # Your stuff...
 # ------------------------------------------------------------------------------
 
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
 # http://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
