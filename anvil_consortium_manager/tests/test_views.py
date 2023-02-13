@@ -1479,6 +1479,26 @@ class AccountDetailTest(TestCase):
             len(response.context_data["accessible_workspace_table"].rows), 2
         )
 
+    def test_accessible_workspace_only_groups_for_this_account(self):
+        """Only shows workspaces shared with one of the account's groups (or parent groups)."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        sharing = factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=group
+        )
+        # Share the workspace with a different group that the account is not part of.
+        other_group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace, group=other_group
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        table = response.context_data["accessible_workspace_table"]
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(sharing, table.data)
+
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
         # Dynamically set the get_absolute_url method. This is hacky...
