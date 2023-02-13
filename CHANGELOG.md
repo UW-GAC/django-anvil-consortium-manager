@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.12 (2023-02-13)
 
 - Support Django 4.1.*.
 - Fix broken links in group membership detail pages.
