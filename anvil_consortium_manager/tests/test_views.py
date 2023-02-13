@@ -4260,6 +4260,14 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
+class ManagedGroupGraphMixinTest(TestCase):
+    """ManagedGroupGraphMixin tests that aren't covered elsewhere."""
+
+    def test_get_graph_not_implemented(self):
+        with self.assertRaises(NotImplementedError):
+            views.ManagedGroupGraphMixin().get_graph()
+
+
 class ManagedGroupDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -6250,7 +6258,9 @@ class ManagedGroupVisualizationTest(TestCase):
             parent_group=grandparent, child_group=parent_2
         )
         factories.GroupGroupMembershipFactory.create(
-            parent_group=parent_1, child_group=child
+            parent_group=parent_1,
+            child_group=child,
+            role=models.GroupGroupMembership.ADMIN,
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
