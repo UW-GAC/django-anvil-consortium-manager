@@ -7,6 +7,8 @@
 - Add last update date to GroupGroupMembership, GroupAccountMembership, and WorkspaceGroupSharing tables.
 - Load workspace data form media in workspace editing templates.
 - Bugfix: Accessible workspaces for an account only includes workspaces that are shared with groups they are in.
+- Add a view to show a graph-based visualization of ManagedGroups.
+- Show a graph-based visualization of group relationships in the ManagedGroupDetail view.
 
 ## 0.11 (2023-02-24)
 

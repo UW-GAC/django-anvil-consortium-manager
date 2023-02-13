@@ -134,6 +134,11 @@ managed_group_patterns = (
             name="autocomplete",
         ),
         path("audit/", views.ManagedGroupAudit.as_view(), name="audit"),
+        path(
+            "visualization/",
+            views.ManagedGroupVisualization.as_view(),
+            name="visualization",
+        ),
         path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
         path(
             "<slug:slug>/audit/",

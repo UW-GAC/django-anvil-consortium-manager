@@ -2,6 +2,7 @@ import datetime
 import time
 from unittest import skip
 
+import networkx as nx
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -1496,6 +1497,65 @@ class ManagedGroupTest(TestCase):
         """get_anvil_url returns a string."""
         group = factories.ManagedGroupFactory.create()
         self.assertIsInstance(group.get_anvil_url(), str)
+
+
+class ManagedGroupGraphTest(TestCase):
+    def test_get_full_graph(self):
+        groups = factories.ManagedGroupFactory.create_batch(5)
+        grandparent_group = groups[0]
+        parent_group_1 = groups[1]
+        parent_group_2 = groups[2]
+        child_group_1 = groups[3]
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group, child_group=parent_group_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group, child_group=parent_group_2
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group_1, child_group=child_group_1
+        )
+        G = ManagedGroup.get_full_graph()
+        # Check nodes.
+        self.assertIsInstance(G, nx.DiGraph)
+        self.assertEqual(len(G.nodes), 5)
+        self.assertIn(str(groups[0]), G.nodes)
+        self.assertIn(str(groups[1]), G.nodes)
+        self.assertIn(str(groups[2]), G.nodes)
+        self.assertIn(str(groups[3]), G.nodes)
+        self.assertIn(str(groups[4]), G.nodes)
+        # Check edges.
+        self.assertEqual(len(G.edges), 3)
+        self.assertIn((grandparent_group.name, parent_group_1.name), G.edges)
+        self.assertIn((grandparent_group.name, parent_group_2.name), G.edges)
+        self.assertIn((parent_group_1.name, child_group_1.name), G.edges)
+
+    def test_get_graph(self):
+        groups = factories.ManagedGroupFactory.create_batch(5)
+        grandparent_group = groups[0]
+        parent_group_1 = groups[1]
+        parent_group_2 = groups[2]
+        child_group_1 = groups[3]
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group, child_group=parent_group_1
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=grandparent_group, child_group=parent_group_2
+        )
+        factories.GroupGroupMembershipFactory.create(
+            parent_group=parent_group_1, child_group=child_group_1
+        )
+        G = parent_group_1.get_graph()
+        # Check nodes.
+        self.assertIsInstance(G, nx.DiGraph)
+        self.assertEqual(len(G.nodes), 3)
+        self.assertIn(str(parent_group_1), G.nodes)
+        self.assertIn(str(grandparent_group), G.nodes)
+        self.assertIn(str(child_group_1), G.nodes)
+        # Check edges.
+        self.assertEqual(len(G.edges), 2)
+        self.assertIn((grandparent_group.name, parent_group_1.name), G.edges)
+        self.assertIn((parent_group_1.name, child_group_1.name), G.edges)
 
 
 class WorkspaceTest(TestCase):

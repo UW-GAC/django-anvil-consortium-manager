@@ -1,5 +1,6 @@
 import uuid
 
+import networkx as nx
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import send_mail
@@ -469,6 +470,78 @@ class ManagedGroup(TimeStampedModel):
     def get_anvil_url(self):
         """Return the URL of the group on AnVIL."""
         return "https://app.terra.bio/#groups/{group}".format(group=self.name)
+
+    def _add_parents_to_graph(self, G):
+        parent_memberships = self.parent_memberships.all()
+        for membership in parent_memberships:
+            # Add a node and an edge.
+            if membership.parent_group.name not in G.nodes:
+                G.add_node(
+                    membership.parent_group.name,
+                    n_groups=membership.parent_group.child_memberships.count(),
+                    n_accounts=membership.parent_group.groupaccountmembership_set.count(),
+                )
+            G.add_edge(membership.parent_group.name, self.name, role=membership.role)
+            # Get the parents of that parent.
+            membership.parent_group._add_parents_to_graph(G)
+
+    def _add_children_to_graph(self, G):
+        child_memberships = self.child_memberships.all()
+        for membership in child_memberships:
+            if membership.child_group.name not in G.nodes:
+                G.add_node(
+                    membership.child_group.name,
+                    n_groups=membership.child_group.child_memberships.count(),
+                    n_accounts=membership.child_group.groupaccountmembership_set.count(),
+                )
+            G.add_edge(self.name, membership.child_group.name, role=membership.role)
+            # Get the parents of that parent.
+            membership.child_group._add_children_to_graph(G)
+
+    def get_graph(self):
+        """Return a networkx graph of the group structure for this group.
+
+        The graph contains parents and children that can be reached from this group.
+
+        Returns:
+            A networkx.DiGraph object representing the group relationships.
+        """
+        # Set up the graph.
+        G = nx.DiGraph()
+        G.add_node(
+            self.name,
+            n_groups=self.child_memberships.count(),
+            n_accounts=self.groupaccountmembership_set.count(),
+        )
+        # Needs to be split up into subfunctions or else you get infinite recursion.
+        self._add_parents_to_graph(G)
+        self._add_children_to_graph(G)
+        return G
+
+    @classmethod
+    def get_full_graph(cls):
+        """Return a networkx graph of the group structure for all ManagedGroups in the app.
+
+        Returns:
+            A networkx.DiGraph object representing the group relationships.
+        """
+        # Build the graph with nx.
+        G = nx.DiGraph()
+        # Add nodes to the graph.
+        for node in cls.objects.all():
+            G.add_node(
+                node.name,
+                n_groups=node.child_memberships.count(),
+                n_accounts=node.groupaccountmembership_set.count(),
+            )
+        # Add edges.
+        for membership in GroupGroupMembership.objects.all():
+            G.add_edge(
+                membership.parent_group.name,
+                membership.child_group.name,
+                role=membership.role,
+            )
+        return G
 
     def anvil_exists(self):
         """Check if the group exists on AnVIL."""
