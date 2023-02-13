@@ -17,3 +17,6 @@ django-autocomplete-light==3.9.4  # https://github.com/yourlabs/django-autocompl
 # Managed Group graph visualization
 plotly==5.13.0
 networkx==2.8.2
+
+# Requests
+requests==2.28.2
