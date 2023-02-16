@@ -9,6 +9,19 @@ from django.core.exceptions import ValidationError
 from . import models
 
 
+class Bootstrap5MediaFormMixin:
+    """Form Mixin defined to set required Media for select2-bootstrap-5-theme."""
+
+    class Media:
+        # Loading the select2-bootstrap-5-theme before the select2 css breaks the widget.
+        # Therefore, we need to put the css for the select2-bootstrap-5-theme here.
+        css = {
+            "screen": (
+                "https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css",  # NOQA: E501
+            )
+        }
+
+
 class BillingProjectImportForm(forms.ModelForm):
     """Form to import a BillingProject from AnVIL"""
 
@@ -103,7 +116,7 @@ class ManagedGroupUpdateForm(forms.ModelForm):
         fields = ("note",)
 
 
-class WorkspaceCreateForm(forms.ModelForm):
+class WorkspaceCreateForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form to create a new workspace on AnVIL."""
 
     # Only allow billing groups where we can create a workspace.
@@ -196,7 +209,7 @@ class WorkspaceImportForm(forms.Form):
         )
 
 
-class WorkspaceCloneForm(forms.ModelForm):
+class WorkspaceCloneForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form to create a new workspace on AnVIL by cloning an existing workspace."""
 
     # Only allow billing groups where we can create a workspace.
@@ -295,7 +308,7 @@ class DefaultWorkspaceDataForm(forms.ModelForm):
         fields = ("workspace",)
 
 
-class GroupGroupMembershipForm(forms.ModelForm):
+class GroupGroupMembershipForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form for the GroupGroupMembership model."""
 
     parent_group = forms.ModelChoiceField(
@@ -323,7 +336,7 @@ class GroupGroupMembershipForm(forms.ModelForm):
         }
 
 
-class GroupAccountMembershipForm(forms.ModelForm):
+class GroupAccountMembershipForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form for the GroupAccountMembership model."""
 
     account = forms.ModelChoiceField(
@@ -356,7 +369,7 @@ class GroupAccountMembershipForm(forms.ModelForm):
         }
 
 
-class WorkspaceGroupSharingForm(forms.ModelForm):
+class WorkspaceGroupSharingForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form for the WorkspaceGroupSharing model."""
 
     class Meta:
