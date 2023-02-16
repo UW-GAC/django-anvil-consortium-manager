@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Add form Mixin class that adds select2-bootstrap-5-theme to form media.
+
 ## 0.12 (2023-02-13)
 
 - Support Django 4.1.*.
