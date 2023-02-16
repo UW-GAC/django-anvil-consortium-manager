@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.12.1 (2023-02-16)
 
 - Add form Mixin class that adds select2-bootstrap-5-theme to form media.
 
