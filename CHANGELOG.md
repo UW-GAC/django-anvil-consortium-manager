@@ -3,6 +3,7 @@
 ## Devel
 
 - Bugfix: require records with `access=OWNER` to have `can_compute=True` for `WorkspaceGroupSharing` objects.
+- Add information about deleting GroupAccountMembership, GrooupGroupMembership, and WorkspaceGroupSharing records to the documtation User guide.
 
 ## 0.12.1 (2023-02-16)
 
