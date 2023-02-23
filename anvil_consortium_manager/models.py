@@ -1407,8 +1407,10 @@ class WorkspaceGroupSharing(TimeStampedModel):
         This method checks that can_compute is not set to ``True`` for "READERS".
         """
 
-        if self.can_compute & (self.access == self.READER):
+        if self.access == self.READER and self.can_compute:
             raise ValidationError("READERs cannot be granted compute privileges.")
+        if self.access == self.OWNER and not self.can_compute:
+            raise ValidationError("OWNERs must be granted compute privileges.")
 
     def get_absolute_url(self):
         """Get the absolute url for this object.
