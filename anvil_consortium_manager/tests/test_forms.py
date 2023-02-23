@@ -850,3 +850,97 @@ class GroupAccountMembershipFormTest(TestCase):
         form = self.form_class()
         self.assertIn(active_account, form.fields["account"].queryset)
         self.assertNotIn(inactive_account, form.fields["account"].queryset)
+
+
+class WorkspaceGroupSharingFormTest(TestCase):
+    """Tests for the WorkspaceGroupSharingForm class."""
+
+    form_class = forms.WorkspaceGroupSharingForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        form_data = {
+            "workspace": workspace,
+            "group": group,
+            "access": models.WorkspaceGroupSharing.READER,
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_missing_group(self):
+        """Form is invalid when missing the group."""
+        workspace = factories.WorkspaceFactory.create()
+        form_data = {
+            "workspace": workspace,
+            "access": models.WorkspaceGroupSharing.READER,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("group", form.errors)
+        self.assertEqual(len(form.errors["group"]), 1)
+        self.assertIn("required", form.errors["group"][0])
+
+    def test_invalid_missing_workspace(self):
+        """Form is invalid when missing the workspace."""
+        group = factories.ManagedGroupFactory.create()
+        form_data = {
+            "group": group,
+            "access": models.WorkspaceGroupSharing.READER,
+        }
+        form = self.form_class(data=form_data)
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("required", form.errors["workspace"][0])
+
+    def test_invalid_missing_access(self):
+        """Form is invalid when missing access."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        form_data = {
+            "workspace": workspace,
+            "group": group,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("access", form.errors)
+        self.assertEqual(len(form.errors["access"]), 1)
+        self.assertIn("required", form.errors["access"][0])
+
+    def test_invalid_reader_can_compute(self):
+        """Form is invalid when the group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        form_data = {
+            "workspace": workspace,
+            "group": group,
+            "access": models.WorkspaceGroupSharing.READER,
+            "can_compute": True,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("__all__", form.errors)
+        self.assertEqual(len(form.errors["__all__"]), 1)
+        self.assertIn("compute privileges", form.errors["__all__"][0])
+
+    def test_invalid_owner_can_compute_false(self):
+        """Form is invalid when the group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        form_data = {
+            "workspace": workspace,
+            "group": group,
+            "access": models.WorkspaceGroupSharing.OWNER,
+            "can_compute": False,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("__all__", form.errors)
+        self.assertEqual(len(form.errors["__all__"]), 1)
+        self.assertIn("compute privileges", form.errors["__all__"][0])
