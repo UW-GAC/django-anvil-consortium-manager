@@ -4,8 +4,8 @@ User guide
 ==========
 
 
-Creating a Managed Group
-----------------
+Create a Managed Group
+----------------------
 
 1. Navigate to `Managed Groups -> Add a group`.
 
@@ -18,8 +18,8 @@ Creating a Managed Group
 If successful, you will be shown a success message and information about the group that you just created.
 
 
-Importing a Billing Project
----------------------------
+Import a Billing Project
+------------------------
 
 Note that the service account running the website must be added as a user of the billing project that you are trying to import.
 
@@ -33,8 +33,8 @@ Note that the service account running the website must be added as a user of the
 
 If successful, you will be shown a success message and information about the billing project that you just imported.
 
-Creating a new workspace
-------------------------
+Create a new workspace
+----------------------
 
 1. Navigate to `Workspaces -> Create a new a workspace`. Make sure to select the "Create a new workspace" link under the workspace type that you would like to create.
 
@@ -55,8 +55,8 @@ Creating a new workspace
 
 If successful, you will be shown a success message and information about the workspace that you just created. The examples would create a workspace named "primed-cc/test-workspace".
 
-Cloning an existing workspace
------------------------------
+Clone an existing workspace
+---------------------------
 
 1. Navigate to the workspace detail page that you would like to clone.
 
@@ -80,8 +80,8 @@ Cloning an existing workspace
 
 If successful, you will be shown a success message and information about the workspace that you just created. The examples would create a workspace named "primed-cc/test-workspace".
 
-Importing an existing workspace
--------------------------------
+Import an existing workspace
+----------------------------
 
 Note that the service account running the website must be an owner of the workspace (or in a group that has owner permissions) to be able to import it to the app.
 If the workspace has any auth domains, they will be imported into the app even if the service account is not an admin of those groups.
@@ -98,8 +98,8 @@ If the workspace has any auth domains, they will be imported into the app even i
 
 If successful, you will be shown a success message and information about the workspace that you just imported.
 
-Adding a user account to a group
---------------------------------
+Add a user account to a group
+-----------------------------
 
 You can add a user account to a group using three different options.
 
@@ -115,8 +115,22 @@ In any case, once you have arrived at the form using one of the above three meth
 
 If successful, you will be shown a success message.
 
-Adding a group to another group
--------------------------------
+
+Remove a user account from a group
+----------------------------------
+
+To remove a user account from a group, first navigate to the detail page for that `GroupAccountMembership` record.
+There are multiple ways to get to this page:
+
+1. Navigate to the detail page for the `Managed Group`. Click on the "View active accounts in this group" dropdown, then click on the "See details" link next to the Account you'd like to remove.
+2. Navigate to the detail page for the `Account`. Click on the "View groups that this account is a member of" dropdown, then click on the "See details" link next to the Group you'd like to remove them from.
+
+Once at the detail page for the `GroupAccountMembership` to delete, click on the "Delete on AnVIL" button. You will be taken to a page to confirm the deletion.
+
+If successful, you will be shown a success message.
+
+Add a group to another group
+----------------------------
 
 You can add a user account to a group using three different options.
 
@@ -132,8 +146,21 @@ In any case, once you have arrived at the form using one of the above three meth
 
 If successful, you will be shown a success message.
 
-Sharing a workspace with a group
---------------------------------
+Remove a group from another group
+---------------------------------
+
+To remove a child group from a parent group, first navigate to the detail page for that `GroupGroupMembership` record.
+There are multiple ways to get to this page:
+
+1. Navigate to the detail page for the parent `ManagedGroup`. Click on the "View groups that are in this group" dropdown, then click on the "See details" link next to the Group you'd like to remove.
+2. Navigate to the detail page for the child `ManagedGroup`. Click on the "View groups that this group is in" dropdown, then click on the "See details" link next to the Group you'd like to remove it from.
+
+Once at the detail page for the `GroupGroupMembership` to delete, click on the "Delete on AnVIL" button. You will be taken to a page to confirm the deletion.
+
+If successful, you will be shown a success message.
+
+Share a workspace with a group
+------------------------------
 
 You can share a workspace with a group using three different options.
 
@@ -150,10 +177,22 @@ In any case, once you have arrived at the form using one of the above three meth
 
 If successful, you will be shown a success message.
 
+Stop sharing a workspace with a group
+-------------------------------------
+
+To stop sharing a workspace with a group, first navigate to the detail page for that `WorkspaceGroupSharing` record.
+There are multiple ways to get to this page:
+
+1. Navigate to the detail page for the `Managed Group`. Click on the "View workspaces shared with this group" dropdown, then click on the "See details" link next to the Workspace you'd like to stop sharing.
+2. Navigate to the detail page for the `Workspace`. Click on the "View groups that this workspace is shared with" dropdown, then click on the "See details" link next to the Group you'd like to stop sharing with.
+
+Once at the detail page for the `GroupGroupMembership` to delete, click on the "Delete on AnVIL" button. You will be taken to a page to confirm the deletion.
+
+If successful, you will be shown a success message.
 
 
-Auditing information in the app
--------------------------------
+Audit information in the app
+----------------------------
 
 For each type of AnVIL resource (Billing Projects, Accounts, Managed Groups, and Workspaces), you can run an audit to compare the information in the app against the information on AnVIL to make sure they match.
 For now, you can do this by navigating to a specific page for each type of resource.
@@ -168,8 +207,8 @@ The audit page explains more about the audit and what is checked for each type o
 Also see the :ref:`Auditing` section for more information.
 
 
-Importing an AnVIL account
---------------------------
+Import an AnVIL account
+-----------------------
 
 Typically, consortium users should link their AnVIL accounts instead of having a coordinating center staff member follow these steps.
 There are two general cases where staff may wish to import an AnVIL account:
