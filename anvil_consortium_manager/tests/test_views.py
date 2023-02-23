@@ -17526,7 +17526,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "email": group.get_email(),
                 "accessLevel": "OWNER",
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": True,
             }
         ]
         api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
@@ -17544,7 +17544,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupSharing.OWNER,
-                "can_compute": False,
+                "can_compute": True,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -17560,7 +17560,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         json_data = [
             {
                 "email": group.get_email(),
-                "accessLevel": "OWNER",
+                "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
             }
@@ -17579,7 +17579,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupSharing.OWNER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -17630,7 +17630,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupSharing.OWNER,
+                "access": models.WorkspaceGroupSharing.WRITER,
                 "can_compute": False,
             },
         )
@@ -18350,7 +18350,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "email": group.get_email(),
                 "accessLevel": "OWNER",
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": True,
             }
         ]
         api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
@@ -18371,7 +18371,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupSharing.OWNER,
-                "can_compute": False,
+                "can_compute": True,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -18387,7 +18387,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         json_data = [
             {
                 "email": group.get_email(),
-                "accessLevel": "OWNER",
+                "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
             }
@@ -18409,7 +18409,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupSharing.OWNER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -18461,7 +18461,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupSharing.OWNER,
+                "access": models.WorkspaceGroupSharing.WRITER,
                 "can_compute": False,
             },
         )
@@ -19089,7 +19089,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "email": group.get_email(),
                 "accessLevel": "OWNER",
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": True,
             }
         ]
         api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
@@ -19109,7 +19109,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupSharing.OWNER,
-                "can_compute": False,
+                "can_compute": True,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -19125,7 +19125,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         json_data = [
             {
                 "email": group.get_email(),
-                "accessLevel": "OWNER",
+                "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
             }
@@ -19146,7 +19146,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupSharing.OWNER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )
@@ -19198,7 +19198,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupSharing.OWNER,
+                "access": models.WorkspaceGroupSharing.WRITER,
                 "can_compute": False,
             },
         )
@@ -19830,7 +19830,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "email": group.get_email(),
                 "accessLevel": "OWNER",
                 "canShare": False,
-                "canCompute": False,
+                "canCompute": True,
             }
         ]
         api_url = self.get_api_url(workspace.billing_project.name, workspace.name)
@@ -19852,7 +19852,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 "group": group.pk,
                 "workspace": workspace.pk,
                 "access": models.WorkspaceGroupSharing.OWNER,
-                "can_compute": False,
+                "can_compute": True,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -19868,7 +19868,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         json_data = [
             {
                 "email": group.get_email(),
-                "accessLevel": "OWNER",
+                "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
             }
@@ -19891,7 +19891,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
-                "access": models.WorkspaceGroupSharing.OWNER,
+                "access": models.WorkspaceGroupSharing.READER,
                 "can_compute": False,
             },
         )

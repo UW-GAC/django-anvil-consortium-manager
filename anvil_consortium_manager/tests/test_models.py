@@ -2463,8 +2463,11 @@ class WorkspaceGroupSharingTest(TestCase):
             access=WorkspaceGroupSharing.READER,
             can_compute=True,
         )
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as e:
             instance.full_clean()
+        self.assertEqual(len(e.exception.messages), 1)
+        self.assertIn("READER", e.exception.messages[0])
+        self.assertIn("compute privileges", e.exception.messages[0])
 
     def test_clean_writer_can_compute(self):
         """Clean method succeeds if a WRITER has can_compute=True"""
@@ -2489,6 +2492,22 @@ class WorkspaceGroupSharingTest(TestCase):
             can_compute=True,
         )
         instance.full_clean()
+
+    def test_clean_owner_can_compute_false(self):
+        """Clean method raises ValidationError if an OWNER has can_compute=False"""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        instance = WorkspaceGroupSharing(
+            group=group,
+            workspace=workspace,
+            access=WorkspaceGroupSharing.OWNER,
+            can_compute=False,
+        )
+        with self.assertRaises(ValidationError) as e:
+            instance.full_clean()
+        self.assertEqual(len(e.exception.messages), 1)
+        self.assertIn("OWNER", e.exception.messages[0])
+        self.assertIn("compute privileges", e.exception.messages[0])
 
     def test_history(self):
         """A simple history record is created when model is updated."""
