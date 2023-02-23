@@ -115,6 +115,20 @@ In any case, once you have arrived at the form using one of the above three meth
 
 If successful, you will be shown a success message.
 
+
+Removing a user account from a group
+------------------------------------
+
+To remove a user account from a group, first navigate to the detail page for that `GroupAccountMembership` record.
+There are multiple ways to get to this page:
+
+1. Navigate to the detail page for the `Managed Group`. Click on the "View active accounts in this group" dropdown, then click on the "See details" link next to the Account you'd like to remove.
+2. Navigate to the detail page for the `Account`. Click on the "View groups that this account is a member of" dropdown, then click on the "See details" link next to the Group you'd like to remove them from.
+
+Once at the detail page for the `GroupAccountMembership` to delete, click on the "Delete on AnVIL" button. You will be taken to a page to confirm the deletion.
+
+If successful, you will be shown a success message.
+
 Adding a group to another group
 -------------------------------
 
@@ -129,6 +143,19 @@ In any case, once you have arrived at the form using one of the above three meth
 1. If applicable, select the Parent Group and/or Child Group that you would like to add to the group from the Parent Group and Child Group fields. You can start typing to autocomplete the Parent Group name and Child Group email.
 2. In the Role field, select the role that the Child Group should have in the Group. In most cases, everyone should be added as a "Member".
 3. Click on the "Save membership" button. This can take some time due to delays from AnVIL.
+
+If successful, you will be shown a success message.
+
+Removing a group from another group
+-----------------------------------
+
+To remove a child group from a parent group, first navigate to the detail page for that `GroupGroupMembership` record.
+There are multiple ways to get to this page:
+
+1. Navigate to the detail page for the parent `ManagedGroup`. Click on the "View groups that are in this group" dropdown, then click on the "See details" link next to the Group you'd like to remove.
+2. Navigate to the detail page for the child `ManagedGroup`. Click on the "View groups that this group is in" dropdown, then click on the "See details" link next to the Group you'd like to remove it from.
+
+Once at the detail page for the `GroupGroupMembership` to delete, click on the "Delete on AnVIL" button. You will be taken to a page to confirm the deletion.
 
 If successful, you will be shown a success message.
 
@@ -150,6 +177,18 @@ In any case, once you have arrived at the form using one of the above three meth
 
 If successful, you will be shown a success message.
 
+Stop sharing a workspace with a group
+-------------------------------------
+
+To stop sharing a workspace with a group, first navigate to the detail page for that `WorkspaceGroupSharing` record.
+There are multiple ways to get to this page:
+
+1. Navigate to the detail page for the `Managed Group`. Click on the "View workspaces shared with this group" dropdown, then click on the "See details" link next to the Workspace you'd like to stop sharing.
+2. Navigate to the detail page for the `Workspace`. Click on the "View groups that this workspace is shared with" dropdown, then click on the "See details" link next to the Group you'd like to stop sharing with.
+
+Once at the detail page for the `GroupGroupMembership` to delete, click on the "Delete on AnVIL" button. You will be taken to a page to confirm the deletion.
+
+If successful, you will be shown a success message.
 
 
 Auditing information in the app
