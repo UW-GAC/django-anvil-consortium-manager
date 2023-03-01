@@ -54,3 +54,15 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(
             anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL, out.getvalue()
         )
+
+    def test_command_output_with_billing_project_api_error(self):
+        """Test command output when BillingProject audit is not ok."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add a response.
+        api_url = self.get_api_url_billing_project(billing_project.name)
+        self.anvil_response_mock.add(
+            responses.GET, api_url, status=500, json={"message": "error"}
+        )
+        out = StringIO()
+        call_command("run_anvil_audit", "BillingProject", stdout=out)
+        self.assertIn("BillingProjects... API error.", out.getvalue())
