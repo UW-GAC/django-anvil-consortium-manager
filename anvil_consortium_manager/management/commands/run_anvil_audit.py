@@ -18,11 +18,11 @@ class Command(BaseCommand):
 
         # Billing projects.
         if "BillingProject" in models_to_audit:
-            self.stdout.write("Running on BillingProjects...")
-            billing_project_results = models.BillingProject.anvil_audit()
-            report = json.dumps(
-                billing_project_results.to_json(include_verified=False), indent=2
-            )
-            self.stdout.write(report)
-
-        self.stdout.write("Done!")
+            self.stdout.write("Running on BillingProjects...", ending="")
+            results = models.BillingProject.anvil_audit()
+            if not results.ok():
+                self.stdout.write("")
+                report = json.dumps(results.to_json(include_verified=False), indent=2)
+                self.stdout.write(report)
+            else:
+                self.stdout.write(" ok!")

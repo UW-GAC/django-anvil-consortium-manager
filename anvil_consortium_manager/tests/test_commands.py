@@ -25,7 +25,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Test command output."""
         out = StringIO()
         call_command("run_anvil_audit", "BillingProject", stdout=out)
-        self.assertIn("Done!", out.getvalue())
+        self.assertIn("BillingProjects... ok!", out.getvalue())
 
     def test_command_output_with_billing_project_ok(self):
         """Test command output."""
@@ -35,10 +35,9 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200)
         out = StringIO()
         call_command("run_anvil_audit", "BillingProject", stdout=out)
-        self.assertIn("BillingProjects", out.getvalue())
-        self.assertIn(""""errors": []""", out.getvalue())
-        self.assertIn(""""not_in_app": []""", out.getvalue())
-        self.assertIn("Done!", out.getvalue())
+        self.assertIn("BillingProjects... ok!", out.getvalue())
+        self.assertNotIn("errors", out.getvalue())
+        self.assertNotIn("not_in_app", out.getvalue())
 
     def test_command_output_with_billing_project_not_ok(self):
         """Test command output when BillingProject audit is not ok."""
@@ -51,7 +50,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         out = StringIO()
         call_command("run_anvil_audit", "BillingProject", stdout=out)
         self.assertIn("BillingProjects", out.getvalue())
+        self.assertIn(""""errors":""", out.getvalue())
         self.assertIn(
             anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL, out.getvalue()
         )
-        self.assertIn("Done!", out.getvalue())
