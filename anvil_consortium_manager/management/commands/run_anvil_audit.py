@@ -33,7 +33,6 @@ class Command(BaseCommand):
             nargs="*",
             type=str,
             choices=["BillingProject", "Account", "ManagedGroup", "Workspace"],
-            required=True,
         )
 
     def _run_audit(self, model, **options):
@@ -76,7 +75,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        models_to_audit = options["models"]
+        if options["models"]:
+            models_to_audit = options["models"]
+        else:
+            models_to_audit = ["BillingProject", "Account", "ManagedGroup", "Workspace"]
 
         if "BillingProject" in models_to_audit:
             self._run_audit(models.BillingProject, **options)
