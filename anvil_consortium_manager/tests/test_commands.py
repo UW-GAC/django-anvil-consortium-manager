@@ -51,6 +51,25 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             "run_anvil_audit", "BillingProject", email="test@example.com", stdout=out
         )
         self.assertIn("BillingProjects... ok!", out.getvalue())
+        # One message has been sent by default.
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("ok", mail.outbox[0].subject)
+
+    def test_command_output_with_billing_project_ok_email_errors_only(self):
+        """Test command output when email and errors_only is set."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add a response.
+        api_url = self.get_api_url_billing_project(billing_project.name)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200)
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "BillingProject",
+            email="test@example.com",
+            errors_only=True,
+            stdout=out,
+        )
+        self.assertIn("BillingProjects... ok!", out.getvalue())
         # No message has been sent by default.
         self.assertEqual(len(mail.outbox), 0)
 
@@ -88,6 +107,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["test@example.com"])
+        self.assertIn("errors", mail.outbox[0].subject)
         # Instead in the email body:
         self.assertIn(""""errors":""", mail.outbox[0].body)
         self.assertIn(

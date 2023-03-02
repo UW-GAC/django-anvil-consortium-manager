@@ -23,6 +23,11 @@ class Command(BaseCommand):
             required=False,
             help="Email to which to send a report instead of printing to stdout.",
         )
+        parser.add_argument(
+            "--errors-only",
+            action="store_true",
+            help="Only send a report when errors are found.",
+        )
         parser.add_argument("models", nargs=1, type=str)
 
     def handle(self, *args, **options):
@@ -30,7 +35,6 @@ class Command(BaseCommand):
         models_to_audit = options["models"]
 
         email = options["email"]
-        print(email)
 
         # Billing projects.
         if "BillingProject" in models_to_audit:
@@ -47,7 +51,7 @@ class Command(BaseCommand):
                     )
                     if email:
                         send_mail(
-                            "AnVIL Audit errors for BillingProjects",
+                            "AnVIL Audit for BillingProjects -- errors",
                             report,
                             None,
                             [email],
@@ -56,4 +60,12 @@ class Command(BaseCommand):
                     else:
                         self.stdout.write(report)
                 else:
+                    if email and not options["errors_only"]:
+                        send_mail(
+                            "AnVIL Audit for BillingProjects -- ok",
+                            "Audit ok",
+                            None,
+                            [email],
+                            fail_silently=False,
+                        )
                     self.stdout.write("ok!")
