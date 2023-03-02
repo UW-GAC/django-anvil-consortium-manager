@@ -127,6 +127,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         # One message has been sent by default.
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("ok", mail.outbox[0].subject)
+        self.assertEqual(mail.outbox[0].body, "Audit ok (1 instances)")
 
     def test_command_run_audit_ok_email_errors_only(self):
         """Test command output when email and errors_only is set."""

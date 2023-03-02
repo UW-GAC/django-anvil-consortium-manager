@@ -69,7 +69,7 @@ class Command(BaseCommand):
                 if email and not errors_only:
                     send_mail(
                         "AnVIL Audit for {} -- ok".format(model_name),
-                        "Audit ok",
+                        "Audit ok ({} instances)".format(len(results.get_verified())),
                         None,
                         [email],
                         fail_silently=False,
