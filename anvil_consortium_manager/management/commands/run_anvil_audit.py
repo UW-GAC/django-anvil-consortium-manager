@@ -30,42 +30,48 @@ class Command(BaseCommand):
         )
         parser.add_argument("models", nargs=1, type=str)
 
+    def _run_audit(self, model, **options):
+        """Run the audit for a specific model class."""
+        email = options["email"]
+        errors_only = options["errors_only"]
+
+        model_name = model._meta.verbose_name_plural
+
+        self.stdout.write("Running on {}... ".format(model_name), ending="")
+        try:
+            # Assume the method is called anvil_audit.
+            results = model.anvil_audit()
+        except AnVILAPIError:
+            self.stdout.write("API error.")
+        else:
+            if not results.ok():
+                self.stdout.write("problems found.")
+                report = json.dumps(results.to_json(include_verified=False), indent=2)
+                if email:
+                    send_mail(
+                        "AnVIL Audit for {} -- errors".format(model_name),
+                        report,
+                        None,
+                        [email],
+                        fail_silently=False,
+                    )
+                else:
+                    self.stdout.write(report)
+            else:
+                if email and not errors_only:
+                    send_mail(
+                        "AnVIL Audit for {} -- ok".format(model_name),
+                        "Audit ok",
+                        None,
+                        [email],
+                        fail_silently=False,
+                    )
+                self.stdout.write("ok!")
+
     def handle(self, *args, **options):
 
         models_to_audit = options["models"]
 
-        email = options["email"]
-
         # Billing projects.
         if "BillingProject" in models_to_audit:
-            self.stdout.write("Running on BillingProjects... ", ending="")
-            try:
-                results = models.BillingProject.anvil_audit()
-            except AnVILAPIError:
-                self.stdout.write("API error.")
-            else:
-                if not results.ok():
-                    self.stdout.write("problems found.")
-                    report = json.dumps(
-                        results.to_json(include_verified=False), indent=2
-                    )
-                    if email:
-                        send_mail(
-                            "AnVIL Audit for BillingProjects -- errors",
-                            report,
-                            None,
-                            [email],
-                            fail_silently=False,
-                        )
-                    else:
-                        self.stdout.write(report)
-                else:
-                    if email and not options["errors_only"]:
-                        send_mail(
-                            "AnVIL Audit for BillingProjects -- ok",
-                            "Audit ok",
-                            None,
-                            [email],
-                            fail_silently=False,
-                        )
-                    self.stdout.write("ok!")
+            self._run_audit(models.BillingProject, **options)
