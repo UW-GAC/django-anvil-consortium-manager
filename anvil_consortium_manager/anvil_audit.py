@@ -104,12 +104,12 @@ class AnVILAuditResults(ABC):
         x = {}
         if include_verified:
             x["verified"] = [
-                {"instance": str(instance), "id": instance.pk}
+                {"id": instance.pk, "instance": str(instance)}
                 for instance in self.get_verified()
             ]
         if include_errors:
             x["errors"] = [
-                {"id": k.pk, "str": str(k), "errors": v}
+                {"id": k.pk, "instance": str(k), "errors": v}
                 for k, v in self.get_errors().items()
             ]
         if include_not_in_app:

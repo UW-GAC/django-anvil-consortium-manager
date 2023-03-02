@@ -120,3 +120,80 @@ class AnVILAuditTest(TestCase):
         self.audit_results.add_verified(obj)
         self.audit_results.add_not_in_app("foo")
         self.assertEqual(self.audit_results.ok(), False)
+
+    def test_to_json(self):
+        """to_json method works as expected."""
+        obj_verified = self.model_factory.create()
+        self.audit_results.add_verified(obj_verified)
+        obj_error = self.model_factory.create()
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
+        self.audit_results.add_not_in_app("foo")
+        expected_json = {
+            "verified": [{"instance": str(obj_verified), "id": obj_verified.pk}],
+            "errors": [
+                {
+                    "id": obj_error.pk,
+                    "instance": str(obj_error),
+                    "errors": [self.audit_results.TEST_ERROR_1],
+                }
+            ],
+            "not_in_app": ["foo"],
+        }
+        self.assertEqual(self.audit_results.to_json(), expected_json)
+
+    def test_to_json_include_verified_false(self):
+        """to_json method works as expected."""
+        obj_verified = self.model_factory.create()
+        self.audit_results.add_verified(obj_verified)
+        obj_error = self.model_factory.create()
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
+        self.audit_results.add_not_in_app("foo")
+        expected_json = {
+            "errors": [
+                {
+                    "id": obj_error.pk,
+                    "instance": str(obj_error),
+                    "errors": [self.audit_results.TEST_ERROR_1],
+                }
+            ],
+            "not_in_app": ["foo"],
+        }
+        self.assertEqual(
+            self.audit_results.to_json(include_verified=False), expected_json
+        )
+
+    def test_to_json_include_errors_false(self):
+        """to_json method works as expected."""
+        obj_verified = self.model_factory.create()
+        self.audit_results.add_verified(obj_verified)
+        obj_error = self.model_factory.create()
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
+        self.audit_results.add_not_in_app("foo")
+        expected_json = {
+            "verified": [{"instance": str(obj_verified), "id": obj_verified.pk}],
+            "not_in_app": ["foo"],
+        }
+        self.assertEqual(
+            self.audit_results.to_json(include_errors=False), expected_json
+        )
+
+    def test_to_json_include_not_in_app_false(self):
+        """to_json method works as expected."""
+        obj_verified = self.model_factory.create()
+        self.audit_results.add_verified(obj_verified)
+        obj_error = self.model_factory.create()
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
+        self.audit_results.add_not_in_app("foo")
+        expected_json = {
+            "verified": [{"instance": str(obj_verified), "id": obj_verified.pk}],
+            "errors": [
+                {
+                    "id": obj_error.pk,
+                    "instance": str(obj_error),
+                    "errors": [self.audit_results.TEST_ERROR_1],
+                }
+            ],
+        }
+        self.assertEqual(
+            self.audit_results.to_json(include_not_in_app=False), expected_json
+        )
