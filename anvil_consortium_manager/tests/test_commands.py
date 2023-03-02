@@ -4,7 +4,7 @@ from io import StringIO
 
 import responses
 from django.core import mail
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import TestCase
 
 from .. import anvil_audit
@@ -21,6 +21,13 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             + "/api/billing/v2/"
             + billing_project_name
         )
+
+    def test_command_output_invalid_model(self):
+        """Appropriate error is returned when an invalid model is specified."""
+        out = StringIO()
+        with self.assertRaises(CommandError) as e:
+            call_command("run_anvil_audit", "foo", stdout=out)
+        self.assertIn("invalid choice", str(e.exception))
 
     def test_command_output_billing_project_no_instances(self):
         """Test command output."""

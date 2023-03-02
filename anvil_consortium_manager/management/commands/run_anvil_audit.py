@@ -28,7 +28,12 @@ class Command(BaseCommand):
             action="store_true",
             help="Only send a report when errors are found.",
         )
-        parser.add_argument("models", nargs=1, type=str)
+        parser.add_argument(
+            "models",
+            nargs=1,
+            type=str,
+            choices=["BillingProject", "Account", "ManagedGroup", "Workspace"],
+        )
 
     def _run_audit(self, model, **options):
         """Run the audit for a specific model class."""
