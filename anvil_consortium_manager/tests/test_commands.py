@@ -3,6 +3,7 @@
 from io import StringIO
 
 import responses
+from django.core import mail
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -39,6 +40,20 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertNotIn("errors", out.getvalue())
         self.assertNotIn("not_in_app", out.getvalue())
 
+    def test_command_output_with_billing_project_ok_email(self):
+        """Test command output."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add a response.
+        api_url = self.get_api_url_billing_project(billing_project.name)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200)
+        out = StringIO()
+        call_command(
+            "run_anvil_audit", "BillingProject", email="test@example.com", stdout=out
+        )
+        self.assertIn("BillingProjects... ok!", out.getvalue())
+        # No message has been sent by default.
+        self.assertEqual(len(mail.outbox), 0)
+
     def test_command_output_with_billing_project_not_ok(self):
         """Test command output when BillingProject audit is not ok."""
         billing_project = factories.BillingProjectFactory.create()
@@ -49,10 +64,35 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         out = StringIO()
         call_command("run_anvil_audit", "BillingProject", stdout=out)
-        self.assertIn("BillingProjects", out.getvalue())
+        self.assertIn("BillingProjects... problems found.", out.getvalue())
         self.assertIn(""""errors":""", out.getvalue())
         self.assertIn(
             anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL, out.getvalue()
+        )
+
+    def test_command_output_with_billing_project_not_ok_email(self):
+        """Test command output when BillingProject audit is not ok with email specified."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add a response.
+        api_url = self.get_api_url_billing_project(billing_project.name)
+        self.anvil_response_mock.add(
+            responses.GET, api_url, status=404, json={"message": "error"}
+        )
+        out = StringIO()
+        call_command(
+            "run_anvil_audit", "BillingProject", email="test@example.com", stdout=out
+        )
+        self.assertIn("BillingProjects... problems found.", out.getvalue())
+        # Not printed to stdout.
+        self.assertNotIn(""""errors":""", out.getvalue())
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["test@example.com"])
+        # Instead in the email body:
+        self.assertIn(""""errors":""", mail.outbox[0].body)
+        self.assertIn(
+            anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL,
+            mail.outbox[0].body,
         )
 
     def test_command_output_with_billing_project_api_error(self):
