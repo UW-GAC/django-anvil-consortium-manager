@@ -21,18 +21,20 @@ class Command(BaseCommand):
         parser.add_argument(
             "--email",
             required=False,
-            help="Email to which to send a report instead of printing to stdout.",
+            help="""Email to which to send a report instead of printing to stdout.
+            One email per model audited will be sent.""",
         )
         parser.add_argument(
             "--errors-only",
             action="store_true",
-            help="Only send a report when errors are found.",
+            help="Only send report when errors are found.",
         )
         parser.add_argument(
             "--models",
             nargs="*",
             type=str,
             choices=["BillingProject", "Account", "ManagedGroup", "Workspace"],
+            help="If specified, run audit on a subset of models. Otherwise, the audit will be run on all models.",
         )
 
     def _run_audit(self, model, **options):
