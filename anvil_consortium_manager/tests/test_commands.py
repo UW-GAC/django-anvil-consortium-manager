@@ -28,7 +28,37 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command("run_anvil_audit", "BillingProject", stdout=out)
         self.assertIn("billing projects... ok!", out.getvalue())
 
-    def test_command_run_audit_ok(self):
+    def test_command_output_account_no_instances(self):
+        """Test command output."""
+        out = StringIO()
+        call_command("run_anvil_audit", "Account", stdout=out)
+        self.assertIn("accounts... ok!", out.getvalue())
+
+    def test_command_output_managed_group_no_instances(self):
+        """Test command output."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=[],
+        )
+        out = StringIO()
+        call_command("run_anvil_audit", "ManagedGroup", stdout=out)
+        self.assertIn("managed groups... ok!", out.getvalue())
+
+    def test_command_output_workspace_no_instances(self):
+        """Test command output."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,
+            json=[],
+        )
+        out = StringIO()
+        call_command("run_anvil_audit", "Workspace", stdout=out)
+        self.assertIn("workspaces... ok!", out.getvalue())
+
+    def test_command_run_audit_one_instance_ok(self):
         """Test command output."""
         billing_project = factories.BillingProjectFactory.create()
         # Add a response.

@@ -72,6 +72,14 @@ class Command(BaseCommand):
 
         models_to_audit = options["models"]
 
-        # Billing projects.
         if "BillingProject" in models_to_audit:
             self._run_audit(models.BillingProject, **options)
+
+        if "Account" in models_to_audit:
+            self._run_audit(models.Account, **options)
+
+        if "ManagedGroup" in models_to_audit:
+            self._run_audit(models.ManagedGroup, **options)
+
+        if "Workspace" in models_to_audit:
+            self._run_audit(models.Workspace, **options)
