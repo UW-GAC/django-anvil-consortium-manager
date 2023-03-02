@@ -29,10 +29,11 @@ class Command(BaseCommand):
             help="Only send a report when errors are found.",
         )
         parser.add_argument(
-            "models",
-            nargs=1,
+            "--models",
+            nargs="*",
             type=str,
             choices=["BillingProject", "Account", "ManagedGroup", "Workspace"],
+            required=True,
         )
 
     def _run_audit(self, model, **options):

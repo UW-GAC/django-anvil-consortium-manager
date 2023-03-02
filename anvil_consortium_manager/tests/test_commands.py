@@ -4,7 +4,7 @@ from io import StringIO
 
 import responses
 from django.core import mail
-from django.core.management import CommandError, call_command
+from django.core.management import call_command
 from django.test import TestCase
 
 from .. import anvil_audit
@@ -22,23 +22,47 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             + billing_project_name
         )
 
-    def test_command_output_invalid_model(self):
-        """Appropriate error is returned when an invalid model is specified."""
+    def test_command_output_no_model_specified(self):
+        """Runs on all models if no models are specified."""
+        # Add API call responses.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=[],
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,
+            json=[],
+        )
         out = StringIO()
-        with self.assertRaises(CommandError) as e:
-            call_command("run_anvil_audit", "foo", stdout=out)
-        self.assertIn("invalid choice", str(e.exception))
+        call_command("run_anvil_audit", stdout=out)
+        self.assertIn("billing projects... ok!", out.getvalue())
+        self.assertIn("accounts... ok!", out.getvalue())
+        self.assertIn("managed groups... ok!", out.getvalue())
+        self.assertIn("workspaces... ok!", out.getvalue())
+
+    def test_command_output_multiple_models(self):
+        """Can audit multiple models at the same time."""
+        out = StringIO()
+        call_command(
+            "run_anvil_audit", models=["BillingProject", "Account"], stdout=out
+        )
+        self.assertIn("billing projects... ok!", out.getvalue())
+        self.assertIn("accounts... ok!", out.getvalue())
 
     def test_command_output_billing_project_no_instances(self):
         """Test command output."""
         out = StringIO()
-        call_command("run_anvil_audit", "BillingProject", stdout=out)
+        call_command("run_anvil_audit", models=["BillingProject"], stdout=out)
         self.assertIn("billing projects... ok!", out.getvalue())
 
     def test_command_output_account_no_instances(self):
         """Test command output."""
         out = StringIO()
-        call_command("run_anvil_audit", "Account", stdout=out)
+        call_command("run_anvil_audit", models=["Account"], stdout=out)
         self.assertIn("accounts... ok!", out.getvalue())
 
     def test_command_output_managed_group_no_instances(self):
@@ -50,7 +74,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         out = StringIO()
-        call_command("run_anvil_audit", "ManagedGroup", stdout=out)
+        call_command("run_anvil_audit", models=["ManagedGroup"], stdout=out)
         self.assertIn("managed groups... ok!", out.getvalue())
 
     def test_command_output_workspace_no_instances(self):
@@ -62,7 +86,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         out = StringIO()
-        call_command("run_anvil_audit", "Workspace", stdout=out)
+        call_command("run_anvil_audit", models=["Workspace"], stdout=out)
         self.assertIn("workspaces... ok!", out.getvalue())
 
     def test_command_run_audit_one_instance_ok(self):
@@ -72,7 +96,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         api_url = self.get_api_url_billing_project(billing_project.name)
         self.anvil_response_mock.add(responses.GET, api_url, status=200)
         out = StringIO()
-        call_command("run_anvil_audit", "BillingProject", stdout=out)
+        call_command("run_anvil_audit", models=["BillingProject"], stdout=out)
         self.assertIn("billing projects... ok!", out.getvalue())
         self.assertNotIn("errors", out.getvalue())
         self.assertNotIn("not_in_app", out.getvalue())
@@ -85,7 +109,10 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200)
         out = StringIO()
         call_command(
-            "run_anvil_audit", "BillingProject", email="test@example.com", stdout=out
+            "run_anvil_audit",
+            models=["BillingProject"],
+            email="test@example.com",
+            stdout=out,
         )
         self.assertIn("billing projects... ok!", out.getvalue())
         # One message has been sent by default.
@@ -101,7 +128,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         out = StringIO()
         call_command(
             "run_anvil_audit",
-            "BillingProject",
+            models=["BillingProject"],
             email="test@example.com",
             errors_only=True,
             stdout=out,
@@ -119,7 +146,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET, api_url, status=404, json={"message": "error"}
         )
         out = StringIO()
-        call_command("run_anvil_audit", "BillingProject", stdout=out)
+        call_command("run_anvil_audit", models=["BillingProject"], stdout=out)
         self.assertIn("billing projects... problems found.", out.getvalue())
         self.assertIn(""""errors":""", out.getvalue())
         self.assertIn(
@@ -136,7 +163,10 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         out = StringIO()
         call_command(
-            "run_anvil_audit", "BillingProject", email="test@example.com", stdout=out
+            "run_anvil_audit",
+            models=["BillingProject"],
+            email="test@example.com",
+            stdout=out,
         )
         self.assertIn("billing projects... problems found.", out.getvalue())
         # Not printed to stdout.
@@ -161,5 +191,5 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET, api_url, status=500, json={"message": "error"}
         )
         out = StringIO()
-        call_command("run_anvil_audit", "BillingProject", stdout=out)
+        call_command("run_anvil_audit", models=["BillingProject"], stdout=out)
         self.assertIn("billing projects... API error.", out.getvalue())
