@@ -18,16 +18,16 @@ class Command(BaseCommand):
     help = """Management command to run an AnVIL audit."""
 
     def add_arguments(self, parser):
-        parser.add_argument(
+        email_group = parser.add_argument_group(title="Email reports")
+        email_group.add_argument(
             "--email",
-            required=False,
             help="""Email to which to send a report instead of printing to stdout.
             One email per model audited will be sent.""",
         )
-        parser.add_argument(
+        email_group.add_argument(
             "--errors-only",
             action="store_true",
-            help="Only send report when errors are found.",
+            help="Only send email report when errors are found.",
         )
         parser.add_argument(
             "--models",
@@ -65,6 +65,7 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(report)
             else:
+                self.stdout.write("ok!")
                 if email and not errors_only:
                     send_mail(
                         "AnVIL Audit for {} -- ok".format(model_name),
@@ -73,7 +74,6 @@ class Command(BaseCommand):
                         [email],
                         fail_silently=False,
                     )
-                self.stdout.write("ok!")
 
     def handle(self, *args, **options):
 
