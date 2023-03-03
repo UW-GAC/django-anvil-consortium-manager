@@ -2029,6 +2029,10 @@ class WorkspaceAutocomplete(
         return qs
 
 
+class WorkspaceLandingPage(auth.AnVILConsortiumManagerViewRequired, TemplateView):
+    template_name = "anvil_consortium_manager/workspace_landing_page.html"
+
+
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupGroupMembership
 

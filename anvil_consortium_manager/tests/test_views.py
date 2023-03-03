@@ -17117,6 +17117,89 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
 
+class WorkspaceLandingPageTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with view permission.
+        self.view_user = User.objects.create_user(username="test_view", password="view")
+        self.view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        # Create a user with edit permission.
+        self.edit_user = User.objects.create_user(username="test_edit", password="test")
+        self.edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+
+    def get_url(self):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:landing_page")
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceLandingPage.as_view()
+
+    def test_view_permission(self):
+        """Links to edit required do not appear in the index when user only has view permission."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:import",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:new",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+
+    def test_edit_permission(self):
+        """Links to edit required do not appear in the index when user only has view permission."""
+        self.client.force_login(self.edit_user)
+        response = self.client.get(self.get_url())
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:import",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:new",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+
+
 class WorkspaceGroupSharingDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
