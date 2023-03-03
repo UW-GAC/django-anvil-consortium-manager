@@ -6,12 +6,6 @@ from django.core.management.base import BaseCommand
 from ... import models
 from ...anvil_api import AnVILAPIError
 
-# TODO:
-# - Add auditing for different models.
-# - Modify model command arg to run on multiple models.
-# - Add syntax coloring to output
-# - Add reporting level - only if errors found or upon any successful run
-
 
 class Command(BaseCommand):
 
