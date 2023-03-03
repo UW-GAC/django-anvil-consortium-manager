@@ -769,6 +769,10 @@ class Workspace(TimeStampedModel):
     workspace_type = models.CharField(
         max_length=255, help_text="""Workspace data type as indicated by an adapter."""
     )
+    is_locked = models.BooleanField(
+        help_text="Indicator of whether the workspace is locked or not.",
+        default=False,
+    )
 
     history = HistoricalRecords()
 
