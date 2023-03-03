@@ -49,10 +49,10 @@ class Command(BaseCommand):
             # Assume the method is called anvil_audit.
             results = model.anvil_audit()
         except AnVILAPIError:
-            self.stdout.write("API error.")
+            self.stdout.write(self.style.ERROR("API error."))
         else:
             if not results.ok():
-                self.stdout.write("problems found.")
+                self.stdout.write(self.style.ERROR("problems found."))
                 report = json.dumps(results.to_json(include_verified=False), indent=2)
                 if email:
                     send_mail(
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(report)
             else:
-                self.stdout.write("ok!")
+                self.stdout.write(self.style.ERROR("ok!"))
                 if email and not errors_only:
                     send_mail(
                         "AnVIL Audit for {} -- ok".format(model_name),
