@@ -192,7 +192,8 @@ workspace_sharing_patterns = (
 
 workspace_patterns = (
     [
-        path("", views.WorkspaceList.as_view(), name="list_all"),
+        path("", views.WorkspaceLandingPage.as_view(), name="landing_page"),
+        path("all/", views.WorkspaceList.as_view(), name="list_all"),
         path(
             "autocomplete/",
             views.WorkspaceAutocomplete.as_view(),

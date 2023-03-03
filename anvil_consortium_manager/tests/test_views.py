@@ -101,12 +101,9 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:managed_groups:audit"),
         reverse("anvil_consortium_manager:status"),
         reverse("anvil_consortium_manager:workspace_group_sharing:list"),
+        reverse("anvil_consortium_manager:workspaces:landing_page"),
         reverse("anvil_consortium_manager:workspaces:list_all"),
         reverse("anvil_consortium_manager:workspaces:audit"),
-        reverse(
-            "anvil_consortium_manager:workspaces:list",
-            kwargs={"workspace_type": "workspace"},
-        ),
     )
 
     # other_urls = (
@@ -132,14 +129,6 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:group_group_membership:new"),
         reverse("anvil_consortium_manager:managed_groups:new"),
         reverse("anvil_consortium_manager:workspace_group_sharing:new"),
-        reverse(
-            "anvil_consortium_manager:workspaces:import",
-            kwargs={"workspace_type": "workspace"},
-        ),
-        reverse(
-            "anvil_consortium_manager:workspaces:new",
-            kwargs={"workspace_type": "workspace"},
-        ),
     )
 
     def setUp(self):
