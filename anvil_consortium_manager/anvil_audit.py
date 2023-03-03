@@ -97,6 +97,25 @@ class AnVILAuditResults(ABC):
         """
         return not self.errors and not self.not_in_app
 
+    def to_json(
+        self, include_verified=True, include_errors=True, include_not_in_app=True
+    ):
+        """Return a dictionary representation of the audit results."""
+        x = {}
+        if include_verified:
+            x["verified"] = [
+                {"id": instance.pk, "instance": str(instance)}
+                for instance in self.get_verified()
+            ]
+        if include_errors:
+            x["errors"] = [
+                {"id": k.pk, "instance": str(k), "errors": v}
+                for k, v in self.get_errors().items()
+            ]
+        if include_not_in_app:
+            x["not_in_app"] = list(self.get_not_in_app())
+        return x
+
 
 class BillingProjectAuditResults(AnVILAuditResults):
     """Class to hold audit results for :class:`~anvil_consortium_manager.models.BillingProject`.
