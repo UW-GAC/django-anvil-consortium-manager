@@ -104,6 +104,35 @@
         </div>
       </div>
 
+
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-computer mx-2"></span>Workspaces</h5>
+          <div class="card-body">
+            <p>
+              Interact with workspaces on AnVIL.
+              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}You can create or import workspaces and then share them with a group.{% endif%}
+            </p>
+          </div>
+
+          <ul class="list-group list-group-flush">
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:list_all' %}" class="icon-link">List workspaces</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:landing_page' %}" class="icon-link">Workspace types</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspace_group_sharing:list' %}" class="icon-link">Workspace sharing</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+          </ul>
+
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
