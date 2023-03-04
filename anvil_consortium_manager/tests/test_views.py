@@ -6482,6 +6482,37 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
 
     def test_view_permission(self):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
@@ -6503,6 +6534,37 @@ class WorkspaceDetailTest(TestCase):
                 kwargs={
                     "billing_project_slug": obj.billing_project.name,
                     "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": "workspace",
                 },
             ),
         )
@@ -6546,6 +6608,78 @@ class WorkspaceDetailTest(TestCase):
         self.assertEqual(
             response.context["workspace_type_display_name"],
             TestWorkspaceAdapter().get_name(),
+        )
+
+    def test_is_locked_true(self):
+        """An indicator of whether a workspace is locked appears on the page."""
+        workspace = factories.WorkspaceFactory.create(is_locked=True)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertContains(response, "Locked")
+
+    def test_is_locked_false(self):
+        """An indicator of whether a workspace is locked appears on the page."""
+        workspace = factories.WorkspaceFactory.create(is_locked=False)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertNotContains(response, "Locked")
+
+    def test_edit_permission_is_locked(self):
+        """Links appear correctly when the user has edit permission but the workspace is locked."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": "workspace",
+                },
+            ),
         )
 
 
