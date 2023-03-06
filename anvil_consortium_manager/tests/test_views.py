@@ -6636,7 +6636,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.WorkspaceFactory.create(is_locked=True)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
