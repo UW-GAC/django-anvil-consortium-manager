@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Track whether an AnVIL workspace is locked or not.
+
 ## 0.13 (2023-03-03)
 
 - Bugfix: require records with `access=OWNER` to have `can_compute=True` for `WorkspaceGroupSharing` objects.
