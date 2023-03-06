@@ -6482,6 +6482,37 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
 
     def test_view_permission(self):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
@@ -6503,6 +6534,37 @@ class WorkspaceDetailTest(TestCase):
                 kwargs={
                     "billing_project_slug": obj.billing_project.name,
                     "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": "workspace",
                 },
             ),
         )
@@ -6546,6 +6608,78 @@ class WorkspaceDetailTest(TestCase):
         self.assertEqual(
             response.context["workspace_type_display_name"],
             TestWorkspaceAdapter().get_name(),
+        )
+
+    def test_is_locked_true(self):
+        """An indicator of whether a workspace is locked appears on the page."""
+        workspace = factories.WorkspaceFactory.create(is_locked=True)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertContains(response, "Locked")
+
+    def test_is_locked_false(self):
+        """An indicator of whether a workspace is locked appears on the page."""
+        workspace = factories.WorkspaceFactory.create(is_locked=False)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertNotContains(response, "Locked")
+
+    def test_edit_permission_is_locked(self):
+        """Links appear correctly when the user has edit permission but the workspace is locked."""
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceFactory.create(is_locked=True)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": "workspace",
+                },
+            ),
         )
 
 
@@ -7480,7 +7614,12 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def get_api_json_response(
-        self, billing_project, workspace, authorization_domains=[], access="OWNER"
+        self,
+        billing_project,
+        workspace,
+        authorization_domains=[],
+        access="OWNER",
+        is_locked=False,
     ):
         """Return a pared down version of the json response from the AnVIL API with only fields we need."""
         json_data = {
@@ -7492,6 +7631,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 ],
                 "name": workspace,
                 "namespace": billing_project,
+                "isLocked": is_locked,
             },
         }
         return json_data
@@ -7894,6 +8034,64 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, workspace_name)
         self.assertEqual(new_workspace.note, "test note")
+        self.assertEqual(new_workspace.billing_project, billing_project)
+
+    def test_can_import_locked_workspace(self):
+        """Sets note when specified when importing a workspace."""
+        billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name=billing_project_name
+        )
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
+        url = self.get_api_url(billing_project_name, workspace_name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, is_locked=True
+            ),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "workspace": billing_project_name + "/" + workspace_name,
+                "note": "test note",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Created a billing project.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        self.assertEqual(new_workspace.is_locked, True)
         self.assertEqual(new_workspace.billing_project, billing_project)
 
     def test_creates_default_workspace_data_without_custom_adapter(self):
@@ -10726,6 +10924,56 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 1)
         object.refresh_from_db()
 
+    def test_get_is_locked(self):
+        """View redirects with a get request if the workspace is locked."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        object = factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-workspace", is_locked=True
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(object.billing_project.name, object.name), follow=True
+        )
+        # Make sure the workspace still exists.
+        self.assertIn(object, models.Workspace.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, object.get_absolute_url())
+        # With a message.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceDelete.message_workspace_locked, str(messages[0])
+        )
+
+    def test_post_is_locked(self):
+        """View redirects with a post request if the workspace is locked."""
+        billing_project = factories.BillingProjectFactory.create(
+            name="test-billing-project"
+        )
+        object = factories.WorkspaceFactory.create(
+            billing_project=billing_project, name="test-workspace", is_locked=True
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(object.billing_project.name, object.name),
+            {"submit": ""},
+            follow=True,
+        )
+        # Make sure the workspace still exists.
+        self.assertIn(object, models.Workspace.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, object.get_absolute_url())
+        # With a message.
+        self.assertIn("messages", response.context)
+        messages = list(response.context["messages"])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceDelete.message_workspace_locked, str(messages[0])
+        )
+
 
 class WorkspaceAutocompleteTest(TestCase):
     def setUp(self):
@@ -10864,6 +11112,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
                 "name": workspace_name,
                 "namespace": billing_project_name,
                 "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
+                "isLocked": False,
             },
         }
 
