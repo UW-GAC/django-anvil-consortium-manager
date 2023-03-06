@@ -7614,7 +7614,12 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
 
     def get_api_json_response(
-        self, billing_project, workspace, authorization_domains=[], access="OWNER"
+        self,
+        billing_project,
+        workspace,
+        authorization_domains=[],
+        access="OWNER",
+        is_locked=False,
     ):
         """Return a pared down version of the json response from the AnVIL API with only fields we need."""
         json_data = {
@@ -7626,6 +7631,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
                 ],
                 "name": workspace,
                 "namespace": billing_project,
+                "isLocked": is_locked,
             },
         }
         return json_data
@@ -8028,6 +8034,64 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, workspace_name)
         self.assertEqual(new_workspace.note, "test note")
+        self.assertEqual(new_workspace.billing_project, billing_project)
+
+    def test_can_import_locked_workspace(self):
+        """Sets note when specified when importing a workspace."""
+        billing_project_name = "billing-project"
+        billing_project = factories.BillingProjectFactory.create(
+            name=billing_project_name
+        )
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project_name, workspace_name)],
+        )
+        url = self.get_api_url(billing_project_name, workspace_name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(
+                billing_project_name, workspace_name, is_locked=True
+            ),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "workspace": billing_project_name + "/" + workspace_name,
+                "note": "test note",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Created a billing project.
+        self.assertEqual(models.BillingProject.objects.count(), 1)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        self.assertEqual(new_workspace.is_locked, True)
         self.assertEqual(new_workspace.billing_project, billing_project)
 
     def test_creates_default_workspace_data_without_custom_adapter(self):

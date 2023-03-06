@@ -977,6 +977,10 @@ class Workspace(TimeStampedModel):
                         billing_project = temporary_billing_project
                         billing_project.save()
 
+                # Check if the workspace is locked.
+                if workspace_json["workspace"]["isLocked"]:
+                    workspace.is_locked = True
+
                 # Finally, set the workspace's billing project to the existing or newly-added BillingProject.
                 workspace.billing_project = billing_project
                 # Redo cleaning, including checks for uniqueness.
