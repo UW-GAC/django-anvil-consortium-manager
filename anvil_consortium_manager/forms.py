@@ -186,10 +186,7 @@ class WorkspaceUpdateForm(forms.ModelForm):
 
     class Meta:
         model = models.Workspace
-        fields = (
-            "is_locked",
-            "note",
-        )
+        fields = ("note",)
 
 
 class WorkspaceImportForm(forms.Form):
