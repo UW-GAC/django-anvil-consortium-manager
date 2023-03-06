@@ -222,12 +222,16 @@ class WorkspaceAuditResults(AnVILAuditResults):
     ERROR_WORKSPACE_SHARING = "Workspace sharing does not match on AnVIL"
     """Error when a Workspace is shared with different ManagedGroups in the app and on AnVIL."""
 
+    ERROR_DIFFERENT_LOCK = "Workspace lock status does not match on AnVIL"
+    """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = (
         ERROR_NOT_IN_ANVIL,
         ERROR_NOT_OWNER_ON_ANVIL,
         ERROR_DIFFERENT_AUTH_DOMAINS,
         ERROR_WORKSPACE_SHARING,
+        ERROR_DIFFERENT_LOCK,
     )
 
 

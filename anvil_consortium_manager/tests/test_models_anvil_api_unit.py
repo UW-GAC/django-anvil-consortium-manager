@@ -4182,7 +4182,12 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         return self.api_client.rawls_entry_point + "/api/workspaces"
 
     def get_api_workspace_json(
-        self, billing_project_name, workspace_name, access, auth_domains=[]
+        self,
+        billing_project_name,
+        workspace_name,
+        access,
+        auth_domains=[],
+        is_locked=False,
     ):
         """Return the json dictionary for a single workspace on AnVIL."""
         return {
@@ -4191,6 +4196,7 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 "name": workspace_name,
                 "namespace": billing_project_name,
                 "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
+                "isLocked": is_locked,
             },
         }
 
@@ -4329,6 +4335,82 @@ class WorkspaceAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(
             audit_results.get_errors(),
             {workspace: [audit_results.ERROR_NOT_OWNER_ON_ANVIL]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_anvil_audit_one_workspace_is_locked_in_app_not_on_anvil(self):
+        """anvil_audit raises exception if workspace is locked in the app but not on AnVIL."""
+        workspace = factories.WorkspaceFactory.create(is_locked=True)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    is_locked=False,
+                )
+            ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_DIFFERENT_LOCK]},
+        )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_anvil_audit_one_workspace_is_not_locked_in_app_but_is_on_anvil(self):
+        """anvil_audit raises exception if workspace is locked in the app but not on AnVIL."""
+        workspace = factories.WorkspaceFactory.create(is_locked=False)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    is_locked=True,
+                )
+            ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            workspace.billing_project.name, workspace.name
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        audit_results = models.Workspace.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.WorkspaceAuditResults)
+        self.assertFalse(audit_results.ok())
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set())
+        self.assertEqual(
+            audit_results.get_errors(),
+            {workspace: [audit_results.ERROR_DIFFERENT_LOCK]},
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
 

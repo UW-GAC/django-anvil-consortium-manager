@@ -11048,6 +11048,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
                 "name": workspace_name,
                 "namespace": billing_project_name,
                 "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
+                "isLocked": False,
             },
         }
 

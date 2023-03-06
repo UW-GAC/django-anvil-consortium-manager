@@ -1096,7 +1096,7 @@ class Workspace(TimeStampedModel):
         audit_results = anvil_audit.WorkspaceAuditResults()
         # Check the list of workspaces.
         response = AnVILAPIClient().list_workspaces(
-            fields="workspace.namespace,workspace.name,workspace.authorizationDomain,accessLevel"
+            fields="workspace.namespace,workspace.name,workspace.authorizationDomain,workspace.isLocked,accessLevel"
         )
         workspaces_on_anvil = response.json()
         for workspace in cls.objects.all():
@@ -1135,6 +1135,11 @@ class Workspace(TimeStampedModel):
                 if set(auth_domains_on_anvil) != set(auth_domains_in_app):
                     audit_results.add_error(
                         workspace, audit_results.ERROR_DIFFERENT_AUTH_DOMAINS
+                    )
+                # Check lock status.
+                if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
+                    audit_results.add_error(
+                        workspace, audit_results.ERROR_DIFFERENT_LOCK
                     )
                 try:
                     audit_results.add_verified(workspace)
