@@ -409,6 +409,18 @@ class WorkspaceUpdateFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_form_valid_is_locked_false(self):
+        """Form is valid with the is_lockec field."""
+        form_data = {"is_locked": False}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_is_locked_true(self):
+        """Form is valid with the is_lockec field."""
+        form_data = {"is_locked": True}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
 
 class WorkspaceImportFormTest(TestCase):
     form_class = forms.WorkspaceImportForm
