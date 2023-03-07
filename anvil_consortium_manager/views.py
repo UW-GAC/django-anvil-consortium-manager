@@ -2032,6 +2032,17 @@ class WorkspaceAutocomplete(
 class WorkspaceLandingPage(auth.AnVILConsortiumManagerViewRequired, TemplateView):
     template_name = "anvil_consortium_manager/workspace_landing_page.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        edit_permission_codename = (
+            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        )
+        context["show_edit_links"] = self.request.user.has_perm(
+            "anvil_consortium_manager." + edit_permission_codename
+        )
+        context["reg_workspaces"] = workspace_adapter_registry.get_registered_names()
+        return context
+
 
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupGroupMembership

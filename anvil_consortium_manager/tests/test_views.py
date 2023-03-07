@@ -17139,6 +17139,14 @@ class WorkspaceLandingPageTest(TestCase):
             ),
         )
 
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
     def get_url(self):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:workspaces:landing_page")
@@ -17148,9 +17156,11 @@ class WorkspaceLandingPageTest(TestCase):
         return views.WorkspaceLandingPage.as_view()
 
     def test_view_permission(self):
-        """Links to edit required do not appear in the index when user only has view permission."""
+        """Links to edit required do not appear in the page when user only has view permission."""
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
         self.assertNotContains(
             response,
             reverse(
@@ -17174,9 +17184,11 @@ class WorkspaceLandingPageTest(TestCase):
         )
 
     def test_edit_permission(self):
-        """Links to edit required do not appear in the index when user only has view permission."""
+        """Links to edit required do not appear in the page when user only has view permission."""
         self.client.force_login(self.edit_user)
         response = self.client.get(self.get_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
         self.assertContains(
             response,
             reverse(
@@ -17198,6 +17210,21 @@ class WorkspaceLandingPageTest(TestCase):
                 kwargs={"workspace_type": "workspace"},
             ),
         )
+
+    def test_one_registered_workspace_in_context(self):
+        """One registered workspace in context when only DefaultWorkspaceAdapter is registered"""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("reg_workspaces", response.context_data)
+        self.assertEqual(len(response.context_data["reg_workspaces"]), 1)
+
+    def test_two_registered_workspaces_in_context(self):
+        """Two registered workspaces in context when two workspace adapters are registered"""
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("reg_workspaces", response.context_data)
+        self.assertEqual(len(response.context_data["reg_workspaces"]), 2)
 
 
 class WorkspaceGroupSharingDetailTest(TestCase):
