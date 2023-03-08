@@ -1869,6 +1869,11 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
         "name",
     )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace_type_display_name"] = "All workspace"
+        return context
+
 
 class WorkspaceListByType(
     auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, SingleTableView

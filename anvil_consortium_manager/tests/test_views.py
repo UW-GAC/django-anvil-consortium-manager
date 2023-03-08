@@ -10257,6 +10257,16 @@ class WorkspaceListTest(TestCase):
         self.assertIn(test_workspace, response.context_data["table"].data)
         self.assertIn(default_workspace, response.context_data["table"].data)
 
+    def test_context_workspace_type_display_name(self):
+        """Context contains workspace_type_display_name and is set properly."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("workspace_type_display_name", response.context_data)
+        self.assertEqual(
+            response.context_data["workspace_type_display_name"], "All workspace"
+        )
+
 
 class WorkspaceListByTypeTest(TestCase):
     def setUp(self):
