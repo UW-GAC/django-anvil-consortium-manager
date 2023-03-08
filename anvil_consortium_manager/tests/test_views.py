@@ -17165,6 +17165,27 @@ class WorkspaceLandingPageTest(TestCase):
         """Return the view being tested."""
         return views.WorkspaceLandingPage.as_view()
 
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(),
+        )
+
+    def test_status_code_with_view_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_status_code_with_edit_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
     def test_view_permission(self):
         """Links to edit required do not appear in the page when user only has view permission."""
         self.client.force_login(self.view_user)
