@@ -2045,7 +2045,11 @@ class WorkspaceLandingPage(auth.AnVILConsortiumManagerViewRequired, TemplateView
         context["show_edit_links"] = self.request.user.has_perm(
             "anvil_consortium_manager." + edit_permission_codename
         )
-        context["reg_workspaces"] = workspace_adapter_registry.get_registered_names()
+        # Instantiate each adapter class for use in the template.
+        registered_workspaces = [
+            x() for x in workspace_adapter_registry.get_registered_adapters().values()
+        ]
+        context["reg_workspaces"] = registered_workspaces
         return context
 
 
