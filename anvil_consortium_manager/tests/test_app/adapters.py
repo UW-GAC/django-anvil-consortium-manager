@@ -9,6 +9,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
 
     name = "Test workspace"
     type = "test"
+    description = "Workspace type for testing"
     list_table_class = tables.TestWorkspaceDataTable
     workspace_data_model = models.TestWorkspaceData
     workspace_data_form_class = forms.TestWorkspaceDataForm

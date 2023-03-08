@@ -16,6 +16,7 @@ class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
 
     name = "Workspace"
     type = "workspace"
+    description = "Default workspace"
     workspace_data_model = models.DefaultWorkspaceData
     workspace_data_form_class = forms.DefaultWorkspaceDataForm
     list_table_class = tables.WorkspaceTable
