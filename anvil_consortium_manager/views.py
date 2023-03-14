@@ -1304,6 +1304,24 @@ class RegisteredWorkspaceAdaptersMixin(ContextMixin):
         return context
 
 
+class WorkspaceLandingPage(
+    auth.AnVILConsortiumManagerViewRequired,
+    RegisteredWorkspaceAdaptersMixin,
+    TemplateView,
+):
+    template_name = "anvil_consortium_manager/workspace_landing_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        edit_permission_codename = (
+            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        )
+        context["show_edit_links"] = self.request.user.has_perm(
+            "anvil_consortium_manager." + edit_permission_codename
+        )
+        return context
+
+
 class WorkspaceDetail(
     auth.AnVILConsortiumManagerViewRequired,
     RegisteredWorkspaceAdaptersMixin,
@@ -2070,24 +2088,6 @@ class WorkspaceAutocomplete(
             qs = qs.filter(name__icontains=self.q)
 
         return qs
-
-
-class WorkspaceLandingPage(
-    auth.AnVILConsortiumManagerViewRequired,
-    RegisteredWorkspaceAdaptersMixin,
-    TemplateView,
-):
-    template_name = "anvil_consortium_manager/workspace_landing_page.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
-        return context
 
 
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
