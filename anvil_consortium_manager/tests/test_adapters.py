@@ -241,6 +241,13 @@ class WorkspaceAdapterTest(TestCase):
         setattr(TestAdapter, "name", "Test")
         self.assertEqual(TestAdapter().get_description(), "test desc")
 
+    def test_get_description_none(self):
+        """get_description raises ImproperlyConfigured when type is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "description", None)
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_description()
+
     def test_get_name_none(self):
         """get_name raises ImproperlyConfigured when type is not set."""
         TestAdapter = self.get_test_adapter()
