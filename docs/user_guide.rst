@@ -36,22 +36,24 @@ If successful, you will be shown a success message and information about the bil
 Create a new workspace
 ----------------------
 
-1. Navigate to `Workspaces -> Create a new a workspace`. Make sure to select the "Create a new workspace" link under the workspace type that you would like to create.
+1. Navigate to the workspace landing page (`Workspaces -> Workspace types`).
 
-2. In the "Billing project" field, select the billing project in which to create the workspace (e.g., primed-cc). If it doesn’t exist, you may need to import a billing project (see instructions).
+2. On the workspace landing page, find the card for the workspace type you would like to import, and then click on the "Create a workspace on AnVIL" link in that card.
 
-3. In the "name" field, type the name of the workspace that you would like to create within the selected billing project (e.g., test-workspace).
+3. In the "Billing project" field, select the billing project in which to create the workspace (e.g., "primed-cc"). If it doesn’t exist, you may need to import a billing project (see instructions).
 
-4. If applicable, in the "authorization domains" box, select one or more authorization domains for this workspace.
+4. In the "name" field, type the name of the workspace that you would like to create within the selected billing project (e.g., "test-workspace").
+
+5. If applicable, in the "authorization domains" box, select one or more authorization domains for this workspace.
 
     * You can select multiple authorization domains using Command-click.
     * To de-select an authorization domain, click on it while holding the Command key.
 
-5. If desired, add any notes about the Workspace in the "note" field.
+6. If desired, add any notes about the Workspace in the "note" field.
 
-6. Fill out all other required fields for the type of workspace you are creating.
+7. Fill out all other required fields for the type of workspace you are creating.
 
-7. Click on the "Save workspace" button. This can take some time due to delays from AnVIL.
+8. Click on the "Save workspace" button. This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a success message and information about the workspace that you just created. The examples would create a workspace named "primed-cc/test-workspace".
 
@@ -62,9 +64,9 @@ Clone an existing workspace
 
 2. Click the "Clone workspace" button and then choose the workspace type that you would like to use for the new workspace.
 
-3. In the "Billing project" field, select the billing project in which to create the workspace (e.g., primed-cc). If it doesn’t exist, you may need to import a billing project (see instructions).
+3. In the "Billing project" field, select the billing project in which to create the workspace (e.g., "primed-cc"). If it doesn’t exist, you may need to import a billing project (see instructions).
 
-4. In the "name" field, type the name of the workspace that you would like to create within the selected billing project (e.g., test-workspace).
+4. In the "name" field, type the name of the workspace that you would like to create within the selected billing project (e.g., "test-workspace").
 
 5. If applicable, in the "authorization domains" box, select one or more authorization domains for this workspace.
 
@@ -86,15 +88,17 @@ Import an existing workspace
 Note that the service account running the website must be an owner of the workspace (or in a group that has owner permissions) to be able to import it to the app.
 If the workspace has any auth domains, they will be imported into the app even if the service account is not an admin of those groups.
 
-1. Navigate to `Workspaces -> Import a workspace` from AnVIL. Make sure to select the "Create a new workspace" link under the workspace type that you would like to import.
+1. Navigate to the workspace landing page (`Workspaces -> Workspace types`).
 
-2. From the "Workspace" dropdown, select the workspace you would like to import. Only workspaces where the service account is an owner are shown in this dropdown.
+2. On the workspace landing page, find the card for the workspace type you would like to import, and then click on the "Import a workspace from AnVIL" link in that card.
 
-3. Fill out all other required fields for this workspace type.
+3. From the "Workspace" dropdown, select the workspace you would like to import. Only workspaces where the service account is an owner are shown in this dropdown.
 
-4. If desired, add any notes about the Workspace in the "note" field.
+4. Fill out all other required fields for this workspace type.
 
-5. Click on the "Import workspace" button. This can take some time due to delays from AnVIL.
+5. If desired, add any notes about the Workspace in the "note" field.
+
+6. Click on the "Import workspace" button. This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a success message and information about the workspace that you just imported.
 
