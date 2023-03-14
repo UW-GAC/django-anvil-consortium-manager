@@ -4,6 +4,9 @@
 
 - Bugfix: require records with `access=OWNER` to have `can_compute=True` for `WorkspaceGroupSharing` objects.
 - Add information about deleting GroupAccountMembership, GrooupGroupMembership, and WorkspaceGroupSharing records to the documtation User guide.
+- Add a new workspace landing page showing the registered workspace types.
+- Move workspace type links from the navbar to a new workspace landing page, because the navbar gets unwieldy when there are large number of registered workspace types.
+- Add a new required "description" field for Workspace adapters.
 
 ## 0.12.1 (2023-02-16)
 
