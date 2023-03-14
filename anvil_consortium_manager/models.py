@@ -769,6 +769,10 @@ class Workspace(TimeStampedModel):
     workspace_type = models.CharField(
         max_length=255, help_text="""Workspace data type as indicated by an adapter."""
     )
+    is_locked = models.BooleanField(
+        help_text="Indicator of whether the workspace is locked or not.",
+        default=False,
+    )
 
     history = HistoricalRecords()
 
@@ -973,6 +977,10 @@ class Workspace(TimeStampedModel):
                         billing_project = temporary_billing_project
                         billing_project.save()
 
+                # Check if the workspace is locked.
+                if workspace_json["workspace"]["isLocked"]:
+                    workspace.is_locked = True
+
                 # Finally, set the workspace's billing project to the existing or newly-added BillingProject.
                 workspace.billing_project = billing_project
                 # Redo cleaning, including checks for uniqueness.
@@ -1092,7 +1100,7 @@ class Workspace(TimeStampedModel):
         audit_results = anvil_audit.WorkspaceAuditResults()
         # Check the list of workspaces.
         response = AnVILAPIClient().list_workspaces(
-            fields="workspace.namespace,workspace.name,workspace.authorizationDomain,accessLevel"
+            fields="workspace.namespace,workspace.name,workspace.authorizationDomain,workspace.isLocked,accessLevel"
         )
         workspaces_on_anvil = response.json()
         for workspace in cls.objects.all():
@@ -1131,6 +1139,11 @@ class Workspace(TimeStampedModel):
                 if set(auth_domains_on_anvil) != set(auth_domains_in_app):
                     audit_results.add_error(
                         workspace, audit_results.ERROR_DIFFERENT_AUTH_DOMAINS
+                    )
+                # Check lock status.
+                if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
+                    audit_results.add_error(
+                        workspace, audit_results.ERROR_DIFFERENT_LOCK
                     )
                 try:
                     audit_results.add_verified(workspace)

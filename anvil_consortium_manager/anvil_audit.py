@@ -97,6 +97,25 @@ class AnVILAuditResults(ABC):
         """
         return not self.errors and not self.not_in_app
 
+    def to_json(
+        self, include_verified=True, include_errors=True, include_not_in_app=True
+    ):
+        """Return a dictionary representation of the audit results."""
+        x = {}
+        if include_verified:
+            x["verified"] = [
+                {"id": instance.pk, "instance": str(instance)}
+                for instance in self.get_verified()
+            ]
+        if include_errors:
+            x["errors"] = [
+                {"id": k.pk, "instance": str(k), "errors": v}
+                for k, v in self.get_errors().items()
+            ]
+        if include_not_in_app:
+            x["not_in_app"] = list(self.get_not_in_app())
+        return x
+
 
 class BillingProjectAuditResults(AnVILAuditResults):
     """Class to hold audit results for :class:`~anvil_consortium_manager.models.BillingProject`.
@@ -203,12 +222,16 @@ class WorkspaceAuditResults(AnVILAuditResults):
     ERROR_WORKSPACE_SHARING = "Workspace sharing does not match on AnVIL"
     """Error when a Workspace is shared with different ManagedGroups in the app and on AnVIL."""
 
+    ERROR_DIFFERENT_LOCK = "Workspace lock status does not match on AnVIL"
+    """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
+
     # Set up allowed errors.
     allowed_errors = (
         ERROR_NOT_IN_ANVIL,
         ERROR_NOT_OWNER_ON_ANVIL,
         ERROR_DIFFERENT_AUTH_DOMAINS,
         ERROR_WORKSPACE_SHARING,
+        ERROR_DIFFERENT_LOCK,
     )
 
 

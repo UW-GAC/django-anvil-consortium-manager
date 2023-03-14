@@ -1903,6 +1903,26 @@ class WorkspaceDelete(
     message_could_not_delete_workspace_from_app = (
         "Cannot delete workspace from app due to foreign key restrictions."
     )
+    message_workspace_locked = "Cannot delete workspace because it is locked."
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object.is_locked:
+            messages.error(self.request, self.message_workspace_locked)
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object.is_locked:
+            messages.error(self.request, self.message_workspace_locked)
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""

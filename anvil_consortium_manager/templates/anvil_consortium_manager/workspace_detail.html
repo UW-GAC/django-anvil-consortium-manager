@@ -14,6 +14,9 @@
 {% endblock after_title %}
 
 {% block pills %}
+  {% if object.is_locked %}
+  <span class="badge bg-danger"><span class="fa-solid fa-lock me-2"></span>Locked</span>
+  {% endif %}
 {% endblock pills %}
 
 {% block panel %}
@@ -84,7 +87,9 @@
 
   <p>
     <a href="{% url 'anvil_consortium_manager:workspaces:update' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
+    {% if not object.is_locked %}
     <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+    {% endif %}
   {% endif %}
   </p>
 {% endblock action_buttons %}

@@ -1559,6 +1559,8 @@ class ManagedGroupGraphTest(TestCase):
 
 
 class WorkspaceTest(TestCase):
+    """Tests for the Workspace model that do not make AnVIL API calls."""
+
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         billing_project = factories.BillingProjectFactory.create()
@@ -1582,6 +1584,27 @@ class WorkspaceTest(TestCase):
         instance.save()
         self.assertIsInstance(instance, Workspace)
         self.assertEqual(instance.note, "test note")
+
+    def test_is_locked_default(self):
+        """Default value for is_locked is set as expected."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        self.assertFalse(instance.is_locked)
+
+    def test_is_locked_true(self):
+        """is_locked can be set to True."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            is_locked=True,
+        )
+        self.assertTrue(instance.is_locked)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""

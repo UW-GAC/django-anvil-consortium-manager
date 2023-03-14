@@ -18,8 +18,11 @@ and the set of records that exist on AnVIL but are not in the app using :meth:`~
 Different models check different things and have different potential errors.
 
 
+Model-specific auditing
+-----------------------
+
 Billing project auditing
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 The :class:`~anvil_consortium_manager.models.BillingProject` model provides a class method :meth:`~anvil_consortium_manager.models.BillingProject.anvil_audit` that runs on all :class:`~anvil_consortium_manager.models.BillingProject` model instances in the app.
 This method runs the following checks:
@@ -30,7 +33,7 @@ It does not check if there are Billing Projects on AnVIL that don't have a recor
 
 
 Account auditing
-----------------
+~~~~~~~~~~~~~~~~
 
 The :class:`~anvil_consortium_manager.models.Account` model provides a class method :meth:`~anvil_consortium_manager.models.Account.anvil_audit` that runs on all :class:`~anvil_consortium_manager.models.Account` model instances in the app.
 This method runs the following checks:
@@ -40,7 +43,7 @@ This method runs the following checks:
 It does not check if there are Accounts on AnVIL that don't have a record in the app, since this is expected to be the case.
 
 Managed Group auditing
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 The :class:`~anvil_consortium_manager.models.ManagedGroup` model provides two options for auditing: an instance method :meth:`~anvil_consortium_manager.models.ManagedGroup.anvil_audit` to check membership for a single :class:`~anvil_consortium_manager.models.ManagedGroup`, and a class method :meth:`~anvil_consortium_manager.models.ManagedGroup.anvil_audit` that runs on all :class:`~anvil_consortium_manager.models.ManagedGroup` model instances in the app.
 
@@ -62,7 +65,7 @@ The :meth:`~anvil_consortium_manager.models.ManagedGroup.anvil_audit_membership`
 
 
 Workspace auditing
-------------------------
+~~~~~~~~~~~~~~~~~~
 
 As for ManagedGroups, the :class:`~anvil_consortium_manager.models.Workspace` model provides two options for auditing: an instance method :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit` to check access for a single :class:`~anvil_consortium_manager.models.Workspace`, and a class method :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit` that runs on all :class:`~anvil_consortium_manager.models.Workspace` model instances in the app.
 
@@ -81,3 +84,44 @@ The :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit_membership` me
     3. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupSharing.can_compute` value is the same in the app and on AnVIL.
     4. The :attr:`~anvil_consortium_manager.models.WorkspaceGroupSharing.can_share` value is the same in the app and on AnVIL.
     5. No groups or accounts on AnVIL have access to the workspace that are not recorded in the app.
+
+
+Running audits
+--------------
+
+Auditing views
+~~~~~~~~~~~~~~
+
+The app provides a number of views for auditing various models.
+
+    - :class:`~anvil_consortium_manager.models.BillingProject`: :class:`~anvil_consortium_manager.views.BillingProjectAudit` (accessible from default navbar)
+    - :class:`~anvil_consortium_manager.models.Account`: :class:`~anvil_consortium_manager.views.AccountAudit` (accessible from default navbar)
+    - :class:`~anvil_consortium_manager.models.ManagedGroup`: :class:`~anvil_consortium_manager.views.ManagedGroupAudit` (accessible from default navbar)
+    - :class:`~anvil_consortium_manager.models.Workspace`: :class:`~anvil_consortium_manager.views.WorkspaceAudit` (accessible from default navbar)
+
+Workspaces and ManagedGroups have additional audit views that can audit the sharing and membership, respectively.
+
+- :class:`~anvil_consortium_manager.models.ManagedGroup` membership: :class:`~anvil_consortium_manager.views.ManagedGroupMembershipAudit` (accessible from Managed Group detail page)
+- :class:`~anvil_consortium_manager.models.Workspace` sharing: :class:`~anvil_consortium_manager.views.WorkspaceSharingAudit` (accessible from the Workspace detail page)
+
+
+Auditing via management command
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The app also provides a management command (``run_anvil_audit``) that can run audits and (optionally) send an email report.
+This command can be used to run audits on a regular schedule, e.g., weekly audits via a cron job.
+
+Here are some examples of calling this command:
+
+.. code-block:: bash
+
+    # To audit all models and print a report to the terminal.
+    python manage.py run_anvil_audit
+
+    # To audit all models and send an email report to test@example.com.
+    python manage.py run_anvil_audit --email test@example.com
+
+    # To audit just the BillingProject and Account models.
+    python manage.py run_anvil_audit --models BillingProject Account
+
+More information can be found in the help for ``run_anvil_audit``.
