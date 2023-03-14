@@ -13,7 +13,7 @@
   <div class="container">
     <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
 
-      {% for workspace_adapter in reg_workspaces %}
+      {% for workspace_adapter in registered_workspace_adapters %}
       <div class="col">
         <div class="card shadow-sm">
           <h5 class="card-header"><span class="fa-solid fa-computer mx-2"></span>{{ workspace_adapter.get_name }}s</h5>

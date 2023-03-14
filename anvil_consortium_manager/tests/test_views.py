@@ -6276,7 +6276,46 @@ class ManagedGroupVisualizationTest(TestCase):
         self.assertIn("graph", response.context_data)
 
 
+class RegisteredWorkspaceAdaptersMixinTest(TestCase):
+    """Tests for the RegisteredWorkspaceAdaptersMixin class."""
+
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
+    def get_view_class(self):
+        return views.RegisteredWorkspaceAdaptersMixin
+
+    def test_context_registered_workspace_adapters_with_one_type(self):
+        """registered_workspace_adapters contains an instance of DefaultWorkspaceAdapter."""
+        context = self.get_view_class()().get_context_data()
+        self.assertIn("registered_workspace_adapters", context)
+        workspace_types = context["registered_workspace_adapters"]
+        self.assertEqual(len(workspace_types), 1)
+        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
+
+    def test_context_registered_workspace_adapters_with_two_types(self):
+        """registered_workspace_adapters contains an instance of a test adapter when it is registered."""
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        context = self.get_view_class()().get_context_data()
+        self.assertIn("registered_workspace_adapters", context)
+        workspace_types = context["registered_workspace_adapters"]
+        self.assertEqual(len(workspace_types), 2)
+        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
+        self.assertIsInstance(workspace_types[1], TestWorkspaceAdapter)
+
+
 class WorkspaceDetailTest(TestCase):
+    """Tests for the WorkspaceDetail view."""
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -6667,6 +6706,46 @@ class WorkspaceDetailTest(TestCase):
                     "billing_project_slug": obj.billing_project.name,
                     "workspace_slug": obj.name,
                     "workspace_type": "workspace",
+                },
+            ),
+        )
+
+    def test_clone_links_with_two_registered_workspace_adapters(self):
+        """Links to clone into each type of workspace appear when there are two registered workspace types."""
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": DefaultWorkspaceAdapter().get_type(),
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": TestWorkspaceAdapter().get_type(),
                 },
             ),
         )
@@ -17495,16 +17574,16 @@ class WorkspaceLandingPageTest(TestCase):
         """One registered workspace in context when only DefaultWorkspaceAdapter is registered"""
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
-        self.assertIn("reg_workspaces", response.context_data)
-        self.assertEqual(len(response.context_data["reg_workspaces"]), 1)
+        self.assertIn("registered_workspace_adapters", response.context_data)
+        self.assertEqual(len(response.context_data["registered_workspace_adapters"]), 1)
 
     def test_two_registered_workspaces_in_context(self):
         """Two registered workspaces in context when two workspace adapters are registered"""
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
-        self.assertIn("reg_workspaces", response.context_data)
-        self.assertEqual(len(response.context_data["reg_workspaces"]), 2)
+        self.assertIn("registered_workspace_adapters", response.context_data)
+        self.assertEqual(len(response.context_data["registered_workspace_adapters"]), 2)
 
 
 class WorkspaceGroupSharingDetailTest(TestCase):
