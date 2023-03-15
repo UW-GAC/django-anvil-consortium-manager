@@ -28,6 +28,7 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+from django.views.generic.base import ContextMixin
 from django.views.generic.detail import (
     BaseDetailView,
     SingleObjectMixin,
@@ -1289,8 +1290,43 @@ class WorkspaceAdapterMixin:
         return super().get_context_data(**kwargs)
 
 
+class RegisteredWorkspaceAdaptersMixin(ContextMixin):
+    """Add registered workspaces to the context data."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Instantiate each adapter class for use in the template.
+        registered_workspaces = [
+            x() for x in workspace_adapter_registry.get_registered_adapters().values()
+        ]
+        context["registered_workspace_adapters"] = registered_workspaces
+        print(registered_workspaces)
+        return context
+
+
+class WorkspaceLandingPage(
+    auth.AnVILConsortiumManagerViewRequired,
+    RegisteredWorkspaceAdaptersMixin,
+    TemplateView,
+):
+    template_name = "anvil_consortium_manager/workspace_landing_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        edit_permission_codename = (
+            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        )
+        context["show_edit_links"] = self.request.user.has_perm(
+            "anvil_consortium_manager." + edit_permission_codename
+        )
+        return context
+
+
 class WorkspaceDetail(
-    auth.AnVILConsortiumManagerViewRequired, WorkspaceAdapterMixin, DetailView
+    auth.AnVILConsortiumManagerViewRequired,
+    RegisteredWorkspaceAdaptersMixin,
+    WorkspaceAdapterMixin,
+    DetailView,
 ):
     model = models.Workspace
 
@@ -1868,6 +1904,11 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
         "billing_project__name",
         "name",
     )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace_type_display_name"] = "All workspace"
+        return context
 
 
 class WorkspaceListByType(

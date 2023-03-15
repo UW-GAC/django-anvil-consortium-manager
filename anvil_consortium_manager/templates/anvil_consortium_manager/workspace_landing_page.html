@@ -1,0 +1,51 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% block title %}Workspace types{% endblock %}
+
+{% block content %}
+
+
+<h1 class="pb-2 border-bottom">Workspace types</h1>
+
+
+<div class="album py-2">
+  <div class="container">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+
+      {% for workspace_adapter in registered_workspace_adapters %}
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-computer mx-2"></span>{{ workspace_adapter.get_name }}s</h5>
+          <div class="card-body">
+            <p>
+              {{ workspace_adapter.get_description }}
+            </p>
+          </div>
+
+          <ul class="list-group list-group-flush">
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:list' workspace_adapter.get_type %}" class="icon-link">List workspaces</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            {% if show_edit_links %}
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:new' workspace_adapter.get_type %}" class="icon-link">Create a workspace on AnVIL</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:import' workspace_adapter.get_type  %}" class="icon-link">Import a workspace from AnVIL</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            {% endif %}
+          </ul>
+
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+</div>
+
+{% endblock content %}

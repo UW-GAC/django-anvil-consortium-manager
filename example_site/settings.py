@@ -145,7 +145,6 @@ TEMPLATES = [
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
-                "anvil_consortium_manager.context_processors.workspace_adapter",
             ],
             "debug": False,
         },

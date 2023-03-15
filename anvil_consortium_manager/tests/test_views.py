@@ -101,12 +101,9 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:managed_groups:audit"),
         reverse("anvil_consortium_manager:status"),
         reverse("anvil_consortium_manager:workspace_group_sharing:list"),
+        reverse("anvil_consortium_manager:workspaces:landing_page"),
         reverse("anvil_consortium_manager:workspaces:list_all"),
         reverse("anvil_consortium_manager:workspaces:audit"),
-        reverse(
-            "anvil_consortium_manager:workspaces:list",
-            kwargs={"workspace_type": "workspace"},
-        ),
     )
 
     # other_urls = (
@@ -132,14 +129,6 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:group_group_membership:new"),
         reverse("anvil_consortium_manager:managed_groups:new"),
         reverse("anvil_consortium_manager:workspace_group_sharing:new"),
-        reverse(
-            "anvil_consortium_manager:workspaces:import",
-            kwargs={"workspace_type": "workspace"},
-        ),
-        reverse(
-            "anvil_consortium_manager:workspaces:new",
-            kwargs={"workspace_type": "workspace"},
-        ),
     )
 
     def setUp(self):
@@ -6287,7 +6276,177 @@ class ManagedGroupVisualizationTest(TestCase):
         self.assertIn("graph", response.context_data)
 
 
+class RegisteredWorkspaceAdaptersMixinTest(TestCase):
+    """Tests for the RegisteredWorkspaceAdaptersMixin class."""
+
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
+    def get_view_class(self):
+        return views.RegisteredWorkspaceAdaptersMixin
+
+    def test_context_registered_workspace_adapters_with_one_type(self):
+        """registered_workspace_adapters contains an instance of DefaultWorkspaceAdapter."""
+        context = self.get_view_class()().get_context_data()
+        self.assertIn("registered_workspace_adapters", context)
+        workspace_types = context["registered_workspace_adapters"]
+        self.assertEqual(len(workspace_types), 1)
+        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
+
+    def test_context_registered_workspace_adapters_with_two_types(self):
+        """registered_workspace_adapters contains an instance of a test adapter when it is registered."""
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        context = self.get_view_class()().get_context_data()
+        self.assertIn("registered_workspace_adapters", context)
+        workspace_types = context["registered_workspace_adapters"]
+        self.assertEqual(len(workspace_types), 2)
+        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
+        self.assertIsInstance(workspace_types[1], TestWorkspaceAdapter)
+
+
+class WorkspaceLandingPageTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with view permission.
+        self.view_user = User.objects.create_user(username="test_view", password="view")
+        self.view_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        # Create a user with edit permission.
+        self.edit_user = User.objects.create_user(username="test_edit", password="test")
+        self.edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
+    def get_url(self):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:landing_page")
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceLandingPage.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(),
+        )
+
+    def test_status_code_with_view_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_status_code_with_edit_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_permission(self):
+        """Links to edit required do not appear in the page when user only has view permission."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:import",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:new",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+
+    def test_edit_permission(self):
+        """Links to edit required do not appear in the page when user only has view permission."""
+        self.client.force_login(self.edit_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:import",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:new",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+
+    def test_one_registered_workspace_in_context(self):
+        """One registered workspace in context when only DefaultWorkspaceAdapter is registered"""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("registered_workspace_adapters", response.context_data)
+        self.assertEqual(len(response.context_data["registered_workspace_adapters"]), 1)
+
+    def test_two_registered_workspaces_in_context(self):
+        """Two registered workspaces in context when two workspace adapters are registered"""
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("registered_workspace_adapters", response.context_data)
+        self.assertEqual(len(response.context_data["registered_workspace_adapters"]), 2)
+
+
 class WorkspaceDetailTest(TestCase):
+    """Tests for the WorkspaceDetail view."""
+
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
@@ -6678,6 +6837,46 @@ class WorkspaceDetailTest(TestCase):
                     "billing_project_slug": obj.billing_project.name,
                     "workspace_slug": obj.name,
                     "workspace_type": "workspace",
+                },
+            ),
+        )
+
+    def test_clone_links_with_two_registered_workspace_adapters(self):
+        """Links to clone into each type of workspace appear when there are two registered workspace types."""
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            ),
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+            ),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": DefaultWorkspaceAdapter().get_type(),
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.billing_project.name,
+                    "workspace_slug": obj.name,
+                    "workspace_type": TestWorkspaceAdapter().get_type(),
                 },
             ),
         )
@@ -10465,6 +10664,16 @@ class WorkspaceListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
         self.assertIn(test_workspace, response.context_data["table"].data)
         self.assertIn(default_workspace, response.context_data["table"].data)
+
+    def test_context_workspace_type_display_name(self):
+        """Context contains workspace_type_display_name and is set properly."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("workspace_type_display_name", response.context_data)
+        self.assertEqual(
+            response.context_data["workspace_type_display_name"], "All workspace"
+        )
 
 
 class WorkspaceListByTypeTest(TestCase):

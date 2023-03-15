@@ -3,6 +3,9 @@
 ## Devel
 
 - Track whether an AnVIL workspace is locked or not.
+- Add a new workspace landing page showing the registered workspace types.
+- Move workspace type links from the navbar to a new workspace landing page, because the navbar gets unwieldy when there are large number of registered workspace types.
+- Add a new required "description" field for Workspace adapters.
 
 ## 0.13 (2023-03-03)
 

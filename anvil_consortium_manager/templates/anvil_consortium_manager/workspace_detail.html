@@ -77,8 +77,9 @@
       </a>
 
       <ul class="dropdown-menu" aria-labelledby="cloneWorkspaceMenuLink">
-        {% for workspace_type, workspace_name in registered_workspaces.items %}
-          <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:clone' billing_project_slug=object.billing_project.name workspace_slug=object.name workspace_type=workspace_type %}">{{ workspace_name }}</a></li>
+
+        {% for workspace_adapter in registered_workspace_adapters %}
+          <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:clone' billing_project_slug=object.billing_project.name workspace_slug=object.name workspace_type=workspace_adapter.get_type %}">{{ workspace_adapter.get_name }}</a></li>
         {% endfor %}
 
       </ul>

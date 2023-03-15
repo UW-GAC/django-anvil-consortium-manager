@@ -25,6 +25,13 @@ class BaseWorkspaceAdapter(ABC):
         ...
 
     @abstractproperty
+    def description(self):
+        """String with a description of the workspace/
+
+        This will be displayed on the workspace landing page."""
+        ...
+
+    @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of workspaces."""
         ...
@@ -55,6 +62,12 @@ class BaseWorkspaceAdapter(ABC):
         if not self.type:
             raise ImproperlyConfigured("Set `type`.")
         return self.type
+
+    def get_description(self):
+        """Return the workspace description specified in the adapter."""
+        if not self.description:
+            raise ImproperlyConfigured("Set `description`.")
+        return self.description
 
     def get_list_table_class(self):
         """Return the table class to use for the WorkspaceListByType view."""

@@ -103,6 +103,7 @@ class WorkspaceAdapterTest(TestCase):
         class TestAdapter(BaseWorkspaceAdapter):
             name = "Test"
             type = "test"
+            description = "test desc"
             list_table_class = tables.TestWorkspaceDataTable
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -227,6 +228,26 @@ class WorkspaceAdapterTest(TestCase):
         setattr(TestAdapter, "name", "Test")
         self.assertEqual(TestAdapter().get_name(), "Test")
 
+    def test_get_description_default(self):
+        """get_description returns the correct string when using the default adapter."""
+        self.assertEqual(
+            DefaultWorkspaceAdapter().get_description(),
+            "Default workspace",
+        )
+
+    def test_get_description_custom(self):
+        """get_description returns the correct model when using a custom adapter."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "name", "Test")
+        self.assertEqual(TestAdapter().get_description(), "test desc")
+
+    def test_get_description_none(self):
+        """get_description raises ImproperlyConfigured when type is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "description", None)
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_description()
+
     def test_get_name_none(self):
         """get_name raises ImproperlyConfigured when type is not set."""
         TestAdapter = self.get_test_adapter()
@@ -276,6 +297,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter1(BaseWorkspaceAdapter):
             name = None
             type = "adapter1"
+            description = "one"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -284,6 +306,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter2(BaseWorkspaceAdapter):
             name = None
             type = "adapter2"
+            description = "two"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -304,6 +327,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class TestAdapter(BaseWorkspaceAdapter):
             name = None
             type = "adapter_type"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -323,6 +347,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter1(BaseWorkspaceAdapter):
             name = None
             type = "adapter_type"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -331,6 +356,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter2(BaseWorkspaceAdapter):
             name = None
             type = "adapter_type"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -367,6 +393,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class TestAdapter(BaseWorkspaceAdapter):
             name = None
             type = "adapter_type"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -383,6 +410,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter1(BaseWorkspaceAdapter):
             name = None
             type = "adapter_type"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -391,6 +419,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter2(BaseWorkspaceAdapter):
             name = None
             type = "adapter_type"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -425,6 +454,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter(BaseWorkspaceAdapter):
             name = None
             type = "adapter"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -441,6 +471,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter1(BaseWorkspaceAdapter):
             name = None
             type = "adapter1"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -449,6 +480,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter2(BaseWorkspaceAdapter):
             name = None
             type = "adapter2"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -473,6 +505,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter(BaseWorkspaceAdapter):
             name = "Adapter"
             type = "adapter"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -489,6 +522,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter1(BaseWorkspaceAdapter):
             name = "Adapter 1"
             type = "adapter1"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -497,6 +531,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
         class Adapter2(BaseWorkspaceAdapter):
             name = "Adapter 2"
             type = "adapter2"
+            description = "desc"
             list_table_class = None
             workspace_data_model = None
             workspace_data_form_class = None
