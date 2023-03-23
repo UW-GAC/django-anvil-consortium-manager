@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.14 (2023-03-23)
 
 - Track whether an AnVIL workspace is locked or not.
 - Add a new workspace landing page showing the registered workspace types.
