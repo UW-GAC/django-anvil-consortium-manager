@@ -74,10 +74,12 @@ If you would like to receive emails when a user links their account, set the ``A
 Permissions
 ~~~~~~~~~~~
 
-The app provides two different permissions settings.
+The app provides three different permissions settings.
 
 1. ``anvil_project_manager_view`` - users with this permission can view information, for example lists of users or workspace details.
 
 2. ``anvil_project_manager_edit`` - users with this permission can add, delete, or edit models, for example import an account from AnVIL or create a workspace.
 
-We suggest creating two groups, viewers (with ``anvil_project_manager_view`` permission) and editors (with both ``anvil_project_manager_view`` and ``anvil_project_manager_edit`` permission). Users can then be added to the appropriate group. Note that users with edit permission but not view permission will not be able to see lists or detail pages, so anyone granted edit permission should also be granted view permission.
+3. ``anvil_project_manager_account_link`` - users with this permission can link their AnVIL accounts in the app using the `AccountLink` and `AccountLinkVerify` views.
+
+We suggest creating three groups, viewers (with ``anvil_project_manager_view`` permission), editors (with both ``anvil_project_manager_view`` and ``anvil_project_manager_edit`` permission), and a final group for users who are allowed to link their AnVIL account. Users can then be added to the appropriate group. Note that users with edit permission but not view permission will not be able to see lists or detail pages, so anyone granted edit permission should also be granted view permission.
