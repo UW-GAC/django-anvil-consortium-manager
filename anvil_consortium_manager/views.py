@@ -8,7 +8,6 @@ from dal import autocomplete
 from django import VERSION as DJANGO_VERSION
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ImproperlyConfigured
@@ -552,7 +551,9 @@ class AccountUpdate(
     success_message = "Successfully updated Account."
 
 
-class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
+class AccountLink(
+    auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessageMixin, FormView
+):
     """View where a user enter their AnVIL email to get an email verification link."""
 
     login_url = settings.LOGIN_URL
@@ -640,7 +641,7 @@ class AccountLink(LoginRequiredMixin, SuccessMessageMixin, FormView):
         return super().form_valid(form)
 
 
-class AccountLinkVerify(LoginRequiredMixin, RedirectView):
+class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, RedirectView):
     """View where a user can verify their email and create an Account object."""
 
     message_already_linked = "You have already linked an AnVIL account."
