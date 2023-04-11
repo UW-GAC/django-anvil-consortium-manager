@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+- Add a new permission, `anvil_consortium_manager_account_link`, which is required for a user to be able to link their AnVIL account.
+
 ## 0.14 (2023-03-23)
 
 - Track whether an AnVIL workspace is locked or not.
