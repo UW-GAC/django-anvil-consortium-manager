@@ -23,7 +23,7 @@ class AnVILConsortiumManagerEditRequired(PermissionRequiredMixin):
 
 
 class AnVILConsortiumManagerAccountLinkRequired(PermissionRequiredMixin):
-    """AnVIL global app edit permission required mixin"""
+    """AnVIL global app account link permission required mixin"""
 
     def get_permission_required(self):
         apm_content_type = ContentType.objects.get_for_model(AnVILProjectManagerAccess)
