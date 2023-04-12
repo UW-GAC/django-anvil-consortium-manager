@@ -1939,6 +1939,11 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.factory = RequestFactory()
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.ACCOUNT_LINK_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1967,7 +1972,17 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url()
         )
 
-    def test_authenticated_user_can_access_view(self):
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_user_with_perms_can_access_view(self):
         """Returns successful response code."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -2468,6 +2483,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.factory = RequestFactory()
         # Create a user with no special permissions.
         self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.ACCOUNT_LINK_PERMISSION_CODENAME
+            )
+        )
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2498,7 +2518,18 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(uuid, "bar"),
         )
 
-    def test_authenticated_user_can_verify_email(self):
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        uuid = uuid4()
+        request = self.factory.get(self.get_url(uuid, "bar"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_user_with_perms_can_verify_email(self):
         """A user can successfully verify their email."""
         email = "test@example.com"
         email_entry = factories.UserEmailEntryFactory.create(

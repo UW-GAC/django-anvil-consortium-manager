@@ -20,6 +20,7 @@ The :class:`~anvil_consortium_manager.views.AccountLink` view provides a form to
 It verifies that the email is associated with an AnVIL account, and sends an email to the that email with a verification link.
 The user is then required to click on the verification link to verify their email using :class:`~anvil_consortium_manager.views.AccountLinkVerify`, create an :class:`~anvil_consortium_manager.models.Account`, and link it to their user.
 
+Users must have the `anvil_consortium_manager_account_link` permission to access these views.
 
 
 AnVIL auditing
