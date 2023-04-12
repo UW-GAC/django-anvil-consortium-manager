@@ -420,6 +420,11 @@ class ManagedGroup(TimeStampedModel):
     name = models.SlugField(
         max_length=64, unique=True, help_text="Name of the group on AnVIL."
     )
+    email = models.EmailField(
+        help_text="Email for this group.",
+        blank=True,
+        default="",
+    )
     is_managed_by_app = models.BooleanField(
         default=True, help_text="Indicator of whether this group is managed by the app."
     )
@@ -436,6 +441,7 @@ class ManagedGroup(TimeStampedModel):
 
     def get_email(self):
         # Email suffix is hardcoded by Terra, I think.
+        # This will be retired in favor of the "email" field.
         return self.name + "@firecloud.org"
 
     def get_direct_parents(self):
