@@ -422,8 +422,8 @@ class ManagedGroup(TimeStampedModel):
     )
     email = models.EmailField(
         help_text="Email for this group.",
-        blank=True,
-        default="",
+        blank=False,
+        unique=True,
     )
     is_managed_by_app = models.BooleanField(
         default=True, help_text="Indicator of whether this group is managed by the app."
