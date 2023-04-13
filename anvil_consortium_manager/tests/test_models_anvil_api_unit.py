@@ -1383,6 +1383,9 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
 
+    def test_anvil_audit_group_email_different_than_name(self):
+        self.fail("write tests when group email is different than name+@firecloud.org.")
+
 
 class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     """Tests forthe ManagedGroup.anvil_audit method."""
