@@ -7,7 +7,7 @@ def populate_email(apps, schema_editor):
     """Populate the email field for ManagedGroups using the name of the group."""
     ManagedGroup = apps.get_model("anvil_consortium_manager", "ManagedGroup")
     for row in ManagedGroup.objects.all():
-        row.email = row.name + "@firecloud.org".lower()
+        row.email = row.name.lower() + "@firecloud.org"
         row.save(update_fields=["email"])
 
 
