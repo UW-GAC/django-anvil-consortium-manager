@@ -900,20 +900,20 @@ class AccountTest(TestCase):
 class ManagedGroupTest(TestCase):
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
-        instance = ManagedGroup(name="my_group")
+        instance = ManagedGroup(name="my_group", email="foo@bar.com")
         instance.save()
         self.assertIsInstance(instance, ManagedGroup)
 
     def test_note_field(self):
         """Creation using the model constructor and .save() works with a note field."""
-        instance = ManagedGroup(name="my_group", note="test note")
+        instance = ManagedGroup(name="my_group", note="test note", email="foo@bar.com")
         instance.save()
         self.assertIsInstance(instance, ManagedGroup)
         self.assertEqual(instance.note, "test note")
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        instance = ManagedGroup(name="my_group")
+        instance = ManagedGroup(name="my_group", email="foo@bar.com")
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "my_group")
@@ -947,19 +947,30 @@ class ManagedGroupTest(TestCase):
 
     def test_unique_name(self):
         """Saving a model with a duplicate name fails."""
-        name = "my_group"
-        instance = ManagedGroup(name=name)
+        instance = factories.ManagedGroupFactory.create()
         instance.save()
-        instance2 = ManagedGroup(name=name)
+        instance2 = factories.ManagedGroupFactory.build(name=instance.name)
+        with self.assertRaises(IntegrityError):
+            instance2.save()
+
+    def test_unique_email(self):
+        """Saving a model with a duplicate name fails."""
+        instance = factories.ManagedGroupFactory.create()
+        instance.save()
+        instance2 = factories.ManagedGroupFactory.build(email=instance.email)
         with self.assertRaises(IntegrityError):
             instance2.save()
 
     def test_is_managed_by_app(self):
         """Can set the is_managed_by_app field."""
-        instance = ManagedGroup(name="my-group", is_managed_by_app=True)
+        instance = ManagedGroup(
+            name="my-group", is_managed_by_app=True, email="foo1@bar.com"
+        )
         instance.full_clean()
         instance.save()
-        instance_2 = ManagedGroup(name="my-group-2", is_managed_by_app=False)
+        instance_2 = ManagedGroup(
+            name="my-group-2", is_managed_by_app=False, email="foo2@bar.com"
+        )
         instance_2.full_clean()
         instance_2.save()
 
