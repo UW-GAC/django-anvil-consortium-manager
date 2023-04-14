@@ -439,11 +439,6 @@ class ManagedGroup(TimeStampedModel):
             "anvil_consortium_manager:managed_groups:detail", kwargs={"slug": self.name}
         )
 
-    def get_email(self):
-        # Email suffix is hardcoded by Terra, I think.
-        # This will be retired in favor of the "email" field.
-        return self.name + "@firecloud.org"
-
     def get_direct_parents(self):
         """Return a queryset of the direct parents of this group. Does not include grandparents."""
         return ManagedGroup.objects.filter(child_memberships__child_group=self)
