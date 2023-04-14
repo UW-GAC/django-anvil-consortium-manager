@@ -6075,11 +6075,11 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
 class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
-        parent_group = factories.ManagedGroupFactory(name="parent-group")
-        child_group = factories.ManagedGroupFactory(name="child-group")
+        self.parent_group = factories.ManagedGroupFactory(name="parent-group")
+        self.child_group = factories.ManagedGroupFactory(name="child-group")
         self.object = factories.GroupGroupMembershipFactory(
-            parent_group=parent_group,
-            child_group=child_group,
+            parent_group=self.parent_group,
+            child_group=self.child_group,
             role=models.GroupGroupMembership.MEMBER,
         )
         self.api_url_create = (
@@ -6094,6 +6094,20 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_create_successful(self):
         self.anvil_response_mock.add(responses.PUT, self.api_url_create, status=204)
         self.object.anvil_create()
+
+    def test_anvil_create_successful_different_email(self):
+        """Can add a child group to a parent group if the child group email is not default."""
+        other_child_membership = factories.GroupGroupMembershipFactory.create(
+            child_group__name="test",
+            child_group__email="foo@bar.com",
+            parent_group=self.parent_group,
+        )
+        api_url_create = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/parent-group/member/foo@bar.com"
+        )
+        self.anvil_response_mock.add(responses.PUT, api_url_create, status=204)
+        other_child_membership.anvil_create()
 
     def test_anvil_create_unsuccessful_403(self):
         self.anvil_response_mock.add(
@@ -6138,6 +6152,20 @@ class GroupGroupMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def test_anvil_delete_successful(self):
         self.anvil_response_mock.add(responses.DELETE, self.api_url_delete, status=204)
         self.object.anvil_delete()
+
+    def test_anvil_delete_successful_different_email(self):
+        """Can delete a child group from a parent group if the child group email is not default."""
+        other_child_membership = factories.GroupGroupMembershipFactory.create(
+            child_group__name="test",
+            child_group__email="foo@bar.com",
+            parent_group=self.parent_group,
+        )
+        api_url_delete = (
+            self.api_client.sam_entry_point
+            + "/api/groups/v1/parent-group/member/foo@bar.com"
+        )
+        self.anvil_response_mock.add(responses.DELETE, api_url_delete, status=204)
+        other_child_membership.anvil_delete()
 
     def test_anvil_delete_unsuccessful_403(self):
         self.anvil_response_mock.add(
