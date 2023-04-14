@@ -2,6 +2,11 @@
 
 import factory
 from factory.fuzzy import FuzzyChoice
+from faker import Faker
+
+from .. import anvil_api
+
+fake = Faker()
 
 
 class MockAPIResponse:
@@ -26,13 +31,25 @@ class ErrorResponseFactory(MockAPIResponseFactory):
     response = factory.Dict({"message": factory.Faker("sentence")})
 
 
-class GetGroupDetailsFactory(factory.DictFactory):
+class GroupDetailsFactory(factory.DictFactory):
 
     groupName = factory.Faker("word")
     groupEmail = factory.LazyAttribute(
         lambda obj: "{}@firecloud.org".format(obj.groupName)
     )
     role = FuzzyChoice(["admin", "member"])
+
+
+class GroupDetailsAdminFactory(GroupDetailsFactory):
+    """Factory for when we are admin of the group."""
+
+    role = "admin"
+
+
+class GroupDetailsMemberFactory(GroupDetailsFactory):
+    """GroupDetailsFactory Factory for when we are members of the group."""
+
+    role = "member"
 
 
 class GetGroupsResponseFactory(factory.Factory):
@@ -45,8 +62,26 @@ class GetGroupsResponseFactory(factory.Factory):
     # response = "foo"
     # response = factory.RelatedFactoryList(GetGroupDetailsFactory, size=3)
     response = factory.LazyAttribute(
-        lambda o: [GetGroupDetailsFactory() for _ in range(o.n_groups)]
+        lambda o: [GroupDetailsFactory() for _ in range(o.n_groups)]
     )
 
     class Params:
         n_groups = 0
+
+
+class GetGroupMembershipResponseFactory(MockAPIResponseFactory):
+
+    response = factory.LazyAttribute(
+        lambda o: [fake.email() for _ in range(o.n_emails)]
+    )
+
+    class Params:
+        n_emails = 0
+        include_service_account = factory.Trait(
+            response=factory.LazyAttribute(
+                lambda o: [fake.email() for _ in range(o.n_emails)]
+                + [
+                    anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
+                ]
+            )
+        )
