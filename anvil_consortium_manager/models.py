@@ -578,7 +578,13 @@ class ManagedGroup(TimeStampedModel):
         """Import an existing group from AnVIL."""
         # Create the group but don't save it yet.
         # Assume that it's not managed by the app until we figure out that it is.
-        group = cls(name=group_name, is_managed_by_app=False, **kwargs)
+        # Assume the email is the default until we figure out what it is.
+        group = cls(
+            name=group_name,
+            is_managed_by_app=False,
+            email=group_name.lower() + "@firecloud.org",
+            **kwargs
+        )
         # Make sure we don't already have it in the database.
         group.full_clean()
         # Note that we have to be a member of the group to import it.
