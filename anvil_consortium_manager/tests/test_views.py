@@ -4800,6 +4800,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.name, "test-group")
+        self.assertEqual(new_object.email, "test-group@firecloud.org")
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")

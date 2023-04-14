@@ -1031,6 +1031,8 @@ class ManagedGroupCreate(
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
+        # Set the email for the new group based on the default.
+        form.instance.email = form.instance.name.lower() + "@firecloud.org"
         # Create but don't save the new group.
         self.object = form.save(commit=False)
         # Make an API call to AnVIL to create the group.
