@@ -600,6 +600,8 @@ class ManagedGroup(TimeStampedModel):
         # Check if we're an admin.
         if group_details["role"].lower() == "admin":
             group.is_managed_by_app = True
+        # Set the email using the json response.
+        group.email = group_details["groupEmail"].lower()
         group.save()
         return group
 

@@ -926,12 +926,12 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
         self.assertEqual(group.name, group_name)
+        self.assertEqual(group.email, "test-group@firecloud.org")
         self.assertEqual(group.is_managed_by_app, False)
         # Check that it was saved.
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         # Make sure it's the group that was returned.
         models.ManagedGroup.objects.get(pk=group.pk)
-        self.assertEqual(group.email, "test-group@firecloud.org")
 
     def test_anvil_import_not_member_or_admin(self):
         group_name = "test-group"
@@ -976,7 +976,52 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
     def test_anvil_audit_group_email_different_than_name(self):
-        self.fail("write tests when group email is different than name+@firecloud.org.")
+        """Email is set using email in response."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GetGroupDetailsFactory(
+                        groupName="test",
+                        groupEmail="foo@bar.com",
+                    ),
+                ]
+            ).response,
+        )
+        group = models.ManagedGroup.anvil_import("test")
+        # Check values.
+        self.assertEqual(group.name, "test")
+        self.assertEqual(group.email, "foo@bar.com")
+        # Check that it was saved.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        # Make sure it's the group that was returned.
+        models.ManagedGroup.objects.get(pk=group.pk)
+
+    def test_anvil_audit_group_email_different_than_name_lowercase(self):
+        """Email is set to lowercase using email in response."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GetGroupDetailsFactory(
+                        groupName="test",
+                        groupEmail="Foo@Bar.com",
+                    ),
+                ]
+            ).response,
+        )
+        group = models.ManagedGroup.anvil_import("test")
+        # Check values.
+        self.assertEqual(group.name, "test")
+        self.assertEqual(group.email, "foo@bar.com")
+        # Check that it was saved.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        # Make sure it's the group that was returned.
+        models.ManagedGroup.objects.get(pk=group.pk)
 
 
 class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
