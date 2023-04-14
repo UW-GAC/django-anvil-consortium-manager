@@ -2520,7 +2520,66 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_different_group_member_email(self):
-        self.fail("write tests")
+        """anvil_audit works correctly if this group has one group member with a different email."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, child_group__email="foo@bar.com"
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[membership.child_group.email]
+            ).response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_different_group_member_email_case_insensitive(self):
+        """anvil_audit works correctly if this group has one group member with a different email, case insensitive."""
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, child_group__email="foo@bar.com"
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=["Foo@Bar.com"]
+            ).response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
 
 
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):

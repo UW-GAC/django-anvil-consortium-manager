@@ -658,7 +658,7 @@ class ManagedGroup(TimeStampedModel):
         for membership in self.child_memberships.all():
             if membership.role == GroupGroupMembership.ADMIN:
                 try:
-                    admins_in_anvil.remove(membership.child_group.get_email().lower())
+                    admins_in_anvil.remove(membership.child_group.email.lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
@@ -668,7 +668,7 @@ class ManagedGroup(TimeStampedModel):
                     audit_results.add_verified(membership)
             elif membership.role == GroupGroupMembership.MEMBER:
                 try:
-                    members_in_anvil.remove(membership.child_group.get_email().lower())
+                    members_in_anvil.remove(membership.child_group.email.lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
