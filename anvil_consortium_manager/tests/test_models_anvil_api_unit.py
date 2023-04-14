@@ -685,7 +685,7 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_exists_does_exist(self):
         self.anvil_response_mock.add(
-            responses.GET, self.api_url_exists, status=200, json=self.object.get_email()
+            responses.GET, self.api_url_exists, status=200, json=self.object.email
         )
         self.assertIs(self.object.anvil_exists(), True)
 
@@ -2000,7 +2000,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             api_url_members,
             status=200,
             json=api_factories.GetGroupMembershipResponseFactory(
-                response=[membership.child_group.get_email()]
+                response=[membership.child_group.email]
             ).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
@@ -2031,8 +2031,8 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             status=200,
             json=api_factories.GetGroupMembershipResponseFactory(
                 response=[
-                    membership_1.child_group.get_email(),
-                    membership_2.child_group.get_email(),
+                    membership_1.child_group.email,
+                    membership_2.child_group.email,
                 ]
             ).response,
         )
@@ -2234,7 +2234,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             api_url_admins,
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.child_group.get_email()]
+                response=[membership.child_group.email]
             ).response,
         )
         audit_results = group.anvil_audit_membership()
@@ -2269,8 +2269,8 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(
                 response=[
-                    membership_1.child_group.get_email(),
-                    membership_2.child_group.get_email(),
+                    membership_1.child_group.email,
+                    membership_2.child_group.email,
                 ]
             ).response,
         )
@@ -2473,7 +2473,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
             api_url_admins,
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.child_group.get_email()]
+                response=[membership.child_group.email]
             ).response,
         )
         audit_results = group.anvil_audit_membership()
@@ -2488,7 +2488,7 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         )
         self.assertEqual(
             audit_results.get_not_in_app(),
-            set(["ADMIN: " + membership.child_group.get_email()]),
+            set(["ADMIN: " + membership.child_group.email]),
         )
 
     def test_service_account_is_both_admin_and_member(self):
@@ -4100,7 +4100,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for ACL query.
         self.add_api_json_response_acl(
-            group.get_email(), "READER", can_compute=False, can_share=False
+            group.email, "READER", can_compute=False, can_share=False
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -4134,7 +4134,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for ACL query.
         self.add_api_json_response_acl(
-            group.get_email(), "WRITER", can_compute=False, can_share=False
+            group.email, "WRITER", can_compute=False, can_share=False
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -4168,7 +4168,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for ACL query.
         self.add_api_json_response_acl(
-            group.get_email(), "OWNER", can_compute=False, can_share=False
+            group.email, "OWNER", can_compute=False, can_share=False
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -4202,7 +4202,7 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for ACL query.
         self.add_api_json_response_acl(
-            group.get_email(), "reader", can_compute=False, can_share=False
+            group.email, "reader", can_compute=False, can_share=False
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -4237,10 +4237,10 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Response for ACL query.
         self.add_api_json_response_acl(
-            group_1.get_email(), "READER", can_compute=False, can_share=False
+            group_1.email, "READER", can_compute=False, can_share=False
         )
         self.add_api_json_response_acl(
-            group_2.get_email(), "WRITER", can_compute=False, can_share=False
+            group_2.email, "WRITER", can_compute=False, can_share=False
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -5456,7 +5456,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
     def test_one_group_reader(self):
         """anvil_audit works correctly if this group has one group member."""
         access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
-        self.update_api_response(access.group.get_email(), access.access)
+        self.update_api_response(access.group.email, access.access)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5477,8 +5477,8 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace
         )
-        self.update_api_response(access_1.group.get_email(), "READER")
-        self.update_api_response(access_2.group.get_email(), "READER")
+        self.update_api_response(access_1.group.email, "READER")
+        self.update_api_response(access_2.group.email, "READER")
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5599,7 +5599,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
-        self.update_api_response(access.group.get_email(), "WRITER")
+        self.update_api_response(access.group.email, "WRITER")
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5620,8 +5620,8 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
-        self.update_api_response(access_1.group.get_email(), "WRITER")
-        self.update_api_response(access_2.group.get_email(), "WRITER")
+        self.update_api_response(access_1.group.email, "WRITER")
+        self.update_api_response(access_2.group.email, "WRITER")
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5748,7 +5748,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
-        self.update_api_response(access.group.get_email(), "OWNER", can_share=True)
+        self.update_api_response(access.group.email, "OWNER", can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5769,8 +5769,8 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access_2 = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.OWNER
         )
-        self.update_api_response(access_1.group.get_email(), "OWNER", can_share=True)
-        self.update_api_response(access_2.group.get_email(), "OWNER", can_share=True)
+        self.update_api_response(access_1.group.email, "OWNER", can_share=True)
+        self.update_api_response(access_2.group.email, "OWNER", can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5897,7 +5897,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.READER
         )
-        self.update_api_response(access.group.get_email(), "WRITER")
+        self.update_api_response(access.group.email, "WRITER")
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5918,7 +5918,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             workspace=self.workspace, access=models.WorkspaceGroupSharing.READER
         )
         self.update_api_response(
-            access.group.get_email(), "OWNER", can_compute=True, can_share=True
+            access.group.email, "OWNER", can_compute=True, can_share=True
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -5947,7 +5947,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             access=models.WorkspaceGroupSharing.WRITER,
             can_compute=True,
         )
-        self.update_api_response(access.group.get_email(), "WRITER", can_compute=False)
+        self.update_api_response(access.group.email, "WRITER", can_compute=False)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -5967,7 +5967,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
         access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.WRITER
         )
-        self.update_api_response(access.group.get_email(), "WRITER", can_share=True)
+        self.update_api_response(access.group.email, "WRITER", can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -6007,7 +6007,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             can_compute=True,
         )
         self.update_api_response(
-            access.group.get_email(), "OWNER", can_compute=True, can_share=True
+            access.group.email, "OWNER", can_compute=True, can_share=True
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -6029,7 +6029,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             can_compute=True,
         )
         self.update_api_response(
-            access.group.get_email(), "WRITER", can_compute=True, can_share=True
+            access.group.email, "WRITER", can_compute=True, can_share=True
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -6054,7 +6054,7 @@ class WorkspaceAnVILAuditSharingAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase
             can_compute=False,
         )
         self.update_api_response(
-            access.group.get_email(), "READER", can_compute=False, can_share=True
+            access.group.email, "READER", can_compute=False, can_share=True
         )
         self.anvil_response_mock.add(
             responses.GET,

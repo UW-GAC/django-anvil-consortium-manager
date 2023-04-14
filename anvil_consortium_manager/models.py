@@ -1066,7 +1066,7 @@ class Workspace(TimeStampedModel):
             pass
         for access in self.workspacegroupsharing_set.all():
             try:
-                access_details = acl_in_anvil.pop(access.group.get_email().lower())
+                access_details = acl_in_anvil.pop(access.group.email.lower())
             except KeyError:
                 audit_results.add_error(access, audit_results.ERROR_NOT_SHARED_IN_ANVIL)
             else:
@@ -1461,7 +1461,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         """
         acl_updates = [
             {
-                "email": self.group.get_email(),
+                "email": self.group.email,
                 "accessLevel": self.access,
                 "canShare": False,
                 "canCompute": self.can_compute,
@@ -1480,7 +1480,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
 
         acl_updates = [
             {
-                "email": self.group.get_email(),
+                "email": self.group.email,
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
                 "canCompute": self.can_compute,
