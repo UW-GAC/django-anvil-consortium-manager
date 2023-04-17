@@ -97,10 +97,6 @@ class WorkspaceTable(tables.Table):
         super().__init__(*args, **kwargs)
         self.registered_names = workspace_adapter_registry.get_registered_names()
 
-    def render_name(self, record):
-        """Show the full name (including billing project) for the workspace."""
-        return record.__str__()
-
     def render_workspace_type(self, record):
         """Show the name of the workspace specified in the adapter for this workspace type."""
         return self.registered_names[record.workspace_type]
