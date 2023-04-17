@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from factory import Faker, SelfAttribute, Sequence, SubFactory, Trait
+from factory import Faker, LazyAttribute, SelfAttribute, Sequence, SubFactory, Trait
 from factory.django import DjangoModelFactory
 
 from .. import models
@@ -83,6 +83,7 @@ class ManagedGroupFactory(DjangoModelFactory):
     """A factory for the ManagedGroup model."""
 
     name = Faker("slug")
+    email = LazyAttribute(lambda o: o.name + "@firecloud.org")
 
     class Meta:
         model = models.ManagedGroup

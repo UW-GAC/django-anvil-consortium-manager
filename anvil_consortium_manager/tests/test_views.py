@@ -4800,6 +4800,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertIsInstance(new_object, models.ManagedGroup)
         self.assertEqual(new_object.name, "test-group")
+        self.assertEqual(new_object.email, "test-group@firecloud.org")
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -9153,7 +9154,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Response for ACL query.
         group = factories.ManagedGroupFactory.create()
         self.add_api_json_response_acl(
-            group.get_email(), "READER", can_compute=False, can_share=False
+            group.email, "READER", can_compute=False, can_share=False
         )
         self.anvil_response_mock.add(
             responses.GET,
@@ -11686,7 +11687,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
         access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
-        self.update_api_response(access.group.get_email(), "READER")
+        self.update_api_response(access.group.email, "READER")
         # Group membership API call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -11721,7 +11722,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         """audit_errors with one error record."""
         access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         # Different access recorded.
-        self.update_api_response(access.group.get_email(), "WRITER")
+        self.update_api_response(access.group.email, "WRITER")
         # Group membership API call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -12052,7 +12053,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT, api_url, status=self.api_success_code
         )
@@ -12077,7 +12078,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a success message if successful."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT, api_url, status=self.api_success_code
         )
@@ -12102,7 +12103,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Posting valid data to the form creates an object."""
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        api_url = self.get_api_url(parent_group.name, "admin", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "admin", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT, api_url, status=self.api_success_code
         )
@@ -12125,7 +12126,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # This needs to use the client because the RequestFactory doesn't handle redirects.
         parent_group = factories.ManagedGroupFactory.create(name="group-1")
         child_group = factories.ManagedGroupFactory.create(name="group-2")
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT, api_url, status=self.api_success_code
         )
@@ -12199,7 +12200,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent, child_group=group_1
         )
-        api_url = self.get_api_url(parent.name, "member", group_2.get_email())
+        api_url = self.get_api_url(parent.name, "member", group_2.email)
         self.anvil_response_mock.add(
             responses.PUT, api_url, status=self.api_success_code
         )
@@ -12222,7 +12223,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=group_1, child_group=child
         )
-        api_url = self.get_api_url(group_2.name, "member", child.get_email())
+        api_url = self.get_api_url(group_2.name, "member", child.email)
         self.anvil_response_mock.add(
             responses.PUT, api_url, status=self.api_success_code
         )
@@ -12447,7 +12448,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT,
             api_url,
@@ -12477,7 +12478,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_no_permission_for_parent_group(self):
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT,
             api_url,
@@ -12507,7 +12508,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_child_group_exists_parent_group_does_not_exist(self):
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT,
             api_url,
@@ -12537,7 +12538,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_child_group_does_not_exist_parent_group_does_not_exist(self):
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT,
             api_url,
@@ -12567,7 +12568,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_child_group_does_not_exist_parent_group_exists(self):
         parent_group = factories.ManagedGroupFactory.create()
         child_group = factories.ManagedGroupFactory.create()
-        api_url = self.get_api_url(parent_group.name, "member", child_group.get_email())
+        api_url = self.get_api_url(parent_group.name, "member", child_group.email)
         self.anvil_response_mock.add(
             responses.PUT,
             api_url,
@@ -12637,7 +12638,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             + "/"
             + role
             + "/"
-            + self.child_group.get_email()
+            + self.child_group.email
         )
         return url
 
@@ -13175,7 +13176,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             + "/"
             + role
             + "/"
-            + self.child_group.get_email()
+            + self.child_group.email
         )
         return url
 
@@ -13673,7 +13674,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             + "/"
             + role
             + "/"
-            + self.child_group.get_email()
+            + self.child_group.email
         )
         return url
 
@@ -14447,7 +14448,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             role=models.GroupGroupMembership.MEMBER
         )
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE, api_url, status=self.api_success_code
@@ -14468,7 +14469,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             role=models.GroupGroupMembership.MEMBER
         )
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE, api_url, status=self.api_success_code
@@ -14491,7 +14492,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create()
         other_object = factories.GroupGroupMembershipFactory.create()
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE, api_url, status=self.api_success_code
@@ -14512,7 +14513,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupGroupMembershipFactory.create()
         parent_group = obj.parent_group
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE, api_url, status=self.api_success_code
@@ -14530,7 +14531,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client to check messages.
         obj = factories.GroupGroupMembershipFactory.create()
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE,
@@ -14604,7 +14605,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error_400(self):
         obj = factories.GroupGroupMembershipFactory.create()
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE,
@@ -14630,7 +14631,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error_403(self):
         obj = factories.GroupGroupMembershipFactory.create()
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE,
@@ -14656,7 +14657,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error_404(self):
         obj = factories.GroupGroupMembershipFactory.create()
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE,
@@ -14682,7 +14683,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_error_500(self):
         obj = factories.GroupGroupMembershipFactory.create()
         api_url = self.get_api_url(
-            obj.parent_group.name, obj.role.lower(), obj.child_group.get_email()
+            obj.parent_group.name, obj.role.lower(), obj.child_group.email
         )
         self.anvil_response_mock.add(
             responses.DELETE,
@@ -17976,7 +17977,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "WRITER",
                 "canShare": False,
                 "canCompute": False,
@@ -18012,7 +18013,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "OWNER",
                 "canShare": False,
                 "canCompute": True,
@@ -18048,7 +18049,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
@@ -18141,7 +18142,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         json_data = [
             {
-                "email": group_2.get_email(),
+                "email": group_2.email,
                 "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
@@ -18177,7 +18178,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
@@ -18366,7 +18367,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
@@ -18797,7 +18798,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "WRITER",
                 "canShare": False,
                 "canCompute": False,
@@ -18836,7 +18837,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "OWNER",
                 "canShare": False,
                 "canCompute": True,
@@ -18875,7 +18876,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
@@ -19537,7 +19538,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "WRITER",
                 "canShare": False,
                 "canCompute": False,
@@ -19575,7 +19576,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "OWNER",
                 "canShare": False,
                 "canCompute": True,
@@ -19613,7 +19614,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
@@ -20276,7 +20277,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "WRITER",
                 "canShare": False,
                 "canCompute": False,
@@ -20316,7 +20317,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "OWNER",
                 "canShare": False,
                 "canCompute": True,
@@ -20356,7 +20357,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": group.get_email(),
+                "email": group.email,
                 "accessLevel": "READER",
                 "canShare": False,
                 "canCompute": False,
@@ -21073,7 +21074,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         )
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "WRITER",
                 "canShare": False,
                 "canCompute": False,
@@ -21191,7 +21192,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         new_group = factories.ManagedGroupFactory.create()
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "WRITER",
                 "canShare": False,
                 "canCompute": False,
@@ -21230,7 +21231,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = factories.WorkspaceFactory.create()
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "WRITER",
                 "canShare": False,
                 "canCompute": False,
@@ -21516,7 +21517,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
                 "canCompute": False,
@@ -21558,7 +21559,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
                 "canCompute": False,
@@ -21594,7 +21595,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         other_object = factories.WorkspaceGroupSharingFactory.create()
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
                 "canCompute": False,
@@ -21639,7 +21640,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
                 "canCompute": True,
@@ -21669,7 +21670,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.WorkspaceGroupSharingFactory.create()
         json_data = [
             {
-                "email": obj.group.get_email(),
+                "email": obj.group.email,
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
                 "canCompute": False,

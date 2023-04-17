@@ -42,5 +42,12 @@ setuptools==65.5.1
 
 # My stuff
 # ------------------------------------------------------------------------------
-responses==0.18.0  # https://github.com/getsentry/responses - Mocked responses in tests
-mysqlclient==2.1.0  # for mariadb/mysql backend
+
+# Mocked responses in tests:
+responses==0.18.0  # https://github.com/getsentry/responses
+
+# For mariadb/mysql backend:
+mysqlclient==2.1.0
+
+# Testing migrations:
+django-test-migrations==1.2.0  # https://github.com/wemake-services/django-test-migrations - for testing migrations

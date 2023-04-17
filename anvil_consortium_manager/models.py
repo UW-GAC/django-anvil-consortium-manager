@@ -420,6 +420,11 @@ class ManagedGroup(TimeStampedModel):
     name = models.SlugField(
         max_length=64, unique=True, help_text="Name of the group on AnVIL."
     )
+    email = models.EmailField(
+        help_text="Email for this group.",
+        blank=False,
+        unique=True,
+    )
     is_managed_by_app = models.BooleanField(
         default=True, help_text="Indicator of whether this group is managed by the app."
     )
@@ -433,10 +438,6 @@ class ManagedGroup(TimeStampedModel):
         return reverse(
             "anvil_consortium_manager:managed_groups:detail", kwargs={"slug": self.name}
         )
-
-    def get_email(self):
-        # Email suffix is hardcoded by Terra, I think.
-        return self.name + "@firecloud.org"
 
     def get_direct_parents(self):
         """Return a queryset of the direct parents of this group. Does not include grandparents."""
@@ -572,7 +573,13 @@ class ManagedGroup(TimeStampedModel):
         """Import an existing group from AnVIL."""
         # Create the group but don't save it yet.
         # Assume that it's not managed by the app until we figure out that it is.
-        group = cls(name=group_name, is_managed_by_app=False, **kwargs)
+        # Assume the email is the default until we figure out what it is.
+        group = cls(
+            name=group_name,
+            is_managed_by_app=False,
+            email=group_name.lower() + "@firecloud.org",
+            **kwargs
+        )
         # Make sure we don't already have it in the database.
         group.full_clean()
         # Note that we have to be a member of the group to import it.
@@ -588,6 +595,8 @@ class ManagedGroup(TimeStampedModel):
         # Check if we're an admin.
         if group_details["role"].lower() == "admin":
             group.is_managed_by_app = True
+        # Set the email using the json response.
+        group.email = group_details["groupEmail"].lower()
         group.save()
         return group
 
@@ -644,7 +653,7 @@ class ManagedGroup(TimeStampedModel):
         for membership in self.child_memberships.all():
             if membership.role == GroupGroupMembership.ADMIN:
                 try:
-                    admins_in_anvil.remove(membership.child_group.get_email().lower())
+                    admins_in_anvil.remove(membership.child_group.email.lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
@@ -654,7 +663,7 @@ class ManagedGroup(TimeStampedModel):
                     audit_results.add_verified(membership)
             elif membership.role == GroupGroupMembership.MEMBER:
                 try:
-                    members_in_anvil.remove(membership.child_group.get_email().lower())
+                    members_in_anvil.remove(membership.child_group.email.lower())
                 except ValueError:
                     # This email is not in the list of members.
                     audit_results.add_error(
@@ -701,7 +710,18 @@ class ManagedGroup(TimeStampedModel):
             try:
                 group_roles = groups_on_anvil.pop(group.name)
             except KeyError:
-                audit_results.add_error(group, audit_results.ERROR_NOT_IN_ANVIL)
+                # Check if the group actually does exist but we're not a member of it.
+                try:
+                    # If this returns a 404 error, then the group actually does not exist.
+                    response = AnVILAPIClient().get_group_email(group.name)
+                    if group.is_managed_by_app:
+                        audit_results.add_error(
+                            group, audit_results.ERROR_DIFFERENT_ROLE
+                        )
+
+                except AnVILAPIError404:
+                    audit_results.add_error(group, audit_results.ERROR_NOT_IN_ANVIL)
+                    # Perhaps we want to add has_app_as_member as a field and check that.
             else:
                 # Check role.
                 if group.is_managed_by_app:
@@ -1057,7 +1077,7 @@ class Workspace(TimeStampedModel):
             pass
         for access in self.workspacegroupsharing_set.all():
             try:
-                access_details = acl_in_anvil.pop(access.group.get_email().lower())
+                access_details = acl_in_anvil.pop(access.group.email.lower())
             except KeyError:
                 audit_results.add_error(access, audit_results.ERROR_NOT_SHARED_IN_ANVIL)
             else:
@@ -1286,13 +1306,13 @@ class GroupGroupMembership(TimeStampedModel):
     def anvil_create(self):
         """Add the child group to the parent group on AnVIL."""
         AnVILAPIClient().add_user_to_group(
-            self.parent_group.name, self.role.lower(), self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.email
         )
 
     def anvil_delete(self):
         """Remove the child group from the parent on AnVIL"""
         AnVILAPIClient().remove_user_from_group(
-            self.parent_group.name, self.role.lower(), self.child_group.get_email()
+            self.parent_group.name, self.role.lower(), self.child_group.email
         )
 
 
@@ -1452,7 +1472,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         """
         acl_updates = [
             {
-                "email": self.group.get_email(),
+                "email": self.group.email,
                 "accessLevel": self.access,
                 "canShare": False,
                 "canCompute": self.can_compute,
@@ -1471,7 +1491,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
 
         acl_updates = [
             {
-                "email": self.group.get_email(),
+                "email": self.group.email,
                 "accessLevel": "NO ACCESS",
                 "canShare": False,
                 "canCompute": self.can_compute,
