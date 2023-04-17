@@ -38,7 +38,7 @@ DATABASES = {
         "PORT": os.getenv("DBPORT", default="3306"),
     }
 }
-print(DATABASES["default"]["ENGINE"])
+
 # URLS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf

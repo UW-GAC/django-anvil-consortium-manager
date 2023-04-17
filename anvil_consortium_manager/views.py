@@ -1303,7 +1303,6 @@ class RegisteredWorkspaceAdaptersMixin(ContextMixin):
             x() for x in workspace_adapter_registry.get_registered_adapters().values()
         ]
         context["registered_workspace_adapters"] = registered_workspaces
-        print(registered_workspaces)
         return context
 
 
