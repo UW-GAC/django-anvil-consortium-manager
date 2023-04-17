@@ -164,9 +164,9 @@ class WorkspaceTableTest(TestCase):
 
     def test_number_of_groups(self):
         """The number of groups with access displayed is correct."""
-        self.model_factory.create()
-        instance_1 = self.model_factory.create()
-        instance_2 = self.model_factory.create()
+        self.model_factory.create(name="a")
+        instance_1 = self.model_factory.create(name="b")
+        instance_2 = self.model_factory.create(name="c")
         factories.WorkspaceGroupSharingFactory.create_batch(1, workspace=instance_1)
         factories.WorkspaceGroupSharingFactory.create_batch(2, workspace=instance_2)
         table = self.table_class(self.model.objects.all())
@@ -181,6 +181,17 @@ class WorkspaceTableTest(TestCase):
         self.model_factory.create(workspace_type=workspace_type)
         table = self.table_class(self.model.objects.all())
         self.assertEqual(table.rows[0].get_cell("workspace_type"), workspace_name)
+
+    def test_order_by(self):
+        """table is ordered by workspace name."""
+        instance_1 = self.model_factory.create(name="zzz")
+        instance_2 = self.model_factory.create(name="aaa")
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(table.data[0], instance_2)
+        self.assertEqual(table.data[1], instance_1)
+        # self.assertEqual(table.rows[0].get_cell("number_groups"), 0)
+        # self.assertEqual(table.rows[1].get_cell("number_groups"), 1)
+        # self.assertEqual(table.rows[2].get_cell("number_groups"), 2)
 
 
 class GroupGroupMembershipTableTest(TestCase):

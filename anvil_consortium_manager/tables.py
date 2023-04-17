@@ -92,6 +92,7 @@ class WorkspaceTable(tables.Table):
     class Meta:
         model = models.Workspace
         fields = ("name", "billing_project", "workspace_type")
+        order_by = ("name",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
