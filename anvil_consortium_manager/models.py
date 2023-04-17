@@ -714,6 +714,11 @@ class ManagedGroup(TimeStampedModel):
                 try:
                     # If this returns a 404 error, then the group actually does not exist.
                     response = AnVILAPIClient().get_group_email(group.name)
+                    if group.is_managed_by_app:
+                        audit_results.add_error(
+                            group, audit_results.ERROR_DIFFERENT_ROLE
+                        )
+
                 except AnVILAPIError404:
                     audit_results.add_error(group, audit_results.ERROR_NOT_IN_ANVIL)
                     # Perhaps we want to add has_app_as_member as a field and check that.

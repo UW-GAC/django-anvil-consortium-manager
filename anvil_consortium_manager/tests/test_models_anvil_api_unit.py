@@ -1185,7 +1185,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_audit_one_group_on_anvil_but_app_not_in_group(self):
         """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
-        group = factories.ManagedGroupFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -1205,6 +1205,33 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue(audit_results.ok())
         self.assertEqual(audit_results.get_verified(), set([group]))
         self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_anvil_audit_one_group_managed_by_app_on_anvil_but_app_not_in_group(self):
+        """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(n_groups=0).response,
+        )
+        # Add the response.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group.name,
+            status=200,
+            json="FOO@BAR.COM",
+        )
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([]))
+        self.assertEqual(
+            audit_results.get_errors(),
+            {group: [anvil_audit.ManagedGroupAuditResults.ERROR_DIFFERENT_ROLE]},
+        )
         self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_group_admin_in_app_member_on_anvil(self):
