@@ -88,18 +88,16 @@ class WorkspaceTable(tables.Table):
         orderable=False,
         accessor="workspacegroupsharing_set__count",
     )
+    created = tables.Column(verbose_name="Date added")
 
     class Meta:
         model = models.Workspace
         fields = ("name", "billing_project", "workspace_type")
+        order_by = ("name",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.registered_names = workspace_adapter_registry.get_registered_names()
-
-    def render_name(self, record):
-        """Show the full name (including billing project) for the workspace."""
-        return record.__str__()
 
     def render_workspace_type(self, record):
         """Show the name of the workspace specified in the adapter for this workspace type."""
