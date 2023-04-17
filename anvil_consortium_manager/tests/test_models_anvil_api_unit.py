@@ -1168,6 +1168,12 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupsResponseFactory(n_groups=0).response,
         )
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
         self.assertFalse(audit_results.ok())
@@ -1175,6 +1181,30 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(
             audit_results.get_errors(), {group: [audit_results.ERROR_NOT_IN_ANVIL]}
         )
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
+    def test_anvil_audit_one_group_on_anvil_but_app_not_in_group(self):
+        """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(n_groups=0).response,
+        )
+        # Add the response.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group.name,
+            status=200,
+            json="FOO@BAR.COM",
+        )
+        audit_results = models.ManagedGroup.anvil_audit()
+        self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([group]))
+        self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
 
     def test_anvil_audit_one_group_admin_in_app_member_on_anvil(self):
@@ -1308,6 +1338,14 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
+        # Add response for the group that is not in the app.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group_1.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Add responses for the group that is in the app.
         api_url_members = self.get_api_url_members(group_2.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1331,7 +1369,7 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(audit_results.get_not_in_app(), set())
 
-    def test_anvil_audit_two_accounts_both_missing(self):
+    def test_anvil_audit_two_groups_both_missing(self):
         """anvil_audit raises exception if there are two groups that exist in the app but not in AnVIL."""
         group_1 = factories.ManagedGroupFactory.create()
         group_2 = factories.ManagedGroupFactory.create()
@@ -1341,6 +1379,20 @@ class ManagedGroupAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=api_factories.GetGroupsResponseFactory().response,
+        )
+        # Add response for the group that is not in the app.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group_1.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Add response for the group that is not in the app.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group_2.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
         )
         audit_results = models.ManagedGroup.anvil_audit()
         self.assertIsInstance(audit_results, anvil_audit.ManagedGroupAuditResults)
