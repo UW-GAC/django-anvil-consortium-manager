@@ -4,6 +4,7 @@
 
 - Add a new permission, `anvil_consortium_manager_account_link`, which is required for a user to be able to link their AnVIL account.
 - Handle groups that the app service account is not part of when auditing ManagedGroups.
+- Add information about deactivating and reactivating Accounts to documentation user guide.
 
 ## 0.14 (2023-03-23)
 
