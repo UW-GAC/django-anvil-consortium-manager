@@ -234,3 +234,21 @@ Note that the account must already exist on AnVIL to be able to import it.
 5. Click on "Save account". This can take some time due to delays from AnVIL.
 
 If successful, you will be shown a message and information about the account that you just imported. Otherwise, you will be shown an error message at the top of the page.
+
+
+Deactivate an account
+---------------------
+
+The app provides the ability to deactivate an Account.
+When an Account is deactivated, it is removed from all groups on AnVIL but keeps the `GroupAccountMembership` records in the app.
+After deactivating, it can no longer be added to new groups unless it is reactivated.
+
+To deactivate an Account, navigate to the Account detail page and click on the "Deactivate account" button.
+
+Reactivate an account
+---------------------
+
+Accounts that have been deactivated can be reactivated.
+Reactivating a deactivated account adds the account back to all groups on AnVIL that it had been a part of before it was deactivated.
+
+To deactivate an Account, navigate to the Account detail page and click on the "Reactivate account" button.
