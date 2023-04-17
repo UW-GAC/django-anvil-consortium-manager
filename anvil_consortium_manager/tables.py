@@ -88,6 +88,7 @@ class WorkspaceTable(tables.Table):
         orderable=False,
         accessor="workspacegroupsharing_set__count",
     )
+    created = tables.Column(verbose_name="Date added")
 
     class Meta:
         model = models.Workspace
