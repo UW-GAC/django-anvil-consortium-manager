@@ -12,7 +12,7 @@ from anvil_consortium_manager.models import (
 class TestWorkspaceData(BaseWorkspaceData):
     """Custom model to hold additional data about a Workspace."""
 
-    study_name = models.CharField(max_length=16, unique=True)
+    study_name = models.CharField(max_length=255, unique=True)
 
 
 class ProtectedManagedGroup(models.Model):

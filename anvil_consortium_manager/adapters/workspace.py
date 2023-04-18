@@ -107,13 +107,13 @@ class BaseWorkspaceAdapter(ABC):
             raise ImproperlyConfigured("Set `workspace_detail_template_name`.")
         return self.workspace_detail_template_name
 
-    def get_autocomplete_queryset(self, queryset, q):
+    def get_autocomplete_queryset(self, queryset, q, forwarded=None):
         """Return the queryset after filtering for WorkspaceAutocompleteByType view.
 
         The default filtering is that the workspace name contains the queryset, case-
         insensitive. If desired, custom autocomplete filtering for a workspace type can
         be implemented by overriding this method."""
-        return queryset.filter(name__icontains=q)
+        return queryset.filter(workspace__name__icontains=q)
 
 
 class AdapterAlreadyRegisteredError(Exception):

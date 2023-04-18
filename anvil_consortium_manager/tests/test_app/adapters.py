@@ -15,8 +15,8 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_form_class = forms.TestWorkspaceDataForm
     workspace_detail_template_name = "test_workspace_detail.html"
 
-    def get_autocomplete_queryset(self, queryset, q):
-        return queryset.filter(name=q)
+    def get_autocomplete_queryset(self, queryset, q, forwarded={}):
+        return queryset.filter(workspace__name=q)
 
 
 class TestAccountAdapter(BaseAccountAdapter):

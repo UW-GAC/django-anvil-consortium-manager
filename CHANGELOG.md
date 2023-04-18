@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.15 (2023-4-18)
 
 - Add a new permission, `anvil_consortium_manager_account_link`, which is required for a user to be able to link their AnVIL account.
 - Handle groups that the app service account is not part of when auditing ManagedGroups.
