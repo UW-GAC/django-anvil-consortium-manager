@@ -27,6 +27,7 @@ from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import TestWorkspaceAdapter
+from .test_app.factories import TestWorkspaceDataFactory
 from .utils import AnVILAPIMockTestMixin
 
 fake = Faker()
@@ -11342,7 +11343,7 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
                 codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
             )
         )
-        self.workspace_type = DefaultWorkspaceAdapter().get_type()
+        self.default_workspace_type = DefaultWorkspaceAdapter().get_type()
         workspace_adapter_registry.register(TestWorkspaceAdapter)
 
     def tearDown(self):
@@ -11361,18 +11362,18 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
-        response = self.client.get(self.get_url(self.workspace_type))
+        response = self.client.get(self.get_url(self.default_workspace_type))
         self.assertRedirects(
             response,
             resolve_url(settings.LOGIN_URL)
             + "?next="
-            + self.get_url(self.workspace_type),
+            + self.get_url(self.default_workspace_type),
         )
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type))
+        response = self.client.get(self.get_url(self.default_workspace_type))
         self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
@@ -11380,10 +11381,10 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        request = self.factory.get(self.get_url(self.workspace_type))
+        request = self.factory.get(self.get_url(self.default_workspace_type))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request, workspace_type=self.workspace_type)
+            self.get_view()(request, workspace_type=self.default_workspace_type)
 
     def test_404_with_unregistered_workspace_type(self):
         """Raises 404 with get request if workspace type is not registered with adapter."""
@@ -11394,9 +11395,9 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
     def test_returns_all_objects(self):
         """Queryset returns all objects when there is no query."""
-        workspaces = factories.WorkspaceFactory.create_batch(10)
+        workspaces = factories.DefaultWorkspaceDataFactory.create_batch(10)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type))
+        response = self.client.get(self.get_url(self.default_workspace_type))
         returned_ids = [
             int(x["id"])
             for x in json.loads(response.content.decode("utf-8"))["results"]
@@ -11408,10 +11409,12 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
     def test_returns_correct_object_match(self):
         """Queryset returns the correct objects when query matches the name."""
-        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="test-workspace"
+        )
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(self.workspace_type), {"q": "test-workspace"}
+            self.get_url(self.default_workspace_type), {"q": "test-workspace"}
         )
         returned_ids = [
             int(x["id"])
@@ -11422,9 +11425,13 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
     def test_returns_correct_object_starting_with_query(self):
         """Queryset returns the correct objects when query matches the beginning of the name."""
-        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="test-workspace"
+        )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type), {"q": "test"})
+        response = self.client.get(
+            self.get_url(self.default_workspace_type), {"q": "test"}
+        )
         returned_ids = [
             int(x["id"])
             for x in json.loads(response.content.decode("utf-8"))["results"]
@@ -11434,9 +11441,13 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
     def test_returns_correct_object_containing_query(self):
         """Queryset returns the correct objects when the name contains the query."""
-        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="test-workspace"
+        )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type), {"q": "work"})
+        response = self.client.get(
+            self.get_url(self.default_workspace_type), {"q": "work"}
+        )
         returned_ids = [
             int(x["id"])
             for x in json.loads(response.content.decode("utf-8"))["results"]
@@ -11446,10 +11457,12 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
     def test_returns_correct_object_case_insensitive(self):
         """Queryset returns the correct objects when query matches the beginning of the name."""
-        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="test-workspace"
+        )
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(self.workspace_type), {"q": "TEST-WORKSPACE"}
+            self.get_url(self.default_workspace_type), {"q": "TEST-WORKSPACE"}
         )
         returned_ids = [
             int(x["id"])
@@ -11460,19 +11473,19 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
     def test_only_specified_workspace_type(self):
         """Queryset returns only objects with the specified workspace type."""
-        workspace = factories.WorkspaceFactory.create()
-        other_workspace = factories.WorkspaceFactory.create(
-            workspace_type=TestWorkspaceAdapter().get_type()
-        )
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        other_workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(workspace.workspace_type))
+        response = self.client.get(self.get_url(workspace.workspace.workspace_type))
         returned_ids = [
             int(x["id"])
             for x in json.loads(response.content.decode("utf-8"))["results"]
         ]
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace.pk)
-        response = self.client.get(self.get_url(other_workspace.workspace_type))
+        response = self.client.get(
+            self.get_url(other_workspace.workspace.workspace_type)
+        )
         returned_ids = [
             int(x["id"])
             for x in json.loads(response.content.decode("utf-8"))["results"]
@@ -11482,16 +11495,12 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
     def test_custom_autocomplete_method(self):
         # Workspace that will match the custom autocomplete filtering.
-        workspace_1 = factories.WorkspaceFactory.create(
-            name="TEST", workspace_type=TestWorkspaceAdapter().get_type()
-        )
+        workspace_1 = TestWorkspaceDataFactory.create(workspace__name="TEST")
         # Workspace that should not match the custom autocomplete filtering.
-        factories.WorkspaceFactory.create(
-            name="TEST-WORKSPACE", workspace_type=TestWorkspaceAdapter().get_type()
-        )
+        TestWorkspaceDataFactory.create(workspace__name="TEST-WORKSPACE")
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(workspace_1.workspace_type), {"q": "TEST"}
+            self.get_url(workspace_1.workspace.workspace_type), {"q": "TEST"}
         )
         returned_ids = [
             int(x["id"])

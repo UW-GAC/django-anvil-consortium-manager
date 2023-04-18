@@ -2097,19 +2097,22 @@ class WorkspaceAutocompleteByType(
     WorkspaceAdapterMixin,
     autocomplete.Select2QuerySetView,
 ):
-    """View to provide autocompletion for Workspaces by type."""
+    """View to provide autocompletion for Workspace data models by type."""
 
     def get_queryset(self):
         # Eventually, add a new method to the workspace adapter that can be overridden for custom autocomplete.
         # Filter out unathorized users, or does the auth mixin do that?
-        qs = models.Workspace.objects.filter(
-            workspace_type=self.adapter.get_type()
-        ).order_by("billing_project", "name")
+        qs = (
+            self.adapter.get_workspace_data_model()
+            .objects.filter()
+            .order_by("workspace__billing_project", "workspace__name")
+        )
 
         if self.q:
             # Use the workspace adapter to process the query.
-            #            import ipdb; ipdb.set_trace()
-            qs = self.adapter.get_autocomplete_queryset(qs, self.q)
+            qs = self.adapter.get_autocomplete_queryset(
+                qs, self.q, forwarded=self.forwarded
+            )
 
         return qs
 
