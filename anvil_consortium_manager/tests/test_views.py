@@ -10855,6 +10855,14 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
 
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:workspaces:delete", args=args)
