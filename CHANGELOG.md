@@ -7,6 +7,7 @@
 - Add information about deactivating and reactivating Accounts to documentation user guide.
 - Sort workspaces by name in the WorkspaceTable.
 - Remove billing project from the workspace name in WorkspaceTable, since it has its own column already.
+- Add a view to autocomplete by workspace type.
 
 ## 0.14 (2023-03-23)
 

@@ -214,6 +214,11 @@ workspace_patterns = (
             views.WorkspaceImport.as_view(),
             name="import",
         ),
+        path(
+            "types/<str:workspace_type>/autocomplete/",
+            views.WorkspaceAutocompleteByType.as_view(),
+            name="autocomplete_by_type",
+        ),
         # path(
         #     "types/<str:workspace_type>/clone/",
         #     views.WorkspaceClone.as_view(),

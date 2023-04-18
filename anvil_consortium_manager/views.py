@@ -2092,6 +2092,28 @@ class WorkspaceAutocomplete(
         return qs
 
 
+class WorkspaceAutocompleteByType(
+    auth.AnVILConsortiumManagerViewRequired,
+    WorkspaceAdapterMixin,
+    autocomplete.Select2QuerySetView,
+):
+    """View to provide autocompletion for Workspaces by type."""
+
+    def get_queryset(self):
+        # Eventually, add a new method to the workspace adapter that can be overridden for custom autocomplete.
+        # Filter out unathorized users, or does the auth mixin do that?
+        qs = models.Workspace.objects.filter(
+            workspace_type=self.adapter.get_type()
+        ).order_by("billing_project", "name")
+
+        if self.q:
+            # Use the workspace adapter to process the query.
+            #            import ipdb; ipdb.set_trace()
+            qs = self.adapter.get_autocomplete_queryset(qs, self.q)
+
+        return qs
+
+
 class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
     model = models.GroupGroupMembership
 

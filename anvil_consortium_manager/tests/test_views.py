@@ -10855,6 +10855,14 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             )
         )
 
+    def tearDown(self):
+        """Clean up after tests."""
+        # Unregister all adapters.
+        workspace_adapter_registry._registry = {}
+        # Register the default adapter.
+        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        super().tearDown()
+
     def get_url(self, *args):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:workspaces:delete", args=args)
@@ -11319,6 +11327,178 @@ class WorkspaceAutocompleteTest(TestCase):
         ]
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace.pk)
+
+
+class WorkspaceAutocompleteByTypeTest(TestCase):
+    """Tests for the WorkspaceAutocompleteByType view."""
+
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with the correct permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
+            )
+        )
+        self.workspace_type = DefaultWorkspaceAdapter().get_type()
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+
+    def tearDown(self):
+        workspace_adapter_registry.unregister(TestWorkspaceAdapter)
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse(
+            "anvil_consortium_manager:workspaces:autocomplete_by_type", args=args
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceAutocompleteByType.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.workspace_type),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(
+            username="test-none", password="test-none"
+        )
+        request = self.factory.get(self.get_url(self.workspace_type))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, workspace_type=self.workspace_type)
+
+    def test_404_with_unregistered_workspace_type(self):
+        """Raises 404 with get request if workspace type is not registered with adapter."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, workspace_type="foo")
+
+    def test_returns_all_objects(self):
+        """Queryset returns all objects when there is no query."""
+        workspaces = factories.WorkspaceFactory.create_batch(10)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 10)
+        self.assertEqual(
+            sorted(returned_ids), sorted([workspace.pk for workspace in workspaces])
+        )
+
+    def test_returns_correct_object_match(self):
+        """Queryset returns the correct objects when query matches the name."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"q": "test-workspace"}
+        )
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_returns_correct_object_starting_with_query(self):
+        """Queryset returns the correct objects when query matches the beginning of the name."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type), {"q": "test"})
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_returns_correct_object_containing_query(self):
+        """Queryset returns the correct objects when the name contains the query."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type), {"q": "work"})
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_returns_correct_object_case_insensitive(self):
+        """Queryset returns the correct objects when query matches the beginning of the name."""
+        workspace = factories.WorkspaceFactory.create(name="test-workspace")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"q": "TEST-WORKSPACE"}
+        )
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_only_specified_workspace_type(self):
+        """Queryset returns only objects with the specified workspace type."""
+        workspace = factories.WorkspaceFactory.create()
+        other_workspace = factories.WorkspaceFactory.create(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.workspace_type))
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+        response = self.client.get(self.get_url(other_workspace.workspace_type))
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], other_workspace.pk)
+
+    def test_custom_autocomplete_method(self):
+        # Workspace that will match the custom autocomplete filtering.
+        workspace_1 = factories.WorkspaceFactory.create(
+            name="TEST", workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        # Workspace that should not match the custom autocomplete filtering.
+        factories.WorkspaceFactory.create(
+            name="TEST-WORKSPACE", workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace_1.workspace_type), {"q": "TEST"}
+        )
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace_1.pk)
 
 
 class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
