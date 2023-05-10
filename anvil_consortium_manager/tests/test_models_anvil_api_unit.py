@@ -755,7 +755,6 @@ class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             responses.DELETE,
             self.api_url_delete,
             status=204,
-            json={"message": "mock message"},
         )
         self.object.anvil_delete()
 
@@ -6353,7 +6352,6 @@ class GroupAccountMembershipAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             responses.DELETE,
             self.api_url_delete,
             status=204,
-            json={"message": "mock message"},
         )
         self.object.anvil_delete()
 
