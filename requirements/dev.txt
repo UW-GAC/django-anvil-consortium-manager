@@ -44,10 +44,12 @@ setuptools==65.5.1
 # ------------------------------------------------------------------------------
 
 # Mocked responses in tests:
-responses==0.18.0  # https://github.com/getsentry/responses
+responses==0.23.1  # https://github.com/getsentry/responses
 
 # For mariadb/mysql backend:
 mysqlclient==2.1.0
 
 # Testing migrations:
 django-test-migrations==1.2.0  # https://github.com/wemake-services/django-test-migrations - for testing migrations
+
+urllib3==2.0.2  # This broke some of the code in CI.
