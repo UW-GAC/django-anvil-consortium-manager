@@ -7,6 +7,7 @@ import responses
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, User
+from django.contrib.messages import get_messages
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.forms import BaseInlineFormSet, HiddenInput
@@ -317,8 +318,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: error checking API status", str(messages[0]))
 
@@ -336,8 +336,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: error checking API user", str(messages[0]))
 
@@ -351,8 +350,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 2)
         self.assertEqual("AnVIL API Error: error checking API status", str(messages[0]))
         self.assertEqual("AnVIL API Error: error checking API user", str(messages[1]))
@@ -491,8 +489,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(), {"name": billing_project_name}, follow=True
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.BillingProjectImport.success_message, str(messages[0]))
 
@@ -713,8 +710,7 @@ class BillingProjectUpdateTest(TestCase):
         instance = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(instance.name), {}, follow=True)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.BillingProjectUpdate.success_message, str(messages[0]))
 
@@ -1643,8 +1639,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.AccountImport.success_message, str(messages[0]))
 
@@ -1917,8 +1912,7 @@ class AccountUpdateTest(TestCase):
         instance = factories.AccountFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(instance.uuid), {}, follow=True)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.AccountUpdate.success_message, str(messages[0]))
 
@@ -2038,8 +2032,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLink.success_message)
 
@@ -2096,8 +2089,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.UserEmailEntry.objects.count(), 1)
         self.assertIn(email_entry, models.UserEmailEntry.objects.all())
         # A message is included.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLink.message_user_already_linked
@@ -2120,8 +2112,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
         # A message is included.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLink.message_user_already_linked
@@ -2181,8 +2172,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLink.message_account_already_exists
@@ -2206,8 +2196,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLink.message_account_does_not_exist
@@ -2252,8 +2241,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLink.message_account_already_exists
@@ -2563,8 +2551,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertGreaterEqual(email_entry.date_verified, timestamp_threshold)
         self.assertLessEqual(email_entry.date_verified, timezone.now())
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
 
@@ -2580,8 +2567,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # No UserEmailEntry objects exist.
         self.assertEqual(models.UserEmailEntry.objects.count(), 0)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_link_invalid)
 
@@ -2604,8 +2590,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # The exsting email entry object is not changed -- no history is added.
         self.assertEqual(email_entry.history.count(), 1)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLinkVerify.message_already_linked
@@ -2633,8 +2618,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # The exsting email entry object is not changed -- no history is added.
         self.assertEqual(existing_email_entry.history.count(), 1)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLinkVerify.message_already_linked
@@ -2661,8 +2645,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(email_entry.history.count(), 1)
         self.assertEqual(other_email_entry.history.count(), 1)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_link_invalid)
 
@@ -2695,8 +2678,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(email_entry.history.count(), 1)
         self.assertEqual(other_email_entry.history.count(), 1)
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLinkVerify.message_account_already_exists
@@ -2723,8 +2705,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(ObjectDoesNotExist):
             email_entry.verified_account
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLinkVerify.message_account_does_not_exist
@@ -2749,8 +2730,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(ObjectDoesNotExist):
             email_entry.verified_account
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]), views.AccountLinkVerify.message_account_does_not_exist
@@ -2777,8 +2757,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(ObjectDoesNotExist):
             email_entry.verified_account
         # A message is added.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: other error", str(messages[0]))
 
@@ -3277,8 +3256,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(object.uuid), {"submit": ""}, follow=True
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.AccountDelete.success_message, str(messages[0]))
 
@@ -3388,8 +3366,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.AccountDelete.message_error_removing_from_groups.format("test error"),
@@ -3528,8 +3505,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(object.uuid), {"submit": ""}, follow=True
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.AccountDeactivate.success_message, str(messages[0]))
 
@@ -3643,8 +3619,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.AccountDeactivate.message_error_removing_from_groups.format(
@@ -3676,8 +3651,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Memberships are *not* deleted from the app.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
         # A message is shown.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.AccountDeactivate.message_already_inactive, str(messages[0])
@@ -3701,8 +3675,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Memberships are *not* deleted from the app.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
         # A message is shown.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.AccountDeactivate.message_already_inactive, str(messages[0])
@@ -3842,8 +3815,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(object.uuid), {"submit": ""}, follow=True
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.AccountReactivate.success_message, str(messages[0]))
 
@@ -3948,8 +3920,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.uuid), {"submit": ""}, follow=True
         )
         self.assertRedirects(response, object.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.AccountReactivate.message_error_adding_to_groups.format("test error"),
@@ -3975,8 +3946,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         object.refresh_from_db()
         self.assertEqual(object.status, object.ACTIVE_STATUS)
         # A message is shown.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.AccountReactivate.message_already_active, str(messages[0])
@@ -3998,8 +3968,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Memberships are *not* deleted from the app.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
         # A message is shown.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.AccountReactivate.message_already_active, str(messages[0])
@@ -4829,8 +4798,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": "test-group"}, follow=True)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.ManagedGroupCreate.success_message, str(messages[0]))
 
@@ -4916,8 +4884,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: group create test error", str(messages[0]))
         # Make sure that no object is created.
@@ -4933,8 +4900,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: other error", str(messages[0]))
         # Make sure that no object is created.
@@ -5039,8 +5005,7 @@ class ManagedGroupUpdateTest(TestCase):
         instance = factories.ManagedGroupFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(instance.name), {}, follow=True)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.ManagedGroupUpdate.success_message, str(messages[0]))
 
@@ -5234,8 +5199,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(
             self.get_url(object.name), {"submit": ""}, follow=True
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.ManagedGroupDelete.success_message, str(messages[0]))
 
@@ -5285,8 +5249,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url(child.name), follow=True)
         self.assertRedirects(response, child.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_is_member_of_another_group,
@@ -5313,8 +5276,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(child.name), follow=True)
         self.assertRedirects(response, child.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_is_member_of_another_group,
@@ -5337,8 +5299,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_is_auth_domain, str(messages[0])
@@ -5356,8 +5317,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_is_auth_domain, str(messages[0])
@@ -5379,8 +5339,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_has_access_to_workspace,
@@ -5407,8 +5366,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_has_access_to_workspace,
@@ -5485,8 +5443,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: group delete test error", str(messages[0]))
         # Make sure that the object still exists.
@@ -5500,8 +5457,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_not_managed_by_app, str(messages[0])
@@ -5517,8 +5473,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.ManagedGroupDelete.message_not_managed_by_app, str(messages[0])
@@ -6208,8 +6163,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
@@ -7168,8 +7122,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceCreate.success_message, str(messages[0]))
 
@@ -7411,8 +7364,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
         # Make sure that no object is created.
@@ -7605,8 +7557,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertTrue(form.is_valid())
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
@@ -7653,8 +7604,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertTrue(form.is_valid())
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
@@ -8024,8 +7974,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # The first choice is the empty string.
         self.assertEqual("", workspace_choices[0][0])
         # A message is shown.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceImport.message_no_available_workspaces, str(messages[0])
@@ -8109,8 +8058,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(form_choices), 1)
         self.assertFalse(("bp/ws-imported", "bp/ws-imported") in form_choices)
         # A message is shown.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceImport.message_no_available_workspaces, str(messages[0])
@@ -8419,8 +8367,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceImport.success_message, str(messages[0]))
 
@@ -8897,8 +8844,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # The form is valid but there was a different error. Is this really what we want?
         self.assertTrue(form.is_valid())
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: an error", str(messages[0]))
         # Did not create any objects.
@@ -8923,8 +8869,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context_data)
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceImport.message_error_fetching_workspaces, str(messages[0])
@@ -8963,8 +8908,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # The form is not valid because workspaces couldn't be fetched.
         self.assertFalse(form.is_valid())
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceImport.message_error_fetching_workspaces, str(messages[0])
@@ -9235,8 +9179,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # The form is valid...
         self.assertTrue(form.is_valid())
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), "AnVIL API Error: group api")
         # Did not create any objects.
@@ -9667,8 +9610,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceCreate.success_message, str(messages[0]))
 
@@ -9958,8 +9900,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
         # Make sure that no object is created.
@@ -10078,8 +10019,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertTrue(form.is_valid())
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
@@ -10132,8 +10072,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertTrue(form.is_valid())
         # Check messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual("AnVIL API Error: api error", str(messages[0]))
         # Did not create any new Workspaces.
@@ -10329,8 +10268,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace create test error", str(messages[0]))
         # Make sure that no object is created.
@@ -10484,8 +10422,7 @@ class WorkspaceUpdateTest(TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceUpdate.success_message, str(messages[0]))
 
@@ -10967,8 +10904,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceDelete.success_message, str(messages[0]))
 
@@ -11120,8 +11056,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.billing_project.name, object.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn("AnVIL API Error: workspace delete test error", str(messages[0]))
         # Make sure that the object still exists.
@@ -11191,8 +11126,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Redirects to detail page.
         self.assertRedirects(response, object.get_absolute_url())
         # With a message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceDelete.message_workspace_locked, str(messages[0])
@@ -11217,8 +11151,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Redirects to detail page.
         self.assertRedirects(response, object.get_absolute_url())
         # With a message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceDelete.message_workspace_locked, str(messages[0])
@@ -12281,8 +12214,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreate.success_message, str(messages[0])
@@ -12654,8 +12586,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -12684,8 +12615,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: error",
@@ -12714,8 +12644,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: error",
@@ -12744,8 +12673,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: error",
@@ -12774,8 +12702,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: error",
@@ -12932,8 +12859,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParent.success_message, str(messages[0])
@@ -13174,8 +13100,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             follow=True,
         )
         self.assertRedirects(response, group.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
@@ -13197,8 +13122,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             follow=True,
         )
         self.assertRedirects(response, group.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
@@ -13225,8 +13149,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13254,8 +13177,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13283,8 +13205,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13312,8 +13233,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13470,8 +13390,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParent.success_message, str(messages[0])
@@ -13722,8 +13641,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13751,8 +13669,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13780,8 +13697,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13809,8 +13725,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -13992,8 +13907,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.success_message,
@@ -14050,8 +13964,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             self.get_url(obj.parent_group.name, obj.child_group.name), follow=True
         )
         self.assertRedirects(response, obj.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_already_exists,
@@ -14074,8 +13987,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             follow=True,
         )
         self.assertRedirects(response, obj.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_already_exists,
@@ -14231,8 +14143,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             follow=True,
         )
         self.assertRedirects(response, group.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_cannot_add_group_to_itself,
@@ -14254,8 +14165,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             follow=True,
         )
         self.assertRedirects(response, group.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_cannot_add_group_to_itself,
@@ -14285,8 +14195,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             follow=True,
         )
         self.assertRedirects(response, child.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_circular_relationship,
@@ -14303,8 +14212,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             follow=True,
         )
         self.assertRedirects(response, group.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
@@ -14326,8 +14234,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             follow=True,
         )
         self.assertRedirects(response, group.get_absolute_url())
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipCreateByParentChild.message_not_managed_by_app,
@@ -14354,8 +14261,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -14383,8 +14289,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -14412,8 +14317,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -14441,8 +14345,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership create test error",
@@ -14669,8 +14572,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipDelete.success_message, str(messages[0])
@@ -14733,8 +14635,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership delete test error",
@@ -14757,8 +14658,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertRedirects(response, obj.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
@@ -14781,8 +14681,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertRedirects(response, obj.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupGroupMembershipDelete.message_parent_group_not_managed_by_app,
@@ -14807,8 +14706,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership delete test error",
@@ -14833,8 +14731,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership delete test error",
@@ -14859,8 +14756,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership delete test error",
@@ -14885,8 +14781,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(obj.parent_group.name, obj.child_group.name), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             "AnVIL API Error: group group membership delete test error",
@@ -15155,8 +15050,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipCreate.success_message, str(messages[0])
@@ -15455,8 +15349,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: other error",
@@ -15520,8 +15413,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: other error",
@@ -15550,8 +15442,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: other error",
@@ -15580,8 +15471,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: other error",
@@ -15610,8 +15500,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: other error",
@@ -15770,8 +15659,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipCreate.success_message, str(messages[0])
@@ -15971,8 +15859,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url(group.name), follow=True)
         self.assertRedirects(response, group.get_absolute_url())
         # Shows a message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             views.GroupAccountMembershipCreateByGroup.message_not_managed_by_app,
@@ -15996,8 +15883,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertRedirects(response, group.get_absolute_url())
         # Shows a message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             views.GroupAccountMembershipCreateByGroup.message_not_managed_by_app,
@@ -16025,8 +15911,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16054,8 +15939,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16083,8 +15967,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16112,8 +15995,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16294,8 +16176,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipCreate.success_message, str(messages[0])
@@ -16530,8 +16411,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16559,8 +16439,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16588,8 +16467,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16617,8 +16495,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -16815,8 +16692,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipCreate.success_message, str(messages[0])
@@ -16879,8 +16755,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         # No new object was created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
         # A message exists.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipCreateByGroupAccount.message_already_exists,
@@ -16910,8 +16785,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         obj.refresh_from_db()
         self.assertEqual(obj.role, models.GroupAccountMembership.MEMBER)
         # A message exists.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipCreateByGroupAccount.message_already_exists,
@@ -17092,8 +16966,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -17121,8 +16994,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -17150,8 +17022,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -17179,8 +17050,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership create test error",
@@ -17601,8 +17471,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipDelete.success_message, str(messages[0])
@@ -17660,8 +17529,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipDelete.message_group_not_managed_by_app,
@@ -17684,8 +17552,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertRedirects(response, membership.get_absolute_url())
         # Check for messages.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.GroupAccountMembershipDelete.message_group_not_managed_by_app,
@@ -17712,8 +17579,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership delete test error",
@@ -17740,8 +17606,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership delete test error",
@@ -17768,8 +17633,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership delete test error",
@@ -17796,8 +17660,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_url(object.group.name, object.account.uuid), {"submit": ""}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: group account membership delete test error",
@@ -18153,8 +18016,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingCreate.success_message, str(messages[0])
@@ -18622,8 +18484,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue(form.is_valid())
         self.assertEqual(response.status_code, 200)
         # Check for the correct message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             views.WorkspaceGroupSharingCreate.message_group_not_found,
@@ -18654,8 +18515,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: workspace group access create test error",
@@ -18973,8 +18833,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_message,
@@ -19377,8 +19236,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         self.assertTrue(form.is_valid())
         self.assertEqual(response.status_code, 200)
         # Check for the correct message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             views.WorkspaceGroupSharingCreate.message_group_not_found,
@@ -19412,8 +19270,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: workspace group access create test error",
@@ -19713,8 +19570,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_message,
@@ -20071,8 +19927,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue(form.is_valid())
         self.assertEqual(response.status_code, 200)
         # Check for the correct message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             views.WorkspaceGroupSharingCreate.message_group_not_found,
@@ -20105,8 +19960,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: workspace group access create test error",
@@ -20452,8 +20306,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingCreateByWorkspaceGroup.success_message,
@@ -20599,8 +20452,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # No new object was created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
         # A message exists.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_already_exists,
@@ -20633,8 +20485,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # No new object was created.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
         # A message exists.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_already_exists,
@@ -20896,8 +20747,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         self.assertTrue(form.is_valid())
         self.assertEqual(response.status_code, 200)
         # Check for the correct message.
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             views.WorkspaceGroupSharingCreate.message_group_not_found,
@@ -20932,8 +20782,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: workspace group access create test error",
@@ -21248,8 +21097,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             },
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingUpdate.success_message, str(messages[0])
@@ -21475,8 +21323,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: workspace group access update test error",
@@ -21771,8 +21618,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
             follow=True,
         )
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             views.WorkspaceGroupSharingDelete.success_message, str(messages[0])
@@ -21908,8 +21754,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             {"submit": ""},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("messages", response.context)
-        messages = list(response.context["messages"])
+        messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertIn(
             "AnVIL API Error: workspace group access delete test error",
