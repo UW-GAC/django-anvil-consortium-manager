@@ -1,0 +1,13 @@
+{% autoescape off %}
+
+{% load render_table from django_tables2 %}
+
+{% block content %}
+
+{% render_table errors_table %}
+
+{% render_table not_in_app_table %}
+
+{% endblock content %}
+
+{% endautoescape %}
