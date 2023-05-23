@@ -1,5 +1,3 @@
-import json
-
 import django_tables2 as tables
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
@@ -11,7 +9,7 @@ from ...anvil_api import AnVILAPIError
 
 class ErrorsTable(tables.Table):
     id = tables.Column(orderable=False)
-    instance = tables.Column(orderable=False)
+    instance = tables.Column(orderable=False, linkify=True)
     errors = tables.Column(orderable=False)
 
     def render_errors(self, value):
@@ -63,7 +61,7 @@ class Command(BaseCommand):
             if not results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))
                 json_results = results.to_json(include_verified=False)
-                report = json.dumps(json_results, indent=2)
+                # report = json.dumps(json_results, indent=2)
                 if email:
                     # trying json2html
                     # table_attributes = table_attributes="class=\"table\""
@@ -89,14 +87,15 @@ class Command(BaseCommand):
                     # import ipdb; ipdb.set_trace()
                     send_mail(
                         "AnVIL Audit for {} -- errors".format(model_name),
-                        report,
+                        "",  # report,
                         None,
                         [email],
                         fail_silently=False,
                         html_message=html_body,
                     )
                 else:
-                    self.stdout.write(report)
+                    # self.stdout.write(report)
+                    pass
             else:
                 self.stdout.write(self.style.SUCCESS("ok!"))
                 if email and not errors_only:
