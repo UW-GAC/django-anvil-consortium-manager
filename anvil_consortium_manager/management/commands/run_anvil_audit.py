@@ -12,7 +12,10 @@ from ...anvil_api import AnVILAPIError
 class ErrorsTable(tables.Table):
     id = tables.Column(orderable=False)
     instance = tables.Column(orderable=False)
-    errors = tables.ManyToManyColumn(orderable=False)
+    errors = tables.Column(orderable=False)
+
+    def render_errors(self, value):
+        return ", ".join(value)
 
 
 class NotInAppTable(tables.Table):
