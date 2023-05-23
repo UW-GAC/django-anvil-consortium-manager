@@ -12,8 +12,6 @@ import os
 # though not all of them may be available with every OS.
 # In Windows, this must be set to your system time zone.
 TIME_ZONE = "America/Los_Angeles"
-# https://docs.djangoproject.com/en/dev/ref/settings/#site-id
-SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
