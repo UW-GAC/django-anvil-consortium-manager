@@ -50,10 +50,10 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", stdout=out)
-        self.assertIn("billing projects... ok!", out.getvalue())
-        self.assertIn("accounts... ok!", out.getvalue())
-        self.assertIn("managed groups... ok!", out.getvalue())
-        self.assertIn("workspaces... ok!", out.getvalue())
+        self.assertIn("BillingProject... ok!", out.getvalue())
+        self.assertIn("Account... ok!", out.getvalue())
+        self.assertIn("ManagedGroup... ok!", out.getvalue())
+        self.assertIn("Workspace... ok!", out.getvalue())
 
     def test_command_output_multiple_models(self):
         """Can audit multiple models at the same time."""
@@ -64,8 +64,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             models=["BillingProject", "Account"],
             stdout=out,
         )
-        self.assertIn("billing projects... ok!", out.getvalue())
-        self.assertIn("accounts... ok!", out.getvalue())
+        self.assertIn("BillingProject... ok!", out.getvalue())
+        self.assertIn("Account... ok!", out.getvalue())
 
     def test_command_output_billing_project_no_instances(self):
         """Test command output."""
@@ -73,13 +73,13 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("billing projects... ok!", out.getvalue())
+        self.assertIn("BillingProject... ok!", out.getvalue())
 
     def test_command_output_account_no_instances(self):
         """Test command output."""
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", models=["Account"], stdout=out)
-        self.assertIn("accounts... ok!", out.getvalue())
+        self.assertIn("Account... ok!", out.getvalue())
 
     def test_command_output_managed_group_no_instances(self):
         """Test command output."""
@@ -93,7 +93,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out
         )
-        self.assertIn("managed groups... ok!", out.getvalue())
+        self.assertIn("ManagedGroup... ok!", out.getvalue())
 
     def test_command_output_workspace_no_instances(self):
         """Test command output."""
@@ -105,7 +105,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)
-        self.assertIn("workspaces... ok!", out.getvalue())
+        self.assertIn("Workspace... ok!", out.getvalue())
 
     def test_command_run_audit_one_instance_ok(self):
         """Test command output."""
@@ -117,7 +117,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("billing projects... ok!", out.getvalue())
+        self.assertIn("BillingProject... ok!", out.getvalue())
         self.assertNotIn("errors", out.getvalue())
         self.assertNotIn("not_in_app", out.getvalue())
 
@@ -135,7 +135,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             email="test@example.com",
             stdout=out,
         )
-        self.assertIn("billing projects... ok!", out.getvalue())
+        self.assertIn("BillingProject... ok!", out.getvalue())
         # One message has been sent by default.
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("ok", mail.outbox[0].subject)
@@ -156,7 +156,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             errors_only=True,
             stdout=out,
         )
-        self.assertIn("billing projects... ok!", out.getvalue())
+        self.assertIn("BillingProject... ok!", out.getvalue())
         # No message has been sent by default.
         self.assertEqual(len(mail.outbox), 0)
 
@@ -172,7 +172,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("billing projects... problems found.", out.getvalue())
+        self.assertIn("BillingProject... problems found.", out.getvalue())
         self.assertIn("""'errors':""", out.getvalue())
         self.assertIn(
             anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL, out.getvalue()
@@ -194,7 +194,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             email="test@example.com",
             stdout=out,
         )
-        self.assertIn("billing projects... problems found.", out.getvalue())
+        self.assertIn("BillingProject... problems found.", out.getvalue())
         # Not printed to stdout.
         self.assertNotIn("""'errors':""", out.getvalue())
         # One message has been sent.
@@ -272,7 +272,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("billing projects... API error.", out.getvalue())
+        self.assertIn("BillingProject... API error.", out.getvalue())
 
     # This test is complicated so skipping for now.
     # When trying to change the settings, the test attempts to repopulate the

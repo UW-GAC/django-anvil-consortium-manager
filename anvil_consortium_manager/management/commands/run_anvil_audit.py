@@ -62,7 +62,7 @@ class Command(BaseCommand):
         email = options["email"]
         errors_only = options["errors_only"]
 
-        model_name = model._meta.verbose_name_plural
+        model_name = model._meta.object_name
 
         self.stdout.write("Running on {}... ".format(model_name), ending="")
         try:
@@ -78,6 +78,7 @@ class Command(BaseCommand):
                     html_body = render_to_string(
                         "anvil_consortium_manager/email_audit_report.html",
                         context={
+                            "model_name": model_name,
                             "errors_table": ErrorsTable(exported_results["errors"]),
                             "not_in_app_table": NotInAppTable(
                                 exported_results["not_in_app"]
@@ -98,7 +99,9 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS("ok!"))
                 if email and not errors_only:
                     send_mail(
-                        "AnVIL Audit for {} -- ok".format(model_name),
+                        "AnVIL Audit for {} -- ok".format(
+                            models.BillingProject._meta.object_name
+                        ),
                         "Audit ok ({} instances)".format(len(results.get_verified())),
                         None,
                         [email],

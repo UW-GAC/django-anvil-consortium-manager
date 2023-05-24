@@ -1,13 +1,18 @@
-{% autoescape off %}
+{% extends "anvil_consortium_manager/base.html" %}
+{% block title %}Audit Errors{% endblock %}
 
 {% load render_table from django_tables2 %}
 
 {% block content %}
 
+<h1>Audit report - {{ model_name }}</h1>
+
+<h2>Verified</h2>
+
+<h2>Errors</h2>
 {% render_table errors_table %}
 
+<h2>Not in app</h2>
 {% render_table not_in_app_table %}
 
 {% endblock content %}
-
-{% endautoescape %}
