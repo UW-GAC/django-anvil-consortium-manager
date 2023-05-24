@@ -10,20 +10,20 @@ from ... import models
 from ...anvil_api import AnVILAPIError
 
 
-def build_absolute_url(record):
-    site = Site.objects.get_current()
-    uri = "https://{domain}{url}".format(
-        domain=site.domain, url=record["instance"].get_absolute_url()
-    )
-    return uri
-
-
 class ErrorsTable(tables.Table):
     id = tables.Column(orderable=False)
     instance = tables.Column(
-        orderable=False, linkify=lambda record: build_absolute_url(record)
+        orderable=False,
+        linkify=lambda value, table: "https://{domain}{url}".format(
+            domain=table.site.domain, url=value.get_absolute_url()
+        ),
     )
     errors = tables.Column(orderable=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set the site here so it only hits the db once.
+        self.site = Site.objects.get_current()
 
     def render_errors(self, value):
         return ", ".join(value)
