@@ -1,4 +1,7 @@
+import pprint
+
 import django_tables2 as tables
+from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
@@ -7,9 +10,19 @@ from ... import models
 from ...anvil_api import AnVILAPIError
 
 
+def build_absolute_url(record):
+    site = Site.objects.get_current()
+    uri = "https://{domain}{url}".format(
+        domain=site.domain, url=record["instance"].get_absolute_url()
+    )
+    return uri
+
+
 class ErrorsTable(tables.Table):
     id = tables.Column(orderable=False)
-    instance = tables.Column(orderable=False, linkify=True)
+    instance = tables.Column(
+        orderable=False, linkify=lambda record: build_absolute_url(record)
+    )
     errors = tables.Column(orderable=False)
 
     def render_errors(self, value):
@@ -60,42 +73,27 @@ class Command(BaseCommand):
         else:
             if not results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))
-                json_results = results.to_json(include_verified=False)
-                # report = json.dumps(json_results, indent=2)
+                exported_results = results.export(include_verified=False)
                 if email:
-                    # trying json2html
-                    # table_attributes = table_attributes="class=\"table\""
-                    # html_body = render_to_string(
-                    #     "anvil_consortium_manager/email_audit_report.html",
-                    #     context={
-                    #         "model": model._meta.object_name,
-                    #         "errors_table": json2html.convert(json_results["errors"]),
-                    #         "not_in_app_table": json2html.convert(json_results["not_in_app"])
-                    #     }
-                    # )
-                    # import ipdb; ipdb.set_trace()
-                    # trying django-tables2 and failing
                     html_body = render_to_string(
                         "anvil_consortium_manager/email_audit_report.html",
                         context={
-                            "errors_table": ErrorsTable(json_results["errors"]),
+                            "errors_table": ErrorsTable(exported_results["errors"]),
                             "not_in_app_table": NotInAppTable(
-                                json_results["not_in_app"]
+                                exported_results["not_in_app"]
                             ),
                         },
                     )
-                    # import ipdb; ipdb.set_trace()
                     send_mail(
                         "AnVIL Audit for {} -- errors".format(model_name),
-                        "",  # report,
+                        pprint.pformat(exported_results),
                         None,
                         [email],
                         fail_silently=False,
                         html_message=html_body,
                     )
                 else:
-                    # self.stdout.write(report)
-                    pass
+                    self.stdout.write(pprint.pformat(exported_results))
             else:
                 self.stdout.write(self.style.SUCCESS("ok!"))
                 if email and not errors_only:

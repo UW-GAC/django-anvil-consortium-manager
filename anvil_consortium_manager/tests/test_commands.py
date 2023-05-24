@@ -1,8 +1,10 @@
 """Tests for management commands in `anvil_consortium_manager`."""
 
 from io import StringIO
+from unittest import skip
 
 import responses
+from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase
@@ -171,7 +173,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
         self.assertIn("billing projects... problems found.", out.getvalue())
-        self.assertIn(""""errors":""", out.getvalue())
+        self.assertIn("""'errors':""", out.getvalue())
         self.assertIn(
             anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL, out.getvalue()
         )
@@ -194,17 +196,69 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertIn("billing projects... problems found.", out.getvalue())
         # Not printed to stdout.
-        self.assertNotIn(""""errors":""", out.getvalue())
+        self.assertNotIn("""'errors':""", out.getvalue())
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, ["test@example.com"])
-        self.assertIn("errors", mail.outbox[0].subject)
-        # Instead in the email body:
-        self.assertIn(""""errors":""", mail.outbox[0].body)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ["test@example.com"])
+        self.assertIn("errors", email.subject)
+        # Text body.
+        self.assertIn("""'errors':""", email.body)
         self.assertIn(
             anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL,
-            mail.outbox[0].body,
+            email.body,
         )
+        # HTML body.
+        self.assertEqual(len(email.alternatives), 1)
+
+    def test_command_run_audit_not_ok_email_has_html_link(self):
+        """Test command output when BillingProject audit is not ok with email specified."""
+        billing_project = factories.BillingProjectFactory.create()
+        # Add a response.
+        api_url = self.get_api_url_billing_project(billing_project.name)
+        self.anvil_response_mock.add(
+            responses.GET, api_url, status=404, json={"message": "error"}
+        )
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "--no-color",
+            models=["BillingProject"],
+            email="test@example.com",
+            stdout=out,
+        )
+        email = mail.outbox[0]
+        self.assertEqual(len(email.alternatives), 1)
+        html_fragment = """<a href="https://example.com{url}">{obj}</a>""".format(
+            obj=str(billing_project), url=billing_project.get_absolute_url()
+        )
+        self.assertInHTML(html_fragment, email.alternatives[0][0])
+
+    def test_command_run_audit_not_ok_email_has_html_link_different_domain(self):
+        """Test command output when BillingProject audit is not ok with email specified."""
+        site = Site.objects.get_current()
+        site.domain = "foobar.com"
+        site.save()
+        billing_project = factories.BillingProjectFactory.create()
+        # Add a response.
+        api_url = self.get_api_url_billing_project(billing_project.name)
+        self.anvil_response_mock.add(
+            responses.GET, api_url, status=404, json={"message": "error"}
+        )
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "--no-color",
+            models=["BillingProject"],
+            email="test@example.com",
+            stdout=out,
+        )
+        email = mail.outbox[0]
+        self.assertEqual(len(email.alternatives), 1)
+        html_fragment = """<a href="https://foobar.com{url}">{obj}</a>""".format(
+            obj=str(billing_project), url=billing_project.get_absolute_url()
+        )
+        self.assertInHTML(html_fragment, email.alternatives[0][0])
 
     def test_command_run_audit_api_error(self):
         """Test command output when BillingProject audit is not ok."""
@@ -219,3 +273,21 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
         self.assertIn("billing projects... API error.", out.getvalue())
+
+    # This test is complicated so skipping for now.
+    # When trying to change the settings, the test attempts to repopulate the
+    # workspace registry. This then causes an error. Skip it until we figure out
+    # how best to handle this situation.
+    @skip
+    def test_command_without_sites(self):
+        """Test command behavior without the Sites framework enabled."""
+        out = StringIO()
+        with self.modify_settings(INSTALLED_APPS={"remove": ["django.contrib.sites"]}):
+            #            with self.assertRaises(ImproperlyConfigured):
+            call_command(
+                "run_anvil_audit",
+                "--no-color",
+                models=["BillingProject"],
+                email="test@example.com",
+                stdout=out,
+            )

@@ -97,7 +97,7 @@ class AnVILAuditResults(ABC):
         """
         return not self.errors and not self.not_in_app
 
-    def to_json(
+    def export(
         self, include_verified=True, include_errors=True, include_not_in_app=True
     ):
         """Return a dictionary representation of the audit results."""
