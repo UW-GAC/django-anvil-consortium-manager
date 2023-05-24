@@ -20,16 +20,19 @@ You will need a service account credentials file that is registered with Terra. 
 Required Settings
 ~~~~~~~~~~~~~~~~~
 
-1. Add ``anvil_consortium_manager`` to your ``INSTALLED_APPS``.
+1. Add required apps and ``anvil_consortium_manager`` to your ``INSTALLED_APPS`` setting.
 
   .. code-block:: python
 
       INSTALLED_APPS = [
-          # ...
+          # The following apps are required:
+          "django.contrib.messages",
+          "django.contrib.sites",
+          "django-tables2",
+
+          # This app:
           "anvil_consortium_manager",
       ]
-
-  If you would like to use the views and templates provided by the app, then you should also install ``django-tables2`` in your project.
 
 2. Set the ``ANVIL_API_SERVICE_ACCOUNT_FILE`` setting to the path to the service account credentials file.
 
@@ -61,6 +64,10 @@ Required Settings
       # Specify the subject for AnVIL account verification emails.
       ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
 
+6. Set up a Site in the sites framework. In your settings file:
+```
+SITE_ID = 1
+```
 
 Optional settings
 ~~~~~~~~~~~~~~~~~
@@ -70,6 +77,16 @@ If you would like to receive emails when a user links their account, set the ``A
 
       ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
 
+
+Post-installation
+~~~~~~~~~~~~~~~~~
+
+1. In your Django root directory, execute the command below to create your database tables:
+```
+python manage.py migrate
+```
+
+2. Start your server and add a site for your domain using the admin interface (e.g. http://localhost:8000/admin/). Make sure ``settings.SITE_ID`` matches the ID for this site.
 
 Permissions
 ~~~~~~~~~~~
