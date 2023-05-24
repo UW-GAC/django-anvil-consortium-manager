@@ -2075,11 +2075,11 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # The body contains the correct url.
         self.assertIn(url, mail.outbox[0].body)
 
+    @override_settings(SITE_ID=2)
     @freeze_time("2022-11-22 03:12:34")
     def test_email_is_sent_site_domain(self):
         """An email is sent when the form is submitted correctly."""
-        site = Site.objects.get_current()
-        site.domain = "foobar.com"
+        site = Site.objects.create(domain="foobar.com", name="test")
         site.save()
         email = "test@example.com"
         api_url = self.get_api_url(email)

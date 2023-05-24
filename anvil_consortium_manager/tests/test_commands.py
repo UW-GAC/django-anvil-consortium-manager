@@ -7,7 +7,7 @@ import responses
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.management import CommandError, call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from .. import anvil_audit
 from . import factories
@@ -234,10 +234,10 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertInHTML(html_fragment, email.alternatives[0][0])
 
+    @override_settings(SITE_ID=2)
     def test_command_run_audit_not_ok_email_has_html_link_different_domain(self):
         """Test command output when BillingProject audit is not ok with email specified."""
-        site = Site.objects.get_current()
-        site.domain = "foobar.com"
+        site = Site.objects.create(domain="foobar.com", name="test")
         site.save()
         billing_project = factories.BillingProjectFactory.create()
         # Add a response.
