@@ -53,9 +53,7 @@ Required Settings
   Note that you can have multiple Workspace adapters, but only one Account adapter.
 
 
-4. If you would like to use the templates provided with the app, add the ``"anvil_consortium_manager.context_processors.workspace_adapter"`` context processor to your settings file. This allows the templates to know about which types of workspace adapters that are registered (step 3), and then display links to the correct URLs.
-
-5. Add account linking settings to your settings file.
+4. Add account linking settings to your settings file.
 
   .. code-block:: python
 
@@ -64,10 +62,11 @@ Required Settings
       # Specify the subject for AnVIL account verification emails.
       ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
 
-6. Set up a Site in the sites framework. In your settings file:
-```
-SITE_ID = 1
-```
+5. Set up a Site in the sites framework. In your settings file:
+
+  .. code-block:: python
+
+      SITE_ID = 1
 
 Optional settings
 ~~~~~~~~~~~~~~~~~
@@ -82,9 +81,10 @@ Post-installation
 ~~~~~~~~~~~~~~~~~
 
 1. In your Django root directory, execute the command below to create your database tables:
-```
-python manage.py migrate
-```
+
+  .. code-block:: bash
+
+      python manage.py migrate
 
 2. Start your server and add a site for your domain using the admin interface (e.g. http://localhost:8000/admin/). Make sure ``settings.SITE_ID`` matches the ID for this site.
 
