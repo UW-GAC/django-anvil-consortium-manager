@@ -88,41 +88,37 @@ class Command(BaseCommand):
         else:
             if not results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))
-                exported_results = results.export()
-                if email:
-                    html_body = render_to_string(
-                        "anvil_consortium_manager/email_audit_report.html",
-                        context={
-                            "model_name": model_name,
-                            "verified_results": exported_results["verified"],
-                            "errors_table": ErrorsTable(exported_results["errors"]),
-                            "not_in_app_table": NotInAppTable(
-                                exported_results["not_in_app"]
-                            ),
-                        },
-                    )
-                    send_mail(
-                        "AnVIL Audit for {} -- errors".format(model_name),
-                        pprint.pformat(exported_results),
-                        None,
-                        [email],
-                        fail_silently=False,
-                        html_message=html_body,
-                    )
-                else:
-                    self.stdout.write(pprint.pformat(exported_results))
+                self.stdout.write(
+                    pprint.pformat(results.export(include_verified=False))
+                )
             else:
                 self.stdout.write(self.style.SUCCESS("ok!"))
-                if email and not errors_only:
-                    send_mail(
-                        "AnVIL Audit for {} -- ok".format(
-                            models.BillingProject._meta.object_name
+
+            if email and (not errors_only) or (errors_only and not results.ok()):
+                # Set up the email message.
+                subject = "AnVIL audit for {} -- {}".format(
+                    model_name, "ok" if results.ok() else "errors!"
+                )
+                exported_results = results.export()
+                html_body = render_to_string(
+                    "anvil_consortium_manager/email_audit_report.html",
+                    context={
+                        "model_name": model_name,
+                        "verified_results": exported_results["verified"],
+                        "errors_table": ErrorsTable(exported_results["errors"]),
+                        "not_in_app_table": NotInAppTable(
+                            exported_results["not_in_app"]
                         ),
-                        "Audit ok ({} instances)".format(len(results.get_verified())),
-                        None,
-                        [email],
-                        fail_silently=False,
-                    )
+                    },
+                )
+                send_mail(
+                    subject,
+                    pprint.pformat(exported_results),
+                    None,
+                    [email],
+                    fail_silently=False,
+                    html_message=html_body,
+                )
 
     def handle(self, *args, **options):
 

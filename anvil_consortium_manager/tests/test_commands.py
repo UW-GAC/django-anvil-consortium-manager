@@ -1,5 +1,6 @@
 """Tests for management commands in `anvil_consortium_manager`."""
 
+import pprint
 from io import StringIO
 from unittest import skip
 
@@ -9,7 +10,7 @@ from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 
-from .. import anvil_audit
+from .. import anvil_audit, models
 from . import factories
 from .utils import AnVILAPIMockTestMixin
 
@@ -138,8 +139,14 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("BillingProject... ok!", out.getvalue())
         # One message has been sent by default.
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("ok", mail.outbox[0].subject)
-        self.assertEqual(mail.outbox[0].body, "Audit ok (1 instances)")
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ["test@example.com"])
+        self.assertIn("ok", email.subject)
+        # Text body.
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertEqual(pprint.pformat(audit_results.export()), email.body)
+        # HTML body.
+        self.assertEqual(len(email.alternatives), 1)
 
     def test_command_run_audit_ok_email_errors_only(self):
         """Test command output when email and errors_only is set."""
@@ -196,18 +203,15 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertIn("BillingProject... problems found.", out.getvalue())
         # Not printed to stdout.
-        self.assertNotIn("""'errors':""", out.getvalue())
+        self.assertIn("""'errors':""", out.getvalue())
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
         self.assertEqual(email.to, ["test@example.com"])
         self.assertIn("errors", email.subject)
         # Text body.
-        self.assertIn("""'errors':""", email.body)
-        self.assertIn(
-            anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL,
-            email.body,
-        )
+        audit_results = models.BillingProject.anvil_audit()
+        self.assertEqual(pprint.pformat(audit_results.export()), email.body)
         # HTML body.
         self.assertEqual(len(email.alternatives), 1)
 
