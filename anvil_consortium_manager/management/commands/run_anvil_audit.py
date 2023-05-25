@@ -10,21 +10,6 @@ from ... import models
 from ...anvil_api import AnVILAPIError
 
 
-class VerifiedTable(tables.Table):
-    id = tables.Column(orderable=False)
-    instance = tables.Column(
-        orderable=False,
-        linkify=lambda value, table: "https://{domain}{url}".format(
-            domain=table.site.domain, url=value.get_absolute_url()
-        ),
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Set the site here so it only hits the db once.
-        self.site = Site.objects.get_current()
-
-
 class ErrorsTable(tables.Table):
     id = tables.Column(orderable=False)
     instance = tables.Column(
