@@ -10,6 +10,21 @@ from ... import models
 from ...anvil_api import AnVILAPIError
 
 
+class VerifiedTable(tables.Table):
+    id = tables.Column(orderable=False)
+    instance = tables.Column(
+        orderable=False,
+        linkify=lambda value, table: "https://{domain}{url}".format(
+            domain=table.site.domain, url=value.get_absolute_url()
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set the site here so it only hits the db once.
+        self.site = Site.objects.get_current()
+
+
 class ErrorsTable(tables.Table):
     id = tables.Column(orderable=False)
     instance = tables.Column(
@@ -73,12 +88,13 @@ class Command(BaseCommand):
         else:
             if not results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))
-                exported_results = results.export(include_verified=False)
+                exported_results = results.export()
                 if email:
                     html_body = render_to_string(
                         "anvil_consortium_manager/email_audit_report.html",
                         context={
                             "model_name": model_name,
+                            "verified_results": exported_results["verified"],
                             "errors_table": ErrorsTable(exported_results["errors"]),
                             "not_in_app_table": NotInAppTable(
                                 exported_results["not_in_app"]
