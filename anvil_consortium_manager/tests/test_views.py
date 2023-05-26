@@ -10,11 +10,7 @@ from django.contrib.auth.models import Permission, User
 from django.contrib.messages import get_messages
 from django.contrib.sites.models import Site
 from django.core import mail
-from django.core.exceptions import (
-    ImproperlyConfigured,
-    ObjectDoesNotExist,
-    PermissionDenied,
-)
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.forms import BaseInlineFormSet, HiddenInput
 from django.http.response import Http404
 from django.shortcuts import resolve_url
@@ -24,7 +20,7 @@ from django.utils import timezone
 from faker import Faker
 from freezegun import freeze_time
 
-from .. import __version__, anvil_api, forms, models, tables, viewmixins, views
+from .. import __version__, anvil_api, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
@@ -200,14 +196,6 @@ class ViewEditUrlTest(TestCase):
             self.assertContains(response, url)
         for url in self.view_urls:
             self.assertContains(response, url)
-
-
-class AnVILAuditMixinTest(TestCase):
-    """ManagedGroupGraphMixin tests that aren't covered elsewhere."""
-
-    def test_run_audit_not_implemented(self):
-        with self.assertRaises(ImproperlyConfigured):
-            viewmixins.AnVILAuditMixin().run_audit()
 
 
 class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
@@ -4309,14 +4297,6 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
-class ManagedGroupGraphMixinTest(TestCase):
-    """ManagedGroupGraphMixin tests that aren't covered elsewhere."""
-
-    def test_get_graph_not_implemented(self):
-        with self.assertRaises(NotImplementedError):
-            viewmixins.ManagedGroupGraphMixin().get_graph()
-
-
 class ManagedGroupDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -6300,43 +6280,6 @@ class ManagedGroupVisualizationTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("graph", response.context_data)
-
-
-class RegisteredWorkspaceAdaptersMixinTest(TestCase):
-    """Tests for the RegisteredWorkspaceAdaptersMixin class."""
-
-    def setUp(self):
-        """Set up test class."""
-        self.factory = RequestFactory()
-
-    def tearDown(self):
-        """Clean up after tests."""
-        # Unregister all adapters.
-        workspace_adapter_registry._registry = {}
-        # Register the default adapter.
-        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
-        super().tearDown()
-
-    def get_view_class(self):
-        return viewmixins.RegisteredWorkspaceAdaptersMixin
-
-    def test_context_registered_workspace_adapters_with_one_type(self):
-        """registered_workspace_adapters contains an instance of DefaultWorkspaceAdapter."""
-        context = self.get_view_class()().get_context_data()
-        self.assertIn("registered_workspace_adapters", context)
-        workspace_types = context["registered_workspace_adapters"]
-        self.assertEqual(len(workspace_types), 1)
-        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
-
-    def test_context_registered_workspace_adapters_with_two_types(self):
-        """registered_workspace_adapters contains an instance of a test adapter when it is registered."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
-        context = self.get_view_class()().get_context_data()
-        self.assertIn("registered_workspace_adapters", context)
-        workspace_types = context["registered_workspace_adapters"]
-        self.assertEqual(len(workspace_types), 2)
-        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
-        self.assertIsInstance(workspace_types[1], TestWorkspaceAdapter)
 
 
 class WorkspaceLandingPageTest(TestCase):
