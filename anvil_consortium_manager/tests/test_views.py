@@ -20,7 +20,7 @@ from django.utils import timezone
 from faker import Faker
 from freezegun import freeze_time
 
-from .. import __version__, anvil_api, forms, models, tables, views
+from .. import __version__, anvil_api, forms, models, tables, viewmixins, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
@@ -4302,7 +4302,7 @@ class ManagedGroupGraphMixinTest(TestCase):
 
     def test_get_graph_not_implemented(self):
         with self.assertRaises(NotImplementedError):
-            views.ManagedGroupGraphMixin().get_graph()
+            viewmixins.ManagedGroupGraphMixin().get_graph()
 
 
 class ManagedGroupDetailTest(TestCase):
@@ -6306,7 +6306,7 @@ class RegisteredWorkspaceAdaptersMixinTest(TestCase):
         super().tearDown()
 
     def get_view_class(self):
-        return views.RegisteredWorkspaceAdaptersMixin
+        return viewmixins.RegisteredWorkspaceAdaptersMixin
 
     def test_context_registered_workspace_adapters_with_one_type(self):
         """registered_workspace_adapters contains an instance of DefaultWorkspaceAdapter."""
