@@ -2,6 +2,7 @@
 
 ## Devel
 
+* The `run_anvil_audit` management command now sends html emails instead of only text emails.
 
 ## 0.15 (2023-4-18)
 

@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, User
 from django.contrib.messages import get_messages
+from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.forms import BaseInlineFormSet, HiddenInput
@@ -2067,7 +2068,33 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
         self.assertEqual(mail.outbox[0].subject, "account activation")
-        url = "http://testserver" + reverse(
+        url = "http://example.com" + reverse(
+            "anvil_consortium_manager:accounts:verify",
+            args=[email_entry.uuid, account_verification_token.make_token(email_entry)],
+        )
+        # The body contains the correct url.
+        self.assertIn(url, mail.outbox[0].body)
+
+    @override_settings(SITE_ID=2)
+    @freeze_time("2022-11-22 03:12:34")
+    def test_email_is_sent_site_domain(self):
+        """An email is sent when the form is submitted correctly."""
+        site = Site.objects.create(domain="foobar.com", name="test")
+        site.save()
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(
+            responses.GET, api_url, status=200, json=self.get_api_json_response(email)
+        )
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        self.client.post(self.get_url(), {"email": email})
+        email_entry = models.UserEmailEntry.objects.get(email=email)
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "account activation")
+        url = "http://foobar.com" + reverse(
             "anvil_consortium_manager:accounts:verify",
             args=[email_entry.uuid, account_verification_token.make_token(email_entry)],
         )

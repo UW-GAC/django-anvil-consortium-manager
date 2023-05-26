@@ -1,0 +1,37 @@
+
+{% load static i18n %}<!DOCTYPE html>
+{% load render_table from django_tables2 %}
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
+  <head>
+    <title>Audit report</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" integrity="sha512-GQGU0fMMi238uA+a/bdWJfpUGKUkBdgfFdgBm72SUQ6BeyWjoY/ton0tEjH+OSH9iP4Dfh+7HM0I9f5eR0L/4w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
+
+  <body>
+    <div class="container">
+
+{% block content %}
+
+      <h1>Audit report - {{ model_name }}</h1>
+
+      <h2>Verified</h2>
+      <div class="container">
+        <p>{{ verified_results|length }} instance(s) verified.</p>
+      </div>
+
+      <h2>Errors</h2>
+      <div class="container">
+        {% render_table errors_table %}
+      </div>
+
+      <h2>Not in app</h2>
+      <div class="container">
+        {% render_table not_in_app_table %}
+      </div>
+
+{% endblock content %}
+
+    </div>
+  </body>
+</html>
