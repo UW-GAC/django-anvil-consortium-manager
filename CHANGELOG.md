@@ -3,6 +3,7 @@
 ## Devel
 
 * The `run_anvil_audit` management command now sends html emails instead of only text emails.
+* Move view mixins to their own source file (`viewmixins.py`).
 
 ## 0.15 (2023-4-18)
 
