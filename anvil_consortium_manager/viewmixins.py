@@ -253,18 +253,12 @@ class WorkspaceAdapterMixin:
             except KeyError:
                 raise Http404("workspace_type is not registered.")
         else:
-            raise AttributeError(
-                "`workspace_type` must be specified." % self.__class__.__name__
-            )
+            raise AttributeError("`workspace_type` must be specified.")
         return adapter
 
     def get(self, request, *args, **kwargs):
         self.adapter = self.get_adapter()
         return super().get(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        self.adapter = self.get_adapter()
-        return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         if "workspace_type_display_name" not in kwargs:

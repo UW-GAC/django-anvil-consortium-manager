@@ -10,7 +10,11 @@ from django.contrib.auth.models import Permission, User
 from django.contrib.messages import get_messages
 from django.contrib.sites.models import Site
 from django.core import mail
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    ObjectDoesNotExist,
+    PermissionDenied,
+)
 from django.forms import BaseInlineFormSet, HiddenInput
 from django.http.response import Http404
 from django.shortcuts import resolve_url
@@ -196,6 +200,14 @@ class ViewEditUrlTest(TestCase):
             self.assertContains(response, url)
         for url in self.view_urls:
             self.assertContains(response, url)
+
+
+class AnVILAuditMixinTest(TestCase):
+    """ManagedGroupGraphMixin tests that aren't covered elsewhere."""
+
+    def test_run_audit_not_implemented(self):
+        with self.assertRaises(ImproperlyConfigured):
+            viewmixins.AnVILAuditMixin().run_audit()
 
 
 class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
