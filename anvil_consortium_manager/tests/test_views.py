@@ -6216,10 +6216,6 @@ class ManagedGroupVisualizationTest(TestCase):
             "anvil_consortium_manager:managed_groups:visualization", args=args
         )
 
-    def get_view(self):
-        """Return the view being tested."""
-        return views.ManagedGroupVisualization.as_view()
-
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -6315,10 +6311,6 @@ class WorkspaceLandingPageTest(TestCase):
     def get_url(self):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:workspaces:landing_page")
-
-    def get_view(self):
-        """Return the view being tested."""
-        return views.WorkspaceLandingPage.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
