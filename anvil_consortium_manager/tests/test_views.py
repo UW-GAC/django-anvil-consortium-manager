@@ -4297,14 +4297,6 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
-class ManagedGroupGraphMixinTest(TestCase):
-    """ManagedGroupGraphMixin tests that aren't covered elsewhere."""
-
-    def test_get_graph_not_implemented(self):
-        with self.assertRaises(NotImplementedError):
-            views.ManagedGroupGraphMixin().get_graph()
-
-
 class ManagedGroupDetailTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -6224,10 +6216,6 @@ class ManagedGroupVisualizationTest(TestCase):
             "anvil_consortium_manager:managed_groups:visualization", args=args
         )
 
-    def get_view(self):
-        """Return the view being tested."""
-        return views.ManagedGroupVisualization.as_view()
-
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -6290,43 +6278,6 @@ class ManagedGroupVisualizationTest(TestCase):
         self.assertIn("graph", response.context_data)
 
 
-class RegisteredWorkspaceAdaptersMixinTest(TestCase):
-    """Tests for the RegisteredWorkspaceAdaptersMixin class."""
-
-    def setUp(self):
-        """Set up test class."""
-        self.factory = RequestFactory()
-
-    def tearDown(self):
-        """Clean up after tests."""
-        # Unregister all adapters.
-        workspace_adapter_registry._registry = {}
-        # Register the default adapter.
-        workspace_adapter_registry.register(DefaultWorkspaceAdapter)
-        super().tearDown()
-
-    def get_view_class(self):
-        return views.RegisteredWorkspaceAdaptersMixin
-
-    def test_context_registered_workspace_adapters_with_one_type(self):
-        """registered_workspace_adapters contains an instance of DefaultWorkspaceAdapter."""
-        context = self.get_view_class()().get_context_data()
-        self.assertIn("registered_workspace_adapters", context)
-        workspace_types = context["registered_workspace_adapters"]
-        self.assertEqual(len(workspace_types), 1)
-        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
-
-    def test_context_registered_workspace_adapters_with_two_types(self):
-        """registered_workspace_adapters contains an instance of a test adapter when it is registered."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
-        context = self.get_view_class()().get_context_data()
-        self.assertIn("registered_workspace_adapters", context)
-        workspace_types = context["registered_workspace_adapters"]
-        self.assertEqual(len(workspace_types), 2)
-        self.assertIsInstance(workspace_types[0], DefaultWorkspaceAdapter)
-        self.assertIsInstance(workspace_types[1], TestWorkspaceAdapter)
-
-
 class WorkspaceLandingPageTest(TestCase):
     def setUp(self):
         """Set up test class."""
@@ -6360,10 +6311,6 @@ class WorkspaceLandingPageTest(TestCase):
     def get_url(self):
         """Get the url for the view being tested."""
         return reverse("anvil_consortium_manager:workspaces:landing_page")
-
-    def get_view(self):
-        """Return the view being tested."""
-        return views.WorkspaceLandingPage.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
