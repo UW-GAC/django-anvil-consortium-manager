@@ -517,7 +517,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
         self.assertIn("already exists", form.errors["name"][0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.BillingProject.objects.all(),
             models.BillingProject.objects.filter(pk=obj.pk),
         )
@@ -533,7 +533,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
         self.assertIn("already exists", form.errors["name"][0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.BillingProject.objects.all(),
             models.BillingProject.objects.filter(pk=obj.pk),
         )
@@ -1672,7 +1672,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors.keys())
         self.assertIn("already exists", form.errors["email"][0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.Account.objects.all(),
             models.Account.objects.filter(pk=obj.pk),
         )
@@ -1688,7 +1688,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors.keys())
         self.assertIn("already exists", form.errors["email"][0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.Account.objects.all(),
             models.Account.objects.filter(pk=obj.pk),
         )
@@ -3303,7 +3303,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Account.objects.count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.Account.objects.all(),
             models.Account.objects.filter(pk=other_object.pk),
         )
@@ -4843,7 +4843,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
         self.assertIn("already exists", form.errors["name"][0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.ManagedGroup.objects.all(),
             models.ManagedGroup.objects.filter(pk=obj.pk),
         )
@@ -4859,7 +4859,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
         self.assertIn("already exists", form.errors["name"][0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.ManagedGroup.objects.all(),
             models.ManagedGroup.objects.filter(pk=obj.pk),
         )
@@ -5234,7 +5234,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(object.name), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.ManagedGroup.objects.all(),
             models.ManagedGroup.objects.filter(pk=other_object.pk),
         )
@@ -7151,7 +7151,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.Workspace.objects.all(),
             models.Workspace.objects.filter(pk=obj.pk),
         )
@@ -10896,7 +10896,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.Workspace.objects.count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.Workspace.objects.all(),
             models.Workspace.objects.filter(pk=other_object.pk),
         )
@@ -12256,7 +12256,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
@@ -12279,7 +12279,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
@@ -12898,7 +12898,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
@@ -13429,7 +13429,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=obj.pk),
         )
@@ -14568,7 +14568,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupGroupMembership.objects.all(),
             models.GroupGroupMembership.objects.filter(pk=other_object.pk),
         )
@@ -15094,7 +15094,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
@@ -15119,7 +15119,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
@@ -15700,7 +15700,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
@@ -16217,7 +16217,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
@@ -17467,7 +17467,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.GroupAccountMembership.objects.all(),
             models.GroupAccountMembership.objects.filter(pk=other_object.pk),
         )
@@ -18125,7 +18125,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
@@ -18153,7 +18153,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
@@ -18953,7 +18953,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
@@ -18981,7 +18981,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
@@ -19687,7 +19687,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
@@ -19715,7 +19715,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("already exists", form.non_field_errors()[0])
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=obj.pk),
         )
@@ -21628,7 +21628,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             models.WorkspaceGroupSharing.objects.all(),
             models.WorkspaceGroupSharing.objects.filter(pk=other_object.pk),
         )

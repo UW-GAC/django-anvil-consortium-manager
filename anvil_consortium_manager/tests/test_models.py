@@ -1046,7 +1046,7 @@ class ManagedGroupTest(TestCase):
     def test_get_direct_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_direct_parents().count(), 0)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             group.get_direct_parents(), ManagedGroup.objects.none()
         )
 
@@ -1057,7 +1057,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_direct_parents().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
@@ -1072,7 +1072,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent_2, child_group=child
         )
         self.assertEqual(child.get_direct_parents().count(), 2)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_direct_parents(),
             ManagedGroup.objects.filter(pk__in=[parent_1.pk, parent_2.pk]),
             ordered=False,
@@ -1089,11 +1089,11 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child_2
         )
         self.assertEqual(child_1.get_direct_parents().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child_1.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
         self.assertEqual(child_2.get_direct_parents().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child_2.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
@@ -1123,14 +1123,14 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_direct_parents().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_direct_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
     def test_get_direct_children_no_children(self):
         group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_direct_children().count(), 0)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             group.get_direct_children(), ManagedGroup.objects.none()
         )
 
@@ -1141,7 +1141,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(parent.get_direct_children().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             parent.get_direct_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
 
@@ -1156,7 +1156,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child_2
         )
         self.assertEqual(parent.get_direct_children().count(), 2)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             parent.get_direct_children(),
             ManagedGroup.objects.filter(pk__in=[child_1.pk, child_2.pk]),
             ordered=False,
@@ -1173,11 +1173,11 @@ class ManagedGroupTest(TestCase):
             parent_group=parent_2, child_group=child
         )
         self.assertEqual(parent_1.get_direct_children().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             parent_1.get_direct_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
         self.assertEqual(parent_2.get_direct_children().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             parent_2.get_direct_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
 
@@ -1207,14 +1207,14 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(grandparent.get_direct_children().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             grandparent.get_direct_children(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
     def test_get_all_parents_no_parents(self):
         group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_all_parents().count(), 0)
-        self.assertQuerysetEqual(group.get_all_parents(), ManagedGroup.objects.none())
+        self.assertQuerySetEqual(group.get_all_parents(), ManagedGroup.objects.none())
 
     def test_get_all_parents_one_parent(self):
         parent = factories.ManagedGroupFactory(name="parent-group")
@@ -1223,7 +1223,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_all_parents().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_all_parents(), ManagedGroup.objects.filter(pk=parent.pk)
         )
 
@@ -1238,7 +1238,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_all_parents().count(), 2)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_all_parents(),
             ManagedGroup.objects.filter(pk__in=[grandparent.pk, parent.pk]),
             ordered=False,
@@ -1259,7 +1259,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_all_parents().count(), 3)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_all_parents(),
             ManagedGroup.objects.filter(
                 pk__in=[grandparent_1.pk, grandparent_2.pk, parent.pk]
@@ -1286,7 +1286,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent_2, child_group=child
         )
         self.assertEqual(child.get_all_parents().count(), 4)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_all_parents(),
             ManagedGroup.objects.filter(
                 pk__in=[grandparent_1.pk, grandparent_2.pk, parent_1.pk, parent_2.pk]
@@ -1310,7 +1310,7 @@ class ManagedGroupTest(TestCase):
             parent_group=grandparent, child_group=child
         )
         self.assertEqual(child.get_all_parents().count(), 2)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_all_parents(),
             ManagedGroup.objects.filter(pk__in=[grandparent.pk, parent.pk]),
             ordered=False,
@@ -1332,7 +1332,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(child.get_all_parents().count(), 3)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             child.get_all_parents(),
             ManagedGroup.objects.filter(
                 pk__in=[greatgrandparent.pk, grandparent.pk, parent.pk]
@@ -1358,7 +1358,7 @@ class ManagedGroupTest(TestCase):
     def test_get_all_children_no_children(self):
         group = factories.ManagedGroupFactory(name="group")
         self.assertEqual(group.get_all_children().count(), 0)
-        self.assertQuerysetEqual(group.get_all_children(), ManagedGroup.objects.none())
+        self.assertQuerySetEqual(group.get_all_children(), ManagedGroup.objects.none())
 
     def test_get_all_children_one_child(self):
         parent = factories.ManagedGroupFactory(name="parent-group")
@@ -1367,7 +1367,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(parent.get_all_children().count(), 1)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             parent.get_all_children(), ManagedGroup.objects.filter(pk=child.pk)
         )
 
@@ -1382,7 +1382,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(grandparent.get_all_children().count(), 2)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             grandparent.get_all_children(),
             ManagedGroup.objects.filter(pk__in=[parent.pk, child.pk]),
             ordered=False,
@@ -1403,7 +1403,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child_2
         )
         self.assertEqual(grandparent.get_all_children().count(), 3)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             grandparent.get_all_children(),
             ManagedGroup.objects.filter(pk__in=[parent.pk, child_1.pk, child_2.pk]),
             ordered=False,
@@ -1428,7 +1428,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent_2, child_group=child_2
         )
         self.assertEqual(grandparent.get_all_children().count(), 4)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             grandparent.get_all_children(),
             ManagedGroup.objects.filter(
                 pk__in=[parent_1.pk, parent_2.pk, child_1.pk, child_2.pk]
@@ -1452,7 +1452,7 @@ class ManagedGroupTest(TestCase):
             parent_group=grandparent, child_group=child
         )
         self.assertEqual(grandparent.get_all_children().count(), 2)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             grandparent.get_all_children(),
             ManagedGroup.objects.filter(pk__in=[parent.pk, child.pk]),
             ordered=False,
@@ -1474,7 +1474,7 @@ class ManagedGroupTest(TestCase):
             parent_group=parent, child_group=child
         )
         self.assertEqual(greatgrandparent.get_all_children().count(), 3)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             greatgrandparent.get_all_children(),
             ManagedGroup.objects.filter(pk__in=[grandparent.pk, parent.pk, child.pk]),
             ordered=False,
