@@ -8,7 +8,7 @@ from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import TestCase, override_settings
+from django.test import override_settings
 from django.utils import timezone
 from freezegun import freeze_time
 
@@ -27,6 +27,7 @@ from ..models import (
 )
 from ..tokens import account_verification_token
 from . import factories
+from .utils import TestCase  # Redefined to work with Django < 4.2 and Django=4.2.
 
 
 class BillingProjectTest(TestCase):

@@ -14,7 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.forms import BaseInlineFormSet, HiddenInput
 from django.http.response import Http404
 from django.shortcuts import resolve_url
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from faker import Faker
@@ -30,7 +30,10 @@ from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import TestWorkspaceAdapter
 from .test_app.factories import TestWorkspaceDataFactory
-from .utils import AnVILAPIMockTestMixin
+from .utils import (  # Redefined to work with Django < 4.2 and Django=4.2.
+    AnVILAPIMockTestMixin,
+    TestCase,
+)
 
 fake = Faker()
 
