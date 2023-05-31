@@ -37,7 +37,7 @@ pytest-django==4.5.2  # https://github.com/pytest-dev/pytest-django
 
 # Packaging
 # ------------------------------------------------------------------------------
-build==0.7.0
+build==0.10.0
 setuptools==67.7.2
 
 # My stuff
