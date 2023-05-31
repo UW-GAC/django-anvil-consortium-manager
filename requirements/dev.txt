@@ -16,7 +16,7 @@ tox==4.4.2
 # ------------------------------------------------------------------------------
 sphinx==4.4.0  # https://github.com/sphinx-doc/sphinx
 sphinx-autobuild==2021.3.14 # https://github.com/GaretJax/sphinx-autobuild
-sphinx-rtd-theme==1.0.0  # sphinx docs theme
+sphinx-rtd-theme==1.2.1  # sphinx docs theme
 
 # Code quality
 # ------------------------------------------------------------------------------
