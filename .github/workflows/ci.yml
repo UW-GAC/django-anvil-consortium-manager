@@ -103,7 +103,18 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install --upgrade tox tox-gh-actions
 
-    - name: Test with tox
+    - name: Test with tox - 10.3
+      if: ${{ matrix.mariadb-version == "10.3" }}
+      run: tox --skip-env ".+?-django42-mysql"
+      env:
+        DBBACKEND: mysql
+        DBNAME: test
+        DBUSER: root
+        DBPASSWORD: rootpw
+        DBHOST: 127.0.0.1
+
+    - name: Test with tox - not 10.3
+      if: ${{ matrix.mariadb-version != "10.3" }}
       run: tox
       env:
         DBBACKEND: mysql
