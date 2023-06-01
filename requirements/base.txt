@@ -15,7 +15,7 @@ django-simple-history==3.3.0  # https://github.com/jazzband/django-simple-histor
 django-autocomplete-light==3.9.4  # https://github.com/yourlabs/django-autocomplete-light
 
 # Managed Group graph visualization
-plotly==5.13.0
+plotly==5.14.1
 networkx==3.1
 numpy==1.24
 
