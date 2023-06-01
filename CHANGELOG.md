@@ -1,11 +1,11 @@
 # Change log
 
-## Devel
+## 0.16 (2023-06-01)
 
 * The `run_anvil_audit` management command now sends html emails instead of only text emails.
 * Move view mixins to their own source file (`viewmixins.py`).
 
-## 0.15 (2023-4-18)
+## 0.15 (2023-04-18)
 
 - Add a new permission, `anvil_consortium_manager_account_link`, which is required for a user to be able to link their AnVIL account.
 - Handle groups that the app service account is not part of when auditing ManagedGroups.
