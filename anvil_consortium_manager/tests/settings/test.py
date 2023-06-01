@@ -3,6 +3,8 @@ Base test settings file.
 """
 import os
 
+from django import VERSION as DJANGO_VERSION
+
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
@@ -116,6 +118,11 @@ ADMIN_URL = "admin/"
 
 # Since there are no templates for redirects in this app, specify the open URL.
 LOGIN_URL = "test_login"
+
+# Django is switching how forms are handled (divs). Set the FORM_RENDERER temporary setting until
+# it is removed in Django 6.0.
+if DJANGO_VERSION >= (4, 1):
+    FORM_RENDERER = "django.forms.renderers.DjangoDivFormRenderer"
 
 # Your stuff...
 # ------------------------------------------------------------------------------

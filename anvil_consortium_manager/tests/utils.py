@@ -3,11 +3,24 @@ from unittest import mock
 import google.auth.credentials
 import google.auth.transport.requests
 import responses
+from django import VERSION as DJANGO_VERSION
+from django.test import TestCase as DjangoTestCase
 from faker import Faker
 
 from ..anvil_api import AnVILAPIClient
 
 fake = Faker()
+
+
+if DJANGO_VERSION >= (4, 2):
+    TestCase = DjangoTestCase
+else:
+    # As of Django 4.2 TestCase.assertQuerysetEqual is deprecated and in favor of assertQuerySetEqual.
+    # If we are running Django < 4.2, define assertQuerySetEqual, which calls self.assertQuerysetEqual.
+    # consistent across all versions.
+    class TestCase(DjangoTestCase):
+        def assertQuerySetEqual(self, *args, **kwargs):
+            return self.assertQuerysetEqual(*args, **kwargs)
 
 
 class AnVILAPIMockTestMixin:
