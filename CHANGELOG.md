@@ -1,6 +1,6 @@
 # Change log
 
-## 0.15.1 (2023-06-01)
+## 0.16 (2023-06-01)
 
 * The `run_anvil_audit` management command now sends html emails instead of only text emails.
 * Move view mixins to their own source file (`viewmixins.py`).
