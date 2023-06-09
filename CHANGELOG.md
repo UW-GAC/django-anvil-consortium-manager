@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Bugfix: correctly import AnVIL groups when the service account is both a member and an admin of the group.
+
 ## 0.16 (2023-06-01)
 
 * The `run_anvil_audit` management command now sends html emails instead of only text emails.
