@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.16.1 (2023-06-09)
 
 * Bugfix: correctly import AnVIL groups when the service account is both a member and an admin of the group.
 * Bugfix: Fix failing ManagedGroup.anvil_audit_memership when the service account is not directly an admin of the group (but is via membership in another group).
