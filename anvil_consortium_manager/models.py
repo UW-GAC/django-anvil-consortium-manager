@@ -590,9 +590,10 @@ class ManagedGroup(TimeStampedModel):
         # indiciate that we are an admin.
         count = 0
         for group_details in json:
-            print(group_details)
             if group_details["groupName"] == group_name:
                 count += 1
+                # Set email using the json response.
+                group.email = group_details["groupEmail"].lower()
                 # If any of them are admin, set is_managed_by_app.
                 if group_details["role"].lower() == "admin":
                     group.is_managed_by_app = True
@@ -601,8 +602,6 @@ class ManagedGroup(TimeStampedModel):
             raise exceptions.AnVILNotGroupMemberError(
                 "group {} not found in response.".format(group_name)
             )
-        # Set the email using the json response.
-        group.email = group_details["groupEmail"].lower()
         # Verify it is still correct after modifying some fields.
         group.full_clean()
         group.save()
