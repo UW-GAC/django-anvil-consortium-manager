@@ -622,9 +622,13 @@ class ManagedGroup(TimeStampedModel):
         # Convert to case-insensitive emails.
         admins_in_anvil = [x.lower() for x in response.json()]
         # Remove the service account as admin.
-        admins_in_anvil.remove(
-            api_client.auth_session.credentials.service_account_email.lower()
-        )
+        try:
+            admins_in_anvil.remove(
+                api_client.auth_session.credentials.service_account_email.lower()
+            )
+        except ValueError:
+            # Not listed as an admin -- this is ok because it could be via group membership.
+            pass
         # Sometimes the service account is also listed as a member. Remove that too.
         try:
             members_in_anvil.remove(
