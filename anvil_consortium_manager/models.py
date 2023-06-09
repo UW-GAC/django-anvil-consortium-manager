@@ -585,18 +585,25 @@ class ManagedGroup(TimeStampedModel):
         # Note that we have to be a member of the group to import it.
         response = AnVILAPIClient().get_groups()
         json = response.json()
-        # Use a generator expression to extract details about the requested group.
-        try:
-            group_details = next(
-                group for group in json if group["groupName"] == group_name
+        # Apparently the AnVIL API will return two records if you are both a member and an admin
+        # of a group. We will need to check all the records for this group to see if any of them
+        # indiciate that we are an admin.
+        count = 0
+        for group_details in json:
+            if group_details["groupName"] == group_name:
+                count += 1
+                # Set email using the json response.
+                group.email = group_details["groupEmail"].lower()
+                # If any of them are admin, set is_managed_by_app.
+                if group_details["role"].lower() == "admin":
+                    group.is_managed_by_app = True
+        # Make sure a group was found.
+        if count == 0:
+            raise exceptions.AnVILNotGroupMemberError(
+                "group {} not found in response.".format(group_name)
             )
-        except StopIteration:
-            raise exceptions.AnVILNotGroupMemberError
-        # Check if we're an admin.
-        if group_details["role"].lower() == "admin":
-            group.is_managed_by_app = True
-        # Set the email using the json response.
-        group.email = group_details["groupEmail"].lower()
+        # Verify it is still correct after modifying some fields.
+        group.full_clean()
         group.save()
         return group
 
