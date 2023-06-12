@@ -30,7 +30,10 @@ class ErrorsTable(tables.Table):
 
 
 class NotInAppTable(tables.Table):
-    instance = tables.Column(orderable=False)
+    instance = tables.Column(orderable=False, empty_values=())
+
+    def render_instance(self, record):
+        return record
 
 
 class Command(BaseCommand):
@@ -85,6 +88,9 @@ class Command(BaseCommand):
                     model_name, "ok" if results.ok() else "errors!"
                 )
                 exported_results = results.export()
+                import ipdb
+
+                ipdb.set_trace()
                 html_body = render_to_string(
                     "anvil_consortium_manager/email_audit_report.html",
                     context={

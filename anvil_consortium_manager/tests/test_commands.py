@@ -11,6 +11,7 @@ from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 
 from .. import anvil_audit, models
+from ..management.commands.run_anvil_audit import ErrorsTable, NotInAppTable
 from . import factories
 from .utils import AnVILAPIMockTestMixin
 
@@ -295,3 +296,44 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
                 email="test@example.com",
                 stdout=out,
             )
+
+
+class RunAnVILAuditTablesTest(TestCase):
+    def setUp(self):
+        super().setUp()
+
+        class GenericAuditResults(anvil_audit.AnVILAuditResults):
+            TEST_ERROR_1 = "Test error 1"
+            TEST_ERROR_2 = "Test error 2"
+            allowed_errors = (
+                TEST_ERROR_1,
+                TEST_ERROR_2,
+            )
+
+        self.audit_results = GenericAuditResults()
+        # It doesn't matter what model we use at this point, so just pick Account.
+        self.model_factory = factories.AccountFactory
+
+    def test_errors_table(self):
+        """Errors table is correct."""
+        obj_verified = self.model_factory.create()
+        self.audit_results.add_verified(obj_verified)
+        obj_error = self.model_factory.create()
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_2)
+        self.audit_results.add_not_in_app("foo")
+        export = self.audit_results.export()
+        table = ErrorsTable(export["errors"])
+        self.assertEqual(table.rows[0].get_cell("errors"), "Test error 1, Test error 2")
+
+    def test_not_in_app_table(self):
+        """NotInApp table is correct."""
+        obj_verified = self.model_factory.create()
+        self.audit_results.add_verified(obj_verified)
+        obj_error = self.model_factory.create()
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
+        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_2)
+        self.audit_results.add_not_in_app("foo")
+        export = self.audit_results.export()
+        table = NotInAppTable(export["not_in_app"])
+        self.assertEqual(table.rows[0].get_cell("instance"), "foo")
