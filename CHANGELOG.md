@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Bugfix: Display "not in app" table correctly in emailed AnVIL audit report.
+
 ## 0.16.1 (2023-06-09)
 
 * Bugfix: correctly import AnVIL groups when the service account is both a member and an admin of the group.

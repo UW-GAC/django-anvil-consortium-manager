@@ -30,7 +30,10 @@ class ErrorsTable(tables.Table):
 
 
 class NotInAppTable(tables.Table):
-    instance = tables.Column(orderable=False)
+    instance = tables.Column(orderable=False, empty_values=())
+
+    def render_instance(self, record):
+        return record
 
 
 class Command(BaseCommand):
