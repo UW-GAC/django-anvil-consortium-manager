@@ -88,9 +88,6 @@ class Command(BaseCommand):
                     model_name, "ok" if results.ok() else "errors!"
                 )
                 exported_results = results.export()
-                import ipdb
-
-                ipdb.set_trace()
                 html_body = render_to_string(
                     "anvil_consortium_manager/email_audit_report.html",
                     context={
