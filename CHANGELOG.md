@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.16.2 (2023-06-12)
 
 * Bugfix: Display "not in app" table correctly in emailed AnVIL audit report.
 
