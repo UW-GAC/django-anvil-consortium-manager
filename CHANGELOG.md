@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.16.3 (2023-06-13)
 
 * Bugfix: Fix failing ManagedGroup.anvil_audit_membership when a group is both a member of and admin of another group.
 
