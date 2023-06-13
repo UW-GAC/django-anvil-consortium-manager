@@ -672,6 +672,13 @@ class ManagedGroup(TimeStampedModel):
                     )
                 else:
                     audit_results.add_verified(membership)
+                # Also remove from members.
+                try:
+                    members_in_anvil.remove(membership.child_group.email.lower())
+                except ValueError:
+                    # The group is not directly listed as a member, so this is ok.
+                    # It is already an admin.
+                    pass
             elif membership.role == GroupGroupMembership.MEMBER:
                 try:
                     members_in_anvil.remove(membership.child_group.email.lower())

@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Bugfix: Fix failing ManagedGroup.anvil_audit_membership when a group is both a member of and admin of another group.
+
 ## 0.16.2 (2023-06-12)
 
 * Bugfix: Display "not in app" table correctly in emailed AnVIL audit report.
