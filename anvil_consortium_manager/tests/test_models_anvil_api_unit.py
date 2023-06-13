@@ -2859,6 +2859,38 @@ class ManagedGroupMembershipAnVILAuditAnVILAPIMockTest(AnVILAPIMockTestMixin, Te
         self.assertEqual(audit_results.get_errors(), {})
         self.assertEqual(audit_results.get_not_in_app(), set())
 
+    def test_group_is_both_admin_and_member(self):
+        group = factories.ManagedGroupFactory.create()
+        membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=group, role=models.GroupGroupMembership.ADMIN
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[membership.child_group.email]
+            ).response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[membership.child_group.email]
+            ).response,
+        )
+        audit_results = group.anvil_audit_membership()
+        self.assertIsInstance(
+            audit_results, anvil_audit.ManagedGroupMembershipAuditResults
+        )
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(audit_results.get_verified(), set([membership]))
+        self.assertEqual(audit_results.get_errors(), {})
+        self.assertEqual(audit_results.get_not_in_app(), set())
+
 
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
