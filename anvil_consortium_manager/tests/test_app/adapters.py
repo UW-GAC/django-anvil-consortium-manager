@@ -16,7 +16,9 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_detail_template_name = "test_workspace_detail.html"
 
     def get_autocomplete_queryset(self, queryset, q, forwarded={}):
-        return queryset.filter(workspace__name=q)
+        if q:
+            queryset = queryset.filter(workspace__name=q)
+        return queryset
 
 
 class TestAccountAdapter(BaseAccountAdapter):
@@ -25,7 +27,9 @@ class TestAccountAdapter(BaseAccountAdapter):
     list_table_class = tables.TestAccountTable
 
     def get_autocomplete_queryset(self, queryset, q):
-        return queryset.filter(email__startswith=q)
+        if q:
+            queryset = queryset.filter(email__startswith=q)
+        return queryset
 
     def get_autocomplete_label(self, account):
         return "TEST {}".format(account.email)
