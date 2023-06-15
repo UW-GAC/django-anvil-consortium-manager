@@ -717,10 +717,9 @@ class AccountAutocomplete(
             status=models.Account.ACTIVE_STATUS
         ).order_by("email")
 
-        if self.q:
-            # Use the account adapter to process the query.
-            adapter = get_account_adapter()
-            qs = adapter().get_autocomplete_queryset(qs, self.q)
+        # Use the account adapter to process the query.
+        adapter = get_account_adapter()
+        qs = adapter().get_autocomplete_queryset(qs, self.q)
 
         return qs
 
@@ -1844,12 +1843,13 @@ class WorkspaceAutocompleteByType(
             .objects.filter()
             .order_by("workspace__billing_project", "workspace__name")
         )
+        print(qs)
 
-        if self.q:
-            # Use the workspace adapter to process the query.
-            qs = self.adapter.get_autocomplete_queryset(
-                qs, self.q, forwarded=self.forwarded
-            )
+        # Use the workspace adapter to process the query.
+        qs = self.adapter.get_autocomplete_queryset(
+            qs, self.q, forwarded=self.forwarded
+        )
+        print(qs)
 
         return qs
 
