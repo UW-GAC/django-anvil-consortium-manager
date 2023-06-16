@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.16.4 (2023-06-16)
 
 * Bugfix: Move autocomplete query if statement to adapter methods so that adapter methods can handle forwarded values even when a query is not passed. `get_autocomplete_queryset` methods should be updated to process the query parameter.
 

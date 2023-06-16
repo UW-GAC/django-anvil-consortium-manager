@@ -1843,13 +1843,11 @@ class WorkspaceAutocompleteByType(
             .objects.filter()
             .order_by("workspace__billing_project", "workspace__name")
         )
-        print(qs)
 
         # Use the workspace adapter to process the query.
         qs = self.adapter.get_autocomplete_queryset(
             qs, self.q, forwarded=self.forwarded
         )
-        print(qs)
 
         return qs
 

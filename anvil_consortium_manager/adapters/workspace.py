@@ -113,10 +113,8 @@ class BaseWorkspaceAdapter(ABC):
         The default filtering is that the workspace name contains the queryset, case-
         insensitive. If desired, custom autocomplete filtering for a workspace type can
         be implemented by overriding this method."""
-        print(queryset)
         if q:
             queryset = queryset.filter(workspace__name__icontains=q)
-        print(queryset)
         return queryset
 
 
