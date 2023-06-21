@@ -5086,6 +5086,19 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 }
             ],
         )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-group/member",
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-group/admin",
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
         # A workspace was created.
         workspace = models.Workspace.anvil_import(
             billing_project.name,
@@ -5149,6 +5162,19 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     "role": "Admin",
                 },
             ],
+        )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-admin/member",
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-admin/admin",
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
         # A workspace was created.
         workspace = models.Workspace.anvil_import(
