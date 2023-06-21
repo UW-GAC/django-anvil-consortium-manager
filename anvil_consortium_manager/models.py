@@ -603,9 +603,12 @@ class ManagedGroup(TimeStampedModel):
                 "group {} not found in response.".format(group_name)
             )
         # Verify it is still correct after modifying some fields.
-        group.full_clean()
-        group.save()
-
+        with transaction.atomic():
+            group.full_clean()
+            group.save()
+            # Import membership records.
+            if group.is_managed_by_app:
+                group.anvil_import_membership()
         return group
 
     def anvil_import_membership(self):
