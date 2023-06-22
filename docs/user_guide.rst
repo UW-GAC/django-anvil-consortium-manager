@@ -102,6 +102,8 @@ If the workspace has any auth domains, they will be imported into the app even i
 
 If successful, you will be shown a success message and information about the workspace that you just imported.
 
+Note: if the workspace has auth domain(s), the group(s) used as the auth domain(s) will also be imported into the app as a new ManagedGroup. If the service account running the app is an admin of that group, it will also import some membership records. GroupGroupMembership or GroupAccountMembership records will be created if the Account or ManagedGroup that is listed as a member/admin already exists in the app.
+
 Add a user account to a group
 -----------------------------
 
