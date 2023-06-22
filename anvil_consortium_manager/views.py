@@ -1263,6 +1263,8 @@ class WorkspaceImport(
                     name=w["workspace"]["name"],
                 ).exists()
             ]
+            # Sort workspaces alphabetically.
+            workspaces = sorted(workspaces)
             workspace_choices = [(x, x) for x in workspaces]
 
             if not len(workspace_choices):

@@ -8007,6 +8007,33 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue(("bp-1/ws-1", "bp-1/ws-1") in workspace_choices)
         self.assertTrue(("bp-2/ws-2", "bp-2/ws-2") in workspace_choices)
 
+    def test_form_choices_alphabetical_order(self):
+        """Choices are populated correctly with two available workspaces."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher(
+                    {"fields": "workspace.namespace,workspace.name,accessLevel"}
+                )
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("zzz", "zzz"),
+                self.get_api_json_response("aaa", "aaa"),
+            ],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        # Choices are populated correctly.
+        workspace_choices = response.context_data["form"].fields["workspace"].choices
+        self.assertEqual(len(workspace_choices), 3)
+        # The first choice is the empty string.
+        self.assertEqual("", workspace_choices[0][0])
+        # The next choices are the workspaces.
+        self.assertEqual(workspace_choices[1], ("aaa/aaa", "aaa/aaa"))
+        self.assertEqual(workspace_choices[2], ("zzz/zzz", "zzz/zzz"))
+
     def test_form_does_not_show_already_imported_workspaces(self):
         """The form does not show workspaces that have already been imported in the choices."""
         billing_project = factories.BillingProjectFactory.create(name="bp")
