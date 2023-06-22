@@ -806,6 +806,18 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """Return the API url being called by the method."""
         return self.api_client.sam_entry_point + "/api/groups/v1"
 
+    def get_api_url_members(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        )
+
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        )
+
     def test_anvil_import_admin_on_anvil(self):
         group_name = "test-group"
         self.anvil_response_mock.add(
@@ -820,6 +832,19 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
         group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
         self.assertEqual(group.name, group_name)
@@ -828,6 +853,9 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         # Make sure it's the group that was returned.
         models.ManagedGroup.objects.get(pk=group.pk)
+        # No memberships were imported.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_anvil_import_admin_on_anvil_lowercase(self):
         group_name = "test-group"
@@ -843,6 +871,19 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
         group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
         self.assertEqual(group.name, group_name)
@@ -852,7 +893,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the group that was returned.
         models.ManagedGroup.objects.get(pk=group.pk)
 
-    def test_anvil_import_member_on_anviL(self):
+    def test_anvil_import_member_on_anvil(self):
         group_name = "test-group"
         self.anvil_response_mock.add(
             responses.GET,
@@ -899,6 +940,9 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.ManagedGroup.objects.count(), 1)
         # Make sure it's the group that was returned.
         models.ManagedGroup.objects.get(pk=group.pk)
+        # No membership records were created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_anvil_import_member_and_admin(self):
         """When the SA is both a member and an admin, store the group as is_managed_by_app=True"""
@@ -913,6 +957,19 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     api_factories.GroupDetailsAdminFactory(groupName=group_name),
                 ]
             ).response,
+        )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
         group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
@@ -937,6 +994,19 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
         group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
         self.assertEqual(group.name, group_name)
@@ -956,9 +1026,22 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 response=[
                     api_factories.GroupDetailsFactory(),
                     api_factories.GroupDetailsFactory(),
-                    api_factories.GroupDetailsFactory(groupName=group_name),
+                    api_factories.GroupDetailsAdminFactory(groupName=group_name),
                 ]
             ).response,
+        )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
         group = models.ManagedGroup.anvil_import(group_name)
         # Check values.
@@ -1011,7 +1094,743 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # No object was saved.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
-    def test_anvil_audit_group_email_different_than_name(self):
+    def test_anvil_import_membership_api_internal_error(self):
+        group_name = "test-group"
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsFactory(),
+                    api_factories.GroupDetailsFactory(),
+                    api_factories.GroupDetailsAdminFactory(groupName=group_name),
+                ]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group_name),
+            status=500,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            models.ManagedGroup.anvil_import(group_name)
+        # No object was saved.
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
+
+    def test_imports_group_and_account_membership(self):
+        """Group and account memberships are imported when they exist in the app."""
+        child_group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        group_name = "test-group"
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsFactory(),
+                    api_factories.GroupDetailsFactory(),
+                    api_factories.GroupDetailsAdminFactory(groupName=group_name),
+                ]
+            ).response,
+        )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[account.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group_name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[child_group.email]
+            ).response,
+        )
+        group = models.ManagedGroup.anvil_import(group_name)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.latest("pk")
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.child_group, child_group)
+        self.assertEqual(membership.role, membership.ADMIN)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        membership = models.GroupAccountMembership.objects.latest("pk")
+        self.assertEqual(membership.group, group)
+        self.assertEqual(membership.account, account)
+        self.assertEqual(membership.role, membership.MEMBER)
+
+
+class ManagedGroupAnVILImportMembershipTest(AnVILAPIMockTestMixin, TestCase):
+    def get_api_url(self):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1"
+
+    def get_api_url_members(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        )
+
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        )
+
+    def test_not_managed_by_app(self):
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+            group.anvil_import_membership()
+        self.assertIn("not managed by app", str(e.exception))
+
+    def test_no_members_or_admin(self):
+        """Imports an admin child group when child group is in the app."""
+        group = factories.ManagedGroupFactory.create()
+        factories.ManagedGroupFactory.create()
+        factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_group_admin_exists_in_app(self):
+        """Imports an admin child group when child group is in the app."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[child_group.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.latest("pk")
+        self.assertEqual(membership.child_group, child_group)
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_group_admin_exists_in_app_case_insensitive(self):
+        """Imports an admin child group when child group is in the app with a case-insensitive email match."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create(email="FoO@BaR.com")
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=["fOo@bAR.com"]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.latest("pk")
+        self.assertEqual(membership.child_group, child_group)
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_group_member_exists_in_app(self):
+        """Imports an admin child group when child group is in the app."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[child_group.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.latest("pk")
+        self.assertEqual(membership.child_group, child_group)
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.role, membership.MEMBER)
+
+    def test_group_member_exists_in_app_case_insensitive(self):
+        """Imports a member child group when child group is in the app with a case-insensitive email match."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create(email="FoO@bAr.com")
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=["fOo@BaR.com"]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.latest("pk")
+        self.assertEqual(membership.child_group, child_group)
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.role, membership.MEMBER)
+
+    def test_group_admin_not_in_app(self):
+        """Does not import an admin child group when child group is not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=["test@example.com"]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_group_member_not_in_app(self):
+        """Does not import a member child group when child group is not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=["test@example.com"]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_same_group_both_admin_and_member(self):
+        """Imports group as an admin when it is listed as both a member and admin on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[child_group.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[child_group.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.latest("pk")
+        self.assertEqual(membership.child_group, child_group)
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_one_member_one_admin(self):
+        group = factories.ManagedGroupFactory.create()
+        child_group_1 = factories.ManagedGroupFactory.create()
+        child_group_2 = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[child_group_1.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[child_group_2.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+        membership = models.GroupGroupMembership.objects.get(
+            parent_group=group, child_group=child_group_1
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+        membership = models.GroupGroupMembership.objects.get(
+            parent_group=group, child_group=child_group_2
+        )
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_two_group_admins(self):
+        """Imports two admin members that exist in the app."""
+        group = factories.ManagedGroupFactory.create()
+        child_group_1 = factories.ManagedGroupFactory.create()
+        child_group_2 = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[child_group_1.email, child_group_2.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+        membership = models.GroupGroupMembership.objects.get(
+            parent_group=group, child_group=child_group_1
+        )
+        self.assertEqual(membership.role, membership.ADMIN)
+        membership = models.GroupGroupMembership.objects.get(
+            parent_group=group, child_group=child_group_2
+        )
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_two_group_members(self):
+        """Imports two group members that exist in the app"""
+        group = factories.ManagedGroupFactory.create()
+        child_group_1 = factories.ManagedGroupFactory.create()
+        child_group_2 = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[child_group_1.email, child_group_2.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+        membership = models.GroupGroupMembership.objects.get(
+            parent_group=group, child_group=child_group_1
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+        membership = models.GroupGroupMembership.objects.get(
+            parent_group=group, child_group=child_group_2
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+
+    def test_account_admin_exists_in_app(self):
+        """Imports an admin account when account is in the app."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[account.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        membership = models.GroupAccountMembership.objects.latest("pk")
+        self.assertEqual(membership.account, account)
+        self.assertEqual(membership.group, group)
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_account_admin_exists_in_app_case_insensitive(self):
+        """Imports an admin child group when child group is in the app with a case-insensitive email match."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create(email="FoO@BaR.com")
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=["fOo@bAR.com"]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        membership = models.GroupAccountMembership.objects.latest("pk")
+        self.assertEqual(membership.account, account)
+        self.assertEqual(membership.group, group)
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_account_member_exists_in_app(self):
+        """Imports an admin account when account is in the app."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[account.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        membership = models.GroupAccountMembership.objects.latest("pk")
+        self.assertEqual(membership.account, account)
+        self.assertEqual(membership.group, group)
+        self.assertEqual(membership.role, membership.MEMBER)
+
+    def test_gaccount_member_exists_in_app_case_insensitive(self):
+        """Imports a member account when account is in the app with a case-insensitive email match."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create(email="FoO@bAr.com")
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=["fOo@BaR.com"]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        membership = models.GroupAccountMembership.objects.latest("pk")
+        self.assertEqual(membership.account, account)
+        self.assertEqual(membership.group, group)
+        self.assertEqual(membership.role, membership.MEMBER)
+
+    def test_account_admin_not_in_app(self):
+        """Does not import an admin account when caccount is not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=["test@example.com"]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_account_member_not_in_app(self):
+        """Does not import a member account when account is not in the app."""
+        group = factories.ManagedGroupFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=["test@example.com"]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_same_account_both_admin_and_member(self):
+        """Imports account as an admin when it is listed as both a member and admin on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[account.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[account.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        membership = models.GroupAccountMembership.objects.latest("pk")
+        self.assertEqual(membership.account, account)
+        self.assertEqual(membership.group, group)
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_account_one_member_one_admin(self):
+        group = factories.ManagedGroupFactory.create()
+        account_1 = factories.AccountFactory.create()
+        account_2 = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[account_1.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[account_2.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        membership = models.GroupAccountMembership.objects.get(
+            group=group, account=account_1
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+        membership = models.GroupAccountMembership.objects.get(
+            group=group, account=account_2
+        )
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_two_account_admins(self):
+        """Imports two admin accounts that exist in the app."""
+        group = factories.ManagedGroupFactory.create()
+        account_1 = factories.AccountFactory.create()
+        account_2 = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[account_1.email, account_2.email]
+            ).response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        membership = models.GroupAccountMembership.objects.get(
+            group=group, account=account_1
+        )
+        self.assertEqual(membership.role, membership.ADMIN)
+        membership = models.GroupAccountMembership.objects.get(
+            group=group, account=account_2
+        )
+        self.assertEqual(membership.role, membership.ADMIN)
+
+    def test_two_account_members(self):
+        """Imports two account members that exist in the app"""
+        group = factories.ManagedGroupFactory.create()
+        account_1 = factories.AccountFactory.create()
+        account_2 = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[account_1.email, account_2.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        membership = models.GroupAccountMembership.objects.get(
+            group=group, account=account_1
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+        membership = models.GroupAccountMembership.objects.get(
+            group=group, account=account_2
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+
+    def test_one_account_one_group(self):
+        """Imports one account member and one group member that exist in the app."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[child_group.email, account.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        membership = models.GroupAccountMembership.objects.get(
+            group=group, account=account
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.get(
+            parent_group=group, child_group=child_group
+        )
+        self.assertEqual(membership.role, membership.MEMBER)
+
+    def test_api_error_group_member_call(self):
+        """Nothing is imported when there is an error in the group membership call."""
+        group = factories.ManagedGroupFactory.create()
+        # child_group = factories.ManagedGroupFactory.create()
+        # account = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Member response called before admin response.
+        # self.anvil_response_mock.add(
+        #     responses.GET,
+        #     self.get_api_url_admins(group.name),
+        #     status=200,
+        #     json=api_factories.GetGroupMembershipAdminResponseFactory(
+        #         response=[child_group.email, account.email]
+        #     ).response,
+        # )
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_api_error_group_admin_call(self):
+        """Nothing is imported when there is an error in the group membership call."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        account = factories.AccountFactory.create()
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_members(group.name),
+            status=200,
+            json=api_factories.ErrorResponseFactory(
+                response=[child_group.email, account.email]
+            ).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_admins(group.name),
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            group.anvil_import_membership()
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_group_email_different_than_name(self):
         """Email is set using email in response."""
         self.anvil_response_mock.add(
             responses.GET,
@@ -1019,7 +1838,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,  # successful response code.
             json=api_factories.GetGroupsResponseFactory(
                 response=[
-                    api_factories.GroupDetailsFactory(
+                    api_factories.GroupDetailsMemberFactory(
                         groupName="test",
                         groupEmail="foo@bar.com",
                     ),
@@ -1035,7 +1854,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the group that was returned.
         models.ManagedGroup.objects.get(pk=group.pk)
 
-    def test_anvil_audit_group_email_different_than_name_lowercase(self):
+    def test_group_email_different_than_name_lowercase(self):
         """Email is set to lowercase using email in response."""
         self.anvil_response_mock.add(
             responses.GET,
@@ -1043,7 +1862,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             status=200,  # successful response code.
             json=api_factories.GetGroupsResponseFactory(
                 response=[
-                    api_factories.GroupDetailsFactory(
+                    api_factories.GroupDetailsMemberFactory(
                         groupName="test",
                         groupEmail="Foo@Bar.com",
                     ),
@@ -4267,6 +5086,19 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 }
             ],
         )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-group/member",
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-group/admin",
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
         # A workspace was created.
         workspace = models.Workspace.anvil_import(
             billing_project.name,
@@ -4330,6 +5162,19 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                     "role": "Admin",
                 },
             ],
+        )
+        # Group member/admins API calls.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-admin/member",
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-admin/admin",
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
         # A workspace was created.
         workspace = models.Workspace.anvil_import(

@@ -603,9 +603,85 @@ class ManagedGroup(TimeStampedModel):
                 "group {} not found in response.".format(group_name)
             )
         # Verify it is still correct after modifying some fields.
-        group.full_clean()
-        group.save()
+        with transaction.atomic():
+            group.full_clean()
+            group.save()
+            # Import membership records.
+            if group.is_managed_by_app:
+                group.anvil_import_membership()
         return group
+
+    def anvil_import_membership(self):
+        """Import group membership records from AnVIL, as long as the members/admins already exist in the app.
+
+        Groups or accounts that are not already in the app are not imported."""
+        if not self.is_managed_by_app:
+            raise exceptions.AnVILNotGroupAdminError(
+                "group {} is not managed by app".format(self.name)
+            )
+        # Now add membership records.
+        api_client = AnVILAPIClient()
+        response = api_client.get_group_members(self.name)
+        # Convert to case-insensitive emails.
+        members_in_anvil = [x.lower() for x in response.json()]
+        response = api_client.get_group_admins(self.name)
+        # Convert to case-insensitive emails.
+        admins_in_anvil = [x.lower() for x in response.json()]
+        for email in admins_in_anvil:
+            # Check groups.
+            try:
+                child_group = ManagedGroup.objects.get(email__iexact=email)
+                membership = GroupGroupMembership(
+                    parent_group=self,
+                    child_group=child_group,
+                    role=GroupGroupMembership.ADMIN,
+                )
+                membership.full_clean()
+                membership.save()
+            except ManagedGroup.DoesNotExist:
+                # This email is not associated with a group in the app.
+                pass
+            # Check accounts.
+            try:
+                account = Account.objects.get(email=email)
+                membership = GroupAccountMembership(
+                    group=self, account=account, role=GroupAccountMembership.ADMIN
+                )
+                membership.full_clean()
+                membership.save()
+            except Account.DoesNotExist:
+                # This email is not associated with an Account in the app.
+                pass
+            # Remove this email from the members.
+            try:
+                members_in_anvil.remove(email)
+            except ValueError:
+                # Not also listed as a member - this is ok.
+                pass
+        for email in members_in_anvil:
+            try:
+                child_group = ManagedGroup.objects.get(email__iexact=email)
+                membership = GroupGroupMembership(
+                    parent_group=self,
+                    child_group=child_group,
+                    role=GroupGroupMembership.MEMBER,
+                )
+                membership.full_clean()
+                membership.save()
+            except ManagedGroup.DoesNotExist:
+                # This email is not associated with a group in the app.
+                pass
+            # Check accounts.
+            try:
+                account = Account.objects.get(email=email)
+                membership = GroupAccountMembership(
+                    group=self, account=account, role=GroupAccountMembership.MEMBER
+                )
+                membership.full_clean()
+                membership.save()
+            except Account.DoesNotExist:
+                # This email is not associated with an Account in the app.
+                pass
 
     def anvil_audit_membership(self):
         """Audit the membership for a single group against AnVIL.
