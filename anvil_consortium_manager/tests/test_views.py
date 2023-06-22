@@ -97,16 +97,14 @@ class ViewEditUrlTest(TestCase):
 
     view_urls = (
         reverse("anvil_consortium_manager:index"),
+        reverse("anvil_consortium_manager:status"),
         reverse("anvil_consortium_manager:accounts:list"),
         reverse("anvil_consortium_manager:accounts:audit"),
         reverse("anvil_consortium_manager:billing_projects:list"),
         reverse("anvil_consortium_manager:billing_projects:audit"),
-        reverse("anvil_consortium_manager:group_account_membership:list"),
-        reverse("anvil_consortium_manager:group_group_membership:list"),
         reverse("anvil_consortium_manager:managed_groups:list"),
+        reverse("anvil_consortium_manager:managed_groups:visualization"),
         reverse("anvil_consortium_manager:managed_groups:audit"),
-        reverse("anvil_consortium_manager:status"),
-        reverse("anvil_consortium_manager:workspace_group_sharing:list"),
         reverse("anvil_consortium_manager:workspaces:landing_page"),
         reverse("anvil_consortium_manager:workspaces:list_all"),
         reverse("anvil_consortium_manager:workspaces:audit"),
