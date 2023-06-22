@@ -2,6 +2,10 @@
 
 ## Devel
 
+* Import ManagedGroup membership from AnVIL when importing a ManagedGroup and the members already have records in the app.
+
+## 0.16.4 (2023-06-16)
+
 * Bugfix: Move autocomplete query if statement to adapter methods so that adapter methods can handle forwarded values even when a query is not passed. `get_autocomplete_queryset` methods should be updated to process the query parameter.
 
 ## 0.16.3 (2023-06-13)
