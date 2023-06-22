@@ -4,6 +4,7 @@
 
 * Import ManagedGroup membership from AnVIL when importing a ManagedGroup and the members already have records in the app.
 * Sort available workspaces alphabetically in the `WorkspaceImport` view.
+* Synchronize dropdown items in navbar and links in cards on home page.
 
 ## 0.16.4 (2023-06-16)
 
