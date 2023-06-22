@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.16.4 (2023-06-16)
 
 * Import ManagedGroup membership from AnVIL when importing a ManagedGroup and the members already have records in the app.
 

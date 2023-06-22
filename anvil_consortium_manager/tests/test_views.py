@@ -11419,6 +11419,27 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace_1.pk)
 
+    def test_custom_autocomplete_with_forwarded_value(self):
+        # Workspace that will match the custom autocomplete filtering.
+        workspace = TestWorkspaceDataFactory.create()
+        # Workspace that should not match the custom autocomplete filtering.
+        TestWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.workspace.workspace_type),
+            {
+                "forward": json.dumps(
+                    {"billing_project": workspace.workspace.billing_project.pk}
+                )
+            },
+        )
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], workspace.pk)
+
 
 class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the WorkspaceAudit view."""
