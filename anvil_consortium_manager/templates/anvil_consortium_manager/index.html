@@ -45,6 +45,10 @@
               <span class="fa-solid fa-angle-right"></span>
             </li>
             {% endif %}
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:billing_projects:audit' %}" class="icon-link">Audit billing projects</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
           </ul>
         </div>
       </div>
@@ -68,6 +72,10 @@
               <span class="fa-solid fa-angle-right"></span>
             </li>
             {% endif %}
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:accounts:audit' %}" class="icon-link">Audit accounts</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
           </ul>
         </div>
       </div>
@@ -86,9 +94,13 @@
               <a href="{% url 'anvil_consortium_manager:managed_groups:list' %}" class="icon-link">List groups</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:managed_groups:visualization' %}" class="icon-link">Group visualization</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
             {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:managed_groups:new' %}" class="icon-link">Add a group</a>
+              <a href="{% url 'anvil_consortium_manager:managed_groups:new' %}" class="icon-link">Create a new group</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
             <li class ="list-group-item">
@@ -100,6 +112,10 @@
               <span class="fa-solid fa-angle-right"></span>
             </li>
             {% endif %}
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:managed_groups:audit' %}" class="icon-link">Audit groups</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
           </ul>
         </div>
       </div>
@@ -117,15 +133,21 @@
 
           <ul class="list-group list-group-flush">
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:workspaces:list_all' %}" class="icon-link">List all workspaces</a>
-              <span class="fa-solid fa-angle-right"></span>
-            </li>
-            <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:workspaces:landing_page' %}" class="icon-link">Workspace types</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:workspace_group_sharing:list' %}" class="icon-link">Workspace sharing</a>
+              <a href="{% url 'anvil_consortium_manager:workspaces:list_all' %}" class="icon-link">List all workspaces</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspace_group_sharing:new' %}" class="icon-link">Share a workspace with a group</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+            {% endif %}
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:workspaces:audit' %}" class="icon-link">Audit workspaces</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
           </ul>
@@ -142,7 +164,7 @@
   <footer class="py-5">
 
     <div class="d-flex flex-column flex-sm-row justify-content-between py-4 my-4 border-top">
-      <p class="text-muted">© 2022 Adrienne Stilp</p>
+      <p class="text-muted">© 2023 Adrienne Stilp</p>
       <p class="text-muted">AnVIL Consortium Manager v{{ app_version }}</p>
     </div>
   </footer>
