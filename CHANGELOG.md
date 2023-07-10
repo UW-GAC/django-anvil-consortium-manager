@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.17 (2023-07-10)
 
 * Import ManagedGroup membership from AnVIL when importing a ManagedGroup and the members already have records in the app.
 * Sort available workspaces alphabetically in the `WorkspaceImport` view.
