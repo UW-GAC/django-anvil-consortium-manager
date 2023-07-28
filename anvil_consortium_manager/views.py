@@ -1100,7 +1100,7 @@ class WorkspaceDetail(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["workspace_data"] = self.get_workspace_data_object()
+        context["workspace_data_object"] = self.get_workspace_data_object()
         context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
             self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )

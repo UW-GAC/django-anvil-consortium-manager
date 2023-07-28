@@ -6475,8 +6475,8 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         response.context_data
-        self.assertIn("workspace_data", response.context_data)
-        self.assertEqual(response.context_data["workspace_data"], obj)
+        self.assertIn("workspace_data_object", response.context_data)
+        self.assertEqual(response.context_data["workspace_data_object"], obj)
 
     def test_group_sharing_table(self):
         """The workspace group access table exists."""
