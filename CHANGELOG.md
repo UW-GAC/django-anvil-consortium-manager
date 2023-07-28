@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Include a workspace_data_object context variable for the `WorkspaceDetail` and `WorkspaceUpdate` views.
+
 ## 0.17 (2023-07-11)
 
 * Import ManagedGroup membership from AnVIL when importing a ManagedGroup and the members already have records in the app.
