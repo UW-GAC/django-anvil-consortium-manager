@@ -10378,6 +10378,18 @@ class WorkspaceUpdateTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
 
+    def test_context_workspace_data(self):
+        """The view adds the workspace_data object to the context."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        response.context_data
+        self.assertIn("workspace_data_object", response.context_data)
+        self.assertEqual(
+            response.context_data["workspace_data_object"], self.workspace_data
+        )
+
     def test_has_form_in_context(self):
         """Response includes a form."""
         self.client.force_login(self.user)
