@@ -1094,8 +1094,13 @@ class WorkspaceDetail(
         object = self.get_object()
         return object.workspace_type
 
+    def get_workspace_data_object(self):
+        model = self.adapter.get_workspace_data_model()
+        return model.objects.get(workspace=self.object)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["workspace_data"] = self.get_workspace_data_object()
         context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
             self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )

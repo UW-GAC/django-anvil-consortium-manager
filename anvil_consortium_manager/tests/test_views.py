@@ -6443,7 +6443,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
@@ -6463,15 +6463,24 @@ class WorkspaceDetailTest(TestCase):
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo1", workspace_slug="foo2")
 
+    def test_context_workspace_data(self):
+        """The view adds the workspace_data object to the context."""
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        response.context_data
+        self.assertIn("workspace_data", response.context_data)
+        self.assertEqual(response.context_data["workspace_data"], obj)
+
     def test_group_sharing_table(self):
         """The workspace group access table exists."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6482,7 +6491,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_group_sharing_table_none(self):
         """No groups are shown if the workspace has not been shared with any groups."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6490,8 +6499,8 @@ class WorkspaceDetailTest(TestCase):
 
     def test_group_sharing_table_one(self):
         """One group is shown if the workspace has been shared with one group."""
-        workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace.workspace)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6499,8 +6508,10 @@ class WorkspaceDetailTest(TestCase):
 
     def test_group_sharing_table_two(self):
         """Two groups are shown if the workspace has been shared with two groups."""
-        workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupSharingFactory.create_batch(2, workspace=workspace)
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceGroupSharingFactory.create_batch(
+            2, workspace=workspace.workspace
+        )
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6508,7 +6519,9 @@ class WorkspaceDetailTest(TestCase):
 
     def test_shows_workspace_group_sharing_for_only_that_workspace(self):
         """Only shows groups that this workspace has been shared with."""
-        workspace = factories.WorkspaceFactory.create(name="workspace-1")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="workspace-1"
+        )
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
         factories.WorkspaceGroupSharingFactory.create(workspace=other_workspace)
         self.client.force_login(self.user)
@@ -6518,7 +6531,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table(self):
         """The workspace auth domain table exists."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6529,7 +6542,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table_none(self):
         """No groups are shown if the workspace has no auth domains."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6539,9 +6552,9 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table_one(self):
         """One group is shown if the workspace has one auth domain."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         group = factories.ManagedGroupFactory.create()
-        workspace.authorization_domains.add(group)
+        workspace.workspace.authorization_domains.add(group)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6551,11 +6564,11 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table_two(self):
         """Two groups are shown if the workspace has two auth domains."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         group_1 = factories.ManagedGroupFactory.create()
-        workspace.authorization_domains.add(group_1)
+        workspace.workspace.authorization_domains.add(group_1)
         group_2 = factories.ManagedGroupFactory.create()
-        workspace.authorization_domains.add(group_2)
+        workspace.workspace.authorization_domains.add(group_2)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6566,7 +6579,9 @@ class WorkspaceDetailTest(TestCase):
 
     def test_shows_auth_domains_for_only_that_workspace(self):
         """Only shows auth domains for this workspace."""
-        workspace = factories.WorkspaceFactory.create(name="workspace-1")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="workspace-1"
+        )
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
         group = factories.ManagedGroupFactory.create()
         other_workspace.authorization_domains.add(group)
@@ -6589,7 +6604,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
@@ -6598,8 +6613,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:delete",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6608,8 +6623,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:update",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6618,8 +6633,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6628,8 +6643,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
                 },
             ),
@@ -6644,7 +6659,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(view_user)
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertFalse(response.context_data["show_edit_links"])
@@ -6653,8 +6668,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:delete",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6663,8 +6678,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:update",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6673,8 +6688,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6683,8 +6698,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
                 },
             ),
@@ -6697,16 +6712,14 @@ class WorkspaceDetailTest(TestCase):
         # new adapter here.
         workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
         workspace_adapter_registry.register(TestWorkspaceAdapter)
-        workspace = factories.WorkspaceFactory.create(
-            workspace_type=TestWorkspaceAdapter().get_type()
-        )
+        workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertTemplateUsed(response, "test_workspace_detail.html")
 
     def test_context_workspace_type_display_name(self):
         """workspace_type_display_name is present in context."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("workspace_type_display_name", response.context)
@@ -6719,9 +6732,7 @@ class WorkspaceDetailTest(TestCase):
         """workspace_type_display_name is present in context with a custom adapter."""
         workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
         workspace_adapter_registry.register(TestWorkspaceAdapter)
-        workspace = factories.WorkspaceFactory.create(
-            workspace_type=TestWorkspaceAdapter().get_type()
-        )
+        workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertTemplateUsed(response, "test_workspace_detail.html")
@@ -6733,14 +6744,18 @@ class WorkspaceDetailTest(TestCase):
 
     def test_is_locked_true(self):
         """An indicator of whether a workspace is locked appears on the page."""
-        workspace = factories.WorkspaceFactory.create(is_locked=True)
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__is_locked=True
+        )
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertContains(response, "Locked")
 
     def test_is_locked_false(self):
         """An indicator of whether a workspace is locked appears on the page."""
-        workspace = factories.WorkspaceFactory.create(is_locked=False)
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__is_locked=False
+        )
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertNotContains(response, "Locked")
@@ -6757,7 +6772,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceFactory.create(is_locked=True)
+        obj = factories.DefaultWorkspaceDataFactory.create(workspace__is_locked=True)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
@@ -6766,8 +6781,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:delete",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6776,8 +6791,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:update",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6786,8 +6801,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6796,8 +6811,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
                 },
             ),
@@ -6816,7 +6831,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
@@ -6825,8 +6840,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": DefaultWorkspaceAdapter().get_type(),
                 },
             ),
@@ -6836,8 +6851,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": TestWorkspaceAdapter().get_type(),
                 },
             ),
