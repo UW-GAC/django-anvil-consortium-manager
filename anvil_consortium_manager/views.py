@@ -1094,8 +1094,13 @@ class WorkspaceDetail(
         object = self.get_object()
         return object.workspace_type
 
+    def get_workspace_data_object(self):
+        model = self.adapter.get_workspace_data_model()
+        return model.objects.get(workspace=self.object)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["workspace_data_object"] = self.get_workspace_data_object()
         context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
             self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )
@@ -1561,6 +1566,10 @@ class WorkspaceUpdate(
             )
         return obj
 
+    def get_workspace_data_object(self):
+        model = self.adapter.get_workspace_data_model()
+        return model.objects.get(workspace=self.object)
+
     def get_workspace_type(self):
         """Return the workspace type of this workspace."""
         object = self.get_object()
@@ -1599,6 +1608,7 @@ class WorkspaceUpdate(
         """Insert the workspace data formset into the context dict."""
         if "workspace_data_formset" not in kwargs:
             kwargs["workspace_data_formset"] = self.get_workspace_data_formset()
+        kwargs["workspace_data_object"] = self.get_workspace_data_object()
         return super().get_context_data(**kwargs)
 
     def post(self, request, *args, **kwargs):
