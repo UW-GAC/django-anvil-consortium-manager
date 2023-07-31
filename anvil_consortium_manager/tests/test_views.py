@@ -11093,11 +11093,11 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_does_not_delete_when_protected_fk_to_another_model(self):
         """Workspace is not deleted when there is a protected foreign key reference to the workspace."""
-        object = factories.WorkspaceFactory.create()
-        app_models.ProtectedWorkspace.objects.create(workspace=object)
+        object = factories.DefaultWorkspaceDataFactory.create()
+        app_models.ProtectedWorkspace.objects.create(workspace=object.workspace)
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.billing_project.name, object.name),
+            self.get_url(object.workspace.billing_project.name, object.workspace.name),
             {"submit": ""},
             follow=True,
         )
@@ -11111,6 +11111,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Make sure the group still exists.
         self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertEqual(models.DefaultWorkspaceData.objects.count(), 1)
         object.refresh_from_db()
 
     def test_post_does_not_delete_when_workspace_data_has_protected_fk_to_another_model(
@@ -11143,15 +11144,19 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        object = factories.WorkspaceFactory.create(
-            billing_project=billing_project, name="test-workspace", is_locked=True
+        object = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__is_locked=True,
         )
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(object.billing_project.name, object.name), follow=True
+            self.get_url(object.workspace.billing_project.name, object.workspace.name),
+            follow=True,
         )
         # Make sure the workspace still exists.
-        self.assertIn(object, models.Workspace.objects.all())
+        self.assertIn(object.workspace, models.Workspace.objects.all())
+        self.assertIn(object, models.DefaultWorkspaceData.objects.all())
         # Redirects to detail page.
         self.assertRedirects(response, object.get_absolute_url())
         # With a message.
@@ -11166,17 +11171,20 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        object = factories.WorkspaceFactory.create(
-            billing_project=billing_project, name="test-workspace", is_locked=True
+        object = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__is_locked=True,
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.billing_project.name, object.name),
+            self.get_url(object.workspace.billing_project.name, object.workspace.name),
             {"submit": ""},
             follow=True,
         )
         # Make sure the workspace still exists.
-        self.assertIn(object, models.Workspace.objects.all())
+        self.assertIn(object.workspace, models.Workspace.objects.all())
+        self.assertIn(object, models.DefaultWorkspaceData.objects.all())
         # Redirects to detail page.
         self.assertRedirects(response, object.get_absolute_url())
         # With a message.
