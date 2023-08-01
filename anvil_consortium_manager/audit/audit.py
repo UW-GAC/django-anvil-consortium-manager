@@ -1,7 +1,7 @@
 from abc import ABC
 
 from .. import exceptions, models
-from ..anvil_api import AnVILAPIClient
+from ..anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
 class ModelInstanceResult:
@@ -81,6 +81,68 @@ class AnVILAudit(ABC):
 
     def get_not_in_app_results(self):
         return self._not_in_app_results
+
+
+class ManagedGroupAudit(AnVILAudit):
+    """Class to hold audit results for ManagedGroup instances."""
+
+    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    """Error when a ManagedGroup in the app does not exist in AnVIL."""
+
+    ERROR_DIFFERENT_ROLE = "App has a different role in this group"
+    """Error when the service account running the app has a different role on AnVIL."""
+
+    ERROR_GROUP_MEMBERSHIP = "Group membership does not match in AnVIL"
+    """Error when a ManagedGroup has a different record of membership in the app compared to on AnVIL."""
+
+    def run_audit(self):
+        """Run an audit on managed groups in the app."""
+        # Check the list of groups.
+        response = AnVILAPIClient().get_groups()
+        # Change from list of group dictionaries to dictionary of roles. That way we can handle being both
+        # a member and an admin of a group.
+        groups_on_anvil = {}
+        for group_details in response.json():
+            group_name = group_details["groupName"]
+            role = group_details["role"].lower()
+            try:
+                groups_on_anvil[group_name] = groups_on_anvil[group_name] + [role]
+            except KeyError:
+                groups_on_anvil[group_name] = [role]
+        # Audit groups that exist in the app.
+        for group in models.ManagedGroup.objects.all():
+            model_instance_result = ModelInstanceResult(group)
+            try:
+                group_roles = groups_on_anvil.pop(group.name)
+            except KeyError:
+                # Check if the group actually does exist but we're not a member of it.
+                try:
+                    # If this returns a 404 error, then the group actually does not exist.
+                    response = AnVILAPIClient().get_group_email(group.name)
+                    if group.is_managed_by_app:
+                        model_instance_result.add_error(self.ERROR_DIFFERENT_ROLE)
+
+                except AnVILAPIError404:
+                    model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
+                    # Perhaps we want to add has_app_as_member as a field and check that.
+            else:
+                # Check role.
+                if group.is_managed_by_app:
+                    if "admin" not in group_roles:
+                        model_instance_result.add_error(self.ERROR_DIFFERENT_ROLE)
+                    else:
+                        membership_audit = ManagedGroupMembershipAudit(group)
+                        membership_audit.run_audit()
+                        if not membership_audit.ok():
+                            model_instance_result.add_error(self.ERROR_GROUP_MEMBERSHIP)
+                elif not group.is_managed_by_app and "admin" in group_roles:
+                    model_instance_result.add_error(self.ERROR_DIFFERENT_ROLE)
+            # Add the final result for this group to the class results.
+            self.add_model_instance_result(model_instance_result)
+
+        # Check for groups that exist on AnVIL but not the app.
+        for group_name in groups_on_anvil:
+            self.add_not_in_app_result(NotInAppResult(group_name))
 
 
 class ManagedGroupMembershipAudit(AnVILAudit):
@@ -186,14 +248,14 @@ class ManagedGroupMembershipAudit(AnVILAudit):
 
         # Add any admin that the app doesn't know about.
         for member in admins_in_anvil:
-            self._not_in_app_results.append(
+            self.add_not_in_app_result(
                 NotInAppResult(
                     "{}: {}".format(models.GroupAccountMembership.ADMIN, member)
                 )
             )
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
-            self._not_in_app_results.append(
+            self.add_not_in_app_result(
                 NotInAppResult(
                     "{}: {}".format(models.GroupAccountMembership.MEMBER, member)
                 )

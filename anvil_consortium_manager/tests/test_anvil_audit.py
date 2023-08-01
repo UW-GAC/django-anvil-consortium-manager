@@ -7,6 +7,700 @@ from . import api_factories, factories
 from .utils import AnVILAPIMockTestMixin
 
 
+class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests forthe ManagedGroup.anvil_audit method."""
+
+    def get_api_groups_url(self):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1"
+
+    def get_api_url_members(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+        )
+
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return (
+            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+        )
+
+    def test_anvil_audit_no_groups(self):
+        """anvil_audit works correct if there are no ManagedGroups in the app."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+
+    def test_anvil_audit_one_group_managed_by_app_no_errors(self):
+        """anvil_audit works correct if there is one group in the app and it exists on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[api_factories.GroupDetailsAdminFactory(groupName=group.name)]
+            ).response,
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_one_group_managed_by_app_lowercase_role(self):
+        """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[api_factories.GroupDetailsAdminFactory(groupName=group.name)]
+            ).response,
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_one_group_not_managed_by_app_no_errors(self):
+        """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[api_factories.GroupDetailsMemberFactory(groupName=group.name)]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_one_group_not_managed_by_app_no_errors_uppercase_role(self):
+        """anvil_audit works correct if there is one account in the app and it exists on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsFactory(
+                        groupName=group.name, role="Member"
+                    )
+                ]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_one_group_not_on_anvil(self):
+        """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(n_groups=0).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_IN_ANVIL]))
+
+    def test_anvil_audit_one_group_on_anvil_but_app_not_in_group_not_managed_by_app(
+        self,
+    ):
+        """anvil_audit is correct if the group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(n_groups=0).response,
+        )
+        # Add the response.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group.name,
+            status=200,
+            json="FOO@BAR.COM",
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_one_group_managed_by_app_on_anvil_but_app_not_in_group(self):
+        """anvil_audit raises exception if one group exists in the app but not on AnVIL."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(n_groups=0).response,
+        )
+        # Add the response.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group.name,
+            status=200,
+            json="FOO@BAR.COM",
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(
+            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
+        )
+
+    def test_anvil_audit_one_group_admin_in_app_member_on_anvil(self):
+        """anvil_audit raises exception if one group exists in the app as an admin but the role on AnVIL is member."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[api_factories.GroupDetailsMemberFactory(groupName=group.name)]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(
+            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
+        )
+
+    def test_anvil_audit_one_group_member_in_app_admin_on_anvil(self):
+        """anvil_audit raises exception if one group exists in the app as an member but the role on AnVIL is admin."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[api_factories.GroupDetailsAdminFactory(groupName=group.name)]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(
+            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
+        )
+
+    def test_anvil_audit_two_groups_no_errors(self):
+        """anvil_audit works correctly if if two groups exist in both the app and AnVIL."""
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(groupName=group_1.name),
+                    api_factories.GroupDetailsMemberFactory(groupName=group_2.name),
+                ]
+            ).response,
+        )
+        api_url_members = self.get_api_url_members(group_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 2)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group_1)
+        self.assertTrue(record_result.ok())
+        record_result = audit_results.get_result_for_model_instance(group_2)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_two_groups_json_response_order_does_not_matter(self):
+        """Order of groups in the json response does not matter."""
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsMemberFactory(groupName=group_2.name),
+                    api_factories.GroupDetailsAdminFactory(groupName=group_1.name),
+                ]
+            ).response,
+        )
+        api_url_members = self.get_api_url_members(group_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 2)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group_1)
+        self.assertTrue(record_result.ok())
+        record_result = audit_results.get_result_for_model_instance(group_2)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_two_groups_first_not_on_anvil(self):
+        """anvil_audit raises exception if two groups exist in the app but the first is not not on AnVIL."""
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(groupName=group_2.name),
+                ]
+            ).response,
+        )
+        # Add response for the group that is not in the app.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group_1.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Add responses for the group that is in the app.
+        api_url_members = self.get_api_url_members(group_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group_1)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_IN_ANVIL]))
+        record_result = audit_results.get_result_for_model_instance(group_2)
+        self.assertTrue(record_result.ok())
+
+    def test_anvil_audit_two_groups_both_missing(self):
+        """anvil_audit raises exception if there are two groups that exist in the app but not in AnVIL."""
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory().response,
+        )
+        # Add response for the group that is not in the app.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group_1.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Add response for the group that is not in the app.
+        self.anvil_response_mock.add(
+            responses.GET,
+            "https://sam.dsde-prod.broadinstitute.org/api/groups/v1/" + group_2.name,
+            status=404,
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 2)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group_1)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_IN_ANVIL]))
+        record_result = audit_results.get_result_for_model_instance(group_2)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_IN_ANVIL]))
+
+    def test_anvil_audit_one_group_member_missing_in_app(self):
+        """anvil_audit works correctly if the service account is a member of a group not in the app."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsMemberFactory(groupName="test-group")
+                ]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
+        record_result = audit_results.get_not_in_app_results()[0]
+        self.assertEqual(record_result.record, "test-group")
+
+    def test_anvil_audit_one_group_admin_missing_in_app(self):
+        """anvil_audit works correctly if the service account is an admin of a group not in the app."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(groupName="test-group")
+                ]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
+        record_result = audit_results.get_not_in_app_results()[0]
+        self.assertEqual(record_result.record, "test-group")
+
+    def test_anvil_audit_two_groups_missing_in_app(self):
+        """anvil_audit works correctly if there are two groups in AnVIL that aren't in the app."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(
+                        groupName="test-group-admin"
+                    ),
+                    api_factories.GroupDetailsMemberFactory(
+                        groupName="test-group-member"
+                    ),
+                ]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 2)
+        record_result = audit_results.get_not_in_app_results()[0]
+        self.assertEqual(record_result.record, "test-group-admin")
+        record_result = audit_results.get_not_in_app_results()[1]
+        self.assertEqual(record_result.record, "test-group-member")
+
+    def test_fails_membership_audit(self):
+        """Error is reported when a group fails the membership audit."""
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[api_factories.GroupDetailsAdminFactory(groupName=group.name)]
+            ).response,
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(
+            record_result.errors, set([audit_results.ERROR_GROUP_MEMBERSHIP])
+        )
+
+    def test_admin_in_app_both_member_and_admin_on_anvil(self):
+        """anvil_audit works correctly when the app is an admin and AnVIL returns both a member and admin record."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(groupName=group.name),
+                    api_factories.GroupDetailsMemberFactory(groupName=group.name),
+                ]
+            ).response,
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertTrue(record_result.ok())
+
+    def test_admin_in_app_both_member_and_admin_different_order_on_anvil(self):
+        """anvil_audit works correctly when the app is an admin and AnVIL returns both a member and admin record."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsMemberFactory(groupName=group.name),
+                    api_factories.GroupDetailsAdminFactory(groupName=group.name),
+                ]
+            ).response,
+        )
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertTrue(record_result.ok())
+
+    def test_member_in_app_both_member_and_admin_on_anvil(self):
+        """anvil_audit works correctly when the app is a member and AnVIL returns both a member and admin record."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsMemberFactory(groupName=group.name),
+                    api_factories.GroupDetailsAdminFactory(groupName=group.name),
+                ]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(
+            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
+        )
+
+    def test_member_in_app_both_member_and_admin_different_order_on_anvil(self):
+        """anvil_audit works correctly when the app is a member and AnVIL returns both a member and admin record."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(groupName=group.name),
+                    api_factories.GroupDetailsMemberFactory(groupName=group.name),
+                ]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(group)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(
+            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
+        )
+
+
 class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests forthe ManagedGroupMembershipAudit class."""
 
@@ -41,7 +735,6 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
-        self.assertIsInstance(audit_results, audit.ManagedGroupMembershipAudit)
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 0)
