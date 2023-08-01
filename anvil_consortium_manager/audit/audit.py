@@ -7,6 +7,9 @@ from ..anvil_api import AnVILAPIClient, AnVILAPIError404
 class ModelInstanceResult:
     """Class to hold an audit result for a specific instance of a model."""
 
+    # TODO:
+    # - Write tests for this class.
+
     def __init__(self, model_instance):
         self.model_instance = model_instance
         self.errors = set()
@@ -32,6 +35,9 @@ class ModelInstanceResult:
 class NotInAppResult:
     """Class to hold an audit result for a record that is not present in the app."""
 
+    # TODO:
+    # - Write tests for this class.
+
     def __init__(self, record):
         self.record = record
 
@@ -41,6 +47,13 @@ class NotInAppResult:
 
 class AnVILAudit(ABC):
     """Abstract base class for AnVIL audit results."""
+
+    # TODO:
+    # - in add_not_in_app_result, check that the result hasn't already been added.
+    # - in add_model_instance_result, check that the result hasn't been added yet.
+    # - add a model_class field, in add_model_instance_result check that the model instance is the correct type
+    #   - This may not work when auditing group membership, since that has both group and account member records.
+    # - Write tests for this class.
 
     def __init__(self):
         self._model_instance_results = []
