@@ -51,6 +51,9 @@ class AnVILAudit(ABC):
         not_in_app_ok = len(self._not_in_app_results) == 0
         return model_instances_ok and not_in_app_ok
 
+    def run_audit(self):
+        raise NotImplementedError("Define a run_audit method.")
+
     def add_not_in_app_result(self, result):
         if not isinstance(result, NotInAppResult):
             raise ValueError("result must be an instance of NotInAppResult.")
