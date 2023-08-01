@@ -100,7 +100,7 @@ class AnVILAudit(ABC):
 
 
 class ManagedGroupAudit(AnVILAudit):
-    """Class to hold audit results for ManagedGroup instances."""
+    """Class to runs an audit for ManagedGroup instances."""
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     """Error when a ManagedGroup in the app does not exist in AnVIL."""
@@ -162,7 +162,7 @@ class ManagedGroupAudit(AnVILAudit):
 
 
 class ManagedGroupMembershipAudit(AnVILAudit):
-    """Class to hold audit results for the membership records of a specific ManagedGroup instance."""
+    """Class that runs an audit for membership of a specific ManagedGroup instance."""
 
     # Error strings for this class.
     ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL = "Account not an admin in AnVIL"
