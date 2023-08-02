@@ -312,6 +312,83 @@ class ManagedGroupMembershipAudit(AnVILAudit):
             )
 
 
+class WorkspaceAudit(AnVILAudit):
+    """Class to runs an audit for Workspace instances."""
+
+    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    """Error when a Workspace in the app does not exist on AnVIL."""
+
+    ERROR_NOT_OWNER_ON_ANVIL = "Not an owner on AnVIL"
+    """Error when the service account running the app is not an owner of the Workspace on AnVIL."""
+
+    ERROR_DIFFERENT_AUTH_DOMAINS = "Has different auth domains on AnVIL"
+    """Error when the Workspace has different auth domains in the app and on AnVIL."""
+
+    ERROR_WORKSPACE_SHARING = "Workspace sharing does not match on AnVIL"
+    """Error when a Workspace is shared with different ManagedGroups in the app and on AnVIL."""
+
+    ERROR_DIFFERENT_LOCK = "Workspace lock status does not match on AnVIL"
+    """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
+
+    def run_audit(self):
+        """Run an audit on Workspaces in the app."""
+        # Check the list of workspaces.
+        fields = [
+            "workspace.namespace",
+            "workspace.name",
+            "workspace.authorizationDomain",
+            "workspace.isLocked,accessLevel",
+        ]
+        response = AnVILAPIClient().list_workspaces(fields=",".join(fields))
+        workspaces_on_anvil = response.json()
+        for workspace in models.Workspace.objects.all():
+            model_instance_result = ModelInstanceResult(workspace)
+            try:
+                i = next(
+                    idx
+                    for idx, x in enumerate(workspaces_on_anvil)
+                    if (
+                        x["workspace"]["name"] == workspace.name
+                        and x["workspace"]["namespace"]
+                        == workspace.billing_project.name
+                    )
+                )
+            except StopIteration:
+                model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
+            else:
+                # Check role.
+                workspace_details = workspaces_on_anvil.pop(i)
+                if workspace_details["accessLevel"] != "OWNER":
+                    model_instance_result.add_error(self.ERROR_NOT_OWNER_ON_ANVIL)
+                elif not workspace.anvil_audit_sharing().ok():
+                    # Since we're the owner, check workspace access.
+                    model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
+                # Check auth domains.
+                auth_domains_on_anvil = [
+                    x["membersGroupName"]
+                    for x in workspace_details["workspace"]["authorizationDomain"]
+                ]
+                auth_domains_in_app = workspace.authorization_domains.all().values_list(
+                    "name", flat=True
+                )
+                if set(auth_domains_on_anvil) != set(auth_domains_in_app):
+                    model_instance_result.add_error(self.ERROR_DIFFERENT_AUTH_DOMAINS)
+                # Check lock status.
+                if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
+                    model_instance_result.add_error(self.ERROR_DIFFERENT_LOCK)
+
+            self.add_model_instance_result(model_instance_result)
+
+        # Check for remaining workspaces on AnVIL where we are OWNER.
+        not_in_app = [
+            "{}/{}".format(x["workspace"]["namespace"], x["workspace"]["name"])
+            for x in workspaces_on_anvil
+            if x["accessLevel"] == "OWNER"
+        ]
+        for workspace_name in not_in_app:
+            self.add_not_in_app_result(NotInAppResult(workspace_name))
+
+
 class WorkspaceSharingAudit(AnVILAudit):
     """Class that runs an audit for sharing of a specific Workspace instance."""
 
