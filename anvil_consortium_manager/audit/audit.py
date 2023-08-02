@@ -116,6 +116,23 @@ class BillingProjectAudit(AnVILAudit):
             self.add_model_instance_result(model_instance_result)
 
 
+class AccountAudit(AnVILAudit):
+    """Class that runs an audit for Account instances."""
+
+    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    """Error when the Account does not exist in AnVIL."""
+
+    def run_audit(self):
+        # Only checks active accounts.
+        for account in models.Account.objects.filter(
+            status=models.Account.ACTIVE_STATUS
+        ).all():
+            model_instance_result = ModelInstanceResult(account)
+            if not account.anvil_exists():
+                model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
+            self.add_model_instance_result(model_instance_result)
+
+
 class ManagedGroupAudit(AnVILAudit):
     """Class to runs an audit for ManagedGroup instances."""
 
