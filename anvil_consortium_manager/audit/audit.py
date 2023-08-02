@@ -1,9 +1,12 @@
 from abc import ABC
 
+import django_tables2 as tables
+
 from .. import exceptions, models
 from ..anvil_api import AnVILAPIClient, AnVILAPIError404
 
 
+# Audit classes for individual model instances:
 class ModelInstanceResult:
     """Class to hold an audit result for a specific instance of a model."""
 
@@ -45,6 +48,30 @@ class NotInAppResult:
         return self.record
 
 
+# Tables for reporting audit results:
+class VerifiedTable(tables.Table):
+    """Table for verified results."""
+
+    model_instance = tables.columns.Column(linkify=True, orderable=False)
+
+
+# Tables for reporting audit results:
+class ErrorTable(tables.Table):
+    """Table for results with errors."""
+
+    model_instance = tables.columns.Column(linkify=True, orderable=False)
+    errors = tables.columns.Column(orderable=False)
+
+    def render_errors(self, record):
+        return ", ".join(record.errors)
+
+
+class NotInAppTable(tables.Table):
+
+    record = tables.columns.Column(orderable=False)
+
+
+# Audit classes for object classes:
 class AnVILAudit(ABC):
     """Abstract base class for AnVIL audit results."""
 
