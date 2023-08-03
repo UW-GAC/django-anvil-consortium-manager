@@ -413,9 +413,12 @@ class WorkspaceAudit(AnVILAudit):
                 workspace_details = workspaces_on_anvil.pop(i)
                 if workspace_details["accessLevel"] != "OWNER":
                     model_instance_result.add_error(self.ERROR_NOT_OWNER_ON_ANVIL)
-                elif not workspace.anvil_audit_sharing().ok():
+                else:
                     # Since we're the owner, check workspace access.
-                    model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
+                    sharing_audit = WorkspaceSharingAudit(workspace)
+                    sharing_audit.run_audit()
+                    if not sharing_audit.ok():
+                        model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
                 # Check auth domains.
                 auth_domains_on_anvil = [
                     x["membersGroupName"]
