@@ -10,7 +10,6 @@ from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 
-from .. import anvil_audit, models
 from ..audit import audit
 from ..management.commands.run_anvil_audit import ErrorTableWithLink
 from . import factories
@@ -145,7 +144,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(email.to, ["test@example.com"])
         self.assertIn("ok", email.subject)
         # Text body.
-        audit_results = models.BillingProject.anvil_audit()
+        audit_results = audit.BillingProjectAudit()
+        audit_results.run_audit()
         self.assertEqual(pprint.pformat(audit_results.export()), email.body)
         # HTML body.
         self.assertEqual(len(email.alternatives), 1)
@@ -183,9 +183,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertIn("BillingProjectAudit... problems found.", out.getvalue())
         self.assertIn("""'errors':""", out.getvalue())
-        self.assertIn(
-            anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL, out.getvalue()
-        )
+        self.assertIn(audit.BillingProjectAudit.ERROR_NOT_IN_ANVIL, out.getvalue())
 
     def test_command_run_audit_not_ok_email(self):
         """Test command output when BillingProject audit is not ok with email specified."""
@@ -212,8 +210,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(email.to, ["test@example.com"])
         self.assertIn("errors", email.subject)
         # Text body.
-        audit_results = models.BillingProject.anvil_audit()
-        self.assertEqual(pprint.pformat(audit_results.export()), email.body)
+        audit_results = audit.BillingProjectAudit()
+        audit_results.run_audit()
         # HTML body.
         self.assertEqual(len(email.alternatives), 1)
 

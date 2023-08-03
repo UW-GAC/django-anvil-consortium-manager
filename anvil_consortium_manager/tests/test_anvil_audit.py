@@ -3784,18 +3784,6 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
         )
 
-        audit_results = self.workspace.anvil_audit_sharing()
-        self.assertFalse(audit_results.ok())
-        self.assertEqual(audit_results.get_verified(), set([]))
-        self.assertEqual(
-            audit_results.get_errors(),
-            {
-                access_1: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
-                access_2: [audit_results.ERROR_NOT_SHARED_IN_ANVIL],
-            },
-        )
-        self.assertEqual(audit_results.get_not_in_app(), set())
-
     def test_one_group_owner_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group owner not in the app."""
         self.update_api_response("test-writer@firecloud.org", "OWNER")
