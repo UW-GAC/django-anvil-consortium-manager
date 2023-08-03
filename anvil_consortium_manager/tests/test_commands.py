@@ -11,7 +11,8 @@ from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 
 from .. import anvil_audit, models
-from ..management.commands.run_anvil_audit import ErrorsTable, NotInAppTable
+from ..audit import audit
+from ..management.commands.run_anvil_audit import ErrorTableWithLink
 from . import factories
 from .utils import AnVILAPIMockTestMixin
 
@@ -52,10 +53,10 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", stdout=out)
-        self.assertIn("BillingProject... ok!", out.getvalue())
-        self.assertIn("Account... ok!", out.getvalue())
-        self.assertIn("ManagedGroup... ok!", out.getvalue())
-        self.assertIn("Workspace... ok!", out.getvalue())
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
+        self.assertIn("AccountAudit... ok!", out.getvalue())
+        self.assertIn("ManagedGroupAudit... ok!", out.getvalue())
+        self.assertIn("WorkspaceAudit... ok!", out.getvalue())
 
     def test_command_output_multiple_models(self):
         """Can audit multiple models at the same time."""
@@ -66,8 +67,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             models=["BillingProject", "Account"],
             stdout=out,
         )
-        self.assertIn("BillingProject... ok!", out.getvalue())
-        self.assertIn("Account... ok!", out.getvalue())
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
+        self.assertIn("AccountAudit... ok!", out.getvalue())
 
     def test_command_output_billing_project_no_instances(self):
         """Test command output."""
@@ -75,13 +76,13 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("BillingProject... ok!", out.getvalue())
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
 
     def test_command_output_account_no_instances(self):
         """Test command output."""
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", models=["Account"], stdout=out)
-        self.assertIn("Account... ok!", out.getvalue())
+        self.assertIn("AccountAudit... ok!", out.getvalue())
 
     def test_command_output_managed_group_no_instances(self):
         """Test command output."""
@@ -95,7 +96,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out
         )
-        self.assertIn("ManagedGroup... ok!", out.getvalue())
+        self.assertIn("ManagedGroupAudit... ok!", out.getvalue())
 
     def test_command_output_workspace_no_instances(self):
         """Test command output."""
@@ -107,7 +108,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)
-        self.assertIn("Workspace... ok!", out.getvalue())
+        self.assertIn("WorkspaceAudit... ok!", out.getvalue())
 
     def test_command_run_audit_one_instance_ok(self):
         """Test command output."""
@@ -119,7 +120,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("BillingProject... ok!", out.getvalue())
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
         self.assertNotIn("errors", out.getvalue())
         self.assertNotIn("not_in_app", out.getvalue())
 
@@ -137,7 +138,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             email="test@example.com",
             stdout=out,
         )
-        self.assertIn("BillingProject... ok!", out.getvalue())
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
         # One message has been sent by default.
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
@@ -164,7 +165,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             errors_only=True,
             stdout=out,
         )
-        self.assertIn("BillingProject... ok!", out.getvalue())
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
         # No message has been sent by default.
         self.assertEqual(len(mail.outbox), 0)
 
@@ -180,7 +181,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("BillingProject... problems found.", out.getvalue())
+        self.assertIn("BillingProjectAudit... problems found.", out.getvalue())
         self.assertIn("""'errors':""", out.getvalue())
         self.assertIn(
             anvil_audit.BillingProjectAuditResults.ERROR_NOT_IN_ANVIL, out.getvalue()
@@ -202,7 +203,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             email="test@example.com",
             stdout=out,
         )
-        self.assertIn("BillingProject... problems found.", out.getvalue())
+        self.assertIn("BillingProjectAudit... problems found.", out.getvalue())
         # Not printed to stdout.
         self.assertIn("""'errors':""", out.getvalue())
         # One message has been sent.
@@ -277,7 +278,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
         )
-        self.assertIn("BillingProject... API error.", out.getvalue())
+        self.assertIn("BillingProjectAudit... API error.", out.getvalue())
 
     # This test is complicated so skipping for now.
     # When trying to change the settings, the test attempts to repopulate the
@@ -302,13 +303,9 @@ class RunAnVILAuditTablesTest(TestCase):
     def setUp(self):
         super().setUp()
 
-        class GenericAuditResults(anvil_audit.AnVILAuditResults):
+        class GenericAuditResults(audit.AnVILAudit):
             TEST_ERROR_1 = "Test error 1"
             TEST_ERROR_2 = "Test error 2"
-            allowed_errors = (
-                TEST_ERROR_1,
-                TEST_ERROR_2,
-            )
 
         self.audit_results = GenericAuditResults()
         # It doesn't matter what model we use at this point, so just pick Account.
@@ -317,23 +314,14 @@ class RunAnVILAuditTablesTest(TestCase):
     def test_errors_table(self):
         """Errors table is correct."""
         obj_verified = self.model_factory.create()
-        self.audit_results.add_verified(obj_verified)
+        self.audit_results.add_model_instance_result(
+            audit.ModelInstanceResult(obj_verified)
+        )
         obj_error = self.model_factory.create()
-        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
-        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_2)
-        self.audit_results.add_not_in_app("foo")
-        export = self.audit_results.export()
-        table = ErrorsTable(export["errors"])
+        error_result = audit.ModelInstanceResult(obj_error)
+        error_result.add_error(self.audit_results.TEST_ERROR_1)
+        error_result.add_error(self.audit_results.TEST_ERROR_2)
+        self.audit_results.add_model_instance_result(error_result)
+        self.audit_results.add_not_in_app_result(audit.NotInAppResult("foo"))
+        table = ErrorTableWithLink(self.audit_results.get_error_results())
         self.assertEqual(table.rows[0].get_cell("errors"), "Test error 1, Test error 2")
-
-    def test_not_in_app_table(self):
-        """NotInApp table is correct."""
-        obj_verified = self.model_factory.create()
-        self.audit_results.add_verified(obj_verified)
-        obj_error = self.model_factory.create()
-        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_1)
-        self.audit_results.add_error(obj_error, self.audit_results.TEST_ERROR_2)
-        self.audit_results.add_not_in_app("foo")
-        export = self.audit_results.export()
-        table = NotInAppTable(export["not_in_app"])
-        self.assertEqual(table.rows[0].get_cell("instance"), "foo")

@@ -22,6 +22,9 @@ class ModelInstanceResult:
             self.model_instance == other.model_instance and self.errors == other.errors
         )
 
+    def __str__(self):
+        return self.model_instance
+
     def add_error(self, error):
         """Add an error to the audit result for this model instance."""
         self.errors.add(error)
@@ -63,12 +66,12 @@ class ErrorTable(tables.Table):
     errors = tables.columns.Column(orderable=False)
 
     def render_errors(self, record):
-        return ", ".join(record.errors)
+        return ", ".join(sorted(record.errors))
 
 
 class NotInAppTable(tables.Table):
 
-    record = tables.columns.Column(orderable=False)
+    record = tables.columns.Column(orderable=False, empty_values=())
 
 
 # Audit classes for object classes:
@@ -124,6 +127,29 @@ class AnVILAudit(ABC):
 
     def get_not_in_app_results(self):
         return self._not_in_app_results
+
+    def export(
+        self, include_verified=True, include_errors=True, include_not_in_app=True
+    ):
+        """Return a dictionary representation of the audit results."""
+        exported_results = {}
+        if include_verified:
+            exported_results["verified"] = [
+                {"id": result.model_instance.pk, "instance": result.model_instance}
+                for result in self.get_verified_results()
+            ]
+        if include_errors:
+            exported_results["errors"] = [
+                {
+                    "id": result.model_instance.pk,
+                    "instance": result.model_instance,
+                    "errors": list(result.errors),
+                }
+                for result in self.get_error_results()
+            ]
+        if include_not_in_app:
+            exported_results["not_in_app"] = list(self.get_not_in_app_results())
+        return exported_results
 
 
 class BillingProjectAudit(AnVILAudit):
