@@ -3,6 +3,7 @@
 ## Devel
 
 * Include a workspace_data_object context variable for the `WorkspaceDetail` and `WorkspaceUpdate` views.
+* Refactor auditing classes.
 
 ## 0.17 (2023-07-11)
 
