@@ -91,6 +91,47 @@ class NotInAppResultTest(TestCase):
         self.assertNotEqual(audit.NotInAppResult("bar"), result)
 
 
+class VerifiedTableTest(TestCase):
+    def test_zero_rows(self):
+        results = []
+        table = audit.VerifiedTable(results)
+        self.assertEqual(len(table.rows), 0)
+
+    def test_one_row(self):
+        results = [audit.ModelInstanceResult(factories.AccountFactory())]
+        table = audit.VerifiedTable(results)
+        self.assertEqual(len(table.rows), 1)
+
+    def test_two_rows(self):
+        results = [
+            audit.ModelInstanceResult(factories.AccountFactory()),
+            audit.ModelInstanceResult(factories.AccountFactory()),
+        ]
+        table = audit.VerifiedTable(results)
+        self.assertEqual(len(table.rows), 2)
+
+
+class ErrorTableTest(TestCase):
+    def test_zero_rows(self):
+        results = []
+        table = audit.ErrorTable(results)
+        self.assertEqual(len(table.rows), 0)
+
+    def test_one_row(self):
+        results = [audit.ModelInstanceResult(factories.AccountFactory())]
+        table = audit.ErrorTable(results)
+        self.assertEqual(len(table.rows), 1)
+
+    def test_two_rows(self):
+        result_1 = audit.ModelInstanceResult(factories.AccountFactory())
+        result_1.add_error("foo")
+        result_2 = audit.ModelInstanceResult(factories.AccountFactory())
+        result_2.add_error("bar")
+        results = [result_1, result_2]
+        table = audit.ErrorTable(results)
+        self.assertEqual(len(table.rows), 2)
+
+
 class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the BillingProject.anvil_audit method."""
 
