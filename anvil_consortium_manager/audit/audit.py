@@ -100,16 +100,37 @@ class AnVILAudit(ABC):
     def run_audit(self):
         raise NotImplementedError("Define a run_audit method.")
 
-    def add_not_in_app_result(self, result):
+    def add_result(self, result):
+        if isinstance(result, NotInAppResult):
+            self._add_not_in_app_result(result)
+        elif isinstance(result, ModelInstanceResult):
+            self._add_model_instance_result(result)
+        else:
+            raise ValueError(
+                "result must be a ModelInstanceResult or a NotInAppResult."
+            )
+
+    def _add_not_in_app_result(self, result):
         if not isinstance(result, NotInAppResult):
             raise ValueError("result must be an instance of NotInAppResult.")
         # Check that it hasn't been added yet.
+        check = [x for x in self._not_in_app_results if x == result]
+        if len(check) > 0:
+            raise ValueError("Already added a result for {}.".format(result.record))
         self._not_in_app_results.append(result)
 
-    def add_model_instance_result(self, result):
+    def _add_model_instance_result(self, result):
         if not isinstance(result, ModelInstanceResult):
             raise ValueError("result must be an instance of ModelInstanceResult.")
-        # Check that it hasn't been added yet.
+        check = [
+            x
+            for x in self._model_instance_results
+            if x.model_instance == result.model_instance
+        ]
+        if len(check) > 0:
+            raise ValueError(
+                "Already added a result for {}.".format(result.model_instance)
+            )
         self._model_instance_results.append(result)
 
     def get_result_for_model_instance(self, model_instance):
@@ -151,7 +172,9 @@ class AnVILAudit(ABC):
                 for result in self.get_error_results()
             ]
         if include_not_in_app:
-            exported_results["not_in_app"] = list(self.get_not_in_app_results())
+            exported_results["not_in_app"] = list(
+                sorted([x.record for x in self.get_not_in_app_results()])
+            )
         return exported_results
 
 
@@ -169,7 +192,7 @@ class BillingProjectAudit(AnVILAudit):
             model_instance_result = ModelInstanceResult(billing_project)
             if not billing_project.anvil_exists():
                 model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
-            self.add_model_instance_result(model_instance_result)
+            self.add_result(model_instance_result)
 
 
 class AccountAudit(AnVILAudit):
@@ -186,7 +209,7 @@ class AccountAudit(AnVILAudit):
             model_instance_result = ModelInstanceResult(account)
             if not account.anvil_exists():
                 model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
-            self.add_model_instance_result(model_instance_result)
+            self.add_result(model_instance_result)
 
 
 class ManagedGroupAudit(AnVILAudit):
@@ -244,11 +267,11 @@ class ManagedGroupAudit(AnVILAudit):
                 elif not group.is_managed_by_app and "admin" in group_roles:
                     model_instance_result.add_error(self.ERROR_DIFFERENT_ROLE)
             # Add the final result for this group to the class results.
-            self.add_model_instance_result(model_instance_result)
+            self.add_result(model_instance_result)
 
         # Check for groups that exist on AnVIL but not the app.
         for group_name in groups_on_anvil:
-            self.add_not_in_app_result(NotInAppResult(group_name))
+            self.add_result(NotInAppResult(group_name))
 
 
 class ManagedGroupMembershipAudit(AnVILAudit):
@@ -324,7 +347,7 @@ class ManagedGroupMembershipAudit(AnVILAudit):
                     model_instance_result.add_error(
                         self.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL
                     )
-            self.add_model_instance_result(model_instance_result)
+            self.add_result(model_instance_result)
 
         # Check group-group membership.
         for membership in self.managed_group.child_memberships.all():
@@ -350,18 +373,18 @@ class ManagedGroupMembershipAudit(AnVILAudit):
                     model_instance_result.add_error(
                         self.ERROR_GROUP_MEMBER_NOT_IN_ANVIL
                     )
-            self.add_model_instance_result(model_instance_result)
+            self.add_result(model_instance_result)
 
         # Add any admin that the app doesn't know about.
         for member in admins_in_anvil:
-            self.add_not_in_app_result(
+            self.add_result(
                 NotInAppResult(
                     "{}: {}".format(models.GroupAccountMembership.ADMIN, member)
                 )
             )
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
-            self.add_not_in_app_result(
+            self.add_result(
                 NotInAppResult(
                     "{}: {}".format(models.GroupAccountMembership.MEMBER, member)
                 )
@@ -436,7 +459,7 @@ class WorkspaceAudit(AnVILAudit):
                 if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
                     model_instance_result.add_error(self.ERROR_DIFFERENT_LOCK)
 
-            self.add_model_instance_result(model_instance_result)
+            self.add_result(model_instance_result)
 
         # Check for remaining workspaces on AnVIL where we are OWNER.
         not_in_app = [
@@ -445,7 +468,7 @@ class WorkspaceAudit(AnVILAudit):
             if x["accessLevel"] == "OWNER"
         ]
         for workspace_name in not_in_app:
-            self.add_not_in_app_result(NotInAppResult(workspace_name))
+            self.add_result(NotInAppResult(workspace_name))
 
 
 class WorkspaceSharingAudit(AnVILAudit):
@@ -502,10 +525,10 @@ class WorkspaceSharingAudit(AnVILAudit):
                 if access_details["canShare"] != can_share:
                     model_instance_result.add_error(self.ERROR_DIFFERENT_CAN_SHARE)
             # Save the results for this model instance.
-            self.add_model_instance_result(model_instance_result)
+            self.add_result(model_instance_result)
 
         # Add any access that the app doesn't know about.
         for key in acl_in_anvil:
-            self.add_not_in_app_result(
+            self.add_result(
                 NotInAppResult("{}: {}".format(acl_in_anvil[key]["accessLevel"], key))
             )

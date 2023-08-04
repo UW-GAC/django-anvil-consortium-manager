@@ -132,6 +132,311 @@ class ErrorTableTest(TestCase):
         self.assertEqual(len(table.rows), 2)
 
 
+class AnVILAuditTest(TestCase):
+    """Tests for the AnVILAudit abstract base class."""
+
+    def setUp(self):
+        super().setUp()
+
+        class GenericAudit(audit.AnVILAudit):
+            TEST_ERROR_1 = "Test error 1"
+            TEST_ERROR_2 = "Test error 2"
+
+        self.audit_results = GenericAudit()
+        # It doesn't matter what model we use at this point, so just pick Account.
+        self.model_factory = factories.AccountFactory
+
+    def test_init(self):
+        """Init method works as expected."""
+        self.assertEqual(len(self.audit_results._model_instance_results), 0)
+        self.assertEqual(len(self.audit_results._not_in_app_results), 0)
+
+    def test_ok_no_results(self):
+        """ok() returns True when there are no results."""
+        self.assertTrue(self.audit_results.ok())
+
+    def test_ok_one_result_ok(self):
+        """ok() returns True when there is one ok result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result)
+        self.assertTrue(self.audit_results.ok())
+
+    def test_ok_two_results_ok(self):
+        """ok() returns True when there is one ok result."""
+        model_instance_result_1 = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result_1)
+        model_instance_result_2 = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result_2)
+        self.assertTrue(self.audit_results.ok())
+
+    def test_ok_one_result_with_errors(self):
+        """ok() returns True when there is one ok result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result.add_error("foo")
+        self.audit_results.add_result(model_instance_result)
+        self.assertFalse(self.audit_results.ok())
+
+    def test_ok_one_not_in_app(self):
+        """ok() returns True when there are no results."""
+        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.assertFalse(self.audit_results.ok())
+
+    def test_run_audit_not_implemented(self):
+        with self.assertRaises(NotImplementedError):
+            self.audit_results.run_audit()
+
+    def test_add_result_not_in_app(self):
+        """Can add a NotInAppResult."""
+        not_in_app_result = audit.NotInAppResult("foo")
+        self.audit_results.add_result(not_in_app_result)
+        self.assertEqual(len(self.audit_results._not_in_app_results), 1)
+
+    def test_add_result_wrong_class(self):
+        """Can add a NotInAppResult."""
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result("foo")
+
+    def test_add_result_duplicate_not_in_app(self):
+        """Cannot add a duplicate NotInAppResult."""
+        not_in_app_result = audit.NotInAppResult("foo")
+        self.audit_results.add_result(not_in_app_result)
+        # import ipdb; ipdb.set_trace()
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result(not_in_app_result)
+        self.assertEqual(len(self.audit_results._not_in_app_results), 1)
+
+    def test_add_result_not_in_app_same_record(self):
+        """Cannot add a duplicate NotInAppResult."""
+        not_in_app_result = audit.NotInAppResult("foo")
+        self.audit_results.add_result(not_in_app_result)
+        # import ipdb; ipdb.set_trace()
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.assertEqual(len(self.audit_results._not_in_app_results), 1)
+
+    def test_add_result_model_instance(self):
+        """Can add a model instance result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results._model_instance_results), 1)
+
+    def test_add_result_duplicate_model_instance_result(self):
+        """Cannot add a duplicate model instance result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result)
+        # import ipdb; ipdb.set_trace()
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results._model_instance_results), 1)
+
+    def test_add_result_second_result_for_same_model_instance(self):
+        obj = self.model_factory()
+        model_instance_result_1 = audit.ModelInstanceResult(obj)
+        self.audit_results.add_result(model_instance_result_1)
+        model_instance_result_2 = audit.ModelInstanceResult(obj)
+        # import ipdb; ipdb.set_trace()
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result(model_instance_result_2)
+        self.assertEqual(len(self.audit_results._model_instance_results), 1)
+        self.assertEqual(
+            self.audit_results._model_instance_results, [model_instance_result_1]
+        )
+
+    def test_add_result_second_result_for_same_model_instance_with_error(self):
+        obj = self.model_factory()
+        model_instance_result_1 = audit.ModelInstanceResult(obj)
+        self.audit_results.add_result(model_instance_result_1)
+        model_instance_result_2 = audit.ModelInstanceResult(obj)
+        model_instance_result_2.add_error("Foo")
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result(model_instance_result_2)
+        self.assertEqual(len(self.audit_results._model_instance_results), 1)
+        self.assertEqual(
+            self.audit_results._model_instance_results, [model_instance_result_1]
+        )
+
+    def test_get_result_for_model_instance_no_matches(self):
+        obj = self.model_factory()
+        audit.ModelInstanceResult(obj)
+        with self.assertRaises(ValueError):
+            self.audit_results.get_result_for_model_instance(obj)
+
+    def test_get_result_for_model_instance_one_match(self):
+        obj = self.model_factory()
+        model_instance_result = audit.ModelInstanceResult(obj)
+        self.audit_results.add_result(model_instance_result)
+        result = self.audit_results.get_result_for_model_instance(obj)
+        self.assertIs(result, model_instance_result)
+
+    def test_get_verified_results_no_results(self):
+        """get_verified_results returns an empty list when there are no results."""
+        self.assertEqual(len(self.audit_results.get_verified_results()), 0)
+
+    def test_get_verified_results_one_verified_result(self):
+        """get_verified_results returns a list when there is one result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results.get_verified_results()), 1)
+        self.assertIn(model_instance_result, self.audit_results.get_verified_results())
+
+    def test_get_error_results_two_verified_result(self):
+        """get_verified_results returns a list of lenght two when there are two verified results."""
+        model_instance_result_1 = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result_1)
+        model_instance_result_2 = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result_2)
+        self.assertEqual(len(self.audit_results.get_verified_results()), 2)
+        self.assertIn(
+            model_instance_result_1, self.audit_results.get_verified_results()
+        )
+        self.assertIn(
+            model_instance_result_2, self.audit_results.get_verified_results()
+        )
+
+    def test_get_verified_results_one_error_result(self):
+        """get_verified_results returns a list of lenght zero when there is one error result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result.add_error("foo")
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results.get_verified_results()), 0)
+
+    def test_get_verified_results_one_not_in_app_result(self):
+        """get_verified_results returns a list of lenght zero when there is one not_in_app result."""
+        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.assertEqual(len(self.audit_results.get_verified_results()), 0)
+
+    def test_get_error_results_no_results(self):
+        """get_error_results returns an empty list when there are no results."""
+        self.assertEqual(len(self.audit_results.get_error_results()), 0)
+
+    def test_get_error_results_one_verified_result(self):
+        """get_error_results returns a list of length zero when there is one verified result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results.get_error_results()), 0)
+
+    def test_get_error_results_one_error_result(self):
+        """get_error_results returns a list of lenght one when there is one error result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result.add_error("foo")
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results.get_error_results()), 1)
+        self.assertIn(model_instance_result, self.audit_results.get_error_results())
+
+    def test_get_error_results_two_error_result(self):
+        """get_error_results returns a list of lenght two when there is one result."""
+        model_instance_result_1 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_1.add_error("foo")
+        self.audit_results.add_result(model_instance_result_1)
+        model_instance_result_2 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_2.add_error("foo")
+        self.audit_results.add_result(model_instance_result_2)
+        self.assertEqual(len(self.audit_results.get_error_results()), 2)
+        self.assertIn(model_instance_result_1, self.audit_results.get_error_results())
+        self.assertIn(model_instance_result_2, self.audit_results.get_error_results())
+
+    def test_get_error_results_one_not_in_app_result(self):
+        """get_error_results returns a list of length zero when there is one not_in_app result."""
+        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.assertEqual(len(self.audit_results.get_error_results()), 0)
+
+    def test_get_not_in_app_results_no_results(self):
+        """get_not_in_app_results returns an empty list when there are no results."""
+        self.assertEqual(len(self.audit_results.get_not_in_app_results()), 0)
+
+    def test_get_not_in_app_results_one_verified_result(self):
+        """get_not_in_app_results returns a list of length zero when there is one verified result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results.get_not_in_app_results()), 0)
+
+    def test_get_not_in_app_results_one_error_result(self):
+        """get_not_in_app_results returns a list of lenght one when there is one error result."""
+        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result.add_error("foo")
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results.get_not_in_app_results()), 0)
+
+    def test_get_not_in_app_results_one_not_in_app_result(self):
+        """get_not_in_app_results returns a list of length zero when there is one not_in_app result."""
+        result = audit.NotInAppResult("foo")
+        self.audit_results.add_result(result)
+        self.assertEqual(len(self.audit_results.get_not_in_app_results()), 1)
+        self.assertIn(result, self.audit_results.get_not_in_app_results())
+
+    def test_get_not_in_app_results_two_not_in_app_results(self):
+        """get_not_in_app_results returns a list of lenght two when there is one result."""
+        result_1 = audit.NotInAppResult("foo")
+        self.audit_results.add_result(result_1)
+        result_2 = audit.NotInAppResult("bar")
+        self.audit_results.add_result(result_2)
+        self.assertEqual(len(self.audit_results.get_not_in_app_results()), 2)
+        self.assertIn(result_1, self.audit_results.get_not_in_app_results())
+        self.assertIn(result_2, self.audit_results.get_not_in_app_results())
+
+    def test_export(self):
+        # One Verified result.
+        verified_result = audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(verified_result)
+        # One error result.
+        error_result = audit.ModelInstanceResult(self.model_factory())
+        error_result.add_error("foo")
+        self.audit_results.add_result(error_result)
+        # Not in app result.
+        not_in_app_result = audit.NotInAppResult("bar")
+        self.audit_results.add_result(not_in_app_result)
+        # Check export.
+        exported_data = self.audit_results.export()
+        self.assertIn("verified", exported_data)
+        self.assertEqual(
+            exported_data["verified"],
+            [
+                {
+                    "id": verified_result.model_instance.pk,
+                    "instance": verified_result.model_instance,
+                }
+            ],
+        )
+        self.assertIn("errors", exported_data)
+        self.assertEqual(
+            exported_data["errors"],
+            [
+                {
+                    "id": error_result.model_instance.pk,
+                    "instance": error_result.model_instance,
+                    "errors": ["foo"],
+                }
+            ],
+        )
+        self.assertIn("not_in_app", exported_data)
+        self.assertEqual(exported_data["not_in_app"], ["bar"])
+
+    def test_export_include_verified_false(self):
+        exported_data = self.audit_results.export(include_verified=False)
+        self.assertNotIn("verified", exported_data)
+        self.assertIn("errors", exported_data)
+        self.assertIn("not_in_app", exported_data)
+
+    def test_export_include_errors_false(self):
+        exported_data = self.audit_results.export(include_errors=False)
+        self.assertIn("verified", exported_data)
+        self.assertNotIn("errors", exported_data)
+        self.assertIn("not_in_app", exported_data)
+
+    def test_export_include_not_in_app_false(self):
+        exported_data = self.audit_results.export(include_not_in_app=False)
+        self.assertIn("verified", exported_data)
+        self.assertIn("errors", exported_data)
+        self.assertNotIn("not_in_app", exported_data)
+
+    def test_export_not_in_app_sorted(self):
+        """export sorts the not_in_app results."""
+        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.audit_results.add_result(audit.NotInAppResult("bar"))
+        exported_data = self.audit_results.export()
+        self.assertEqual(exported_data["not_in_app"], ["bar", "foo"])
+
+
 class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the BillingProject.anvil_audit method."""
 

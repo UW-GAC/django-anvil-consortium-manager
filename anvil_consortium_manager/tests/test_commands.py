@@ -312,14 +312,12 @@ class RunAnVILAuditTablesTest(TestCase):
     def test_errors_table(self):
         """Errors table is correct."""
         obj_verified = self.model_factory.create()
-        self.audit_results.add_model_instance_result(
-            audit.ModelInstanceResult(obj_verified)
-        )
+        self.audit_results.add_result(audit.ModelInstanceResult(obj_verified))
         obj_error = self.model_factory.create()
         error_result = audit.ModelInstanceResult(obj_error)
         error_result.add_error(self.audit_results.TEST_ERROR_1)
         error_result.add_error(self.audit_results.TEST_ERROR_2)
-        self.audit_results.add_model_instance_result(error_result)
-        self.audit_results.add_not_in_app_result(audit.NotInAppResult("foo"))
+        self.audit_results.add_result(error_result)
+        self.audit_results.add_result(audit.NotInAppResult("foo"))
         table = ErrorTableWithLink(self.audit_results.get_error_results())
         self.assertEqual(table.rows[0].get_cell("errors"), "Test error 1, Test error 2")
