@@ -98,8 +98,6 @@ class AnVILAudit(ABC):
             )
 
     def _add_not_in_app_result(self, result):
-        if not isinstance(result, NotInAppResult):
-            raise ValueError("result must be an instance of NotInAppResult.")
         # Check that it hasn't been added yet.
         check = [x for x in self._not_in_app_results if x == result]
         if len(check) > 0:
@@ -107,8 +105,6 @@ class AnVILAudit(ABC):
         self._not_in_app_results.append(result)
 
     def _add_model_instance_result(self, result):
-        if not isinstance(result, ModelInstanceResult):
-            raise ValueError("result must be an instance of ModelInstanceResult.")
         check = [
             x
             for x in self._model_instance_results
