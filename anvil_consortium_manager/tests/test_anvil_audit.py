@@ -10,6 +10,87 @@ from .utils import AnVILAPIMockTestMixin
 fake = Faker()
 
 
+class ModelInstanceResultTest(TestCase):
+    def test_init(self):
+        """Constructor works as expected."""
+        obj = factories.AccountFactory.create()
+        result = audit.ModelInstanceResult(obj)
+        self.assertEqual(result.model_instance, obj)
+        self.assertEqual(result.errors, set())
+
+    def test_str(self):
+        """__str__ method works as expected."""
+        obj = factories.AccountFactory.create()
+        result = audit.ModelInstanceResult(obj)
+        self.assertEqual(str(result), (str(obj)))
+
+    def test_eq_no_errors(self):
+        """__eq__ method works as expected when there are no errors."""
+        obj = factories.AccountFactory.create()
+        result_1 = audit.ModelInstanceResult(obj)
+        result_2 = audit.ModelInstanceResult(obj)
+        self.assertEqual(result_1, result_2)
+
+    def test_eq_errors(self):
+        """__eq__ method works as expected when there are errors."""
+        obj = factories.AccountFactory.create()
+        result_1 = audit.ModelInstanceResult(obj)
+        result_1.add_error("foo")
+        result_2 = audit.ModelInstanceResult(obj)
+        self.assertNotEqual(result_1, result_2)
+        result_2.add_error("foo")
+        self.assertEqual(result_1, result_2)
+
+    def test_add_error(self):
+        """add_error method works as expected."""
+        obj = factories.AccountFactory.create()
+        result = audit.ModelInstanceResult(obj)
+        result.add_error("foo")
+        self.assertEqual(result.errors, set(["foo"]))
+        result.add_error("bar")
+        self.assertEqual(result.errors, set(["foo", "bar"]))
+
+    def test_add_error_duplicate(self):
+        """can add a second, duplicate error without error."""
+        obj = factories.AccountFactory.create()
+        result = audit.ModelInstanceResult(obj)
+        result.add_error("foo")
+        self.assertEqual(result.errors, set(["foo"]))
+        result.add_error("foo")
+        self.assertEqual(result.errors, set(["foo"]))
+
+    def test_ok_no_errors(self):
+        """ok method returns True when there are no errors."""
+        obj = factories.AccountFactory.create()
+        result = audit.ModelInstanceResult(obj)
+        self.assertTrue(result.ok())
+
+    def test_ok_errors(self):
+        """ok method returns False when there are errors."""
+        obj = factories.AccountFactory.create()
+        result = audit.ModelInstanceResult(obj)
+        result.add_error("foo")
+        self.assertFalse(result.ok())
+
+
+class NotInAppResultTest(TestCase):
+    def test_init(self):
+        """Constructor works as expected."""
+        result = audit.NotInAppResult("foo bar")
+        self.assertEqual(result.record, "foo bar")
+
+    def test_str(self):
+        """__str__ method works as expected."""
+        result = audit.NotInAppResult("foo bar")
+        self.assertEqual(str(result), "foo bar")
+
+    def test_eq(self):
+        """__eq__ method works as expected."""
+        result = audit.NotInAppResult("foo")
+        self.assertEqual(audit.NotInAppResult("foo"), result)
+        self.assertNotEqual(audit.NotInAppResult("bar"), result)
+
+
 class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the BillingProject.anvil_audit method."""
 

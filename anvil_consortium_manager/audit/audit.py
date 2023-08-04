@@ -23,7 +23,7 @@ class ModelInstanceResult:
         )
 
     def __str__(self):
-        return self.model_instance
+        return str(self.model_instance)
 
     def add_error(self, error):
         """Add an error to the audit result for this model instance."""
@@ -49,6 +49,9 @@ class NotInAppResult:
 
     def __str__(self):
         return self.record
+
+    def __eq__(self, other):
+        return self.record == other.record
 
 
 # Tables for reporting audit results:
