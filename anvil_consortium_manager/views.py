@@ -42,6 +42,7 @@ from . import (
 from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
+from .audit import audit
 from .tokens import account_verification_token
 
 # Based on Wagtail: https://github.com/wagtail/wagtail/blob/main/wagtail/admin/views/generic/models.py
@@ -230,9 +231,7 @@ class BillingProjectAudit(
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/billing_project_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.BillingProject.anvil_audit()
+    audit_class = audit.BillingProjectAudit
 
 
 class AccountDetail(
@@ -730,9 +729,7 @@ class AccountAudit(
     """View to run an audit on Accounts and display the results."""
 
     template_name = "anvil_consortium_manager/account_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.Account.anvil_audit()
+    audit_class = audit.AccountAudit
 
 
 class ManagedGroupDetail(
@@ -1002,9 +999,7 @@ class ManagedGroupAudit(
     """View to run an audit on ManagedGroups and display the results."""
 
     template_name = "anvil_consortium_manager/managedgroup_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.ManagedGroup.anvil_audit()
+    audit_class = audit.ManagedGroupAudit
 
 
 class ManagedGroupMembershipAudit(
@@ -1036,8 +1031,8 @@ class ManagedGroupMembershipAudit(
         # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
-    def run_audit(self):
-        self.audit_results = self.object.anvil_audit_membership()
+    def get_audit_instance(self):
+        return audit.ManagedGroupMembershipAudit(self.object)
 
 
 class WorkspaceLandingPage(
@@ -1775,9 +1770,7 @@ class WorkspaceAudit(
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/workspace_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.Workspace.anvil_audit()
+    audit_class = audit.WorkspaceAudit
 
 
 class WorkspaceSharingAudit(
@@ -1819,8 +1812,8 @@ class WorkspaceSharingAudit(
         # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
-    def run_audit(self):
-        self.audit_results = self.object.anvil_audit_sharing()
+    def get_audit_instance(self):
+        return audit.WorkspaceSharingAudit(self.object)
 
 
 class WorkspaceAutocomplete(

@@ -6,34 +6,23 @@ from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 
-from ... import models
 from ...anvil_api import AnVILAPIError
+from ...audit import audit
 
 
-class ErrorsTable(tables.Table):
-    id = tables.Column(orderable=False)
-    instance = tables.Column(
+class ErrorTableWithLink(audit.ErrorTable):
+
+    model_instance = tables.Column(
         orderable=False,
         linkify=lambda value, table: "https://{domain}{url}".format(
             domain=table.site.domain, url=value.get_absolute_url()
         ),
     )
-    errors = tables.Column(orderable=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Set the site here so it only hits the db once.
         self.site = Site.objects.get_current()
-
-    def render_errors(self, value):
-        return ", ".join(value)
-
-
-class NotInAppTable(tables.Table):
-    instance = tables.Column(orderable=False, empty_values=())
-
-    def render_instance(self, record):
-        return record
 
 
 class Command(BaseCommand):
@@ -60,42 +49,43 @@ class Command(BaseCommand):
             help="If specified, run audit on a subset of models. Otherwise, the audit will be run on all models.",
         )
 
-    def _run_audit(self, model, **options):
+    def _run_audit(self, audit_results, **options):
         """Run the audit for a specific model class."""
         email = options["email"]
         errors_only = options["errors_only"]
 
-        model_name = model._meta.object_name
-
-        self.stdout.write("Running on {}... ".format(model_name), ending="")
+        audit_name = audit_results.__class__.__name__
+        self.stdout.write("Running on {}... ".format(audit_name), ending="")
         try:
             # Assume the method is called anvil_audit.
-            results = model.anvil_audit()
+            audit_results.run_audit()
         except AnVILAPIError:
             self.stdout.write(self.style.ERROR("API error."))
         else:
-            if not results.ok():
+            if not audit_results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))
                 self.stdout.write(
-                    pprint.pformat(results.export(include_verified=False))
+                    pprint.pformat(audit_results.export(include_verified=False))
                 )
             else:
                 self.stdout.write(self.style.SUCCESS("ok!"))
 
-            if email and (not errors_only) or (errors_only and not results.ok()):
+            if email and (not errors_only) or (errors_only and not audit_results.ok()):
                 # Set up the email message.
-                subject = "AnVIL audit for {} -- {}".format(
-                    model_name, "ok" if results.ok() else "errors!"
+                subject = "AnVIL audit {} -- {}".format(
+                    audit_name, "ok" if audit_results.ok() else "errors!"
                 )
-                exported_results = results.export()
+                exported_results = audit_results.export()
                 html_body = render_to_string(
                     "anvil_consortium_manager/email_audit_report.html",
                     context={
-                        "model_name": model_name,
-                        "verified_results": exported_results["verified"],
-                        "errors_table": ErrorsTable(exported_results["errors"]),
-                        "not_in_app_table": NotInAppTable(
-                            exported_results["not_in_app"]
+                        "model_name": audit_name,
+                        "verified_results": len(audit_results.get_verified_results()),
+                        "errors_table": ErrorTableWithLink(
+                            audit_results.get_error_results()
+                        ),
+                        "not_in_app_table": audit.NotInAppTable(
+                            audit_results.get_not_in_app_results()
                         ),
                     },
                 )
@@ -116,13 +106,13 @@ class Command(BaseCommand):
             models_to_audit = ["BillingProject", "Account", "ManagedGroup", "Workspace"]
 
         if "BillingProject" in models_to_audit:
-            self._run_audit(models.BillingProject, **options)
+            self._run_audit(audit.BillingProjectAudit(), **options)
 
         if "Account" in models_to_audit:
-            self._run_audit(models.Account, **options)
+            self._run_audit(audit.AccountAudit(), **options)
 
         if "ManagedGroup" in models_to_audit:
-            self._run_audit(models.ManagedGroup, **options)
+            self._run_audit(audit.ManagedGroupAudit(), **options)
 
         if "Workspace" in models_to_audit:
-            self._run_audit(models.Workspace, **options)
+            self._run_audit(audit.WorkspaceAudit(), **options)

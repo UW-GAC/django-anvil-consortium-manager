@@ -23,6 +23,7 @@ from freezegun import freeze_time
 from .. import __version__, anvil_api, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
+from ..audit import audit
 from ..tokens import account_verification_token
 from . import factories
 from .test_app import forms as app_forms
@@ -1100,8 +1101,11 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         """audit_verified is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -1115,15 +1119,16 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one verified record."""
@@ -1137,15 +1142,18 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -4220,8 +4228,11 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         """audit_verified is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_verified(self):
         """audit_verified with one verified record."""
@@ -4235,15 +4246,16 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_verified(self):
         """audit_errors with one verified record."""
@@ -4257,15 +4269,15 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -5761,8 +5773,11 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -5791,8 +5806,8 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -5805,8 +5820,9 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -5821,8 +5837,8 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -5835,8 +5851,11 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -5849,8 +5868,8 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -6023,8 +6042,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -6045,8 +6067,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -6066,8 +6088,9 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -6089,8 +6112,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -6110,8 +6133,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -6131,8 +6157,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -11619,8 +11645,11 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -11648,8 +11677,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -11662,8 +11691,9 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -11682,8 +11712,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -11696,8 +11726,11 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -11710,8 +11743,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -11861,8 +11894,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -11879,8 +11915,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -11895,8 +11931,9 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -11914,8 +11951,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -11931,8 +11968,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -11947,8 +11987,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
