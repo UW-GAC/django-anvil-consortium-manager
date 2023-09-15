@@ -7,6 +7,13 @@
 
 {% block content %}
 <div class="container">
+  <div class="alert alert-info" role="alert">
+
+      <form method="get">
+        {{ filter.form }}
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </form>
+  </div>
 
   <div class="row">
     <div class="col-sm-12">
