@@ -27,6 +27,7 @@ from django.views.generic.detail import (
 )
 from django.views.generic.edit import BaseDeleteView as DjangoBaseDeleteView
 from django.views.generic.edit import DeletionMixin, FormMixin
+from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import (
@@ -34,6 +35,7 @@ from . import (
     anvil_api,
     auth,
     exceptions,
+    filters,
     forms,
     models,
     tables,
@@ -204,10 +206,15 @@ class BillingProjectDetail(
         return context
 
 
-class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class BillingProjectList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
     ordering = ("name",)
+    template_name = "anvil_consortium_manager/billingproject_list.html"
+
+    filterset_class = filters.BillingProjectFilter
 
 
 class BillingProjectAutocomplete(
