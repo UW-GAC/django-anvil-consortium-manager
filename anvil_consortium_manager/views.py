@@ -214,7 +214,7 @@ class BillingProjectList(
     ordering = ("name",)
     template_name = "anvil_consortium_manager/billingproject_list.html"
 
-    filterset_class = filters.BillingProjectFilter
+    filterset_class = filters.BillingProjectListFilter
 
 
 class BillingProjectAutocomplete(
