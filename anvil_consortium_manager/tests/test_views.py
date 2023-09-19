@@ -915,6 +915,16 @@ class BillingProjectListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_one_filtered_object(self):
+        factories.BillingProjectFactory.create(name="Billing project")
+        factories.BillingProjectFactory.create(name="Project")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?name__icontains=bill")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
 
 class BillingProjectAutocompleteTest(TestCase):
     def setUp(self):
