@@ -846,10 +846,15 @@ class ManagedGroupUpdate(
     success_message = "Successfully updated ManagedGroup."
 
 
-class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class ManagedGroupList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
     ordering = ("name",)
+    template_name = "anvil_consortium_manager/managedgroup_list.html"
+
+    filterset_class = filters.ManagedGroupListFilter
 
 
 class ManagedGroupVisualization(
