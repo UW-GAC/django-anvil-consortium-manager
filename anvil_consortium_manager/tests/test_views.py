@@ -915,15 +915,15 @@ class BillingProjectListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
-    def test_view_with_filter_returns_all_objects(self):
+    def test_view_with_filter_return_no_object(self):
         factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=pro")
+        url = resolve_url(self.get_url() + "?name__icontains=abc")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
-        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_filter_returns_one_object(self):
         factories.BillingProjectFactory.create(name="Billing_project")
@@ -935,15 +935,15 @@ class BillingProjectListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
-    def test_view_with_filter_return_no_object(self):
+    def test_view_with_filter_returns_all_objects(self):
         factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=abc")
+        url = resolve_url(self.get_url() + "?name__icontains=pro")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
-        self.assertEqual(len(response.context_data["table"].rows), 0)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
 class BillingProjectAutocompleteTest(TestCase):
