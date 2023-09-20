@@ -1664,7 +1664,9 @@ class WorkspaceUpdate(
         return self.object.get_absolute_url()
 
 
-class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class WorkspaceList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
@@ -1673,6 +1675,8 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
         "billing_project__name",
         "name",
     )
+    template_name = "anvil_consortium_manager/workspace_list.html"
+    filterset_class = filters.WorkspaceListFilter
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1683,7 +1687,8 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
 class WorkspaceListByType(
     auth.AnVILConsortiumManagerViewRequired,
     viewmixins.WorkspaceAdapterMixin,
-    SingleTableView,
+    SingleTableMixin,
+    FilterView,
 ):
     """Display a list of workspaces of the given ``workspace_type``."""
 
@@ -1692,6 +1697,8 @@ class WorkspaceListByType(
         "billing_project__name",
         "name",
     )
+    template_name = "anvil_consortium_manager/workspace_list.html"
+    filterset_class = filters.WorkspaceListFilter
 
     def get_queryset(self):
         return self.model.objects.filter(workspace_type=self.adapter.get_type())

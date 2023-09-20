@@ -13,3 +13,9 @@ class ManagedGroupListFilter(FilterSet):
     class Meta:
         model = models.ManagedGroup
         fields = {"name": ["icontains"]}
+
+
+class WorkspaceListFilter(FilterSet):
+    class Meta:
+        model = models.Workspace
+        fields = {"name": ["icontains"]}

@@ -11367,6 +11367,36 @@ class WorkspaceListTest(TestCase):
             response.context_data["workspace_type_display_name"], "All workspace"
         )
 
+    def test_view_with_filter_return_no_object(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?name__icontains=abc")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?name__icontains=work")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?name__icontains=tes")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
 
 class WorkspaceListByTypeTest(TestCase):
     def setUp(self):
@@ -11506,6 +11536,36 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_return_no_object(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url(self.workspace_type) + "?name__icontains=abc")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url(self.workspace_type) + "?name__icontains=work")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url(self.workspace_type) + "?name__icontains=tes")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
 class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
