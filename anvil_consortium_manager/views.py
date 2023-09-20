@@ -511,22 +511,30 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         return super().get(request, *args, **kwargs)
 
 
-class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     """View to display a list of Accounts.
 
     The table class can be customized using in a custom Account adapter."""
 
     model = models.Account
     ordering = ("email",)
+    template_name = "anvil_consortium_manager/account_list.html"
+    filterset_class = filters.AccountListFilter
 
     def get_table_class(self):
         adapter = get_account_adapter()
         return adapter().get_list_table_class()
 
 
-class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountActiveList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.Account
     ordering = ("email",)
+    template_name = "anvil_consortium_manager/account_list.html"
+    filterset_class = filters.AccountListFilter
 
     def get_table_class(self):
         adapter = get_account_adapter()
@@ -536,9 +544,13 @@ class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView
         return self.model.objects.active()
 
 
-class AccountInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountInactiveList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.Account
     ordering = ("email",)
+    template_name = "anvil_consortium_manager/account_list.html"
+    filterset_class = filters.AccountListFilter
 
     def get_table_class(self):
         adapter = get_account_adapter()

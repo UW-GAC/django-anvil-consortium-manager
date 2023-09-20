@@ -3165,6 +3165,36 @@ class AccountListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_filter_return_no_object(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=abc")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=tes")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=example")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
     def test_view_with_service_account(self):
         factories.AccountFactory.create(is_service_account=True)
         factories.AccountFactory.create(is_service_account=False)
@@ -3288,6 +3318,48 @@ class AccountActiveListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_filter_return_no_object(self):
+        factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=abc")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object(self):
+        factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=tes")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=example")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
     def test_view_with_service_account(self):
         factories.AccountFactory.create(is_service_account=True)
         factories.AccountFactory.create(is_service_account=False)
@@ -3407,6 +3479,48 @@ class AccountInactiveListTest(TestCase):
         factories.AccountFactory.create_batch(2, status=models.Account.INACTIVE_STATUS)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_return_no_object(self):
+        factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=abc")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object(self):
+        factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=tes")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?email__icontains=example")
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
