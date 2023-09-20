@@ -5153,6 +5153,36 @@ class ManagedGroupListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_filter_return_no_object(self):
+        factories.ManagedGroupFactory.create(name="Managed_group")
+        factories.ManagedGroupFactory.create(name="Group")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?name__icontains=abc")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object(self):
+        factories.ManagedGroupFactory.create(name="Managed_group")
+        factories.ManagedGroupFactory.create(name="Group")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?name__icontains=man")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.ManagedGroupFactory.create(name="Managed_group")
+        factories.ManagedGroupFactory.create(name="Group")
+        self.client.force_login(self.user)
+        url = resolve_url(self.get_url() + "?name__icontains=gro")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
 
 class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
