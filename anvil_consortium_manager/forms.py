@@ -1,5 +1,8 @@
 """Forms classes for the anvil_consortium_manager app."""
 
+from crispy_bootstrap5.bootstrap5 import FloatingField
+from crispy_forms import layout
+from crispy_forms.helper import FormHelper
 from dal import autocomplete
 from django import VERSION as DJANGO_VERSION
 from django import forms
@@ -20,6 +23,40 @@ class Bootstrap5MediaFormMixin:
                 "https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css",  # NOQA: E501
             )
         }
+
+
+class FilterForm(forms.Form):
+    """Custom form to pass to Filters defined in filters.py.
+
+    This form displays the fields with floating fields in a single row.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.form_class = "form-floating"
+        self.helper.form_method = "get"
+        # Wrap all inputs in a FloatingField and Div with the correct class.
+        self.helper.all().wrap(FloatingField)
+        self.helper.all().wrap(layout.Div, css_class="col")
+        # Save the original layout so we can insert it into the form as desired.
+        tmp = self.helper.layout.copy()
+        # Modify the layout to wrap everything in a row div.
+        # This is necessary because wrap_together does not include the Submit field, but we want it wrapped as well.
+        self.helper.layout = layout.Layout(
+            layout.Div(
+                *tmp,
+                # Add a submit button with col-auto. This makes auto-sizes the column to just fit the submit button.
+                layout.Div(
+                    # mb-3 to match what is done in FloatingField - this centers the button vertically.
+                    layout.Submit(
+                        "submit", "Filter", css_class="btn btn-secondary mb-3"
+                    ),
+                    css_class="col-auto",
+                ),
+                css_class="row align-items-center"
+            ),
+        )
 
 
 class BillingProjectImportForm(forms.ModelForm):
