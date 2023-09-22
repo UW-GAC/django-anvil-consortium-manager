@@ -1,6 +1,6 @@
 from django_filters import FilterSet
 
-from . import models
+from . import forms, models
 
 
 class AccountListFilter(FilterSet):
@@ -13,6 +13,7 @@ class BillingProjectListFilter(FilterSet):
     class Meta:
         model = models.BillingProject
         fields = {"name": ["icontains"]}
+        form = forms.FilterForm
 
 
 class ManagedGroupListFilter(FilterSet):
