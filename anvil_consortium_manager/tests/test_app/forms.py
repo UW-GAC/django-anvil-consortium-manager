@@ -2,6 +2,8 @@
 
 from django import forms
 
+from anvil_consortium_manager.forms import WorkspaceCreateForm
+
 from . import models
 
 
@@ -14,3 +16,7 @@ class TestWorkspaceDataForm(forms.ModelForm):
             "study_name",
             "workspace",
         )
+
+
+class TestWorkspaceForm(WorkspaceCreateForm):
+    pass

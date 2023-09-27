@@ -37,6 +37,11 @@ class BaseWorkspaceAdapter(ABC):
         ...
 
     @abstractproperty
+    def workspace_form_class(self):
+        """Custom form to use when creating a Workspace."""
+        ...
+
+    @abstractproperty
     def workspace_data_model(self):
         """Model to use for storing extra data about workspaces."""
         ...
@@ -76,6 +81,17 @@ class BaseWorkspaceAdapter(ABC):
                 "Set `list_table_class` in `{}`.".format(type(self))
             )
         return self.list_table_class
+
+    def get_workspace_form_class(self):
+        """Return the form used to create a `Workspace`."""
+        if not self.workspace_form_class:
+            raise ImproperlyConfigured("Set `workspace_data_form_class`.")
+        # Make sure it has the correct model set.
+        if self.workspace_form_class.Meta.model != models.Workspace:
+            raise ImproperlyConfigured(
+                "workspace_form_class Meta model field must be anvil_consortium_manager.models.Workspace."
+            )
+        return self.workspace_form_class
 
     def get_workspace_data_model(self):
         """Return the `workspace_data_model`."""
