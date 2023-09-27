@@ -7626,33 +7626,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Did not create any new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 0)
 
-    def test_not_user_of_billing_project(self):
-        """Posting a billing project where we are not users does not create an object."""
-        billing_project = factories.BillingProjectFactory.create(
-            name="test-billing-project", has_app_as_user=False
-        )
-        self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("form", response.context_data)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("billing_project", form.errors.keys())
-        self.assertIn("valid choice", form.errors["billing_project"][0])
-        # No workspace was created.
-        self.assertEqual(models.Workspace.objects.count(), 0)
-
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
         # Overriding settings doesn't work, because appconfig.ready has already run and

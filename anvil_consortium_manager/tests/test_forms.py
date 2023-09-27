@@ -375,8 +375,10 @@ class WorkspaceCreateFormTest(TestCase):
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
-        self.assertIn("billing_project", form.errors)
         self.assertEqual(len(form.errors), 1)
+        self.assertIn("billing_project", form.errors)
+        self.assertEqual(len(form.errors["billing_project"]), 1)
+        self.assertIn("has_app_as_user", form.errors["billing_project"][0])
 
     def test_invalid_case_insensitive_duplicate(self):
         """Cannot validate with the same case-insensitive name in the same billing project as an existing workspace."""
