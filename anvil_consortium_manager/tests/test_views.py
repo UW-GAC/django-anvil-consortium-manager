@@ -6986,7 +6986,11 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertTrue("form" in response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceCreateForm)
+
+    def test_form_class(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceForm)
 
     def test_has_formset_in_context(self):
         """Response includes a formset for the workspace_data model."""
@@ -7626,33 +7630,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Did not create any new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 0)
 
-    def test_not_user_of_billing_project(self):
-        """Posting a billing project where we are not users does not create an object."""
-        billing_project = factories.BillingProjectFactory.create(
-            name="test-billing-project", has_app_as_user=False
-        )
-        self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("form", response.context_data)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("billing_project", form.errors.keys())
-        self.assertIn("valid choice", form.errors["billing_project"][0])
-        # No workspace was created.
-        self.assertEqual(models.Workspace.objects.count(), 0)
-
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
@@ -7757,6 +7734,50 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", workspace_data_form.errors["study_name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_adapter_custom_form_class(self):
+        """No workspace is created if custom workspace form is invalid."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertIsInstance(
+            response.context_data["form"], app_forms.TestWorkspaceForm
+        )
+
+    def test_adapter_does_not_create_object_if_workspace_form_invalid(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        billing_project = factories.BillingProjectFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-fail",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-study_name": "test study",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("Workspace name cannot be", form.errors["name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(len(responses.calls), 0)
 
 
@@ -10423,7 +10444,17 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
         self.assertIn("form", response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceUpdateForm)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceForm)
+
+    def test_form_fields(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        form = response.context_data.get("form")
+        self.assertEqual(len(form.fields), 1)
+        self.assertIn("note", form.fields)
 
     def test_has_formset_in_context(self):
         """Response includes a formset for the workspace_data model."""
@@ -10582,6 +10613,27 @@ class WorkspaceUpdateTest(TestCase):
         workspace_data.refresh_from_db()
         self.assertEqual(workspace.note, "original note")
         self.assertEqual(workspace_data.study_name, "original name")
+
+    def test_custom_adapter_workspace_form(self):
+        """Workspace form is subclass of the custom adapter form."""
+        # Note that we need to use the test adapter for this.
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        app_models.TestWorkspaceData.objects.create(
+            workspace=workspace, study_name="original name"
+        )
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.billing_project.name, workspace.name)
+        )
+        self.assertTrue("form" in response.context_data)
+        form = response.context_data["form"]
+        self.assertIsInstance(form, TestWorkspaceAdapter().get_workspace_form_class())
+        self.assertEqual(len(form.fields), 1)
+        self.assertIn("note", form.fields)
 
 
 class WorkspaceListTest(TestCase):

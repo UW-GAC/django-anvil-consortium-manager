@@ -15,7 +15,8 @@ Install from GitHub:
 Configure
 ----------------------------------------------------------------------
 
-You will need a service account credentials file that is registered with Terra. XXX Get info from Ben about this.
+You will need a service account credentials file that is registered with Terra.
+See the `Terra service account documentation <https://support.terra.bio/hc/en-us/articles/360031023592-Service-accounts-in-Terra>`_ for more information.
 
 Required Settings
 ~~~~~~~~~~~~~~~~~

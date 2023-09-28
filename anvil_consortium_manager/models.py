@@ -674,7 +674,7 @@ class Workspace(TimeStampedModel):
         max_length=64,
         help_text="Name of the workspace on AnVIL, not including billing project name.",
     )
-    # This makes it possible to easily select the authorization domains in the WorkspaceCreateForm.
+    # This makes it possible to easily select the authorization domains in the WorkspaceForm.
     # However, it does not create a record in django-simple-history for creating the many-to-many field.
     authorization_domains = models.ManyToManyField(
         "ManagedGroup",

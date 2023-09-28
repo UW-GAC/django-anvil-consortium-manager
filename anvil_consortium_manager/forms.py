@@ -116,19 +116,8 @@ class ManagedGroupUpdateForm(forms.ModelForm):
         fields = ("note",)
 
 
-class WorkspaceCreateForm(Bootstrap5MediaFormMixin, forms.ModelForm):
+class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form to create a new workspace on AnVIL."""
-
-    # Only allow billing groups where we can create a workspace.
-    billing_project = forms.ModelChoiceField(
-        queryset=models.BillingProject.objects.filter(has_app_as_user=True),
-        widget=autocomplete.ModelSelect2(
-            url="anvil_consortium_manager:billing_projects:autocomplete",
-            attrs={"data-theme": "bootstrap-5"},
-        ),
-        help_text="""Select the billing project in which the workspace should be created.
-                  Only billing projects where this app is a user are shown.""",
-    )
 
     class Meta:
         model = models.Workspace
@@ -148,13 +137,14 @@ class WorkspaceCreateForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                 attrs={"data-theme": "bootstrap-5"},
             ),
         }
-        help_texts = {
-            "billing_project": """Enter the billing project in which the workspace should be created.
-                               Only billing projects that have this app as a user are shown.""",
-            "name": "Enter the name of the workspace to create.",
-            "authorization_domains": """Select one or more authorization domains for this workspace.
-                        These cannot be changed after creation.""",
-        }
+
+    def clean_billing_project(self):
+        billing_project = self.cleaned_data.get("billing_project")
+        if billing_project and not billing_project.has_app_as_user:
+            raise ValidationError(
+                "Billing project must have has_app_as_user set to True"
+            )
+        return billing_project
 
     def clean(self):
         # DJANGO <4.1 on mysql:
@@ -179,14 +169,6 @@ class WorkspaceCreateForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                     "Workspace with this Billing Project and Name already exists."
                 )
         return self.cleaned_data
-
-
-class WorkspaceUpdateForm(forms.ModelForm):
-    """Form to update information about a Workspace."""
-
-    class Meta:
-        model = models.Workspace
-        fields = ("note",)
 
 
 class WorkspaceImportForm(forms.Form):

@@ -3,13 +3,14 @@ from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from . import forms, models, tables
 
 
-class ExampleWorkspaceAdapter(BaseWorkspaceAdapter):
+class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
     """Example adapter for workspaces."""
 
-    name = "Example workspace"
-    type = "example"
-    description = "Example workspace type for demo app"
-    list_table_class = tables.ExampleWorkspaceDataTable
-    workspace_data_model = models.ExampleWorkspaceData
-    workspace_data_form_class = forms.ExampleWorkspaceDataForm
-    workspace_detail_template_name = "app/example_workspace_detail.html"
+    name = "Custom workspace"
+    type = "custom"
+    description = "Example custom workspace type for demo app"
+    list_table_class = tables.CustomWorkspaceDataTable
+    workspace_form_class = forms.CustomWorkspaceForm
+    workspace_data_model = models.CustomWorkspaceData
+    workspace_data_form_class = forms.CustomWorkspaceDataForm
+    workspace_detail_template_name = "app/custom_workspace_detail.html"
