@@ -137,13 +137,6 @@ class WorkspaceCreateForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                 attrs={"data-theme": "bootstrap-5"},
             ),
         }
-        help_texts = {
-            "billing_project": """Enter the billing project in which the workspace should be created.
-                               Only billing projects that have this app as a user are shown.""",
-            "name": "Enter the name of the workspace to create.",
-            "authorization_domains": """Select one or more authorization domains for this workspace.
-                        These cannot be changed after creation.""",
-        }
 
     def clean_billing_project(self):
         billing_project = self.cleaned_data.get("billing_project")
