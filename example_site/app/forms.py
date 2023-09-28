@@ -1,8 +1,26 @@
 """Forms classes for the example_site app."""
 
 from django import forms
+from django.core.exceptions import ValidationError
+
+from anvil_consortium_manager.forms import WorkspaceCreateForm
 
 from . import models
+
+
+class ExampleWorkspaceForm(WorkspaceCreateForm):
+    """Example custom form for creating a Workspace."""
+
+    class Meta(WorkspaceCreateForm.Meta):
+        help_texts = {
+            "name": "Enter the name of the workspace to create. (Hint: Example workspace names cannot include a 'y'.)",
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name")
+        if name and "y" in name:
+            raise ValidationError("Name cannot include a y.")
+        return name
 
 
 class ExampleWorkspaceDataForm(forms.ModelForm):

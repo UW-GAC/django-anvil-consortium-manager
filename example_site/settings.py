@@ -218,8 +218,8 @@ ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
 
 # Workspace adapters.
 ANVIL_WORKSPACE_ADAPTERS = [
+    "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
     "example_site.app.adapters.ExampleWorkspaceAdapter",
-    # "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
 # Account adapter.
 ANVIL_ACCOUNT_ADAPTER = (
