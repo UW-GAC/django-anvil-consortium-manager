@@ -1,5 +1,5 @@
 from django.core.exceptions import ImproperlyConfigured
-from django.forms import ModelForm
+from django.forms import Form, ModelForm
 from django.test import TestCase, override_settings
 
 from ..adapters.account import BaseAccountAdapter
@@ -154,6 +154,32 @@ class WorkspaceAdapterTest(TestCase):
         setattr(TestAdapter, "workspace_form_class", None)
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_form_class()
+
+    def test_get_workspace_form_class_wrong_model(self):
+        """ImproperlyConfigured raised when wrong model is speciifed in Meta."""
+        TestAdapter = self.get_test_adapter()
+
+        class TestForm(ModelForm):
+            class Meta:
+                model = Account
+                fields = ("email",)
+
+        setattr(TestAdapter, "workspace_form_class", TestForm)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_workspace_form_class()
+        self.assertIn("workspace_form_class Meta model", str(e.exception))
+
+    def test_get_workspace_form_class_wrong_subclass(self):
+        """ImproperlyConfigured raised when form is not a ModelForm."""
+        TestAdapter = self.get_test_adapter()
+
+        class TestForm(Form):
+            pass
+
+        setattr(TestAdapter, "workspace_form_class", TestForm)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_workspace_form_class()
+        self.assertIn("ModelForm", str(e.exception))
 
     def test_get_workspace_data_form_class_default(self):
         """get_workspace_data_form_class returns the correct form when using the default adapter."""

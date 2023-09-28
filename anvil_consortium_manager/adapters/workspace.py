@@ -4,6 +4,7 @@ from abc import ABC, abstractproperty
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.forms import ModelForm
 from django.utils.module_loading import import_string
 
 from .. import models
@@ -86,6 +87,11 @@ class BaseWorkspaceAdapter(ABC):
         """Return the form used to create a `Workspace`."""
         if not self.workspace_form_class:
             raise ImproperlyConfigured("Set `workspace_data_form_class`.")
+        # Make sure it is a model form
+        if not issubclass(self.workspace_form_class, ModelForm):
+            raise ImproperlyConfigured(
+                "workspace_form_class must be a subclass of ModelForm."
+            )
         # Make sure it has the correct model set.
         if self.workspace_form_class.Meta.model != models.Workspace:
             raise ImproperlyConfigured(
