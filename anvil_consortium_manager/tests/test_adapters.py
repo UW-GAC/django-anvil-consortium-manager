@@ -10,7 +10,7 @@ from ..adapters.workspace import (
     BaseWorkspaceAdapter,
     WorkspaceAdapterRegistry,
 )
-from ..forms import DefaultWorkspaceDataForm, WorkspaceCreateForm
+from ..forms import DefaultWorkspaceDataForm, WorkspaceForm
 from ..models import Account, DefaultWorkspaceData
 from ..tables import AccountTable, WorkspaceTable
 from . import factories
@@ -105,7 +105,7 @@ class WorkspaceAdapterTest(TestCase):
             type = "test"
             description = "test desc"
             list_table_class = tables.TestWorkspaceDataTable
-            workspace_form_class = forms.WorkspaceCreateForm
+            workspace_form_class = forms.WorkspaceForm
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = forms.TestWorkspaceDataForm
             workspace_detail_template_name = "custom/workspace_detail.html"
@@ -137,7 +137,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_form_class returns the correct form when using the default adapter."""
         self.assertEqual(
             DefaultWorkspaceAdapter().get_workspace_form_class(),
-            WorkspaceCreateForm,
+            WorkspaceForm,
         )
 
     def test_get_workspace_form_class_custom(self):

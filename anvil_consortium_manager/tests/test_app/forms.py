@@ -3,7 +3,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from anvil_consortium_manager.forms import WorkspaceCreateForm
+from anvil_consortium_manager.forms import WorkspaceForm
 
 from . import models
 
@@ -19,7 +19,7 @@ class TestWorkspaceDataForm(forms.ModelForm):
         )
 
 
-class TestWorkspaceForm(WorkspaceCreateForm):
+class TestWorkspaceForm(WorkspaceForm):
     """Custom form for Workspace."""
 
     def clean_name(self):

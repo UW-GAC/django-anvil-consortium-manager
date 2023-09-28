@@ -3,15 +3,15 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from anvil_consortium_manager.forms import WorkspaceCreateForm
+from anvil_consortium_manager.forms import WorkspaceForm
 
 from . import models
 
 
-class CustomWorkspaceForm(WorkspaceCreateForm):
+class CustomWorkspaceForm(WorkspaceForm):
     """Example custom form for creating a Workspace."""
 
-    class Meta(WorkspaceCreateForm.Meta):
+    class Meta(WorkspaceForm.Meta):
         help_texts = {
             "name": "Enter the name of the workspace to create. (Hint: Example workspace names cannot include a 'y'.)",
         }

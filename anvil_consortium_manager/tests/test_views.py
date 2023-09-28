@@ -6990,7 +6990,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_form_class(self):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceCreateForm)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceForm)
 
     def test_has_formset_in_context(self):
         """Response includes a formset for the workspace_data model."""
@@ -10444,7 +10444,17 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
         self.assertIn("form", response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceUpdateForm)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceForm)
+
+    def test_form_fields(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        form = response.context_data.get("form")
+        self.assertEqual(len(form.fields), 1)
+        self.assertIn("note", form.fields)
 
     def test_has_formset_in_context(self):
         """Response includes a formset for the workspace_data model."""
@@ -10603,6 +10613,27 @@ class WorkspaceUpdateTest(TestCase):
         workspace_data.refresh_from_db()
         self.assertEqual(workspace.note, "original note")
         self.assertEqual(workspace_data.study_name, "original name")
+
+    def test_custom_adapter_workspace_form(self):
+        """Workspace form is subclass of the custom adapter form."""
+        # Note that we need to use the test adapter for this.
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        app_models.TestWorkspaceData.objects.create(
+            workspace=workspace, study_name="original name"
+        )
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.billing_project.name, workspace.name)
+        )
+        self.assertTrue("form" in response.context_data)
+        form = response.context_data["form"]
+        self.assertIsInstance(form, TestWorkspaceAdapter().get_workspace_form_class())
+        self.assertEqual(len(form.fields), 1)
+        self.assertIn("note", form.fields)
 
 
 class WorkspaceListTest(TestCase):

@@ -1535,10 +1535,22 @@ class WorkspaceUpdate(
     """View to update information about an Account."""
 
     model = models.Workspace
-    form_class = forms.WorkspaceUpdateForm
     slug_field = "name"
     template_name = "anvil_consortium_manager/workspace_update.html"
     success_message = "Successfully updated Workspace."
+
+    def get_form_class(self):
+        form_class = self.adapter.get_workspace_form_class()
+
+        class WorkspaceUpdateForm(form_class):
+            class Meta(form_class.Meta):
+                exclude = (
+                    "billing_project",
+                    "name",
+                    "authorization_domains",
+                )
+
+        return WorkspaceUpdateForm
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""

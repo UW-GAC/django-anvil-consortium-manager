@@ -116,7 +116,7 @@ class ManagedGroupUpdateForm(forms.ModelForm):
         fields = ("note",)
 
 
-class WorkspaceCreateForm(Bootstrap5MediaFormMixin, forms.ModelForm):
+class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form to create a new workspace on AnVIL."""
 
     class Meta:
@@ -169,14 +169,6 @@ class WorkspaceCreateForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                     "Workspace with this Billing Project and Name already exists."
                 )
         return self.cleaned_data
-
-
-class WorkspaceUpdateForm(forms.ModelForm):
-    """Form to update information about a Workspace."""
-
-    class Meta:
-        model = models.Workspace
-        fields = ("note",)
 
 
 class WorkspaceImportForm(forms.Form):
