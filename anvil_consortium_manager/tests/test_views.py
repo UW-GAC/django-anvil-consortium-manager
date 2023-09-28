@@ -6986,6 +6986,10 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertTrue("form" in response.context_data)
+
+    def test_form_class(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceCreateForm)
 
     def test_has_formset_in_context(self):
@@ -7730,6 +7734,50 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", workspace_data_form.errors["study_name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_adapter_custom_form_class(self):
+        """No workspace is created if custom workspace form is invalid."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertIsInstance(
+            response.context_data["form"], app_forms.TestWorkspaceForm
+        )
+
+    def test_adapter_does_not_create_object_if_workspace_form_invalid(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        billing_project = factories.BillingProjectFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-fail",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-study_name": "test study",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("Workspace name cannot be", form.errors["name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(len(responses.calls), 0)
 
 

@@ -1,6 +1,7 @@
 """Forms classes for the example_site app."""
 
 from django import forms
+from django.core.exceptions import ValidationError
 
 from anvil_consortium_manager.forms import WorkspaceCreateForm
 
@@ -19,4 +20,11 @@ class TestWorkspaceDataForm(forms.ModelForm):
 
 
 class TestWorkspaceForm(WorkspaceCreateForm):
-    pass
+    """Custom form for Workspace."""
+
+    def clean_name(self):
+        """Test custom cleaning for workspace name."""
+        name = self.cleaned_data.get("name")
+        if name and name == "test-fail":
+            raise ValidationError("Workspace name cannot be 'test-fail'!")
+        return name
