@@ -22,6 +22,7 @@ class AnVILProjectManagerAccess(models.Model):
 
     EDIT_PERMISSION_CODENAME = "anvil_project_manager_edit"
     VIEW_PERMISSION_CODENAME = "anvil_project_manager_view"
+    LIMITED_VIEW_PERMISSION_CODENAME = "anvil_project_manager_limited_view"
     ACCOUNT_LINK_PERMISSION_CODENAME = "anvil_project_manager_account_link"
 
     class Meta:
@@ -38,6 +39,10 @@ class AnVILProjectManagerAccess(models.Model):
             (
                 "anvil_project_manager_account_link",
                 "AnVIL Project Manager Account Link Permission",
+            ),
+            (
+                "anvil_project_manager_limited_view",
+                "AnVIL Project Manager Limited View Permission",
             ),
         ]
 
