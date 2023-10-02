@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.18 (in prep)
 
 * Include a workspace_data_object context variable for the `WorkspaceDetail` and `WorkspaceUpdate` views.
 * Refactor auditing classes.
