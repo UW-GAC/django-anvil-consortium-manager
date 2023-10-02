@@ -75,6 +75,21 @@ class IndexTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -272,6 +287,21 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_context_data_anvil_status_ok(self):
         """Context data contains anvil_status."""
         url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
@@ -424,6 +454,21 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -671,6 +716,21 @@ class BillingProjectUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, slug="foo")
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo")
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -771,6 +831,21 @@ class BillingProjectDetailTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_status_code_with_existing_object_not_user(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.BillingProjectFactory.create(has_app_as_user=False)
@@ -868,6 +943,21 @@ class BillingProjectListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_template_with_user_permission(self):
         """Returns successful response code."""
         self.client.force_login(self.user)
@@ -959,6 +1049,21 @@ class BillingProjectAutocompleteTest(TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -1088,6 +1193,21 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -1236,6 +1356,21 @@ class AccountDetailTest(TestCase):
         )
         request = self.factory.get(self.get_url(uuid))
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -1582,6 +1717,21 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -1880,6 +2030,21 @@ class AccountUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=uuid)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         uuid = uuid4()
@@ -1984,6 +2149,21 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -2548,9 +2728,23 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        uuid = uuid4()
-        request = self.factory.get(self.get_url(uuid, "bar"))
+        request = self.factory.get(self.get_url(uuid4(), "bar"))
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4(), "bar"))
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -2897,6 +3091,21 @@ class AccountListTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -3005,6 +3214,21 @@ class AccountActiveListTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -3110,6 +3334,21 @@ class AccountInactiveListTest(TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -3254,6 +3493,21 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=uuid)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -3490,6 +3744,21 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=uuid)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -3796,6 +4065,21 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=uuid)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4045,6 +4329,21 @@ class AccountAutocompleteTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4208,6 +4507,21 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4344,6 +4658,21 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -4771,6 +5100,21 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4995,6 +5339,21 @@ class ManagedGroupUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, slug="foo")
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -5083,6 +5442,21 @@ class ManagedGroupListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -5187,6 +5561,21 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=1)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -5582,6 +5971,21 @@ class ManagedGroupAutocompleteTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -5738,6 +6142,21 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -5993,6 +6412,21 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -6257,6 +6691,21 @@ class ManagedGroupVisualizationTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            views.ManagedGroupVisualization.as_view()(request)
+
     def test_view_status_code_with_existing_object_not_managed(self):
         """Returns a successful status code for an existing object pk."""
         self.client.force_login(self.user)
@@ -6353,6 +6802,21 @@ class WorkspaceLandingPageTest(TestCase):
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            views.WorkspaceLandingPage.as_view()(request)
 
     def test_status_code_with_edit_permission(self):
         """Returns successful response code."""
@@ -6458,6 +6922,10 @@ class WorkspaceDetailTest(TestCase):
         """Return the view being tested."""
         return views.WorkspaceDetail.as_view()
 
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:detail", args=args)
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -6474,15 +6942,27 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        url = reverse(
-            "anvil_consortium_manager:workspaces:detail", args=["foo1", "foo2"]
-        )
-        request = self.factory.get(url)
+        request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
@@ -6956,6 +7436,21 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, workspace_type=self.workspace_type)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -7920,6 +8415,21 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.workspace_type))
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -9357,6 +9867,21 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
                 workspace_type=self.workspace_type,
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", self.workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -10408,6 +10933,21 @@ class WorkspaceUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -10680,6 +11220,21 @@ class WorkspaceListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -10798,6 +11353,21 @@ class WorkspaceListByTypeTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -10953,6 +11523,21 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=1)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -11307,6 +11892,21 @@ class WorkspaceAutocompleteTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -11423,6 +12023,21 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.default_workspace_type))
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.default_workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -11662,6 +12277,21 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -11909,6 +12539,21 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -12143,6 +12788,21 @@ class GroupGroupMembershipDetailTest(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -12299,6 +12959,21 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -12940,6 +13615,21 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, parent_group_slug=self.parent_group.name)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -13471,6 +14161,21 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, group_slug=self.child_group.name)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -13973,6 +14678,21 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
                 parent_group_slug=self.parent_group.name,
                 child_group_slug=self.child_group.name,
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -14541,6 +15261,21 @@ class GroupGroupMembershipListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -14662,6 +15397,21 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_view()(
                 request, parent_group_slug="parent", child_group_slug="child"
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -14980,6 +15730,21 @@ class GroupAccountMembershipDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -15135,6 +15900,21 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -15736,6 +16516,21 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, group_slug=self.group.name)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -16253,6 +17048,21 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=self.account.uuid)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -16756,6 +17566,21 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             self.get_view()(
                 request, group_slug=self.group.name, account_uuid=self.account.uuid
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -17267,6 +18092,21 @@ class GroupAccountMembershipListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -17434,6 +18274,21 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -17567,6 +18422,21 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, group_slug="foo", account_uuid=uuid)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -17860,6 +18730,21 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -18024,6 +18909,21 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -18789,6 +19689,21 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 workspace_slug=self.workspace.name,
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -19539,6 +20454,21 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 group_slug=self.group.name,
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -20240,6 +21170,21 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 workspace_slug=self.workspace.name,
                 group_slug=self.group.name,
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -21045,6 +21990,21 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 group_slug="group",
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -21529,6 +22489,21 @@ class WorkspaceGroupSharingListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -21657,6 +22632,21 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 workspace_slug="workspace",
                 group_slug="group",
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
