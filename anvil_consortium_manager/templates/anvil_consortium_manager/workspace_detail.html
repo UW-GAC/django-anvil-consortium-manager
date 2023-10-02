@@ -38,7 +38,10 @@
         Authorization domains
       </div>
       <div class="card-body">
-          {% render_table authorization_domain_table %}
+        <p>
+          This table shows all Managed Groups that are used as an authorization domain for this Workspace.
+        </p>
+      {% render_table authorization_domain_table %}
       </div>
     </div>
   </div>
@@ -54,6 +57,9 @@
         </h2>
         <div id="collapseGroupsOne" class="accordion-collapse collapse" aria-labelledby="headingGroupsOne" data-bs-parent="#accordionGroups">
           <div class="accordion-body">
+            <p>
+              This table shows Managed Groups that this Workspace has been shared with.
+            </p>
             {% render_table group_sharing_table %}
           </div>
         </div>
