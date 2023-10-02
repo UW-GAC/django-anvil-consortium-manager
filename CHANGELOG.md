@@ -6,6 +6,7 @@
 * Refactor auditing classes.
 * Add ability to specify a custom `Workspace` form in the workspace adapter.
 * Add informational text to tables on Detail pages.
+* Add a new "Limited view" permission. This permission is not yet used anywhere in the app, but can be used by projects using the app (e.g., to show a custom page to users with this permission).
 
 ## 0.17 (2023-07-11)
 
