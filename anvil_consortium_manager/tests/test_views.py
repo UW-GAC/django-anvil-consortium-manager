@@ -915,32 +915,47 @@ class BillingProjectListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
-    def test_view_with_filter_return_no_object(self):
+    def test_view_with_filter_return_no_object_case(self):
         factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=abc")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object(self):
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
         factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=bill")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "bill"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
-    def test_view_with_filter_returns_all_objects(self):
+    def test_view_with_filter_returns_one_object_case_matched(self):
         factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=pro")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "Bill"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects_case_insensitive(self):
+        factories.BillingProjectFactory.create(name="Billing_project")
+        factories.BillingProjectFactory.create(name="Project")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "pro"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_returns_all_objects_case_matched(self):
+        factories.BillingProjectFactory.create(name="Billing_Project")
+        factories.BillingProjectFactory.create(name="Project")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Pro"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -2960,18 +2975,25 @@ class AccountListTest(TestCase):
         factories.AccountFactory.create(email="account_test1@example.com")
         factories.AccountFactory.create(email="account@example.com")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=abc")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object(self):
-        factories.AccountFactory.create(email="account_test1@example.com")
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        factories.AccountFactory.create(email="account_Test1@example.com")
         factories.AccountFactory.create(email="account@example.com")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=tes")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "tes"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_one_object_case_sensitive(self):
+        factories.AccountFactory.create(email="account_Test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "Tes"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
@@ -2980,8 +3002,7 @@ class AccountListTest(TestCase):
         factories.AccountFactory.create(email="account_test1@example.com")
         factories.AccountFactory.create(email="account@example.com")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=example")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "example"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -3102,8 +3123,7 @@ class AccountActiveListTest(TestCase):
             email="account@example.com", status=models.Account.ACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=abc")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
@@ -3116,8 +3136,7 @@ class AccountActiveListTest(TestCase):
             email="account@example.com", status=models.Account.ACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=tes")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "tes"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
@@ -3130,8 +3149,7 @@ class AccountActiveListTest(TestCase):
             email="account@example.com", status=models.Account.ACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=example")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "example"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -3252,8 +3270,7 @@ class AccountInactiveListTest(TestCase):
             email="account@example.com", status=models.Account.INACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=abc")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
@@ -3266,8 +3283,7 @@ class AccountInactiveListTest(TestCase):
             email="account@example.com", status=models.Account.INACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=tes")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "tes"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
@@ -3280,8 +3296,7 @@ class AccountInactiveListTest(TestCase):
             email="account@example.com", status=models.Account.INACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?email__icontains=example")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"email__icontains": "example"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -5271,28 +5286,43 @@ class ManagedGroupListTest(TestCase):
         factories.ManagedGroupFactory.create(name="Managed_group")
         factories.ManagedGroupFactory.create(name="Group")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=abc")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object(self):
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
         factories.ManagedGroupFactory.create(name="Managed_group")
         factories.ManagedGroupFactory.create(name="Group")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=man")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "man"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
-    def test_view_with_filter_returns_all_objects(self):
+    def test_view_with_filter_returns_one_object_case_sensitive(self):
         factories.ManagedGroupFactory.create(name="Managed_group")
         factories.ManagedGroupFactory.create(name="Group")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=gro")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "Man"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects_case_insensitive(self):
+        factories.ManagedGroupFactory.create(name="Managed_group")
+        factories.ManagedGroupFactory.create(name="Group")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "gro"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.ManagedGroupFactory.create(name="Managed_Group")
+        factories.ManagedGroupFactory.create(name="Group")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Gro"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -10878,28 +10908,43 @@ class WorkspaceListTest(TestCase):
         factories.WorkspaceFactory.create(name="Workspace_test")
         factories.WorkspaceFactory.create(name="Test")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=abc")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object(self):
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
         factories.WorkspaceFactory.create(name="Workspace_test")
         factories.WorkspaceFactory.create(name="Test")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=work")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "work"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
-    def test_view_with_filter_returns_all_objects(self):
+    def test_view_with_filter_returns_one_object_case_matched(self):
         factories.WorkspaceFactory.create(name="Workspace_test")
         factories.WorkspaceFactory.create(name="Test")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url() + "?name__icontains=tes")
-        response = self.client.get(url)
+        response = self.client.get(self.get_url(), {"name__icontains": "Work"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects_case_insensitive(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "tes"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_returns_all_objects_case_matched(self):
+        factories.WorkspaceFactory.create(name="Workspace_Test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Tes"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -11033,28 +11078,53 @@ class WorkspaceListByTypeTest(TestCase):
         factories.WorkspaceFactory.create(name="Workspace_test")
         factories.WorkspaceFactory.create(name="Test")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url(self.workspace_type) + "?name__icontains=abc")
-        response = self.client.get(url)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "abc"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object(self):
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
         factories.WorkspaceFactory.create(name="Workspace_test")
         factories.WorkspaceFactory.create(name="Test")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url(self.workspace_type) + "?name__icontains=work")
-        response = self.client.get(url)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "work"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
-    def test_view_with_filter_returns_all_objects(self):
+    def test_view_with_filter_returns_one_object_case_matched(self):
         factories.WorkspaceFactory.create(name="Workspace_test")
         factories.WorkspaceFactory.create(name="Test")
         self.client.force_login(self.user)
-        url = resolve_url(self.get_url(self.workspace_type) + "?name__icontains=tes")
-        response = self.client.get(url)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "Work"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_returns_all_objects_case_insensitive(self):
+        factories.WorkspaceFactory.create(name="Workspace_test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "test"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_returns_all_objects_case_matched(self):
+        factories.WorkspaceFactory.create(name="Workspace_Test")
+        factories.WorkspaceFactory.create(name="Test")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "Test"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
