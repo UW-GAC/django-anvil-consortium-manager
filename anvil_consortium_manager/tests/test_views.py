@@ -915,7 +915,7 @@ class BillingProjectListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
-    def test_view_with_filter_return_no_object_case(self):
+    def test_view_with_filter_return_no_object(self):
         factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
@@ -924,38 +924,45 @@ class BillingProjectListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.BillingProjectFactory.create(name="billing_project")
+        factories.BillingProjectFactory.create(name="project")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"name__icontains": "billing_project"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
     def test_view_with_filter_returns_one_object_case_insensitive(self):
-        factories.BillingProjectFactory.create(name="Billing_project")
+        instance = factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "bill"})
+        response = self.client.get(
+            self.get_url(), {"name__icontains": "billing_project"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_one_object_case_matched(self):
-        factories.BillingProjectFactory.create(name="Billing_project")
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.BillingProjectFactory.create(name="Billing_project")
         factories.BillingProjectFactory.create(name="Project")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "Bill"})
+        response = self.client.get(self.get_url(), {"name__icontains": "illing"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_all_objects_case_insensitive(self):
-        factories.BillingProjectFactory.create(name="Billing_project")
-        factories.BillingProjectFactory.create(name="Project")
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.BillingProjectFactory.create(name="project1")
+        factories.BillingProjectFactory.create(name="project_2")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "pro"})
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("table", response.context_data)
-        self.assertEqual(len(response.context_data["table"].rows), 2)
-
-    def test_view_with_filter_returns_all_objects_case_matched(self):
-        factories.BillingProjectFactory.create(name="Billing_Project")
-        factories.BillingProjectFactory.create(name="Project")
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "Pro"})
+        response = self.client.get(self.get_url(), {"name__icontains": "project"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -2980,27 +2987,56 @@ class AccountListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object_case_insensitive(self):
-        factories.AccountFactory.create(email="account_Test1@example.com")
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.AccountFactory.create(email="account_test1@example.com")
         factories.AccountFactory.create(email="account@example.com")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"email__icontains": "tes"})
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_one_object_case_sensitive(self):
-        factories.AccountFactory.create(email="account_Test1@example.com")
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.AccountFactory.create(email="account_Test1@example.com")
         factories.AccountFactory.create(email="account@example.com")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"email__icontains": "Tes"})
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_contains(self):
+        instance = factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "test1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_status(self):
+        factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
 
     def test_view_with_filter_returns_all_objects(self):
-        factories.AccountFactory.create(email="account_test1@example.com")
-        factories.AccountFactory.create(email="account@example.com")
+        factories.AccountFactory.create(email="account1@example.com")
+        factories.AccountFactory.create(email="account2@example.com")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), {"email__icontains": "example"})
         self.assertEqual(response.status_code, 200)
@@ -3128,25 +3164,72 @@ class AccountActiveListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object(self):
-        factories.AccountFactory.create(
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.AccountFactory.create(
             email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
         )
         factories.AccountFactory.create(
             email="account@example.com", status=models.Account.ACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"email__icontains": "tes"})
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_all_objects(self):
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.AccountFactory.create(
+            email="account_Test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
         factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_active_only(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_contains(self):
+        instance = factories.AccountFactory.create(
             email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
         )
         factories.AccountFactory.create(
             email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "test1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.ACTIVE_STATUS
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), {"email__icontains": "example"})
@@ -3264,10 +3347,10 @@ class AccountInactiveListTest(TestCase):
 
     def test_view_with_filter_return_no_object(self):
         factories.AccountFactory.create(
-            email="account_test1@example.com", status=models.Account.INACTIVE_STATUS
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
         )
         factories.AccountFactory.create(
-            email="account@example.com", status=models.Account.INACTIVE_STATUS
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), {"email__icontains": "abc"})
@@ -3275,25 +3358,72 @@ class AccountInactiveListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object(self):
-        factories.AccountFactory.create(
-            email="account_test1@example.com", status=models.Account.INACTIVE_STATUS
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
         )
         factories.AccountFactory.create(
-            email="account@example.com", status=models.Account.INACTIVE_STATUS
+            email="account2@example.com", status=models.Account.ACTIVE_STATUS
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"email__icontains": "tes"})
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account1@example.com"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "Account1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_inactive_only(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_contains(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
     def test_view_with_filter_returns_all_objects(self):
         factories.AccountFactory.create(
-            email="account_test1@example.com", status=models.Account.INACTIVE_STATUS
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
         )
         factories.AccountFactory.create(
-            email="account@example.com", status=models.Account.INACTIVE_STATUS
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), {"email__icontains": "example"})
@@ -5283,46 +5413,49 @@ class ManagedGroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
     def test_view_with_filter_return_no_object(self):
-        factories.ManagedGroupFactory.create(name="Managed_group")
-        factories.ManagedGroupFactory.create(name="Group")
+        factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), {"name__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "group1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
     def test_view_with_filter_returns_one_object_case_insensitive(self):
-        factories.ManagedGroupFactory.create(name="Managed_group")
-        factories.ManagedGroupFactory.create(name="Group")
+        instance = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "man"})
+        response = self.client.get(self.get_url(), {"name__icontains": "Group1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_one_object_case_sensitive(self):
-        factories.ManagedGroupFactory.create(name="Managed_group")
-        factories.ManagedGroupFactory.create(name="Group")
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "Man"})
+        response = self.client.get(self.get_url(), {"name__icontains": "roup1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_all_objects_case_insensitive(self):
-        factories.ManagedGroupFactory.create(name="Managed_group")
-        factories.ManagedGroupFactory.create(name="Group")
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="gRouP2")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "gro"})
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("table", response.context_data)
-        self.assertEqual(len(response.context_data["table"].rows), 2)
-
-    def test_view_with_filter_returns_all_objects(self):
-        factories.ManagedGroupFactory.create(name="Managed_Group")
-        factories.ManagedGroupFactory.create(name="Group")
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "Gro"})
+        response = self.client.get(self.get_url(), {"name__icontains": "Group"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -10905,46 +11038,49 @@ class WorkspaceListTest(TestCase):
         )
 
     def test_view_with_filter_return_no_object(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), {"name__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "workspace1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
     def test_view_with_filter_returns_one_object_case_insensitive(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "work"})
+        response = self.client.get(self.get_url(), {"name__icontains": "Workspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_one_object_case_matched(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "Work"})
+        response = self.client.get(self.get_url(), {"name__icontains": "orkspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_all_objects_case_insensitive(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="wOrkspace1")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "tes"})
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("table", response.context_data)
-        self.assertEqual(len(response.context_data["table"].rows), 2)
-
-    def test_view_with_filter_returns_all_objects_case_matched(self):
-        factories.WorkspaceFactory.create(name="Workspace_Test")
-        factories.WorkspaceFactory.create(name="Test")
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"name__icontains": "Tes"})
+        response = self.client.get(self.get_url(), {"name__icontains": "Workspace"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -11075,8 +11211,8 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
     def test_view_with_filter_return_no_object(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
         self.client.force_login(self.user)
         response = self.client.get(
             self.get_url(self.workspace_type), {"name__icontains": "abc"}
@@ -11085,45 +11221,62 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "workspace1"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
     def test_view_with_filter_returns_one_object_case_insensitive(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(self.workspace_type), {"name__icontains": "work"}
+            self.get_url(self.workspace_type), {"name__icontains": "Workspace1"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_one_object_case_matched(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(self.workspace_type), {"name__icontains": "Work"}
+            self.get_url(self.workspace_type), {"name__icontains": "orkspace1"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_all_objects_case_insensitive(self):
-        factories.WorkspaceFactory.create(name="Workspace_test")
-        factories.WorkspaceFactory.create(name="Test")
+    def test_view_with_filter_workspace_type(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(
+            name="workspace2", workspace_type=TestWorkspaceAdapter().get_type()
+        )
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(self.workspace_type), {"name__icontains": "test"}
+            self.get_url(self.workspace_type), {"name__icontains": "workspace"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
-        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_all_objects_case_matched(self):
-        factories.WorkspaceFactory.create(name="Workspace_Test")
-        factories.WorkspaceFactory.create(name="Test")
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="wOrkspace1")
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(self.workspace_type), {"name__icontains": "Test"}
+            self.get_url(self.workspace_type), {"name__icontains": "Workspace"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
