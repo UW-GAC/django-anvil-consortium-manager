@@ -7,6 +7,7 @@ class AccountListFilter(FilterSet):
     class Meta:
         model = models.Account
         fields = {"email": ["icontains"]}
+        form = forms.FilterForm
 
 
 class BillingProjectListFilter(FilterSet):
@@ -20,9 +21,11 @@ class ManagedGroupListFilter(FilterSet):
     class Meta:
         model = models.ManagedGroup
         fields = {"name": ["icontains"]}
+        form = forms.FilterForm
 
 
 class WorkspaceListFilter(FilterSet):
     class Meta:
         model = models.Workspace
         fields = {"name": ["icontains"]}
+        form = forms.FilterForm
