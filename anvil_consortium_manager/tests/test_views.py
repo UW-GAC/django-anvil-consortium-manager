@@ -20,7 +20,7 @@ from django.utils import timezone
 from faker import Faker
 from freezegun import freeze_time
 
-from .. import __version__, anvil_api, forms, models, tables, views
+from .. import __version__, anvil_api, filters, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..audit import audit
@@ -31,6 +31,7 @@ from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import TestWorkspaceAdapter
 from .test_app.factories import TestWorkspaceDataFactory
+from .test_app.filters import TestAccountListFilter
 from .utils import (  # Redefined to work with Django < 4.2 and Django=4.2.
     AnVILAPIMockTestMixin,
     TestCase,
@@ -3187,6 +3188,16 @@ class AccountListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_filterset_class(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("filter", response.context_data)
+        self.assertIsInstance(
+            response.context_data["filter"], filters.AccountListFilter
+        )
+
     def test_view_with_filter_return_no_object(self):
         factories.AccountFactory.create(email="account_test1@example.com")
         factories.AccountFactory.create(email="account@example.com")
@@ -3285,6 +3296,7 @@ class AccountListTest(TestCase):
         self.assertIsInstance(
             response.context_data["table"], app_tables.TestAccountTable
         )
+        self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
 class AccountActiveListTest(TestCase):
@@ -3351,6 +3363,16 @@ class AccountActiveListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+
+    def test_filterset_class(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("filter", response.context_data)
+        self.assertIsInstance(
+            response.context_data["filter"], filters.AccountListFilter
+        )
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -3486,7 +3508,7 @@ class AccountActiveListTest(TestCase):
     @override_settings(
         ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
     )
-    def test_adapter_table_class(self):
+    def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -3494,6 +3516,7 @@ class AccountActiveListTest(TestCase):
         self.assertIsInstance(
             response.context_data["table"], app_tables.TestAccountTable
         )
+        self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
 class AccountInactiveListTest(TestCase):
@@ -3560,6 +3583,16 @@ class AccountInactiveListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+
+    def test_filterset_class(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("filter", response.context_data)
+        self.assertIsInstance(
+            response.context_data["filter"], filters.AccountListFilter
+        )
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -3707,6 +3740,7 @@ class AccountInactiveListTest(TestCase):
         self.assertIsInstance(
             response.context_data["table"], app_tables.TestAccountTable
         )
+        self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
 class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
