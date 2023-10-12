@@ -2,22 +2,21 @@
 {% load static %}
 
 {% load render_table from django_tables2 %}
+{% load crispy_forms_tags %}
 
 {% block title %}Accounts{% endblock %}
 
 {% block content %}
 <div class="container">
-  <div class="alert alert-info" role="alert">
-    <form method="get">
-      {{ filter.form }}
-      <button type="submit" class="btn btn-primary">Filter</button>
-    </form>
-  </div>
 
   <div class="row">
     <div class="col-sm-12">
 
       <h2>Accounts</h2>
+
+      <div class="container pt-3">
+        {% crispy filter.form %}
+      </div>
 
       {% render_table table %}
 
