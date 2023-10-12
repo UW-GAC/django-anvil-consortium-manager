@@ -10,11 +10,12 @@ from ..adapters.workspace import (
     BaseWorkspaceAdapter,
     WorkspaceAdapterRegistry,
 )
+from ..filters import AccountListFilter, BillingProjectListFilter
 from ..forms import DefaultWorkspaceDataForm, WorkspaceForm
 from ..models import Account, DefaultWorkspaceData
 from ..tables import AccountTable, WorkspaceTable
 from . import factories
-from .test_app import forms, models, tables
+from .test_app import filters, forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
 
 
@@ -26,6 +27,7 @@ class AccountAdapterTestCase(TestCase):
 
         class TestAdapter(BaseAccountAdapter):
             list_table_class = tables.TestAccountTable
+            list_filterset_class = filters.TestAccountListFilter
 
         return TestAdapter
 
@@ -45,6 +47,45 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "list_table_class", None)
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class()
+
+    def test_list_filterset_class_default(self):
+        """get_list_filterset_class returns the correct filter when using the default adapter."""
+        self.assertEqual(
+            DefaultAccountAdapter().get_list_filterset_class(), AccountListFilter
+        )
+
+    def test_list_filterset_class_custom(self):
+        """get_list_filterset_class returns the correct filter when using a custom adapter."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_filterset_class", filters.TestAccountListFilter)
+        self.assertEqual(
+            TestAdapter().get_list_filterset_class(), filters.TestAccountListFilter
+        )
+
+    def test_list_filterset_class_none(self):
+        """get_list_filterset_class raises ImproperlyConfigured when get_list_filterset_class is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_filterset_class", None)
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_list_filterset_class()
+
+    def test_list_filterset_class_different_model(self):
+        """get_list_filterset_class raises ImproperlyConfigured when incorrect model is used."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_filterset_class", BillingProjectListFilter)
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_list_filterset_class()
+
+    def test_list_filterset_class_not_filterset(self):
+        """get_list_filterset_class raises ImproperlyConfigured when not a subclass of FilterSet."""
+
+        class Foo:
+            pass
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_filterset_class", Foo)
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_list_filterset_class()
 
     def test_get_autocomplete_queryset_default(self):
         """get_autocomplete_queryset returns the correct queryset when using the default adapter."""

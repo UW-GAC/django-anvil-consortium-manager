@@ -1,7 +1,7 @@
 from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 
-from . import forms, models, tables
+from . import filters, forms, models, tables
 
 
 class TestWorkspaceAdapter(BaseWorkspaceAdapter):
@@ -30,6 +30,7 @@ class TestAccountAdapter(BaseAccountAdapter):
     """Test adapter for accounts."""
 
     list_table_class = tables.TestAccountTable
+    list_filterset_class = filters.TestAccountListFilter
 
     def get_autocomplete_queryset(self, queryset, q):
         if q:
