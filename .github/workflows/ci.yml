@@ -61,7 +61,7 @@ jobs:
     - name: Test with tox
       run: |
         df
-        tox -vvvvv
+        tox -vvvv
         df
       env:
         DBBACKEND: sqlite3
@@ -110,7 +110,7 @@ jobs:
       if: ${{ matrix.mariadb-version == '10.3' }}
       run: |
         df
-        tox -vvvvv --skip-env ".+?-django42-mysql"
+        tox -vvvv --skip-env ".+?-django42-mysql"
         df
       env:
         DBBACKEND: mysql
@@ -123,7 +123,7 @@ jobs:
       if: ${{ matrix.mariadb-version != '10.3' }}
       run: |
         df
-        tox -vvvvv
+        tox -vvvv
         df
       env:
         DBBACKEND: mysql
