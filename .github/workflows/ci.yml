@@ -59,7 +59,10 @@ jobs:
         python -m pip install --upgrade tox tox-gh-actions
 
     - name: Test with tox
-      run: tox
+      run: |
+        df
+        tox
+        df
       env:
         DBBACKEND: sqlite3
         DBNAME: ":memory:"
@@ -105,7 +108,10 @@ jobs:
 
     - name: Test with tox - 10.3
       if: ${{ matrix.mariadb-version == '10.3' }}
-      run: tox --skip-env ".+?-django42-mysql"
+      run: |
+        df
+        tox --skip-env ".+?-django42-mysql"
+        df
       env:
         DBBACKEND: mysql
         DBNAME: test
@@ -115,7 +121,10 @@ jobs:
 
     - name: Test with tox - not 10.3
       if: ${{ matrix.mariadb-version != '10.3' }}
-      run: tox
+      run: |
+        df
+        tox
+        df
       env:
         DBBACKEND: mysql
         DBNAME: test
