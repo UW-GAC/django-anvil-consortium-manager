@@ -4,6 +4,7 @@ name: ci-tox
 env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
+  PIP_VERBOSE: 3
 
 on:
   pull_request:
