@@ -5,6 +5,7 @@ env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
   PIP_VERBOSE: 3
+  PIP_NO_CACHE_DIR: off
 
 on:
   pull_request:
