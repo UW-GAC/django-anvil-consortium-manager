@@ -44,8 +44,6 @@ jobs:
       max-parallel: 10
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
-    env:
-      PIP_NO_CACHE_DIR: off
 
     steps:
     - uses: actions/checkout@v3.5.2
@@ -65,7 +63,6 @@ jobs:
       env:
         DBBACKEND: sqlite3
         DBNAME: ":memory:"
-        PIP_NO_CACHE_DIR: off
 
     - name: Upload coverage data
       uses: actions/upload-artifact@v3
@@ -115,7 +112,6 @@ jobs:
         DBUSER: root
         DBPASSWORD: rootpw
         DBHOST: 127.0.0.1
-        PIP_NO_CACHE_DIR: off
 
     - name: Test with tox - not 10.3
       if: ${{ matrix.mariadb-version != '10.3' }}
