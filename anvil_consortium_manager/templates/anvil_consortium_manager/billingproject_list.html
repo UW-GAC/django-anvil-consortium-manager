@@ -14,9 +14,12 @@
 
       <h2>Billing Projects</h2>
 
-      <div class="container pt-3">
-        {% crispy filter.form %}
-      </div>
+      <div class="my-3 p-3 bg-light border rounded shadow-sm">
+        <form method="get">
+          {{ filter.form|crispy }}
+          <button type="submit" class="btn btn-primary">Filter</button>
+        </form>
+    </div>
 
       {% render_table table %}
 
