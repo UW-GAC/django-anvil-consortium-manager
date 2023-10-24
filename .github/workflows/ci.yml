@@ -59,7 +59,13 @@ jobs:
         sleep 10
 
     - name: Test with tox
-      run: tox
+      uses: nick-fields/retry@v2
+      id: retry-sqlite
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_on: error
+        command: tox
       env:
         DBBACKEND: sqlite3
         DBNAME: ":memory:"
@@ -111,9 +117,14 @@ jobs:
       run:
         sleep 10
 
-    - name: Test with tox - not 10.3
-      if: ${{ matrix.mariadb-version != '10.3' }}
-      run: tox
+    - name: Test with tox
+      uses: nick-fields/retry@v2
+      id: retry-sqlite
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_on: error
+        command: tox
       env:
         DBBACKEND: mysql
         DBNAME: test
