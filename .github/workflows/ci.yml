@@ -54,6 +54,10 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install --upgrade tox tox-gh-actions
 
+    - name: sleep
+      run:
+        sleep 10
+
     - name: Test with tox
       run: tox
       env:
@@ -102,6 +106,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install --upgrade tox tox-gh-actions
+
+    - name: sleep
+      run:
+        sleep 10
 
     - name: Test with tox - not 10.3
       if: ${{ matrix.mariadb-version != '10.3' }}
