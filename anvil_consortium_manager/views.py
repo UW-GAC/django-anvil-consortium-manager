@@ -27,6 +27,7 @@ from django.views.generic.detail import (
 )
 from django.views.generic.edit import BaseDeleteView as DjangoBaseDeleteView
 from django.views.generic.edit import DeletionMixin, FormMixin
+from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import (
@@ -34,6 +35,7 @@ from . import (
     anvil_api,
     auth,
     exceptions,
+    filters,
     forms,
     models,
     tables,
@@ -204,10 +206,15 @@ class BillingProjectDetail(
         return context
 
 
-class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class BillingProjectList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
     ordering = ("name",)
+    template_name = "anvil_consortium_manager/billingproject_list.html"
+
+    filterset_class = filters.BillingProjectListFilter
 
 
 class BillingProjectAutocomplete(
@@ -504,38 +511,44 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         return super().get(request, *args, **kwargs)
 
 
-class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountList(
+    auth.AnVILConsortiumManagerViewRequired,
+    viewmixins.AccountAdapterMixin,
+    SingleTableMixin,
+    FilterView,
+):
     """View to display a list of Accounts.
 
     The table class can be customized using in a custom Account adapter."""
 
     model = models.Account
     ordering = ("email",)
-
-    def get_table_class(self):
-        adapter = get_account_adapter()
-        return adapter().get_list_table_class()
+    template_name = "anvil_consortium_manager/account_list.html"
 
 
-class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountActiveList(
+    auth.AnVILConsortiumManagerViewRequired,
+    viewmixins.AccountAdapterMixin,
+    SingleTableMixin,
+    FilterView,
+):
     model = models.Account
     ordering = ("email",)
-
-    def get_table_class(self):
-        adapter = get_account_adapter()
-        return adapter().get_list_table_class()
+    template_name = "anvil_consortium_manager/account_list.html"
 
     def get_queryset(self):
         return self.model.objects.active()
 
 
-class AccountInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountInactiveList(
+    auth.AnVILConsortiumManagerViewRequired,
+    viewmixins.AccountAdapterMixin,
+    SingleTableMixin,
+    FilterView,
+):
     model = models.Account
     ordering = ("email",)
-
-    def get_table_class(self):
-        adapter = get_account_adapter()
-        return adapter().get_list_table_class()
+    template_name = "anvil_consortium_manager/account_list.html"
 
     def get_queryset(self):
         return self.model.objects.inactive()
@@ -839,10 +852,15 @@ class ManagedGroupUpdate(
     success_message = "Successfully updated ManagedGroup."
 
 
-class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class ManagedGroupList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
     ordering = ("name",)
+    template_name = "anvil_consortium_manager/managedgroup_list.html"
+
+    filterset_class = filters.ManagedGroupListFilter
 
 
 class ManagedGroupVisualization(
@@ -1652,7 +1670,9 @@ class WorkspaceUpdate(
         return self.object.get_absolute_url()
 
 
-class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class WorkspaceList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
@@ -1661,6 +1681,8 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
         "billing_project__name",
         "name",
     )
+    template_name = "anvil_consortium_manager/workspace_list.html"
+    filterset_class = filters.WorkspaceListFilter
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1671,7 +1693,8 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
 class WorkspaceListByType(
     auth.AnVILConsortiumManagerViewRequired,
     viewmixins.WorkspaceAdapterMixin,
-    SingleTableView,
+    SingleTableMixin,
+    FilterView,
 ):
     """Display a list of workspaces of the given ``workspace_type``."""
 
@@ -1680,6 +1703,8 @@ class WorkspaceListByType(
         "billing_project__name",
         "name",
     )
+    template_name = "anvil_consortium_manager/workspace_list.html"
+    filterset_class = filters.WorkspaceListFilter
 
     def get_queryset(self):
         return self.model.objects.filter(workspace_type=self.adapter.get_type())

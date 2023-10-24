@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "django_extensions",  # useful extensions
     "simple_history",  # model history tracking - required for viewing in admin.
+    "django_filters",
     # This app.
     "anvil_consortium_manager",
     # Autocomplete.

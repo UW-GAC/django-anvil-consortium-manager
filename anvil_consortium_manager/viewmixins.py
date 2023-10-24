@@ -12,6 +12,7 @@ from django.views.generic.base import ContextMixin
 from django.views.generic.detail import SingleObjectMixin
 
 from . import models
+from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .audit import audit
 
@@ -53,6 +54,21 @@ class AnVILAuditMixin:
             self.audit_results.get_not_in_app_results()
         )
         return context
+
+
+class AccountAdapterMixin:
+    """Class for handling account adapters."""
+
+    def get(self, request, *args, **kwargs):
+        self.adapter = get_account_adapter()
+        return super().get(request, *args, **kwargs)
+
+    def get_filterset_class(self):
+        return self.adapter().get_list_filterset_class()
+        # return filters.AccountListFilter
+
+    def get_table_class(self):
+        return self.adapter().get_list_table_class()
 
 
 class ManagedGroupGraphMixin:

@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Add filtering in list views.
+
 ## 0.18 (2023-10-03)
 
 * Include a workspace_data_object context variable for the `WorkspaceDetail` and `WorkspaceUpdate` views.

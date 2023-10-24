@@ -9,9 +9,14 @@ The account adapter
 The app provides an adapter that you can use to customize behavior for Accounts.
 By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultAccountAdapter`.
 
-The default adapter provides the following settings and methods:
+To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseAccountAdapter`
+and set the following attributes:
 
-- ``list_table_class``: an attribute set to the class of the table used to display accounts in the `AccountList` view. The default is :class:`anvil_consortium_manager.tables.AccountTable`.
+- ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountTable`.
+- ``list_filterset_class``: an attribute set to the class of the table used to filter accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.filters.AccountListFilter`. This must subclass ``FilterSet`` from `django-filter <https://django-filter.readthedocs.io/en/stable/>`_.
+
+Optionally, you can override the following methods:
+
 - ``get_autocomplete_queryset(self, queryset, q)``: a method that allows the user to provide custom filtering for the autocomplete view. By default, this filters to Accounts whose email contains the case-insensitive search string in ``q``.
 - ``get_autocomplete_label(self, account)``: a method that allows the user to set the label for an account shown in forms using the autocomplete widget.
 
