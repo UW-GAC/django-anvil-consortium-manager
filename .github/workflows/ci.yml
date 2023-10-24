@@ -64,9 +64,9 @@ jobs:
         DBBACKEND: sqlite3
         DBNAME: ":memory:"
 
-    - name: Debug with tmate on failure
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
+    # - name: Debug with tmate on failure
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
 
     - name: Upload coverage data
       uses: actions/upload-artifact@v3
@@ -121,9 +121,9 @@ jobs:
         DBPASSWORD: rootpw
         DBHOST: 127.0.0.1
 
-    - name: Debug with tmate on failure
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
+    # - name: Debug with tmate on failure
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
 
     - name: Upload coverage data
       uses: actions/upload-artifact@v3
