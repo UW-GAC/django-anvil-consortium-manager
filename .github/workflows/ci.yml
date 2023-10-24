@@ -35,6 +35,7 @@ jobs:
 
   sqlite:
     runs-on: ubuntu-latest
+    needs: [linter]
     strategy:
       fail-fast: false
       max-parallel: 10
@@ -77,6 +78,7 @@ jobs:
 
   mysql:
     runs-on: ubuntu-latest
+    needs: [linter]
     strategy:
       fail-fast: false
       max-parallel: 10
@@ -111,7 +113,7 @@ jobs:
       # Sometimes tox fails to build the package correctly and intermittently throws an OSError or BadZipFile error.
       # Upon retry, it seems to work.
       uses: nick-fields/retry@v2
-      id: retry-sqlite
+      id: retry-mysql
       with:
         timeout_minutes: 10
         max_attempts: 3
