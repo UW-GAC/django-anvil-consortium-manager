@@ -1182,7 +1182,7 @@ class BillingProjectAutocompleteTest(TestCase):
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], object.pk)
 
-    def test_does_not_return_groups_not_managed_by_app(self):
+    def test_does_not_return_billing_projects_where_app_is_not_user(self):
         """Queryset does not return groups that are not managed by the app."""
         factories.BillingProjectFactory.create(name="test-bp", has_app_as_user=False)
         self.client.force_login(self.user)
@@ -6427,11 +6427,28 @@ class ManagedGroupAutocompleteTest(TestCase):
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], group.pk)
 
-    def test_does_not_return_groups_not_managed_by_app(self):
-        """Queryset does not return groups that are not managed by the app."""
+    def test_returns_groups_not_managed_by_app_by_default(self):
+        """Queryset does return groups that are not managed by the app by default."""
+        object = factories.ManagedGroupFactory.create(
+            name="test-group", is_managed_by_app=False
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], object.pk)
+
+    def test_does_not_return_groups_not_managed_by_app_when_specified(self):
+        """Queryset does not return groups that are not managed by the app when specified."""
         factories.ManagedGroupFactory.create(name="test-group", is_managed_by_app=False)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"q": "test-group"})
+        response = self.client.get(
+            self.get_url(),
+            {"forward": json.dumps({"only_managed_by_app": True})},
+        )
         self.assertEqual(json.loads(response.content.decode("utf-8"))["results"], [])
 
 
