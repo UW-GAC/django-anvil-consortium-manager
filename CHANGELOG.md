@@ -6,6 +6,7 @@
 * Bugfix: Print the correct number of "ok" instances in audit emails. 0.18 introduced a bug where the email included "0 instance(s) verified even if there was more than one verified instance.
 * Bugfix: ManagedGroupMembershipAudit does not unexpectedly show errors for deactivated accounts that were in the group before they were deactivated.
 * Bugfix: ManagedGroupMembershipAudit now raises the correct exception when instantiated with a ManagedGroup that is not managed by the app.
+* Bugfix: ManagedGroupAudit does not report missing groups where the app is only a member.
 
 ## 0.18 (2023-10-03)
 
