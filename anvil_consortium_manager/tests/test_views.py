@@ -6654,7 +6654,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
-            json=[self.get_api_group_json("foo", "Member")],
+            json=[self.get_api_group_json("foo", "Admin")],
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())

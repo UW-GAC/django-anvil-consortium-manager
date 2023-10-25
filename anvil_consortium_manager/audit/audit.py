@@ -254,7 +254,9 @@ class ManagedGroupAudit(AnVILAudit):
 
         # Check for groups that exist on AnVIL but not the app.
         for group_name in groups_on_anvil:
-            self.add_result(NotInAppResult(group_name))
+            # Only report the ones where the app is an admin.
+            if "admin" in groups_on_anvil[group_name]:
+                self.add_result(NotInAppResult(group_name))
 
 
 class ManagedGroupMembershipAudit(AnVILAudit):

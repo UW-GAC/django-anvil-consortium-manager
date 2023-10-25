@@ -1219,7 +1219,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_IN_ANVIL]))
 
     def test_anvil_audit_one_group_member_missing_in_app(self):
-        """anvil_audit works correctly if the service account is a member of a group not in the app."""
+        """Groups that the app is a member of are not reported in the app."""
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -1233,12 +1233,10 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         audit_results = audit.ManagedGroupAudit()
         audit_results.run_audit()
-        self.assertFalse(audit_results.ok())
+        self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 0)
-        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
-        record_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(record_result.record, "test-group")
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
 
     def test_anvil_audit_one_group_admin_missing_in_app(self):
         """anvil_audit works correctly if the service account is an admin of a group not in the app."""
@@ -1262,7 +1260,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         record_result = audit_results.get_not_in_app_results()[0]
         self.assertEqual(record_result.record, "test-group")
 
-    def test_anvil_audit_two_groups_missing_in_app(self):
+    def test_anvil_audit_two_groups_admin_missing_in_app(self):
         """anvil_audit works correctly if there are two groups in AnVIL that aren't in the app."""
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
@@ -1271,12 +1269,8 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupsResponseFactory(
                 response=[
-                    api_factories.GroupDetailsAdminFactory(
-                        groupName="test-group-admin"
-                    ),
-                    api_factories.GroupDetailsMemberFactory(
-                        groupName="test-group-member"
-                    ),
+                    api_factories.GroupDetailsAdminFactory(groupName="test-group-1"),
+                    api_factories.GroupDetailsAdminFactory(groupName="test-group-2"),
                 ]
             ).response,
         )
@@ -1287,9 +1281,9 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 2)
         record_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(record_result.record, "test-group-admin")
+        self.assertEqual(record_result.record, "test-group-1")
         record_result = audit_results.get_not_in_app_results()[1]
-        self.assertEqual(record_result.record, "test-group-member")
+        self.assertEqual(record_result.record, "test-group-2")
 
     def test_fails_membership_audit(self):
         """Error is reported when a group fails the membership audit."""
