@@ -1003,10 +1003,14 @@ class ManagedGroupAutocomplete(
 
     def get_queryset(self):
         # Filter out unathorized users, or does the auth mixin do that?
-        qs = models.ManagedGroup.objects.filter(is_managed_by_app=True).order_by("name")
+        qs = models.ManagedGroup.objects.order_by("name")
+
+        only_managed_by_app = self.forwarded.get("only_managed_by_app", None)
 
         if self.q:
             qs = qs.filter(name__icontains=self.q)
+        if only_managed_by_app:
+            qs = qs.filter(is_managed_by_app=True)
 
         return qs
 
