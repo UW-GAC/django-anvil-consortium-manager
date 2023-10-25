@@ -2,7 +2,7 @@ import responses
 from django.test import TestCase
 from faker import Faker
 
-from .. import models
+from .. import exceptions, models
 from ..audit import audit
 from . import api_factories, factories
 from .utils import AnVILAPIMockTestMixin
@@ -1475,6 +1475,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         return (
             self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
         )
+
+    def test_group_not_managed_by_app(self):
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+            audit.ManagedGroupMembershipAudit(group)
 
     def test_no_members(self):
         """audit works correctly if this group has no members."""

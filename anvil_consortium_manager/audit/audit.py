@@ -287,7 +287,7 @@ class ManagedGroupMembershipAudit(AnVILAudit):
         super().__init__(*args, **kwargs)
         if not managed_group.is_managed_by_app:
             raise exceptions.AnVILNotGroupAdminError(
-                "group {} is not managed by app".format(self.name)
+                "group {} is not managed by app".format(managed_group.name)
             )
         self.managed_group = managed_group
 
