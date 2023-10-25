@@ -80,7 +80,7 @@ class Command(BaseCommand):
                     "anvil_consortium_manager/email_audit_report.html",
                     context={
                         "model_name": audit_name,
-                        "verified_results": len(audit_results.get_verified_results()),
+                        "verified_results": audit_results.get_verified_results(),
                         "errors_table": ErrorTableWithLink(
                             audit_results.get_error_results()
                         ),

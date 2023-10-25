@@ -149,6 +149,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(pprint.pformat(audit_results.export()), email.body)
         # HTML body.
         self.assertEqual(len(email.alternatives), 1)
+        # Check that the number of "ok" instances is correct in email body.
+        self.assertIn("1 instance(s) verified", email.alternatives[0][0])
 
     def test_command_run_audit_ok_email_errors_only(self):
         """Test command output when email and errors_only is set."""
