@@ -2634,6 +2634,140 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         record_result = audit_results.get_result_for_model_instance(membership)
         self.assertTrue(record_result.ok())
 
+    def test_deactivated_account_not_member_in_anvil(self):
+        """Audit is ok if a deactivated account is not in the group on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        # Create an inactive account that is a member of this group.
+        factories.GroupAccountMembershipFactory.create(
+            group=group, account__status=models.Account.INACTIVE_STATUS
+        )
+        # The Account is not a member in AnVIL
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+
+    def test_deactivated_account_member_in_anvil(self):
+        """Audit is not ok if a deactivated account is in the group on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        # Create an inactive account that is a member of this group.
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group, account__status=models.Account.INACTIVE_STATUS
+        )
+        # The Account is not a member in AnVIL
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory(
+                response=[membership.account.email]
+            ).response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(membership)
+        self.assertEqual(
+            record_result.errors,
+            set([audit_results.ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL]),
+        )
+
+    def test_deactivated_account_not_admin_in_anvil(self):
+        """Audit is ok if a deactivated account is not in the group on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        # Create an inactive account that is a member of this group.
+        factories.GroupAccountMembershipFactory.create(
+            group=group,
+            account__status=models.Account.INACTIVE_STATUS,
+            role=models.GroupAccountMembership.ADMIN,
+        )
+        # The Account is not a member in AnVIL
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+
+    def test_deactivated_account_admin_in_anvil(self):
+        """Audit is not ok if a deactivated account is in the group on AnVIL."""
+        group = factories.ManagedGroupFactory.create()
+        # Create an inactive account that is a member of this group.
+        membership = factories.GroupAccountMembershipFactory.create(
+            group=group,
+            account__status=models.Account.INACTIVE_STATUS,
+            role=models.GroupAccountMembership.ADMIN,
+        )
+        # The Account is not a member in AnVIL
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(
+                response=[membership.account.email]
+            ).response,
+        )
+        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(membership)
+        self.assertEqual(
+            record_result.errors,
+            set([audit_results.ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL]),
+        )
+
 
 class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the Workspace.anvil_audit method."""

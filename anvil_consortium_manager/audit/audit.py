@@ -267,6 +267,16 @@ class ManagedGroupMembershipAudit(AnVILAudit):
     ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL = "Account not a member in AnVIL"
     """Error when an Account is a member of a ManagedGroup on the app, but not in AnVIL."""
 
+    ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL = (
+        "Account is deactivated but is an admin in AnVIL."
+    )
+    """Error when a deactivated Account is an admin of a ManagedGroup in AnVIL."""
+
+    ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL = (
+        "Account is deactivated but is a member in AnVIL."
+    )
+    """Error when a deactivated Account is a member of a ManagedGroup in AnVIL."""
+
     ERROR_GROUP_ADMIN_NOT_IN_ANVIL = "Group not an admin in AnVIL"
     """Error when a ManagedGroup is an admin of another ManagedGroup on the app, but not in AnVIL."""
 
@@ -317,19 +327,29 @@ class ManagedGroupMembershipAudit(AnVILAudit):
             if membership.role == models.GroupAccountMembership.ADMIN:
                 try:
                     admins_in_anvil.remove(membership.account.email.lower())
+                    if membership.account.status == models.Account.INACTIVE_STATUS:
+                        model_instance_result.add_error(
+                            self.ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL
+                        )
                 except ValueError:
-                    # This email is not in the list of members.
-                    model_instance_result.add_error(
-                        self.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL
-                    )
+                    # For active accounts, this is an error - the email is not in the list of members.
+                    if membership.account.status == models.Account.ACTIVE_STATUS:
+                        model_instance_result.add_error(
+                            self.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL
+                        )
             elif membership.role == models.GroupAccountMembership.MEMBER:
                 try:
                     members_in_anvil.remove(membership.account.email.lower())
+                    if membership.account.status == models.Account.INACTIVE_STATUS:
+                        model_instance_result.add_error(
+                            self.ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL
+                        )
                 except ValueError:
-                    # This email is not in the list of members.
-                    model_instance_result.add_error(
-                        self.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL
-                    )
+                    # For active accounts, this is an error - the email is not in the list of members.
+                    if membership.account.status == models.Account.ACTIVE_STATUS:
+                        model_instance_result.add_error(
+                            self.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL
+                        )
             self.add_result(model_instance_result)
 
         # Check group-group membership.
