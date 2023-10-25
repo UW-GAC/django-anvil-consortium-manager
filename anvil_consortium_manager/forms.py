@@ -3,7 +3,7 @@
 from crispy_bootstrap5.bootstrap5 import FloatingField
 from crispy_forms import layout
 from crispy_forms.helper import FormHelper
-from dal import autocomplete
+from dal import autocomplete, forward
 from django import VERSION as DJANGO_VERSION
 from django import forms
 from django.conf import settings
@@ -335,6 +335,7 @@ class GroupGroupMembershipForm(Bootstrap5MediaFormMixin, forms.ModelForm):
         widget=autocomplete.ModelSelect2(
             url="anvil_consortium_manager:managed_groups:autocomplete",
             attrs={"data-theme": "bootstrap-5"},
+            forward=(forward.Const(True, "only_managed_by_app"),),
         ),
         help_text="Select the group to add the child group to. Only groups that are managed by this app are shown.",
     )
@@ -374,6 +375,7 @@ class GroupAccountMembershipForm(Bootstrap5MediaFormMixin, forms.ModelForm):
             attrs={
                 "data-theme": "bootstrap-5",
             },
+            forward=(forward.Const(True, "only_managed_by_app"),),
         ),
     )
 
