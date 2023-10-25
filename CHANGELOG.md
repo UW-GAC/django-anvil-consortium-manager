@@ -7,6 +7,7 @@
 * Bugfix: ManagedGroupMembershipAudit does not unexpectedly show errors for deactivated accounts that were in the group before they were deactivated.
 * Bugfix: ManagedGroupMembershipAudit now raises the correct exception when instantiated with a ManagedGroup that is not managed by the app.
 * Bugfix: ManagedGroupAudit does not report missing groups where the app is only a member.
+* Bugfix: Allow groups not managed by the app to be added as child groups of another group, and allow workspaces to be shared with them.
 
 ## 0.18 (2023-10-03)
 
