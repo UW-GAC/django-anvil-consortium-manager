@@ -30,6 +30,7 @@ Required Settings
           "django.contrib.messages",
           "django.contrib.sites",
           "django-tables2",
+          "crispy_bootstrap5",  # If you are using the default templates
 
           # This app:
           "anvil_consortium_manager",
