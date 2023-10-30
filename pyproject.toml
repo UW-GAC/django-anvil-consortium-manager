@@ -11,7 +11,7 @@ authors = [
 ]
 description = "A Django app to manage Consortium AnVIL groups, workspaces, and access."
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
     "Framework :: Django",
     "Development Status :: 4 - Beta",
