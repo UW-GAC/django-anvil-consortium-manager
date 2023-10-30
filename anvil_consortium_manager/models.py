@@ -11,7 +11,7 @@ from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
-from . import anvil_audit, exceptions
+from . import exceptions
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
@@ -22,6 +22,7 @@ class AnVILProjectManagerAccess(models.Model):
 
     EDIT_PERMISSION_CODENAME = "anvil_project_manager_edit"
     VIEW_PERMISSION_CODENAME = "anvil_project_manager_view"
+    LIMITED_VIEW_PERMISSION_CODENAME = "anvil_project_manager_limited_view"
     ACCOUNT_LINK_PERMISSION_CODENAME = "anvil_project_manager_account_link"
 
     class Meta:
@@ -38,6 +39,10 @@ class AnVILProjectManagerAccess(models.Model):
             (
                 "anvil_project_manager_account_link",
                 "AnVIL Project Manager Account Link Permission",
+            ),
+            (
+                "anvil_project_manager_limited_view",
+                "AnVIL Project Manager Limited View Permission",
             ),
         ]
 
@@ -91,28 +96,6 @@ class BillingProject(TimeStampedModel):
         AnVILAPIClient().get_billing_project(billing_project_name)
         billing_project.save()
         return billing_project
-
-    @classmethod
-    def anvil_audit(cls):
-        """Verify data in the app against AnVIL.
-
-        Only billing projects with ``have_app_as_user=True`` are checked, because the AnVIL API does not
-        differentiate between billing projects that don't exist and billing projects where the app is
-        not a user.
-
-        Returns:
-            An instance of :class:`~anvil_consortium_manager.anvil_audit.BillingProjectAuditResults`.
-        """
-        # Check that all billing projects exist.
-        audit_results = anvil_audit.BillingProjectAuditResults()
-        for billing_project in cls.objects.filter(has_app_as_user=True).all():
-            if not billing_project.anvil_exists():
-                audit_results.add_error(
-                    billing_project, audit_results.ERROR_NOT_IN_ANVIL
-                )
-            else:
-                audit_results.add_verified(billing_project)
-        return audit_results
 
 
 class UserEmailEntry(TimeStampedModel, models.Model):
@@ -357,26 +340,6 @@ class Account(TimeStampedModel, ActivatorModel):
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
-
-    @classmethod
-    def anvil_audit(cls):
-        """Verify data in the app against AnVIL.
-
-        Only billing projects with have_app_as_user=True are checked, because the AnVIL API does not
-        differentiate between billing projects that don't exist and billing projects where the app is
-        not a user.
-
-        Returns:
-            An instance of :class:`~anvil_consortium_manager.anvil_audit.AccountAuditResults`
-        """
-        # Check that all accounts exist on AnVIL.
-        audit_results = anvil_audit.AccountAuditResults()
-        for account in cls.objects.filter(status=cls.ACTIVE_STATUS).all():
-            if not account.anvil_exists():
-                audit_results.add_error(account, audit_results.ERROR_NOT_IN_ANVIL)
-            else:
-                audit_results.add_verified(account)
-        return audit_results
 
     def get_accessible_workspaces(self):
         """Get a list of workspaces an Account has access to.
@@ -683,165 +646,6 @@ class ManagedGroup(TimeStampedModel):
                 # This email is not associated with an Account in the app.
                 pass
 
-    def anvil_audit_membership(self):
-        """Audit the membership for a single group against AnVIL.
-
-        Returns:
-            An instance of :class:`~anvil_consortium_manager.anvil_audit.ManagedGroupMembershipAuditResults`.
-        """
-        api_client = AnVILAPIClient()
-        audit_results = anvil_audit.ManagedGroupMembershipAuditResults()
-        response = api_client.get_group_members(self.name)
-        # Convert to case-insensitive emails.
-        members_in_anvil = [x.lower() for x in response.json()]
-        response = api_client.get_group_admins(self.name)
-        # Convert to case-insensitive emails.
-        admins_in_anvil = [x.lower() for x in response.json()]
-        # Remove the service account as admin.
-        try:
-            admins_in_anvil.remove(
-                api_client.auth_session.credentials.service_account_email.lower()
-            )
-        except ValueError:
-            # Not listed as an admin -- this is ok because it could be via group membership.
-            pass
-        # Sometimes the service account is also listed as a member. Remove that too.
-        try:
-            members_in_anvil.remove(
-                api_client.auth_session.credentials.service_account_email.lower()
-            )
-        except ValueError:
-            # Not listed as a member -- this is ok.
-            pass
-        # Check group-account membership.
-        for membership in self.groupaccountmembership_set.all():
-            if membership.role == GroupAccountMembership.ADMIN:
-                try:
-                    admins_in_anvil.remove(membership.account.email.lower())
-                except ValueError:
-                    # This email is not in the list of members.
-                    audit_results.add_error(
-                        membership, audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL
-                    )
-                else:
-                    audit_results.add_verified(membership)
-            elif membership.role == GroupAccountMembership.MEMBER:
-                try:
-                    members_in_anvil.remove(membership.account.email.lower())
-                except ValueError:
-                    # This email is not in the list of members.
-                    audit_results.add_error(
-                        membership, audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL
-                    )
-                else:
-                    audit_results.add_verified(membership)
-
-        # Check group-group membership.
-        for membership in self.child_memberships.all():
-            if membership.role == GroupGroupMembership.ADMIN:
-                try:
-                    admins_in_anvil.remove(membership.child_group.email.lower())
-                except ValueError:
-                    # This email is not in the list of members.
-                    audit_results.add_error(
-                        membership, audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL
-                    )
-                else:
-                    audit_results.add_verified(membership)
-                # Also remove from members.
-                try:
-                    members_in_anvil.remove(membership.child_group.email.lower())
-                except ValueError:
-                    # The group is not directly listed as a member, so this is ok.
-                    # It is already an admin.
-                    pass
-            elif membership.role == GroupGroupMembership.MEMBER:
-                try:
-                    members_in_anvil.remove(membership.child_group.email.lower())
-                except ValueError:
-                    # This email is not in the list of members.
-                    audit_results.add_error(
-                        membership, audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL
-                    )
-                else:
-                    audit_results.add_verified(membership)
-
-        # Add any admin that the app doesn't know about.
-        for member in admins_in_anvil:
-            audit_results.add_not_in_app(
-                "{}: {}".format(GroupAccountMembership.ADMIN, member)
-            )
-        # Add any members that the app doesn't know about.
-        for member in members_in_anvil:
-            audit_results.add_not_in_app(
-                "{}: {}".format(GroupAccountMembership.MEMBER, member)
-            )
-
-        return audit_results
-
-    @classmethod
-    def anvil_audit(cls):
-        """Verify data in the app against AnVIL.
-
-        Returns:
-            An instance of :class:`~anvil_consortium_manager.anvil_audit.ManagedGroupAuditResults`.
-        """
-        audit_results = anvil_audit.ManagedGroupAuditResults()
-        # Check the list of groups.
-        response = AnVILAPIClient().get_groups()
-        # Change from list of group dictionaries to dictionary of roles. That way we can handle being both
-        # a member and an admin of a group.
-        groups_on_anvil = {}
-        for group_details in response.json():
-            group_name = group_details["groupName"]
-            role = group_details["role"].lower()
-            try:
-                groups_on_anvil[group_name] = groups_on_anvil[group_name] + [role]
-            except KeyError:
-                groups_on_anvil[group_name] = [role]
-        # Audit groups that exist in the app.
-        for group in cls.objects.all():
-            try:
-                group_roles = groups_on_anvil.pop(group.name)
-            except KeyError:
-                # Check if the group actually does exist but we're not a member of it.
-                try:
-                    # If this returns a 404 error, then the group actually does not exist.
-                    response = AnVILAPIClient().get_group_email(group.name)
-                    if group.is_managed_by_app:
-                        audit_results.add_error(
-                            group, audit_results.ERROR_DIFFERENT_ROLE
-                        )
-
-                except AnVILAPIError404:
-                    audit_results.add_error(group, audit_results.ERROR_NOT_IN_ANVIL)
-                    # Perhaps we want to add has_app_as_member as a field and check that.
-            else:
-                # Check role.
-                if group.is_managed_by_app:
-                    if "admin" not in group_roles:
-                        audit_results.add_error(
-                            group, audit_results.ERROR_DIFFERENT_ROLE
-                        )
-                    else:
-                        if not group.anvil_audit_membership().ok():
-                            audit_results.add_error(
-                                group, audit_results.ERROR_GROUP_MEMBERSHIP
-                            )
-                elif not group.is_managed_by_app and "admin" in group_roles:
-                    audit_results.add_error(group, audit_results.ERROR_DIFFERENT_ROLE)
-
-            try:
-                audit_results.add_verified(group)
-            except ValueError:
-                # ValueError is raised when the group already has errors reported, so
-                # ignore this exception -- we don't want to add it to the verified list.
-                pass
-        # Check for groups that exist on AnVIL but not the app.
-        for group_name in groups_on_anvil:
-            audit_results.add_not_in_app(group_name)
-        return audit_results
-
     def is_in_authorization_domain(self, workspace):
         """Check if this group (or a group that it is part of) is in the auth domain of a workspace."""
         return workspace.is_in_authorization_domain(self)
@@ -875,7 +679,7 @@ class Workspace(TimeStampedModel):
         max_length=64,
         help_text="Name of the workspace on AnVIL, not including billing project name.",
     )
-    # This makes it possible to easily select the authorization domains in the WorkspaceCreateForm.
+    # This makes it possible to easily select the authorization domains in the WorkspaceForm.
     # However, it does not create a record in django-simple-history for creating the many-to-many field.
     authorization_domains = models.ManyToManyField(
         "ManagedGroup",
@@ -1150,136 +954,6 @@ class Workspace(TimeStampedModel):
             raise
 
         return workspace
-
-    def anvil_audit_sharing(self):
-        """Audit the sharing for a single Workspace against AnVIL.
-
-        Returns:
-            An instance of :class:`~anvil_consortium_manager.anvil_audit.WorkspaceGroupSharingAuditResults`.
-        """
-        api_client = AnVILAPIClient()
-        audit_results = anvil_audit.WorkspaceGroupSharingAuditResults()
-        response = api_client.get_workspace_acl(self.billing_project.name, self.name)
-        acl_in_anvil = {k.lower(): v for k, v in response.json()["acl"].items()}
-        # Remove the service account.
-        try:
-            acl_in_anvil.pop(
-                api_client.auth_session.credentials.service_account_email.lower()
-            )
-        except KeyError:
-            # In some cases, the workspace is shared with a group we are part of instead of directly with us.
-            pass
-        for access in self.workspacegroupsharing_set.all():
-            try:
-                access_details = acl_in_anvil.pop(access.group.email.lower())
-            except KeyError:
-                audit_results.add_error(access, audit_results.ERROR_NOT_SHARED_IN_ANVIL)
-            else:
-                # Check access level.
-                if access.access != access_details["accessLevel"]:
-                    audit_results.add_error(
-                        access, audit_results.ERROR_DIFFERENT_ACCESS
-                    )
-                # Check can_compute value.
-                if access.can_compute != access_details["canCompute"]:
-                    audit_results.add_error(
-                        access, audit_results.ERROR_DIFFERENT_CAN_COMPUTE
-                    )
-                # Check can_share value -- the app never grants this, so it should always be false.
-                # Can share should be True for owners and false for others.
-                can_share = access.access == "OWNER"
-                if access_details["canShare"] != can_share:
-                    audit_results.add_error(
-                        access, audit_results.ERROR_DIFFERENT_CAN_SHARE
-                    )
-
-            try:
-                audit_results.add_verified(access)
-            except ValueError:
-                # This means that the access instance already has errors reported, so do nothing.
-                pass
-
-        # Add any access that the app doesn't know about.
-        for key in acl_in_anvil:
-            audit_results.add_not_in_app(
-                "{}: {}".format(acl_in_anvil[key]["accessLevel"], key)
-            )
-
-        return audit_results
-
-    @classmethod
-    def anvil_audit(cls):
-        """Verify data in the app against AnVIL.
-
-        This method checks if any workspaces where the service account is an owner exist in AnVIL.
-
-        Returns:
-            An instance of :class:`~anvil_consortium_manager.anvil_audit.WorkspaceAuditResults`.
-        """
-        audit_results = anvil_audit.WorkspaceAuditResults()
-        # Check the list of workspaces.
-        response = AnVILAPIClient().list_workspaces(
-            fields="workspace.namespace,workspace.name,workspace.authorizationDomain,workspace.isLocked,accessLevel"
-        )
-        workspaces_on_anvil = response.json()
-        for workspace in cls.objects.all():
-            try:
-                i = next(
-                    idx
-                    for idx, x in enumerate(workspaces_on_anvil)
-                    if (
-                        x["workspace"]["name"] == workspace.name
-                        and x["workspace"]["namespace"]
-                        == workspace.billing_project.name
-                    )
-                )
-            except StopIteration:
-                audit_results.add_error(workspace, audit_results.ERROR_NOT_IN_ANVIL)
-            else:
-                # Check role.
-                workspace_details = workspaces_on_anvil.pop(i)
-                if workspace_details["accessLevel"] != "OWNER":
-                    audit_results.add_error(
-                        workspace, audit_results.ERROR_NOT_OWNER_ON_ANVIL
-                    )
-                elif not workspace.anvil_audit_sharing().ok():
-                    # Since we're the owner, check workspace access.
-                    audit_results.add_error(
-                        workspace, audit_results.ERROR_WORKSPACE_SHARING
-                    )
-                # Check auth domains.
-                auth_domains_on_anvil = [
-                    x["membersGroupName"]
-                    for x in workspace_details["workspace"]["authorizationDomain"]
-                ]
-                auth_domains_in_app = workspace.authorization_domains.all().values_list(
-                    "name", flat=True
-                )
-                if set(auth_domains_on_anvil) != set(auth_domains_in_app):
-                    audit_results.add_error(
-                        workspace, audit_results.ERROR_DIFFERENT_AUTH_DOMAINS
-                    )
-                # Check lock status.
-                if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
-                    audit_results.add_error(
-                        workspace, audit_results.ERROR_DIFFERENT_LOCK
-                    )
-                try:
-                    audit_results.add_verified(workspace)
-                except ValueError:
-                    # ValueError is raised when the workspace already has errors reported, so
-                    # ignore this exception -- we don't want to add it to the verified list.
-                    pass
-
-        # Check for remaining workspaces on AnVIL where we are OWNER.
-        not_in_app = [
-            "{}/{}".format(x["workspace"]["namespace"], x["workspace"]["name"])
-            for x in workspaces_on_anvil
-            if x["accessLevel"] == "OWNER"
-        ]
-        for workspace_name in not_in_app:
-            audit_results.add_not_in_app(workspace_name)
-        return audit_results
 
 
 class BaseWorkspaceData(models.Model):

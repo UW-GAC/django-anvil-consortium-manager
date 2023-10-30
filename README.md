@@ -138,3 +138,11 @@ To run tests using MariaDB as the backend, run:
 ```
 pytest --ds=anvil_consortium_manager.tests.settings.test_mariadb
 ```
+
+If you run into errors with `mysqclient>=2.2`, you will need to set some environment variables before installing mysqlclient:
+
+```
+export PKG_CONFIG_PATH="/opt/local/lib/mariadb-10.5/pkgconfig/"
+export MYSQLCLIENT_LDFLAGS=`pkg-config --libs libmariadb`
+export MYSQLCLIENT_CFLAGS=`pkg-config --cflags libmariadb`
+```

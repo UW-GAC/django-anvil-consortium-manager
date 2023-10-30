@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "django_extensions",  # useful extensions
     "simple_history",  # model history tracking - required for viewing in admin.
+    "django_filters",
     # This app.
     "anvil_consortium_manager",
     # Autocomplete.
@@ -218,8 +219,8 @@ ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
 
 # Workspace adapters.
 ANVIL_WORKSPACE_ADAPTERS = [
-    "example_site.app.adapters.ExampleWorkspaceAdapter",
-    # "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+    "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+    "example_site.app.adapters.CustomWorkspaceAdapter",
 ]
 # Account adapter.
 ANVIL_ACCOUNT_ADAPTER = (

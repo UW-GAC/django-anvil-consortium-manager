@@ -1,6 +1,6 @@
 """Default adapters for the app."""
 
-from .. import forms, models, tables
+from .. import filters, forms, models, tables
 from .account import BaseAccountAdapter
 from .workspace import BaseWorkspaceAdapter
 
@@ -9,6 +9,7 @@ class DefaultAccountAdapter(BaseAccountAdapter):
     """Default account adapter for use with the app."""
 
     list_table_class = tables.AccountTable
+    list_filterset_class = filters.AccountListFilter
 
 
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
@@ -17,6 +18,7 @@ class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     name = "Workspace"
     type = "workspace"
     description = "Default workspace"
+    workspace_form_class = forms.WorkspaceForm
     workspace_data_model = models.DefaultWorkspaceData
     workspace_data_form_class = forms.DefaultWorkspaceDataForm
     list_table_class = tables.WorkspaceTable

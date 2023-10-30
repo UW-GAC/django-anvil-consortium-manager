@@ -9,9 +9,14 @@ The account adapter
 The app provides an adapter that you can use to customize behavior for Accounts.
 By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultAccountAdapter`.
 
-The default adapter provides the following settings and methods:
+To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseAccountAdapter`
+and set the following attributes:
 
-- ``list_table_class``: an attribute set to the class of the table used to display accounts in the `AccountList` view. The default is :class:`anvil_consortium_manager.tables.AccountTable`.
+- ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountTable`.
+- ``list_filterset_class``: an attribute set to the class of the table used to filter accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.filters.AccountListFilter`. This must subclass ``FilterSet`` from `django-filter <https://django-filter.readthedocs.io/en/stable/>`_.
+
+Optionally, you can override the following methods:
+
 - ``get_autocomplete_queryset(self, queryset, q)``: a method that allows the user to provide custom filtering for the autocomplete view. By default, this filters to Accounts whose email contains the case-insensitive search string in ``q``.
 - ``get_autocomplete_label(self, account)``: a method that allows the user to set the label for an account shown in forms using the autocomplete widget.
 
@@ -67,8 +72,10 @@ If you do not want to define a custom table, you can use the default table provi
 
 Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapter.BaseWorkspaceAdapter`. You will need to set:
 
-* ``type``: a string indicating the workspace type (e.g., ``"custom"``). This will be stored in the ``workspace_type`` field of the :class:`anvil_consortium_manager.models.Workspace` model for any workspaces created using the adapter.
 * ``name``: a human-readable name for workspaces created with this adapater (e.g., ``"Custom workspace"``). This will be used when displaying information about workspaces created with this adapter.
+* ``type``: a string indicating the workspace type (e.g., ``"custom"``). This will be stored in the ``workspace_type`` field of the :class:`anvil_consortium_manager.models.Workspace` model for any workspaces created using the adapter.
+* ``description``: a string giving a brief description of the workspace data model. This will be displayed in the :class:`~anvil_consortium_manager.views.WorkspaceLandingPage` view.
+* ``workspace_form_class``: the form to use to create an instance of the ``Workspace`` model. The default adapter uses :class:`~anvil_consortium_manager.forms.WorkspaceForm``.
 * ``workspace_data_model``: the model used to store additional data about a workspace, subclassed from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`
 * ``workspace_data_form_class``: the form to use to create an instance of the ``workspace_data_model``
 * ``list_table_class``: the table to use to display the list of workspaces
@@ -83,16 +90,19 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
 .. code-block:: python
 
     from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
+    from anvil_consortium_manager.forms import WorkspaceForm
     from my_app.models import CustomWorkspaceData
     from my_app.forms import CustomWorkspaceDataForm
     from my_app.tables import CustomWorkspaceTable
 
     class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
-        type = "custom"
         name = "Custom workspace"
+        type = "custom"
+        description = "Example custom workspace type for demo app"
+        list_table_class = tables.CustomWorkspaceDataTable
+        workspace_form_class = WorkspaceForm
         workspace_data_model = models.CustomWorkspaceData
         workspace_data_form_class = forms.CustomWorkspaceDataForm
-        list_table_class = tables.CustomWorkspaceTable
         workspace_detail_template_name = "my_app/custom_workspace_detail.html"
 
 Finally, to tell the app to use this adapter, set ``ANVIL_WORKSPACE_ADAPTERS`` in your settings file, e.g.: ``ANVIL_WORKSPACE_ADAPTERS = ["my_app.adapters.CustomWorkspaceAdapter"]``. You can even define multiple adapters for different types of workspaces, e.g.:
@@ -120,3 +130,22 @@ If you would like to display information from the custom workspace data model in
     {% endblock workspace_data %}
 
 If custom content is not provided for the ``workspace_data`` block, a default set of information will be displayed: the billing project, the date added, and the date modified.
+
+Customizing the :class:`~anvil_consortium_manager.models.Workspace` form
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Most workspace adapters can set `workspace_data_form` to :class:`~anvil_consortium_manager.forms.WorkspaceForm`.
+This will use the default form provided by the app.
+
+If you would like to add a custom form (e.g., to provide custom help text or do additional cleaning on fields), you can set `workspace_data_form` to a custom form.
+You must subclass :class:`anvil_consortium_manager.forms.WorkspaceForm`.
+If you modify the form `Meta` class, make sure that it also subclasses `WorkspaceForm.Meta`:
+
+.. code-block:: python
+
+    from anvil_consortium_manager.forms import WorkspaceForm
+
+    class CustomWorkspaceForm(WorkspaceForm):
+
+        class Meta(WorkspaceForm.Meta):
+            help_texts = {"note": "Custom help for note field."}

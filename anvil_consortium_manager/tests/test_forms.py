@@ -302,10 +302,10 @@ class ManagedGroupUpdateFormTest(TestCase):
         self.assertTrue(form.is_valid())
 
 
-class WorkspaceCreateFormTest(TestCase):
-    """Tests for the WorkspaceCreateForm class."""
+class WorkspaceFormTest(TestCase):
+    """Tests for the WorkspaceForm class."""
 
-    form_class = forms.WorkspaceCreateForm
+    form_class = forms.WorkspaceForm
 
     def test_valid(self):
         """Form is valid with necessary input."""
@@ -375,8 +375,10 @@ class WorkspaceCreateFormTest(TestCase):
         }
         form = self.form_class(data=form_data)
         self.assertFalse(form.is_valid())
-        self.assertIn("billing_project", form.errors)
         self.assertEqual(len(form.errors), 1)
+        self.assertIn("billing_project", form.errors)
+        self.assertEqual(len(form.errors["billing_project"]), 1)
+        self.assertIn("has_app_as_user", form.errors["billing_project"][0])
 
     def test_invalid_case_insensitive_duplicate(self):
         """Cannot validate with the same case-insensitive name in the same billing project as an existing workspace."""
@@ -390,24 +392,6 @@ class WorkspaceCreateFormTest(TestCase):
         self.assertIn(NON_FIELD_ERRORS, form.errors)
         self.assertEqual(len(form.errors[NON_FIELD_ERRORS]), 1)
         self.assertIn("already exists", form.errors[NON_FIELD_ERRORS][0])
-
-
-class WorkspaceUpdateFormTest(TestCase):
-    """Tests for the ManagedGroupUpdateForm class."""
-
-    form_class = forms.WorkspaceUpdateForm
-
-    def test_valid(self):
-        """Form is valid with necessary input."""
-        form_data = {}
-        form = self.form_class(data=form_data)
-        self.assertTrue(form.is_valid())
-
-    def test_form_valid_note(self):
-        """Form is valid with the note field."""
-        form_data = {"note": "test note"}
-        form = self.form_class(data=form_data)
-        self.assertTrue(form.is_valid())
 
 
 class WorkspaceImportFormTest(TestCase):

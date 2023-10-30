@@ -27,6 +27,7 @@ from django.views.generic.detail import (
 )
 from django.views.generic.edit import BaseDeleteView as DjangoBaseDeleteView
 from django.views.generic.edit import DeletionMixin, FormMixin
+from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin, SingleTableView
 
 from . import (
@@ -34,6 +35,7 @@ from . import (
     anvil_api,
     auth,
     exceptions,
+    filters,
     forms,
     models,
     tables,
@@ -42,6 +44,7 @@ from . import (
 from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
+from .audit import audit
 from .tokens import account_verification_token
 
 # Based on Wagtail: https://github.com/wagtail/wagtail/blob/main/wagtail/admin/views/generic/models.py
@@ -203,10 +206,15 @@ class BillingProjectDetail(
         return context
 
 
-class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class BillingProjectList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
     ordering = ("name",)
+    template_name = "anvil_consortium_manager/billingproject_list.html"
+
+    filterset_class = filters.BillingProjectListFilter
 
 
 class BillingProjectAutocomplete(
@@ -230,9 +238,7 @@ class BillingProjectAudit(
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/billing_project_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.BillingProject.anvil_audit()
+    audit_class = audit.BillingProjectAudit
 
 
 class AccountDetail(
@@ -505,38 +511,44 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         return super().get(request, *args, **kwargs)
 
 
-class AccountList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountList(
+    auth.AnVILConsortiumManagerViewRequired,
+    viewmixins.AccountAdapterMixin,
+    SingleTableMixin,
+    FilterView,
+):
     """View to display a list of Accounts.
 
     The table class can be customized using in a custom Account adapter."""
 
     model = models.Account
     ordering = ("email",)
-
-    def get_table_class(self):
-        adapter = get_account_adapter()
-        return adapter().get_list_table_class()
+    template_name = "anvil_consortium_manager/account_list.html"
 
 
-class AccountActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountActiveList(
+    auth.AnVILConsortiumManagerViewRequired,
+    viewmixins.AccountAdapterMixin,
+    SingleTableMixin,
+    FilterView,
+):
     model = models.Account
     ordering = ("email",)
-
-    def get_table_class(self):
-        adapter = get_account_adapter()
-        return adapter().get_list_table_class()
+    template_name = "anvil_consortium_manager/account_list.html"
 
     def get_queryset(self):
         return self.model.objects.active()
 
 
-class AccountInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class AccountInactiveList(
+    auth.AnVILConsortiumManagerViewRequired,
+    viewmixins.AccountAdapterMixin,
+    SingleTableMixin,
+    FilterView,
+):
     model = models.Account
     ordering = ("email",)
-
-    def get_table_class(self):
-        adapter = get_account_adapter()
-        return adapter().get_list_table_class()
+    template_name = "anvil_consortium_manager/account_list.html"
 
     def get_queryset(self):
         return self.model.objects.inactive()
@@ -730,9 +742,7 @@ class AccountAudit(
     """View to run an audit on Accounts and display the results."""
 
     template_name = "anvil_consortium_manager/account_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.Account.anvil_audit()
+    audit_class = audit.AccountAudit
 
 
 class ManagedGroupDetail(
@@ -842,10 +852,15 @@ class ManagedGroupUpdate(
     success_message = "Successfully updated ManagedGroup."
 
 
-class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class ManagedGroupList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
     ordering = ("name",)
+    template_name = "anvil_consortium_manager/managedgroup_list.html"
+
+    filterset_class = filters.ManagedGroupListFilter
 
 
 class ManagedGroupVisualization(
@@ -988,10 +1003,14 @@ class ManagedGroupAutocomplete(
 
     def get_queryset(self):
         # Filter out unathorized users, or does the auth mixin do that?
-        qs = models.ManagedGroup.objects.filter(is_managed_by_app=True).order_by("name")
+        qs = models.ManagedGroup.objects.order_by("name")
+
+        only_managed_by_app = self.forwarded.get("only_managed_by_app", None)
 
         if self.q:
             qs = qs.filter(name__icontains=self.q)
+        if only_managed_by_app:
+            qs = qs.filter(is_managed_by_app=True)
 
         return qs
 
@@ -1002,9 +1021,7 @@ class ManagedGroupAudit(
     """View to run an audit on ManagedGroups and display the results."""
 
     template_name = "anvil_consortium_manager/managedgroup_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.ManagedGroup.anvil_audit()
+    audit_class = audit.ManagedGroupAudit
 
 
 class ManagedGroupMembershipAudit(
@@ -1036,8 +1053,8 @@ class ManagedGroupMembershipAudit(
         # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
-    def run_audit(self):
-        self.audit_results = self.object.anvil_audit_membership()
+    def get_audit_instance(self):
+        return audit.ManagedGroupMembershipAudit(self.object)
 
 
 class WorkspaceLandingPage(
@@ -1094,8 +1111,13 @@ class WorkspaceDetail(
         object = self.get_object()
         return object.workspace_type
 
+    def get_workspace_data_object(self):
+        model = self.adapter.get_workspace_data_model()
+        return model.objects.get(workspace=self.object)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["workspace_data_object"] = self.get_workspace_data_object()
         context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
             self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )
@@ -1124,9 +1146,11 @@ class WorkspaceCreate(
     viewmixins.WorkspaceAdapterMixin,
     FormView,
 ):
-    form_class = forms.WorkspaceCreateForm
     success_message = "Successfully created Workspace on AnVIL."
     template_name = "anvil_consortium_manager/workspace_create.html"
+
+    def get_form_class(self):
+        return self.adapter.get_workspace_form_class()
 
     def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
@@ -1533,10 +1557,22 @@ class WorkspaceUpdate(
     """View to update information about an Account."""
 
     model = models.Workspace
-    form_class = forms.WorkspaceUpdateForm
     slug_field = "name"
     template_name = "anvil_consortium_manager/workspace_update.html"
     success_message = "Successfully updated Workspace."
+
+    def get_form_class(self):
+        form_class = self.adapter.get_workspace_form_class()
+
+        class WorkspaceUpdateForm(form_class):
+            class Meta(form_class.Meta):
+                exclude = (
+                    "billing_project",
+                    "name",
+                    "authorization_domains",
+                )
+
+        return WorkspaceUpdateForm
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -1560,6 +1596,10 @@ class WorkspaceUpdate(
                 % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
+
+    def get_workspace_data_object(self):
+        model = self.adapter.get_workspace_data_model()
+        return model.objects.get(workspace=self.object)
 
     def get_workspace_type(self):
         """Return the workspace type of this workspace."""
@@ -1599,6 +1639,7 @@ class WorkspaceUpdate(
         """Insert the workspace data formset into the context dict."""
         if "workspace_data_formset" not in kwargs:
             kwargs["workspace_data_formset"] = self.get_workspace_data_formset()
+        kwargs["workspace_data_object"] = self.get_workspace_data_object()
         return super().get_context_data(**kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -1633,7 +1674,9 @@ class WorkspaceUpdate(
         return self.object.get_absolute_url()
 
 
-class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class WorkspaceList(
+    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
+):
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
@@ -1642,6 +1685,8 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
         "billing_project__name",
         "name",
     )
+    template_name = "anvil_consortium_manager/workspace_list.html"
+    filterset_class = filters.WorkspaceListFilter
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1652,7 +1697,8 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
 class WorkspaceListByType(
     auth.AnVILConsortiumManagerViewRequired,
     viewmixins.WorkspaceAdapterMixin,
-    SingleTableView,
+    SingleTableMixin,
+    FilterView,
 ):
     """Display a list of workspaces of the given ``workspace_type``."""
 
@@ -1661,6 +1707,8 @@ class WorkspaceListByType(
         "billing_project__name",
         "name",
     )
+    template_name = "anvil_consortium_manager/workspace_list.html"
+    filterset_class = filters.WorkspaceListFilter
 
     def get_queryset(self):
         return self.model.objects.filter(workspace_type=self.adapter.get_type())
@@ -1765,9 +1813,7 @@ class WorkspaceAudit(
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/workspace_audit.html"
-
-    def run_audit(self):
-        self.audit_results = models.Workspace.anvil_audit()
+    audit_class = audit.WorkspaceAudit
 
 
 class WorkspaceSharingAudit(
@@ -1809,8 +1855,8 @@ class WorkspaceSharingAudit(
         # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
-    def run_audit(self):
-        self.audit_results = self.object.anvil_audit_sharing()
+    def get_audit_instance(self):
+        return audit.WorkspaceSharingAudit(self.object)
 
 
 class WorkspaceAutocomplete(

@@ -58,7 +58,10 @@
       </h2>
       <div id="collapseWorkspaceAuthDomainsOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAuthDomainsOne" data-bs-parent="#accordionWorkspaceAuthDomains">
         <div class="accordion-body">
-          {% render_table workspace_authorization_domain_table %}
+          <p>
+            This table shows Workspaces for which this group is used as an authorization domain.
+          </p>
+        {% render_table workspace_authorization_domain_table %}
         </div>
       </div>
     </div>
@@ -79,6 +82,9 @@
         </h2>
         <div id="collapseWorkspaceAccessOne" class="accordion-collapse collapse" aria-labelledby="headingWorkspaceAccessOne" data-bs-parent="#accordionWorkspaceAccess">
           <div class="accordion-body">
+            <p>
+              This table shows Workspaces that have been shared directly with this group.
+            </p>
             {% render_table workspace_table %}
           </div>
         </div>
@@ -99,6 +105,9 @@
         </h2>
         <div id="collapseParents" class="accordion-collapse collapse" aria-labelledby="headingParents">
           <div class="accordion-body">
+            <p>
+              This table shows Managed Groups that this group is a part of, either as an admin or a member.
+            </p>
             {% render_table parent_table %}
           </div>
         </div>
@@ -115,6 +124,9 @@
         </h2>
         <div id="collapseMembersOne" class="accordion-collapse collapse" aria-labelledby="headingMembersOne">
           <div class="accordion-body">
+            <p>
+              This table shows Managed Groups that in this group, either as an admin or a member.
+            </p>
             {% render_table group_table %}
           </div>
         </div>
@@ -130,6 +142,9 @@
         </h2>
         <div id="collapseMembersTwo" class="accordion-collapse collapse" aria-labelledby="headingMembersTwo">
           <div class="accordion-body">
+            <p>
+              This table shows active Accounts that in this group, either as an admin or a member.
+            </p>
             {% render_table active_account_table %}
           </div>
         </div>
@@ -145,6 +160,10 @@
         </h2>
         <div id="collapseMembersThree" class="accordion-collapse collapse" aria-labelledby="headingMembersThree">
           <div class="accordion-body">
+            <p>
+              This table shows a record of the inactive Accounts that were in this group, either as an admin or a member.
+              Note that these Accounts are not part of the group on AnVIL.
+            </p>
             {% render_table inactive_account_table %}
           </div>
         </div>

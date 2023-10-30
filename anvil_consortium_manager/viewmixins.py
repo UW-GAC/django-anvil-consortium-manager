@@ -12,14 +12,28 @@ from django.views.generic.base import ContextMixin
 from django.views.generic.detail import SingleObjectMixin
 
 from . import models
+from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
+from .audit import audit
 
 
 class AnVILAuditMixin:
     """Mixin to display AnVIL audit results."""
 
+    audit_class = None
+
+    def get_audit_instance(self):
+        if not self.audit_class:
+            raise ImproperlyConfigured(
+                "%(cls)s is missing an audit class. Define %(cls)s.audit_class or override "
+                "%(cls)s.get_audit_instance()." % {"cls": self.__class__.__name__}
+            )
+        else:
+            return self.audit_class()
+
     def run_audit(self):
-        raise ImproperlyConfigured("The 'run_audit' method must be implemented.")
+        self.audit_results = self.get_audit_instance()
+        self.audit_results.run_audit()
 
     def get(self, request, *args, **kwargs):
         self.run_audit()
@@ -27,19 +41,34 @@ class AnVILAuditMixin:
 
     def get_context_data(self, *args, **kwargs):
         """Add audit results to the context data."""
-        # Catchall
-        if "audit_timestamp" not in kwargs:
-            kwargs["audit_timestamp"] = timezone.now()
-        if "audit_ok" not in kwargs:
-            kwargs["audit_ok"] = self.audit_results.ok()
-        if "audit_verified" not in kwargs:
-            kwargs["audit_verified"] = self.audit_results.get_verified()
-        if "audit_errors" not in kwargs:
-            kwargs["audit_errors"] = self.audit_results.get_errors()
-        if "audit_not_in_app" not in kwargs:
-            kwargs["audit_not_in_app"] = self.audit_results.get_not_in_app()
+        context = super().get_context_data(*args, **kwargs)
+        context["audit_timestamp"] = timezone.now()
+        context["audit_ok"] = self.audit_results.ok()
+        context["verified_table"] = audit.VerifiedTable(
+            self.audit_results.get_verified_results()
+        )
+        context["error_table"] = audit.ErrorTable(
+            self.audit_results.get_error_results()
+        )
+        context["not_in_app_table"] = audit.NotInAppTable(
+            self.audit_results.get_not_in_app_results()
+        )
+        return context
 
-        return super().get_context_data(*args, **kwargs)
+
+class AccountAdapterMixin:
+    """Class for handling account adapters."""
+
+    def get(self, request, *args, **kwargs):
+        self.adapter = get_account_adapter()
+        return super().get(request, *args, **kwargs)
+
+    def get_filterset_class(self):
+        return self.adapter().get_list_filterset_class()
+        # return filters.AccountListFilter
+
+    def get_table_class(self):
+        return self.adapter().get_list_table_class()
 
 
 class ManagedGroupGraphMixin:

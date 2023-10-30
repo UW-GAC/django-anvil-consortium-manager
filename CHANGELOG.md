@@ -1,6 +1,23 @@
 # Change log
 
-## Devel
+## 0.19 (2023-10-27)
+
+* Add filtering in list views.
+* Bugfix: Print the correct number of "ok" instances in audit emails. 0.18 introduced a bug where the email included "0 instance(s) verified even if there was more than one verified instance.
+* Bugfix: ManagedGroupMembershipAudit does not unexpectedly show errors for deactivated accounts that were in the group before they were deactivated.
+* Bugfix: ManagedGroupMembershipAudit now raises the correct exception when instantiated with a ManagedGroup that is not managed by the app.
+* Bugfix: ManagedGroupAudit does not report missing groups where the app is only a member.
+* Bugfix: Allow groups not managed by the app to be added as child groups of another group, and allow workspaces to be shared with them.
+
+## 0.18 (2023-10-03)
+
+* Include a workspace_data_object context variable for the `WorkspaceDetail` and `WorkspaceUpdate` views.
+* Refactor auditing classes.
+* Add ability to specify a custom `Workspace` form in the workspace adapter.
+* Add informational text to tables on Detail pages.
+* Add a new "Limited view" permission. This permission is not yet used anywhere in the app, but can be used by projects using the app (e.g., to show a custom page to users with this permission).
+
+## 0.17 (2023-07-11)
 
 * Import ManagedGroup membership from AnVIL when importing a ManagedGroup and the members already have records in the app.
 * Sort available workspaces alphabetically in the `WorkspaceImport` view.

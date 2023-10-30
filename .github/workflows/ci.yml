@@ -28,10 +28,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
-          cache: pip
-          cache-dependency-path: |
-            requirements/base.txt
-            requirements/dev.txt
 
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.0
@@ -41,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 10
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
@@ -59,7 +55,15 @@ jobs:
         python -m pip install --upgrade tox tox-gh-actions
 
     - name: Test with tox
-      run: tox
+      # Sometimes tox fails to build the package correctly and intermittently throws an OSError or BadZipFile error.
+      # Upon retry, it seems to work.
+      uses: nick-fields/retry@v2
+      id: retry-sqlite
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_on: error
+        command: tox
       env:
         DBBACKEND: sqlite3
         DBNAME: ":memory:"
@@ -75,10 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 10
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
-        mariadb-version: ["10.3", "10.5"]
+        mariadb-version: ["10.4"]
 
     services:
       database:
@@ -103,19 +107,16 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install --upgrade tox tox-gh-actions
 
-    - name: Test with tox - 10.3
-      if: ${{ matrix.mariadb-version == '10.3' }}
-      run: tox --skip-env ".+?-django42-mysql"
-      env:
-        DBBACKEND: mysql
-        DBNAME: test
-        DBUSER: root
-        DBPASSWORD: rootpw
-        DBHOST: 127.0.0.1
-
-    - name: Test with tox - not 10.3
-      if: ${{ matrix.mariadb-version != '10.3' }}
-      run: tox
+    - name: Test with tox
+      # Sometimes tox fails to build the package correctly and intermittently throws an OSError or BadZipFile error.
+      # Upon retry, it seems to work.
+      uses: nick-fields/retry@v2
+      id: retry-mysql
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_on: error
+        command: tox
       env:
         DBBACKEND: mysql
         DBNAME: test
@@ -142,7 +143,6 @@ jobs:
           python-version: "3.10"
 
       - run: python -m pip install --upgrade coverage[toml] django==3.2.16 django-coverage-plugin
-
 
       - name: Download coverage data.
         uses: actions/download-artifact@v3

@@ -20,9 +20,10 @@ from django.utils import timezone
 from faker import Faker
 from freezegun import freeze_time
 
-from .. import __version__, anvil_api, forms, models, tables, views
+from .. import __version__, anvil_api, filters, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
+from ..audit import audit
 from ..tokens import account_verification_token
 from . import factories
 from .test_app import forms as app_forms
@@ -30,6 +31,7 @@ from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import TestWorkspaceAdapter
 from .test_app.factories import TestWorkspaceDataFactory
+from .test_app.filters import TestAccountListFilter
 from .utils import (  # Redefined to work with Django < 4.2 and Django=4.2.
     AnVILAPIMockTestMixin,
     TestCase,
@@ -73,6 +75,21 @@ class IndexTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -271,6 +288,21 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_context_data_anvil_status_ok(self):
         """Context data contains anvil_status."""
         url_me = self.api_client.firecloud_entry_point + "/me?userDetailsOnly=true"
@@ -423,6 +455,21 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -670,6 +717,21 @@ class BillingProjectUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, slug="foo")
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo")
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -770,6 +832,21 @@ class BillingProjectDetailTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_status_code_with_existing_object_not_user(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.BillingProjectFactory.create(has_app_as_user=False)
@@ -867,6 +944,21 @@ class BillingProjectListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_template_with_user_permission(self):
         """Returns successful response code."""
         self.client.force_login(self.user)
@@ -910,6 +1002,58 @@ class BillingProjectListTest(TestCase):
         factories.BillingProjectFactory.create_batch(2)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_return_no_object(self):
+        factories.BillingProjectFactory.create(name="Billing_project")
+        factories.BillingProjectFactory.create(name="Project")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.BillingProjectFactory.create(name="billing_project")
+        factories.BillingProjectFactory.create(name="project")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"name__icontains": "billing_project"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.BillingProjectFactory.create(name="Billing_project")
+        factories.BillingProjectFactory.create(name="Project")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"name__icontains": "billing_project"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.BillingProjectFactory.create(name="Billing_project")
+        factories.BillingProjectFactory.create(name="Project")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "illing"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.BillingProjectFactory.create(name="project1")
+        factories.BillingProjectFactory.create(name="project_2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "project"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -958,6 +1102,21 @@ class BillingProjectAutocompleteTest(TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -1023,7 +1182,7 @@ class BillingProjectAutocompleteTest(TestCase):
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], object.pk)
 
-    def test_does_not_return_groups_not_managed_by_app(self):
+    def test_does_not_return_billing_projects_where_app_is_not_user(self):
         """Queryset does not return groups that are not managed by the app."""
         factories.BillingProjectFactory.create(name="test-bp", has_app_as_user=False)
         self.client.force_login(self.user)
@@ -1090,6 +1249,21 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_template(self):
         """Template loads successfully."""
         self.client.force_login(self.user)
@@ -1100,8 +1274,11 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         """audit_verified is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -1115,15 +1292,16 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one verified record."""
@@ -1137,15 +1315,18 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -1228,6 +1409,21 @@ class AccountDetailTest(TestCase):
         )
         request = self.factory.get(self.get_url(uuid))
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -1574,6 +1770,21 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -1872,6 +2083,21 @@ class AccountUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=uuid)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         uuid = uuid4()
@@ -1976,6 +2202,21 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -2540,9 +2781,23 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        uuid = uuid4()
-        request = self.factory.get(self.get_url(uuid, "bar"))
+        request = self.factory.get(self.get_url(uuid4(), "bar"))
         request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4(), "bar"))
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -2889,6 +3144,21 @@ class AccountListTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -2914,6 +3184,81 @@ class AccountListTest(TestCase):
         factories.AccountFactory.create_batch(2)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_filterset_class(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("filter", response.context_data)
+        self.assertIsInstance(
+            response.context_data["filter"], filters.AccountListFilter
+        )
+
+    def test_view_with_filter_return_no_object(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.AccountFactory.create(email="account_Test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_contains(self):
+        instance = factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "test1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_status(self):
+        factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.AccountFactory.create(email="account1@example.com")
+        factories.AccountFactory.create(email="account2@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "example"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -2951,6 +3296,7 @@ class AccountListTest(TestCase):
         self.assertIsInstance(
             response.context_data["table"], app_tables.TestAccountTable
         )
+        self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
 class AccountActiveListTest(TestCase):
@@ -2997,11 +3343,36 @@ class AccountActiveListTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+
+    def test_filterset_class(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("filter", response.context_data)
+        self.assertIsInstance(
+            response.context_data["filter"], filters.AccountListFilter
+        )
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -3022,6 +3393,92 @@ class AccountActiveListTest(TestCase):
         factories.AccountFactory.create_batch(2)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_return_no_object(self):
+        factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.AccountFactory.create(
+            email="account_Test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account_test1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_active_only(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_contains(self):
+        instance = factories.AccountFactory.create(
+            email="account_test1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "test1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "example"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -3051,7 +3508,7 @@ class AccountActiveListTest(TestCase):
     @override_settings(
         ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter"
     )
-    def test_adapter_table_class(self):
+    def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -3059,6 +3516,7 @@ class AccountActiveListTest(TestCase):
         self.assertIsInstance(
             response.context_data["table"], app_tables.TestAccountTable
         )
+        self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
 class AccountInactiveListTest(TestCase):
@@ -3105,11 +3563,36 @@ class AccountInactiveListTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_view_has_correct_table_class(self):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+
+    def test_filterset_class(self):
+        factories.AccountFactory.create(email="account_test1@example.com")
+        factories.AccountFactory.create(email="account@example.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("filter", response.context_data)
+        self.assertIsInstance(
+            response.context_data["filter"], filters.AccountListFilter
+        )
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -3130,6 +3613,92 @@ class AccountInactiveListTest(TestCase):
         factories.AccountFactory.create_batch(2, status=models.Account.INACTIVE_STATUS)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_return_no_object(self):
+        factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "account1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"email__icontains": "Account1@example.com"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_inactive_only(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.ACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_contains(self):
+        instance = factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "account1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_all_objects(self):
+        factories.AccountFactory.create(
+            email="account1@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        factories.AccountFactory.create(
+            email="account2@example.com", status=models.Account.INACTIVE_STATUS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"email__icontains": "example"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -3171,6 +3740,7 @@ class AccountInactiveListTest(TestCase):
         self.assertIsInstance(
             response.context_data["table"], app_tables.TestAccountTable
         )
+        self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
 class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
@@ -3246,6 +3816,21 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=uuid)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -3482,6 +4067,21 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=uuid)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -3788,6 +4388,21 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=uuid)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4037,6 +4652,21 @@ class AccountAutocompleteTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4200,6 +4830,21 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4220,8 +4865,11 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         """audit_verified is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_verified(self):
         """audit_verified with one verified record."""
@@ -4235,15 +4883,16 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_verified(self):
         """audit_errors with one verified record."""
@@ -4257,15 +4906,15 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_errors is in the context data."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -4332,6 +4981,21 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -4759,6 +5423,21 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -4983,6 +5662,21 @@ class ManagedGroupUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, slug="foo")
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -5072,6 +5766,21 @@ class ManagedGroupListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -5107,6 +5816,54 @@ class ManagedGroupListTest(TestCase):
         factories.ManagedGroupFactory.create_batch(2)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_return_no_object(self):
+        factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "group1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Group1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "roup1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="gRouP2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Group"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
@@ -5175,6 +5932,21 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=1)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -5570,6 +6342,21 @@ class ManagedGroupAutocompleteTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -5640,11 +6427,28 @@ class ManagedGroupAutocompleteTest(TestCase):
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], group.pk)
 
-    def test_does_not_return_groups_not_managed_by_app(self):
-        """Queryset does not return groups that are not managed by the app."""
+    def test_returns_groups_not_managed_by_app_by_default(self):
+        """Queryset does return groups that are not managed by the app by default."""
+        object = factories.ManagedGroupFactory.create(
+            name="test-group", is_managed_by_app=False
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        returned_ids = [
+            int(x["id"])
+            for x in json.loads(response.content.decode("utf-8"))["results"]
+        ]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], object.pk)
+
+    def test_does_not_return_groups_not_managed_by_app_when_specified(self):
+        """Queryset does not return groups that are not managed by the app when specified."""
         factories.ManagedGroupFactory.create(name="test-group", is_managed_by_app=False)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"q": "test-group"})
+        response = self.client.get(
+            self.get_url(),
+            {"forward": json.dumps({"only_managed_by_app": True})},
+        )
         self.assertEqual(json.loads(response.content.decode("utf-8"))["results"], [])
 
 
@@ -5727,6 +6531,21 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -5761,8 +6580,11 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -5791,8 +6613,8 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -5805,8 +6627,9 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -5821,8 +6644,8 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -5835,8 +6658,11 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -5845,12 +6671,12 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
-            json=[self.get_api_group_json("foo", "Member")],
+            json=[self.get_api_group_json("foo", "Admin")],
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -5975,6 +6801,21 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url(self.group.name))
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -6023,8 +6864,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -6045,8 +6889,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -6066,8 +6910,9 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -6089,8 +6934,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -6110,8 +6955,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -6131,8 +6979,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -6231,6 +7079,21 @@ class ManagedGroupVisualizationTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            views.ManagedGroupVisualization.as_view()(request)
+
     def test_view_status_code_with_existing_object_not_managed(self):
         """Returns a successful status code for an existing object pk."""
         self.client.force_login(self.user)
@@ -6327,6 +7190,21 @@ class WorkspaceLandingPageTest(TestCase):
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            views.WorkspaceLandingPage.as_view()(request)
 
     def test_status_code_with_edit_permission(self):
         """Returns successful response code."""
@@ -6432,6 +7310,10 @@ class WorkspaceDetailTest(TestCase):
         """Return the view being tested."""
         return views.WorkspaceDetail.as_view()
 
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:detail", args=args)
+
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
         # Need a client for redirects.
@@ -6443,35 +7325,56 @@ class WorkspaceDetailTest(TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
             username="test-none", password="test-none"
         )
-        url = reverse(
-            "anvil_consortium_manager:workspaces:detail", args=["foo1", "foo2"]
-        )
-        request = self.factory.get(url)
+        request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user_no_perms
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
     def test_view_status_code_with_invalid_pk(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         request = self.factory.get(obj.get_absolute_url())
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo1", workspace_slug="foo2")
 
+    def test_context_workspace_data(self):
+        """The view adds the workspace_data object to the context."""
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        response.context_data
+        self.assertIn("workspace_data_object", response.context_data)
+        self.assertEqual(response.context_data["workspace_data_object"], obj)
+
     def test_group_sharing_table(self):
         """The workspace group access table exists."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6482,7 +7385,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_group_sharing_table_none(self):
         """No groups are shown if the workspace has not been shared with any groups."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6490,8 +7393,8 @@ class WorkspaceDetailTest(TestCase):
 
     def test_group_sharing_table_one(self):
         """One group is shown if the workspace has been shared with one group."""
-        workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace.workspace)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6499,8 +7402,10 @@ class WorkspaceDetailTest(TestCase):
 
     def test_group_sharing_table_two(self):
         """Two groups are shown if the workspace has been shared with two groups."""
-        workspace = factories.WorkspaceFactory.create()
-        factories.WorkspaceGroupSharingFactory.create_batch(2, workspace=workspace)
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceGroupSharingFactory.create_batch(
+            2, workspace=workspace.workspace
+        )
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6508,7 +7413,9 @@ class WorkspaceDetailTest(TestCase):
 
     def test_shows_workspace_group_sharing_for_only_that_workspace(self):
         """Only shows groups that this workspace has been shared with."""
-        workspace = factories.WorkspaceFactory.create(name="workspace-1")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="workspace-1"
+        )
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
         factories.WorkspaceGroupSharingFactory.create(workspace=other_workspace)
         self.client.force_login(self.user)
@@ -6518,7 +7425,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table(self):
         """The workspace auth domain table exists."""
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6529,7 +7436,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table_none(self):
         """No groups are shown if the workspace has no auth domains."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6539,9 +7446,9 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table_one(self):
         """One group is shown if the workspace has one auth domain."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         group = factories.ManagedGroupFactory.create()
-        workspace.authorization_domains.add(group)
+        workspace.workspace.authorization_domains.add(group)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6551,11 +7458,11 @@ class WorkspaceDetailTest(TestCase):
 
     def test_auth_domain_table_two(self):
         """Two groups are shown if the workspace has two auth domains."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         group_1 = factories.ManagedGroupFactory.create()
-        workspace.authorization_domains.add(group_1)
+        workspace.workspace.authorization_domains.add(group_1)
         group_2 = factories.ManagedGroupFactory.create()
-        workspace.authorization_domains.add(group_2)
+        workspace.workspace.authorization_domains.add(group_2)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("authorization_domain_table", response.context_data)
@@ -6566,7 +7473,9 @@ class WorkspaceDetailTest(TestCase):
 
     def test_shows_auth_domains_for_only_that_workspace(self):
         """Only shows auth domains for this workspace."""
-        workspace = factories.WorkspaceFactory.create(name="workspace-1")
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__name="workspace-1"
+        )
         other_workspace = factories.WorkspaceFactory.create(name="workspace-2")
         group = factories.ManagedGroupFactory.create()
         other_workspace.authorization_domains.add(group)
@@ -6589,7 +7498,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
@@ -6598,8 +7507,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:delete",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6608,8 +7517,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:update",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6618,8 +7527,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6628,8 +7537,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
                 },
             ),
@@ -6644,7 +7553,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(view_user)
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertFalse(response.context_data["show_edit_links"])
@@ -6653,8 +7562,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:delete",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6663,8 +7572,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:update",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6673,8 +7582,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6683,8 +7592,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
                 },
             ),
@@ -6697,16 +7606,14 @@ class WorkspaceDetailTest(TestCase):
         # new adapter here.
         workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
         workspace_adapter_registry.register(TestWorkspaceAdapter)
-        workspace = factories.WorkspaceFactory.create(
-            workspace_type=TestWorkspaceAdapter().get_type()
-        )
+        workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertTemplateUsed(response, "test_workspace_detail.html")
 
     def test_context_workspace_type_display_name(self):
         """workspace_type_display_name is present in context."""
-        workspace = factories.WorkspaceFactory.create()
+        workspace = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("workspace_type_display_name", response.context)
@@ -6719,9 +7626,7 @@ class WorkspaceDetailTest(TestCase):
         """workspace_type_display_name is present in context with a custom adapter."""
         workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
         workspace_adapter_registry.register(TestWorkspaceAdapter)
-        workspace = factories.WorkspaceFactory.create(
-            workspace_type=TestWorkspaceAdapter().get_type()
-        )
+        workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertTemplateUsed(response, "test_workspace_detail.html")
@@ -6733,14 +7638,18 @@ class WorkspaceDetailTest(TestCase):
 
     def test_is_locked_true(self):
         """An indicator of whether a workspace is locked appears on the page."""
-        workspace = factories.WorkspaceFactory.create(is_locked=True)
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__is_locked=True
+        )
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertContains(response, "Locked")
 
     def test_is_locked_false(self):
         """An indicator of whether a workspace is locked appears on the page."""
-        workspace = factories.WorkspaceFactory.create(is_locked=False)
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__is_locked=False
+        )
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertNotContains(response, "Locked")
@@ -6757,7 +7666,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceFactory.create(is_locked=True)
+        obj = factories.DefaultWorkspaceDataFactory.create(workspace__is_locked=True)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
@@ -6766,8 +7675,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:delete",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6776,8 +7685,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:update",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6786,8 +7695,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -6796,8 +7705,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
                 },
             ),
@@ -6816,7 +7725,7 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
         self.client.force_login(edit_user)
-        obj = factories.WorkspaceFactory.create()
+        obj = factories.DefaultWorkspaceDataFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
@@ -6825,8 +7734,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": DefaultWorkspaceAdapter().get_type(),
                 },
             ),
@@ -6836,8 +7745,8 @@ class WorkspaceDetailTest(TestCase):
             reverse(
                 "anvil_consortium_manager:workspaces:clone",
                 kwargs={
-                    "billing_project_slug": obj.billing_project.name,
-                    "workspace_slug": obj.name,
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                     "workspace_type": TestWorkspaceAdapter().get_type(),
                 },
             ),
@@ -6916,6 +7825,21 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, workspace_type=self.workspace_type)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -6945,7 +7869,11 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertTrue("form" in response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceCreateForm)
+
+    def test_form_class(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceForm)
 
     def test_has_formset_in_context(self):
         """Response includes a formset for the workspace_data model."""
@@ -7585,33 +8513,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Did not create any new Workspaces.
         self.assertEqual(models.Workspace.objects.count(), 0)
 
-    def test_not_user_of_billing_project(self):
-        """Posting a billing project where we are not users does not create an object."""
-        billing_project = factories.BillingProjectFactory.create(
-            name="test-billing-project", has_app_as_user=False
-        )
-        self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("form", response.context_data)
-        form = response.context_data["form"]
-        self.assertFalse(form.is_valid())
-        self.assertIn("billing_project", form.errors.keys())
-        self.assertIn("valid choice", form.errors["billing_project"][0])
-        # No workspace was created.
-        self.assertEqual(models.Workspace.objects.count(), 0)
-
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
@@ -7716,6 +8617,50 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("required", workspace_data_form.errors["study_name"][0])
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_adapter_custom_form_class(self):
+        """No workspace is created if custom workspace form is invalid."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertIsInstance(
+            response.context_data["form"], app_forms.TestWorkspaceForm
+        )
+
+    def test_adapter_does_not_create_object_if_workspace_form_invalid(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = "test"
+        billing_project = factories.BillingProjectFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-fail",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-study_name": "test study",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("Workspace name cannot be", form.errors["name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(len(responses.calls), 0)
 
 
@@ -7858,6 +8803,21 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.workspace_type))
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -9295,6 +10255,21 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
                 workspace_type=self.workspace_type,
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", self.workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -10346,6 +11321,21 @@ class WorkspaceUpdateTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -10363,6 +11353,18 @@ class WorkspaceUpdateTest(TestCase):
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
 
+    def test_context_workspace_data(self):
+        """The view adds the workspace_data object to the context."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        response.context_data
+        self.assertIn("workspace_data_object", response.context_data)
+        self.assertEqual(
+            response.context_data["workspace_data_object"], self.workspace_data
+        )
+
     def test_has_form_in_context(self):
         """Response includes a form."""
         self.client.force_login(self.user)
@@ -10370,7 +11372,17 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
         self.assertIn("form", response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceUpdateForm)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceForm)
+
+    def test_form_fields(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name)
+        )
+        form = response.context_data.get("form")
+        self.assertEqual(len(form.fields), 1)
+        self.assertIn("note", form.fields)
 
     def test_has_formset_in_context(self):
         """Response includes a formset for the workspace_data model."""
@@ -10530,6 +11542,27 @@ class WorkspaceUpdateTest(TestCase):
         self.assertEqual(workspace.note, "original note")
         self.assertEqual(workspace_data.study_name, "original name")
 
+    def test_custom_adapter_workspace_form(self):
+        """Workspace form is subclass of the custom adapter form."""
+        # Note that we need to use the test adapter for this.
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = factories.WorkspaceFactory(
+            workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        app_models.TestWorkspaceData.objects.create(
+            workspace=workspace, study_name="original name"
+        )
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.billing_project.name, workspace.name)
+        )
+        self.assertTrue("form" in response.context_data)
+        form = response.context_data["form"]
+        self.assertIsInstance(form, TestWorkspaceAdapter().get_workspace_form_class())
+        self.assertEqual(len(form.fields), 1)
+        self.assertIn("note", form.fields)
+
 
 class WorkspaceListTest(TestCase):
     def setUp(self):
@@ -10574,6 +11607,21 @@ class WorkspaceListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -10647,6 +11695,54 @@ class WorkspaceListTest(TestCase):
             response.context_data["workspace_type_display_name"], "All workspace"
         )
 
+    def test_view_with_filter_return_no_object(self):
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "workspace1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Workspace1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "orkspace1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="wOrkspace1")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Workspace"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
 
 class WorkspaceListByTypeTest(TestCase):
     def setUp(self):
@@ -10693,6 +11789,21 @@ class WorkspaceListByTypeTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -10772,6 +11883,78 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
+    def test_view_with_filter_return_no_object(self):
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "abc"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_returns_one_object_exact(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "workspace1"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_insensitive(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "Workspace1"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_one_object_case_contains(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "orkspace1"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_workspace_type(self):
+        instance = factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(
+            name="workspace2", workspace_type=TestWorkspaceAdapter().get_type()
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "workspace"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_returns_mutiple_objects(self):
+        factories.WorkspaceFactory.create(name="workspace1")
+        factories.WorkspaceFactory.create(name="wOrkspace1")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace_type), {"name__icontains": "Workspace"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
 
 class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
@@ -10848,6 +12031,21 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, pk=1)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -11066,11 +12264,11 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_does_not_delete_when_protected_fk_to_another_model(self):
         """Workspace is not deleted when there is a protected foreign key reference to the workspace."""
-        object = factories.WorkspaceFactory.create()
-        app_models.ProtectedWorkspace.objects.create(workspace=object)
+        object = factories.DefaultWorkspaceDataFactory.create()
+        app_models.ProtectedWorkspace.objects.create(workspace=object.workspace)
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.billing_project.name, object.name),
+            self.get_url(object.workspace.billing_project.name, object.workspace.name),
             {"submit": ""},
             follow=True,
         )
@@ -11084,6 +12282,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Make sure the group still exists.
         self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertEqual(models.DefaultWorkspaceData.objects.count(), 1)
         object.refresh_from_db()
 
     def test_post_does_not_delete_when_workspace_data_has_protected_fk_to_another_model(
@@ -11116,15 +12315,19 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        object = factories.WorkspaceFactory.create(
-            billing_project=billing_project, name="test-workspace", is_locked=True
+        object = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__is_locked=True,
         )
         self.client.force_login(self.user)
         response = self.client.get(
-            self.get_url(object.billing_project.name, object.name), follow=True
+            self.get_url(object.workspace.billing_project.name, object.workspace.name),
+            follow=True,
         )
         # Make sure the workspace still exists.
-        self.assertIn(object, models.Workspace.objects.all())
+        self.assertIn(object.workspace, models.Workspace.objects.all())
+        self.assertIn(object, models.DefaultWorkspaceData.objects.all())
         # Redirects to detail page.
         self.assertRedirects(response, object.get_absolute_url())
         # With a message.
@@ -11139,17 +12342,20 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create(
             name="test-billing-project"
         )
-        object = factories.WorkspaceFactory.create(
-            billing_project=billing_project, name="test-workspace", is_locked=True
+        object = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__is_locked=True,
         )
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(object.billing_project.name, object.name),
+            self.get_url(object.workspace.billing_project.name, object.workspace.name),
             {"submit": ""},
             follow=True,
         )
         # Make sure the workspace still exists.
-        self.assertIn(object, models.Workspace.objects.all())
+        self.assertIn(object.workspace, models.Workspace.objects.all())
+        self.assertIn(object, models.DefaultWorkspaceData.objects.all())
         # Redirects to detail page.
         self.assertRedirects(response, object.get_absolute_url())
         # With a message.
@@ -11193,6 +12399,21 @@ class WorkspaceAutocompleteTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -11310,6 +12531,21 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.default_workspace_type))
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(self.default_workspace_type))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -11550,6 +12786,21 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -11584,8 +12835,11 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -11613,8 +12867,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -11627,8 +12881,9 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -11647,8 +12902,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -11661,8 +12916,11 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -11675,8 +12933,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -11789,6 +13047,21 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -11826,8 +13099,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 0)
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["verified_table"], audit.VerifiedTable
+        )
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
 
     def test_audit_verified_one_record(self):
         """audit_verified with one verified record."""
@@ -11844,8 +13120,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_verified", response.context_data)
-        self.assertEqual(len(response.context_data["audit_verified"]), 1)
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
 
     def test_audit_errors(self):
         """audit_errors is in the context data."""
@@ -11860,8 +13136,9 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 0)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
 
     def test_audit_errors_one_record(self):
         """audit_errors with one error record."""
@@ -11879,8 +13156,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_errors", response.context_data)
-        self.assertEqual(len(response.context_data["audit_errors"]), 1)
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
 
     def test_audit_not_in_app(self):
         """audit_not_in_app is in the context data."""
@@ -11896,8 +13173,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 0)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["not_in_app_table"], audit.NotInAppTable
+        )
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
 
     def test_audit_not_in_app_one_record(self):
         """audit_not_in_app with one record not in app."""
@@ -11912,8 +13192,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(
             self.get_url(self.workspace.billing_project.name, self.workspace.name)
         )
-        self.assertIn("audit_not_in_app", response.context_data)
-        self.assertEqual(len(response.context_data["audit_not_in_app"]), 1)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
@@ -12015,6 +13295,21 @@ class GroupGroupMembershipDetailTest(TestCase):
             self.get_url(obj.parent_group.name, obj.child_group.name)
         )
         self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -12172,6 +13467,21 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -12813,6 +14123,21 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, parent_group_slug=self.parent_group.name)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -13344,6 +14669,21 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, group_slug=self.child_group.name)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -13846,6 +15186,21 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
                 parent_group_slug=self.parent_group.name,
                 child_group_slug=self.child_group.name,
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -14414,6 +15769,21 @@ class GroupGroupMembershipListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -14535,6 +15905,21 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
             self.get_view()(
                 request, parent_group_slug="parent", child_group_slug="child"
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -14853,6 +16238,21 @@ class GroupAccountMembershipDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -15008,6 +16408,21 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -15609,6 +17024,21 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, group_slug=self.group.name)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -16126,6 +17556,21 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, uuid=self.account.uuid)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url(uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -16629,6 +18074,21 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             self.get_view()(
                 request, group_slug=self.group.name, account_uuid=self.account.uuid
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -17140,6 +18600,21 @@ class GroupAccountMembershipListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -17307,6 +18782,21 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -17440,6 +18930,21 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         request.user = user_with_view_perm
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, group_slug="foo", account_uuid=uuid)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", uuid4()))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -17733,6 +19238,21 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -17897,6 +19417,21 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
@@ -18662,6 +20197,21 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
                 workspace_slug=self.workspace.name,
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -19412,6 +20962,21 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
                 group_slug=self.group.name,
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -20113,6 +21678,21 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
                 workspace_slug=self.workspace.name,
                 group_slug=self.group.name,
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -20918,6 +22498,21 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
                 group_slug="group",
             )
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -21402,6 +22997,21 @@ class WorkspaceGroupSharingListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(
@@ -21530,6 +23140,21 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
                 workspace_slug="workspace",
                 group_slug="group",
             )
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(
+            username="test-limited", password="test-limited"
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
+            )
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "tmp"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""

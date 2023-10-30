@@ -4,6 +4,7 @@ from abc import ABC, abstractproperty
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.forms import ModelForm
 from django.utils.module_loading import import_string
 
 from .. import models
@@ -34,6 +35,11 @@ class BaseWorkspaceAdapter(ABC):
     @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of workspaces."""
+        ...
+
+    @abstractproperty
+    def workspace_form_class(self):
+        """Custom form to use when creating a Workspace."""
         ...
 
     @abstractproperty
@@ -76,6 +82,22 @@ class BaseWorkspaceAdapter(ABC):
                 "Set `list_table_class` in `{}`.".format(type(self))
             )
         return self.list_table_class
+
+    def get_workspace_form_class(self):
+        """Return the form used to create a `Workspace`."""
+        if not self.workspace_form_class:
+            raise ImproperlyConfigured("Set `workspace_data_form_class`.")
+        # Make sure it is a model form
+        if not issubclass(self.workspace_form_class, ModelForm):
+            raise ImproperlyConfigured(
+                "workspace_form_class must be a subclass of ModelForm."
+            )
+        # Make sure it has the correct model set.
+        if self.workspace_form_class.Meta.model != models.Workspace:
+            raise ImproperlyConfigured(
+                "workspace_form_class Meta model field must be anvil_consortium_manager.models.Workspace."
+            )
+        return self.workspace_form_class
 
     def get_workspace_data_model(self):
         """Return the `workspace_data_model`."""
