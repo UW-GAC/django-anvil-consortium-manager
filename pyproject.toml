@@ -1,3 +1,25 @@
 [build-system]
 requires = ['setuptools>=40.8.0', 'wheel']
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-anvil-consortium-manager"
+# Version needs to be updated such that the canonical version is only stored in one place.
+version = "0.19"
+authors = [
+    {name="Adrienne Stilp", email="amstilp@uw.edu"},
+]
+description = "A Django app to manage Consortium AnVIL groups, workspaces, and access."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Framework :: Django",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/UW-GAC/django-anvil-consortium-manager"
+"Bug Tracker" = "https://github.com/UW-GAC/django-anvil-consortium-manager/issues"
