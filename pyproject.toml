@@ -39,3 +39,6 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/UW-GAC/django-anvil-consortium-manager"
 "Bug Tracker" = "https://github.com/UW-GAC/django-anvil-consortium-manager/issues"
+
+[tool.setuptools]
+packages = ["anvil_consortium_manager"]
