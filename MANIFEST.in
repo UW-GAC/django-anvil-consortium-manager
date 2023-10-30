@@ -2,3 +2,4 @@ include LICENSE
 include README.md
 recursive-include anvil_consortium_manager/templates *
 recursive-include docs *
+prune docs/_build
