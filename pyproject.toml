@@ -35,8 +35,8 @@ dynamic = ["version"]
 
 
 [build-system]
-requires = ['setuptools>=40.8.0', 'wheel']
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 
 [project.urls]
@@ -79,3 +79,8 @@ minversion = "6.0"
 addopts = "--ds=anvil_consortium_manager.tests.settings.test --reuse-db --ignore=anvil_consortium_manager/tests/test_app/"
 python_files = ["anvil_consortium_manager/tests/test*.py"]
 python_classes = ["!TestWorkspaceDataFactory"]
+
+[tool.hatch]
+
+[tool.hatch.version]
+path = "anvil_consortium_manager/__init__.py"
