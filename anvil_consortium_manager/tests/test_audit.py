@@ -238,9 +238,7 @@ class AnVILAuditTest(TestCase):
         with self.assertRaises(ValueError):
             self.audit_results.add_result(model_instance_result_2)
         self.assertEqual(len(self.audit_results._model_instance_results), 1)
-        self.assertEqual(
-            self.audit_results._model_instance_results, [model_instance_result_1]
-        )
+        self.assertEqual(self.audit_results._model_instance_results, [model_instance_result_1])
 
     def test_add_result_second_result_for_same_model_instance_with_error(self):
         obj = self.model_factory()
@@ -251,9 +249,7 @@ class AnVILAuditTest(TestCase):
         with self.assertRaises(ValueError):
             self.audit_results.add_result(model_instance_result_2)
         self.assertEqual(len(self.audit_results._model_instance_results), 1)
-        self.assertEqual(
-            self.audit_results._model_instance_results, [model_instance_result_1]
-        )
+        self.assertEqual(self.audit_results._model_instance_results, [model_instance_result_1])
 
     def test_get_result_for_model_instance_no_matches(self):
         obj = self.model_factory()
@@ -286,12 +282,8 @@ class AnVILAuditTest(TestCase):
         model_instance_result_2 = audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result_2)
         self.assertEqual(len(self.audit_results.get_verified_results()), 2)
-        self.assertIn(
-            model_instance_result_1, self.audit_results.get_verified_results()
-        )
-        self.assertIn(
-            model_instance_result_2, self.audit_results.get_verified_results()
-        )
+        self.assertIn(model_instance_result_1, self.audit_results.get_verified_results())
+        self.assertIn(model_instance_result_2, self.audit_results.get_verified_results())
 
     def test_get_verified_results_one_error_result(self):
         """get_verified_results returns a list of lenght zero when there is one error result."""
@@ -441,11 +433,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the BillingProject.anvil_audit method."""
 
     def get_api_url(self, billing_project_name):
-        return (
-            self.api_client.rawls_entry_point
-            + "/api/billing/v2/"
-            + billing_project_name
-        )
+        return self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name
 
     def get_api_json_response(self):
         return {
@@ -776,15 +764,11 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
-        return (
-            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
-        )
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
 
     def get_api_url_admins(self, group_name):
         """Return the API url being called by the method."""
-        return (
-            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
-        )
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
 
     def test_anvil_audit_no_groups(self):
         """anvil_audit works correct if there are no ManagedGroups in the app."""
@@ -902,11 +886,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=api_factories.GetGroupsResponseFactory(
-                response=[
-                    api_factories.GroupDetailsFactory(
-                        groupName=group.name, role="Member"
-                    )
-                ]
+                response=[api_factories.GroupDetailsFactory(groupName=group.name, role="Member")]
             ).response,
         )
         audit_results = audit.ManagedGroupAudit()
@@ -997,9 +977,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(group)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE]))
 
     def test_anvil_audit_one_group_admin_in_app_member_on_anvil(self):
         """anvil_audit raises exception if one group exists in the app as an admin but the role on AnVIL is member."""
@@ -1021,9 +999,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(group)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE]))
 
     def test_anvil_audit_one_group_member_in_app_admin_on_anvil(self):
         """anvil_audit raises exception if one group exists in the app as an member but the role on AnVIL is admin."""
@@ -1045,9 +1021,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(group)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE]))
 
     def test_anvil_audit_two_groups_no_errors(self):
         """anvil_audit works correctly if if two groups exist in both the app and AnVIL."""
@@ -1226,9 +1200,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=api_factories.GetGroupsResponseFactory(
-                response=[
-                    api_factories.GroupDetailsMemberFactory(groupName="test-group")
-                ]
+                response=[api_factories.GroupDetailsMemberFactory(groupName="test-group")]
             ).response,
         )
         audit_results = audit.ManagedGroupAudit()
@@ -1246,9 +1218,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=api_factories.GetGroupsResponseFactory(
-                response=[
-                    api_factories.GroupDetailsAdminFactory(groupName="test-group")
-                ]
+                response=[api_factories.GroupDetailsAdminFactory(groupName="test-group")]
             ).response,
         )
         audit_results = audit.ManagedGroupAudit()
@@ -1320,9 +1290,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(group)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_MEMBERSHIP])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_MEMBERSHIP]))
 
     def test_admin_in_app_both_member_and_admin_on_anvil(self):
         """anvil_audit works correctly when the app is an admin and AnVIL returns both a member and admin record."""
@@ -1423,9 +1391,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(group)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE]))
 
     def test_member_in_app_both_member_and_admin_different_order_on_anvil(self):
         """anvil_audit works correctly when the app is a member and AnVIL returns both a member and admin record."""
@@ -1450,9 +1416,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(group)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_ROLE]))
 
 
 class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
@@ -1460,15 +1424,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
-        return (
-            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
-        )
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
 
     def get_api_url_admins(self, group_name):
         """Return the API url being called by the method."""
-        return (
-            self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
-        )
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
 
     def test_group_not_managed_by_app(self):
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
@@ -1508,9 +1468,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=[membership.account.email]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=[membership.account.email]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -1589,9 +1547,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(membership)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]))
 
     def test_two_account_members_not_in_anvil(self):
         """anvil_audit works correctly if this group has two account member not in anvil."""
@@ -1620,15 +1576,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(membership_1)
         self.assertIsInstance(model_result, audit.ModelInstanceResult)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]))
         model_result = audit_results.get_result_for_model_instance(membership_2)
         self.assertIsInstance(model_result, audit.ModelInstanceResult)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]))
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
 
     def test_one_account_members_not_in_app(self):
@@ -1639,9 +1591,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=["test-member@example.com"]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=["test-member@example.com"]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -1705,9 +1655,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=["Test-Member@example.com"]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=["Test-Member@example.com"]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -1743,9 +1691,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.account.email]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.account.email]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -1820,9 +1766,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(membership)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL]))
 
     def test_two_account_admins_not_in_anvil(self):
         """anvil_audit works correctly if this group has two account member not in anvil."""
@@ -1855,14 +1799,10 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(membership_1)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL]))
         record_result = audit_results.get_result_for_model_instance(membership_2)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL]))
 
     def test_one_account_admin_not_in_app(self):
         """anvil_audit works correctly if this group has one account member not in the app."""
@@ -1879,9 +1819,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=["test-admin@example.com"]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=["test-admin@example.com"]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -1942,9 +1880,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=["Test-Admin@example.com"]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=["Test-Admin@example.com"]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -1973,9 +1909,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.account.email]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.account.email]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -1985,9 +1919,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         record_result = audit_results.get_result_for_model_instance(membership)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]))
         record_result = audit_results.get_not_in_app_results()[0]
         self.assertEqual(record_result.record, "ADMIN: " + membership.account.email)
 
@@ -2000,9 +1932,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=[membership.child_group.email]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=[membership.child_group.email]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2081,9 +2011,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(membership)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL]))
 
     def test_two_group_members_not_in_anvil(self):
         """anvil_audit works correctly if this group has two group member not in anvil."""
@@ -2112,14 +2040,10 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(membership_1)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL]))
         record_result = audit_results.get_result_for_model_instance(membership_2)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL]))
 
     def test_one_group_members_not_in_app(self):
         """anvil_audit works correctly if this group has one group member not in the app."""
@@ -2129,9 +2053,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=["test-member@firecloud.org"]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=["test-member@firecloud.org"]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2182,17 +2104,13 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_one_group_members_case_insensitive(self):
         """anvil_audit works correctly if this group has one group member not in the app."""
         group = factories.ManagedGroupFactory.create()
-        membership = factories.GroupGroupMembershipFactory.create(
-            parent_group=group, child_group__name="tEsT-mEmBeR"
-        )
+        membership = factories.GroupGroupMembershipFactory.create(parent_group=group, child_group__name="tEsT-mEmBeR")
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=["Test-Member@firecloud.org"]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=["Test-Member@firecloud.org"]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2308,9 +2226,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(membership)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL]))
 
     def test_two_group_admins_not_in_anvil(self):
         """anvil_audit works correctly if this group has two group member not in anvil."""
@@ -2343,14 +2259,10 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(membership_1)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL]))
         record_result = audit_results.get_result_for_model_instance(membership_2)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_ADMIN_NOT_IN_ANVIL]))
 
     def test_one_group_admin_not_in_app(self):
         """anvil_audit works correctly if this group has one group member not in the app."""
@@ -2367,9 +2279,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=["test-admin@firecloud.org"]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=["test-admin@firecloud.org"]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -2430,9 +2340,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=["Test-Admin@firecloud.org"]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=["Test-Admin@firecloud.org"]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -2473,9 +2381,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         record_result = audit_results.get_result_for_model_instance(membership)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_GROUP_MEMBER_NOT_IN_ANVIL]))
         record_result = audit_results.get_not_in_app_results()[0]
         self.assertEqual(record_result.record, "ADMIN: " + membership.child_group.email)
 
@@ -2487,9 +2393,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=[self.service_account_email]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=[self.service_account_email]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2508,17 +2412,13 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_different_group_member_email(self):
         """anvil_audit works correctly if this group has one group member with a different email."""
         group = factories.ManagedGroupFactory.create()
-        membership = factories.GroupGroupMembershipFactory.create(
-            parent_group=group, child_group__email="foo@bar.com"
-        )
+        membership = factories.GroupGroupMembershipFactory.create(parent_group=group, child_group__email="foo@bar.com")
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=[membership.child_group.email]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=[membership.child_group.email]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2539,17 +2439,13 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_different_group_member_email_case_insensitive(self):
         """anvil_audit works correctly if this group has one group member with a different email, case insensitive."""
         group = factories.ManagedGroupFactory.create()
-        membership = factories.GroupGroupMembershipFactory.create(
-            parent_group=group, child_group__email="foo@bar.com"
-        )
+        membership = factories.GroupGroupMembershipFactory.create(parent_group=group, child_group__email="foo@bar.com")
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=["Foo@Bar.com"]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=["Foo@Bar.com"]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2588,9 +2484,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url_admins,
             status=200,
             # Use the Membership factory because it doesn't add the service account as a direct admin.
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=["foo@bar.com"]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=["foo@bar.com"]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -2611,9 +2505,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=[membership.child_group.email]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=[membership.child_group.email]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2637,9 +2529,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Audit is ok if a deactivated account is not in the group on AnVIL."""
         group = factories.ManagedGroupFactory.create()
         # Create an inactive account that is a member of this group.
-        factories.GroupAccountMembershipFactory.create(
-            group=group, account__status=models.Account.INACTIVE_STATUS
-        )
+        factories.GroupAccountMembershipFactory.create(group=group, account__status=models.Account.INACTIVE_STATUS)
         # The Account is not a member in AnVIL
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -2675,9 +2565,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_members,
             status=200,
-            json=api_factories.GetGroupMembershipResponseFactory(
-                response=[membership.account.email]
-            ).response,
+            json=api_factories.GetGroupMembershipResponseFactory(response=[membership.account.email]).response,
         )
         api_url_admins = self.get_api_url_admins(group.name)
         self.anvil_response_mock.add(
@@ -2751,9 +2639,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.account.email]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.account.email]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -2840,16 +2726,10 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
-            json=[
-                self.get_api_workspace_json(
-                    workspace.billing_project.name, workspace.name, "OWNER"
-                )
-            ],
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -2893,11 +2773,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
-            json=[
-                self.get_api_workspace_json(
-                    workspace.billing_project.name, workspace.name, "READER"
-                )
-            ],
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -2907,9 +2783,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_NOT_OWNER_ON_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_OWNER_ON_ANVIL]))
 
     def test_anvil_audit_one_workspace_owner_in_app_writer_on_anvil(self):
         """anvil_audit raises exception if one workspace exists in the app but the access on AnVIL is WRITER."""
@@ -2919,11 +2793,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
-            json=[
-                self.get_api_workspace_json(
-                    workspace.billing_project.name, workspace.name, "WRITER"
-                )
-            ],
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "WRITER")],
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -2933,9 +2803,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_NOT_OWNER_ON_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_OWNER_ON_ANVIL]))
 
     def test_anvil_audit_one_workspace_is_locked_in_app_not_on_anvil(self):
         """anvil_audit raises exception if workspace is locked in the app but not on AnVIL."""
@@ -2955,9 +2823,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -2972,9 +2838,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_LOCK])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_LOCK]))
 
     def test_anvil_audit_one_workspace_is_not_locked_in_app_but_is_on_anvil(self):
         """anvil_audit raises exception if workspace is locked in the app but not on AnVIL."""
@@ -2994,9 +2858,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3011,9 +2873,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_LOCK])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_LOCK]))
 
     def test_anvil_audit_two_workspaces_no_errors(self):
         """anvil_audit returns None if if two workspaces exist in both the app and AnVIL."""
@@ -3025,18 +2885,12 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=[
-                self.get_api_workspace_json(
-                    workspace_1.billing_project.name, workspace_1.name, "OWNER"
-                ),
-                self.get_api_workspace_json(
-                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
-                ),
+                self.get_api_workspace_json(workspace_1.billing_project.name, workspace_1.name, "OWNER"),
+                self.get_api_workspace_json(workspace_2.billing_project.name, workspace_2.name, "OWNER"),
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url_1 = self.get_api_workspace_acl_url(
-            workspace_1.billing_project.name, workspace_1.name
-        )
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(workspace_1.billing_project.name, workspace_1.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
@@ -3044,9 +2898,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_workspace_acl_response(),
         )
         # Response to check workspace access.
-        workspace_acl_url_2 = self.get_api_workspace_acl_url(
-            workspace_2.billing_project.name, workspace_2.name
-        )
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(workspace_2.billing_project.name, workspace_2.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
@@ -3074,18 +2926,12 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=[
-                self.get_api_workspace_json(
-                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
-                ),
-                self.get_api_workspace_json(
-                    workspace_1.billing_project.name, workspace_1.name, "OWNER"
-                ),
+                self.get_api_workspace_json(workspace_2.billing_project.name, workspace_2.name, "OWNER"),
+                self.get_api_workspace_json(workspace_1.billing_project.name, workspace_1.name, "OWNER"),
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url_1 = self.get_api_workspace_acl_url(
-            workspace_1.billing_project.name, workspace_1.name
-        )
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(workspace_1.billing_project.name, workspace_1.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
@@ -3093,9 +2939,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_workspace_acl_response(),
         )
         # Response to check workspace access.
-        workspace_acl_url_2 = self.get_api_workspace_acl_url(
-            workspace_2.billing_project.name, workspace_2.name
-        )
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(workspace_2.billing_project.name, workspace_2.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
@@ -3123,15 +2967,11 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=[
-                self.get_api_workspace_json(
-                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
-                ),
+                self.get_api_workspace_json(workspace_2.billing_project.name, workspace_2.name, "OWNER"),
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url_2 = self.get_api_workspace_acl_url(
-            workspace_2.billing_project.name, workspace_2.name
-        )
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(workspace_2.billing_project.name, workspace_2.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
@@ -3160,18 +3000,12 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=[
-                self.get_api_workspace_json(
-                    workspace_1.billing_project.name, workspace_1.name, "READER"
-                ),
-                self.get_api_workspace_json(
-                    workspace_2.billing_project.name, workspace_2.name, "OWNER"
-                ),
+                self.get_api_workspace_json(workspace_1.billing_project.name, workspace_1.name, "READER"),
+                self.get_api_workspace_json(workspace_2.billing_project.name, workspace_2.name, "OWNER"),
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url_2 = self.get_api_workspace_acl_url(
-            workspace_2.billing_project.name, workspace_2.name
-        )
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(workspace_2.billing_project.name, workspace_2.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
@@ -3186,9 +3020,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace_1)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_NOT_OWNER_ON_ANVIL])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_OWNER_ON_ANVIL]))
         record_result = audit_results.get_result_for_model_instance(workspace_2)
         self.assertTrue(record_result.ok())
 
@@ -3258,9 +3090,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_different_billing_project(self):
         """A workspace is reported as missing if it has the same name but a different billing project in app."""
-        workspace = factories.WorkspaceFactory.create(
-            billing_project__name="test-bp-app", name="test-ws"
-        )
+        workspace = factories.WorkspaceFactory.create(billing_project__name="test-bp-app", name="test-ws")
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -3345,20 +3175,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_verified_results()), 1)
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
-        record_result = audit_results.get_result_for_model_instance(
-            auth_domain.workspace
-        )
+        record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
         self.assertTrue(record_result.ok())
 
     def test_one_workspace_two_auth_domains(self):
         """anvil_audit works properly when there is one workspace with two auth domains."""
         workspace = factories.WorkspaceFactory.create()
-        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(
-            workspace=workspace
-        )
-        auth_domain_2 = factories.WorkspaceAuthorizationDomainFactory.create(
-            workspace=workspace
-        )
+        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        auth_domain_2 = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -3374,9 +3198,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3395,12 +3217,8 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_one_workspace_two_auth_domains_order_does_not_matter(self):
         """anvil_audit works properly when there is one workspace with two auth domains."""
         workspace = factories.WorkspaceFactory.create()
-        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(
-            workspace=workspace, group__name="aa"
-        )
-        auth_domain_2 = factories.WorkspaceAuthorizationDomainFactory.create(
-            workspace=workspace, group__name="zz"
-        )
+        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__name="aa")
+        auth_domain_2 = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__name="zz")
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -3416,9 +3234,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3452,9 +3268,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3469,9 +3283,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_one_workspace_one_auth_domain_in_app_no_auth_domain_on_anvil(self):
         """anvil_audit works properly when there is one workspace with one auth domain in the app but none on AnVIL."""
@@ -3506,13 +3318,9 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 1)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
-        record_result = audit_results.get_result_for_model_instance(
-            auth_domain.workspace
-        )
+        record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_one_workspace_no_auth_domain_in_app_two_auth_domains_on_anvil(self):
         """anvil_audit works properly when there is one workspace with no auth domain in the app but two on AnVIL."""
@@ -3532,9 +3340,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3549,9 +3355,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_one_workspace_two_auth_domains_in_app_no_auth_domain_on_anvil(self):
         """anvil_audit works properly when there is one workspace with two auth domains in the app but none on AnVIL."""
@@ -3573,9 +3377,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3590,16 +3392,12 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_one_workspace_two_auth_domains_in_app_one_auth_domain_on_anvil(self):
         """anvil_audit works properly when there is one workspace with two auth domains in the app but one on AnVIL."""
         workspace = factories.WorkspaceFactory.create()
-        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(
-            workspace=workspace
-        )
+        auth_domain_1 = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
@@ -3616,9 +3414,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3633,15 +3429,11 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_one_workspace_different_auth_domains(self):
         """anvil_audit works properly when the app and AnVIL have different auth domains for the same workspace."""
-        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(
-            group__name="app"
-        )
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(group__name="app")
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -3672,13 +3464,9 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 1)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
-        record_result = audit_results.get_result_for_model_instance(
-            auth_domain.workspace
-        )
+        record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_two_workspaces_first_auth_domains_do_not_match(self):
         """anvil_audit works properly when there are two workspaces in the app and the first has auth domain issues."""
@@ -3705,9 +3493,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url_1 = self.get_api_workspace_acl_url(
-            workspace_1.billing_project.name, workspace_1.name
-        )
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(workspace_1.billing_project.name, workspace_1.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
@@ -3715,9 +3501,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_workspace_acl_response(),
         )
         # Response to check workspace access.
-        workspace_acl_url_2 = self.get_api_workspace_acl_url(
-            workspace_2.billing_project.name, workspace_2.name
-        )
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(workspace_2.billing_project.name, workspace_2.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
@@ -3732,9 +3516,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace_1)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
         record_result = audit_results.get_result_for_model_instance(workspace_2)
         self.assertTrue(record_result.ok())
 
@@ -3763,9 +3545,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url_1 = self.get_api_workspace_acl_url(
-            workspace_1.billing_project.name, workspace_1.name
-        )
+        workspace_acl_url_1 = self.get_api_workspace_acl_url(workspace_1.billing_project.name, workspace_1.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_1,
@@ -3773,9 +3553,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_workspace_acl_response(),
         )
         # Response to check workspace access.
-        workspace_acl_url_2 = self.get_api_workspace_acl_url(
-            workspace_2.billing_project.name, workspace_2.name
-        )
+        workspace_acl_url_2 = self.get_api_workspace_acl_url(workspace_2.billing_project.name, workspace_2.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url_2,
@@ -3790,14 +3568,10 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace_1)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
         record_result = audit_results.get_result_for_model_instance(workspace_2)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_one_workspace_with_two_errors(self):
         """One workspace has two errors: different auth domains and not owner."""
@@ -3808,11 +3582,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
-            json=[
-                self.get_api_workspace_json(
-                    workspace.billing_project.name, workspace.name, "READER"
-                )
-            ],
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3851,9 +3621,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             ],
         )
         # Response to check workspace access.
-        workspace_acl_url = self.get_api_workspace_acl_url(
-            workspace.billing_project.name, workspace.name
-        )
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
         self.anvil_response_mock.add(
             responses.GET,
             workspace_acl_url,
@@ -3868,9 +3636,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
-        self.assertEqual(
-            record_result.errors, set([audit_results.ERROR_WORKSPACE_SHARING])
-        )
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_WORKSPACE_SHARING]))
 
 
 class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
@@ -3941,12 +3707,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_two_group_readers(self):
         """anvil_audit works correctly if this workspace has two group readers."""
-        access_1 = factories.WorkspaceGroupSharingFactory.create(
-            workspace=self.workspace
-        )
-        access_2 = factories.WorkspaceGroupSharingFactory.create(
-            workspace=self.workspace
-        )
+        access_1 = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        access_2 = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.update_api_response(access_1.group.email, "READER")
         self.update_api_response(access_2.group.email, "READER")
         self.anvil_response_mock.add(
@@ -3983,18 +3745,12 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
     def test_two_group_readers_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group readers not in anvil."""
-        access_1 = factories.WorkspaceGroupSharingFactory.create(
-            workspace=self.workspace
-        )
-        access_2 = factories.WorkspaceGroupSharingFactory.create(
-            workspace=self.workspace
-        )
+        access_1 = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        access_2 = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -4009,14 +3765,10 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access_1)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
         model_result = audit_results.get_result_for_model_instance(access_2)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
     def test_one_group_readers_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group reader not in the app."""
@@ -4059,9 +3811,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_one_group_members_case_insensitive(self):
         """anvil_audit ignores case."""
-        access = factories.WorkspaceGroupSharingFactory.create(
-            workspace=self.workspace, group__name="tEsT-mEmBeR"
-        )
+        access = factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace, group__name="tEsT-mEmBeR")
         self.update_api_response("Test-Member@firecloud.org", "READER")
         self.anvil_response_mock.add(
             responses.GET,
@@ -4145,9 +3895,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
     def test_two_group_writers_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group writers not in anvil."""
@@ -4171,14 +3919,10 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access_1)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
         model_result = audit_results.get_result_for_model_instance(access_2)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
     def test_one_group_writer_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group writer not in the app."""
@@ -4309,9 +4053,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
     def test_two_group_owners_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group owners not in anvil."""
@@ -4335,14 +4077,10 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access_1)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
         model_result = audit_results.get_result_for_model_instance(access_2)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
     def test_one_group_owner_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group owner not in the app."""
@@ -4426,18 +4164,14 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_DIFFERENT_ACCESS])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_ACCESS]))
 
     def test_group_different_access_reader_in_app_owner_in_anvil(self):
         """anvil_audit works correctly if a group has different access to a workspace in AnVIL."""
         access = factories.WorkspaceGroupSharingFactory.create(
             workspace=self.workspace, access=models.WorkspaceGroupSharing.READER
         )
-        self.update_api_response(
-            access.group.email, "OWNER", can_compute=True, can_share=True
-        )
+        self.update_api_response(access.group.email, "OWNER", can_compute=True, can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -4485,9 +4219,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_COMPUTE])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_COMPUTE]))
 
     def test_group_different_can_share(self):
         """anvil_audit works correctly if can_share is True in AnVIL."""
@@ -4509,15 +4241,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE]))
 
     def test_removes_service_account(self):
         """Removes the service account from acl if it exists."""
-        self.update_api_response(
-            self.service_account_email, "OWNER", can_compute=True, can_share=True
-        )
+        self.update_api_response(self.service_account_email, "OWNER", can_compute=True, can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -4538,9 +4266,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             access=models.WorkspaceGroupSharing.OWNER,
             can_compute=True,
         )
-        self.update_api_response(
-            access.group.email, "OWNER", can_compute=True, can_share=True
-        )
+        self.update_api_response(access.group.email, "OWNER", can_compute=True, can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -4561,9 +4287,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             access=models.WorkspaceGroupSharing.WRITER,
             can_compute=True,
         )
-        self.update_api_response(
-            access.group.email, "WRITER", can_compute=True, can_share=True
-        )
+        self.update_api_response(access.group.email, "WRITER", can_compute=True, can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -4578,9 +4302,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE]))
 
     def test_group_reader_can_share_false(self):
         """Readers must have can_share=False."""
@@ -4589,9 +4311,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             access=models.WorkspaceGroupSharing.READER,
             can_compute=False,
         )
-        self.update_api_response(
-            access.group.email, "READER", can_compute=False, can_share=True
-        )
+        self.update_api_response(access.group.email, "READER", can_compute=False, can_share=True)
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -4606,6 +4326,4 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
-        self.assertEqual(
-            model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE])
-        )
+        self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE]))

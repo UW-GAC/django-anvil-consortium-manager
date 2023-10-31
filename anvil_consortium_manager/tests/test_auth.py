@@ -19,9 +19,7 @@ class AnVILConsortiumManagerLimitedViewRequiredTest(TestCase):
     def test_user_with_limited_view_perms(self):
         """test_func returns True for a user with limited view permission."""
         self.user.user_permissions.add(
-            Permission.objects.get(
-                codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME
-            )
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
         )
         inst = self.get_view_class()()
         request = self.factory.get("")
@@ -32,9 +30,7 @@ class AnVILConsortiumManagerLimitedViewRequiredTest(TestCase):
     def test_user_with_view_perms(self):
         """test_func returns True for a user with view permission."""
         self.user.user_permissions.add(
-            Permission.objects.get(
-                codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME
-            )
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         inst = self.get_view_class()()
         request = self.factory.get("")
@@ -45,9 +41,7 @@ class AnVILConsortiumManagerLimitedViewRequiredTest(TestCase):
     def test_user_with_edit_perms(self):
         """test_func returns False for a user with edit permission."""
         self.user.user_permissions.add(
-            Permission.objects.get(
-                codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-            )
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
         )
         inst = self.get_view_class()()
         request = self.factory.get("")

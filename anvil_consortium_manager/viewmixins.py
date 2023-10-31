@@ -44,15 +44,9 @@ class AnVILAuditMixin:
         context = super().get_context_data(*args, **kwargs)
         context["audit_timestamp"] = timezone.now()
         context["audit_ok"] = self.audit_results.ok()
-        context["verified_table"] = audit.VerifiedTable(
-            self.audit_results.get_verified_results()
-        )
-        context["error_table"] = audit.ErrorTable(
-            self.audit_results.get_error_results()
-        )
-        context["not_in_app_table"] = audit.NotInAppTable(
-            self.audit_results.get_not_in_app_results()
-        )
+        context["verified_table"] = audit.VerifiedTable(self.audit_results.get_verified_results())
+        context["error_table"] = audit.ErrorTable(self.audit_results.get_error_results())
+        context["not_in_app_table"] = audit.NotInAppTable(self.audit_results.get_not_in_app_results())
         return context
 
 
@@ -120,10 +114,7 @@ class ManagedGroupGraphMixin:
                 node_x.append(x)
                 node_y.append(y)
                 node_labels.append(
-                    node
-                    + "<br>Number of groups: {}<br>Number of accounts: {}".format(
-                        d["n_groups"], d["n_accounts"]
-                    )
+                    node + "<br>Number of groups: {}<br>Number of accounts: {}".format(d["n_groups"], d["n_accounts"])
                 )
                 node_annotations.append(
                     go.layout.Annotation(
@@ -260,8 +251,7 @@ class SingleAccountMixin(SingleObjectMixin):
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -301,8 +291,6 @@ class RegisteredWorkspaceAdaptersMixin(ContextMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Instantiate each adapter class for use in the template.
-        registered_workspaces = [
-            x() for x in workspace_adapter_registry.get_registered_adapters().values()
-        ]
+        registered_workspaces = [x() for x in workspace_adapter_registry.get_registered_adapters().values()]
         context["registered_workspace_adapters"] = registered_workspaces
         return context

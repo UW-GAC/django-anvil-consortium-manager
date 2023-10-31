@@ -30,9 +30,7 @@ INTERNAL_IPS = ["127.0.0.1"]
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.{}".format(
-            os.getenv("DBBACKEND", default="sqlite3")
-        ),
+        "ENGINE": "django.db.backends.{}".format(os.getenv("DBBACKEND", default="sqlite3")),
         "NAME": os.getenv("DBNAME", default="anvil_consortium_manager"),
         "USER": os.getenv("DBUSER", default="django"),
         "PASSWORD": os.getenv("DBPASSWORD", default="password"),
@@ -145,6 +143,4 @@ ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "account activation"
 ANVIL_WORKSPACE_ADAPTERS = [
     "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
-ANVIL_ACCOUNT_ADAPTER = (
-    "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
-)
+ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"

@@ -36,9 +36,7 @@ class UserEmailEntryFactory(DjangoModelFactory):
 
     email = Faker("email")
     user = SubFactory(UserFactory)
-    date_verification_email_sent = Faker(
-        "date_time", tzinfo=timezone.get_current_timezone()
-    )
+    date_verification_email_sent = Faker("date_time", tzinfo=timezone.get_current_timezone())
 
     class Meta:
         model = models.UserEmailEntry
@@ -72,9 +70,7 @@ class AccountFactory(DjangoModelFactory):
                 UserEmailEntryFactory,
                 email=SelfAttribute("..email"),
                 user=SelfAttribute("..user"),
-                date_verified=Faker(
-                    "date_time", tzinfo=timezone.get_current_timezone()
-                ),
+                date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
             ),
         )
 

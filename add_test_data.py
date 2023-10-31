@@ -8,15 +8,9 @@ groups = factories.ManagedGroupFactory.create_batch(5)
 workspaces = factories.WorkspaceFactory.create_batch(5, workspace_type="example")
 
 # Add some groups to other groups.
-factories.GroupGroupMembershipFactory.create(
-    parent_group=groups[0], child_group=groups[1]
-)
-factories.GroupGroupMembershipFactory.create(
-    parent_group=groups[0], child_group=groups[2]
-)
-factories.GroupGroupMembershipFactory.create(
-    parent_group=groups[3], child_group=groups[2]
-)
+factories.GroupGroupMembershipFactory.create(parent_group=groups[0], child_group=groups[1])
+factories.GroupGroupMembershipFactory.create(parent_group=groups[0], child_group=groups[2])
+factories.GroupGroupMembershipFactory.create(parent_group=groups[3], child_group=groups[2])
 
 # Add accounts to groups.
 factories.GroupAccountMembershipFactory.create(group=groups[1], account=accounts[0])

@@ -13,34 +13,14 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import CreateView
 from django.views.generic import DeleteView as DjangoDeleteView
-from django.views.generic import (
-    DetailView,
-    FormView,
-    RedirectView,
-    TemplateView,
-    UpdateView,
-)
-from django.views.generic.detail import (
-    BaseDetailView,
-    SingleObjectMixin,
-    SingleObjectTemplateResponseMixin,
-)
+from django.views.generic import DetailView, FormView, RedirectView, TemplateView, UpdateView
+from django.views.generic.detail import BaseDetailView, SingleObjectMixin, SingleObjectTemplateResponseMixin
 from django.views.generic.edit import BaseDeleteView as DjangoBaseDeleteView
 from django.views.generic.edit import DeletionMixin, FormMixin
 from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin, SingleTableView
 
-from . import (
-    __version__,
-    anvil_api,
-    auth,
-    exceptions,
-    filters,
-    forms,
-    models,
-    tables,
-    viewmixins,
-)
+from . import __version__, anvil_api, auth, exceptions, filters, forms, models, tables, viewmixins
 from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
@@ -128,22 +108,16 @@ class AnVILStatus(auth.AnVILConsortiumManagerViewRequired, TemplateView):
             context["anvil_user"] = response.json()["userEmail"]
         except AnVILAPIError:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: error checking API user"
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: error checking API user")
             context["anvil_user"] = None
         return context
 
 
-class BillingProjectImport(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
-):
+class BillingProjectImport(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
     template_name = "anvil_consortium_manager/billingproject_import.html"
-    message_not_users_of_billing_project = (
-        "Not a user of requested billing project or it doesn't exist on AnVIL."
-    )
+    message_not_users_of_billing_project = "Not a user of requested billing project or it doesn't exist on AnVIL."
     success_message = "Successfully imported Billing Project from AnVIL."
 
     def form_valid(self, form):
@@ -155,24 +129,18 @@ class BillingProjectImport(
             )
         except anvil_api.AnVILAPIError404:
             # Either the workspace doesn't exist or we don't have permission for it.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_not_users_of_billing_project
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_not_users_of_billing_project)
             return self.render_to_response(self.get_context_data(form=form))
         except anvil_api.AnVILAPIError as e:
             # If the API call failed for some other reason, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
 
         messages.add_message(self.request, messages.SUCCESS, self.success_message)
         return HttpResponseRedirect(self.get_success_url())
 
 
-class BillingProjectUpdate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView
-):
+class BillingProjectUpdate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView):
     """View to update information about a Billing Project."""
 
     model = models.BillingProject
@@ -182,33 +150,23 @@ class BillingProjectUpdate(
     success_message = "Successfully updated Billing Project."
 
 
-class BillingProjectDetail(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView
-):
+class BillingProjectDetail(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView):
     model = models.BillingProject
     slug_field = "name"
     context_table_name = "workspace_table"
 
     def get_table(self):
-        return tables.WorkspaceTable(
-            self.object.workspace_set.all(), exclude="billing_project"
-        )
+        return tables.WorkspaceTable(self.object.workspace_set.all(), exclude="billing_project")
 
     def get_context_data(self, **kwargs):
         """Add show_edit_links to context data."""
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class BillingProjectList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
-):
+class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
     ordering = ("name",)
@@ -217,9 +175,7 @@ class BillingProjectList(
     filterset_class = filters.BillingProjectListFilter
 
 
-class BillingProjectAutocomplete(
-    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
-):
+class BillingProjectAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for BillingProjects. Only billing project where the app is a user are included."""
 
     def get_queryset(self):
@@ -232,9 +188,7 @@ class BillingProjectAutocomplete(
         return qs
 
 
-class BillingProjectAudit(
-    auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView
-):
+class BillingProjectAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/billing_project_audit.html"
@@ -252,12 +206,8 @@ class AccountDetail(
         context = super().get_context_data(**kwargs)
         # Add an indicator of whether the account is inactive.
         context["is_inactive"] = self.object.status == models.Account.INACTIVE_STATUS
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
 
@@ -271,15 +221,11 @@ class AccountDetail(
             group__in=self.object.get_all_groups(),
         ).order_by("workspace", "group")
 
-        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingTable(
-            workspace_sharing
-        )
+        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingTable(workspace_sharing)
         return context
 
 
-class AccountImport(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
-):
+class AccountImport(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
     """Import an account from AnVIL.
 
     This view checks that the specified email has a valid AnVIL account. If so, it saves a record in the database.
@@ -291,9 +237,7 @@ class AccountImport(
     message_account_does_not_exist = "This account does not exist on AnVIL."
     """A string that can be displayed if the account does not exist on AnVIL."""
 
-    message_email_associated_with_group = (
-        "This email is associated with a group, not a user."
-    )
+    message_email_associated_with_group = "This email is associated with a group, not a user."
     """A string that can be displayed if the account does not exist on AnVIL."""
 
     form_class = forms.AccountImportForm
@@ -313,9 +257,7 @@ class AccountImport(
             messages.add_message(self.request, messages.ERROR, msg)
             return self.render_to_response(self.get_context_data(form=form))
         if not account_exists:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_account_does_not_exist
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_account_does_not_exist)
             # Re-render the page with a message.
             return self.render_to_response(self.get_context_data(form=form))
 
@@ -336,9 +278,7 @@ class AccountUpdate(
     success_message = "Successfully updated Account."
 
 
-class AccountLink(
-    auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessageMixin, FormView
-):
+class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessageMixin, FormView):
     """View where a user enter their AnVIL email to get an email verification link."""
 
     login_url = settings.LOGIN_URL
@@ -346,13 +286,9 @@ class AccountLink(
     model = models.UserEmailEntry
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_user_already_linked = "You have already linked an AnVIL account."
-    message_account_already_exists = (
-        "An AnVIL Account with this email already exists in this app."
-    )
+    message_account_already_exists = "An AnVIL Account with this email already exists in this app."
     form_class = forms.UserEmailEntryForm
-    success_message = (
-        "To complete linking the account, check your email for a verification link."
-    )
+    success_message = "To complete linking the account, check your email for a verification link."
 
     def get(self, request, *args, **kwargs):
         """Check if the user already has an account linked and redirect."""
@@ -362,9 +298,7 @@ class AccountLink(
             return super().get(request, *args, **kwargs)
         else:
             # The user already has a linked account, so redirect with a message.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_user_already_linked
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_user_already_linked)
             return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
     def post(self, request, *args, **kwargs):
@@ -375,9 +309,7 @@ class AccountLink(
             return super().post(request, *args, **kwargs)
         else:
             # The user already has a linked account, so redirect with a message.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_user_already_linked
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_user_already_linked)
             return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
     def get_success_url(self):
@@ -388,9 +320,7 @@ class AccountLink(
         email = form.cleaned_data.get("email")
 
         try:
-            email_entry = models.UserEmailEntry.objects.get(
-                email__iexact=email, user=self.request.user
-            )
+            email_entry = models.UserEmailEntry.objects.get(email__iexact=email, user=self.request.user)
         except models.UserEmailEntry.DoesNotExist:
             email_entry = models.UserEmailEntry(email=email, user=self.request.user)
 
@@ -398,24 +328,18 @@ class AccountLink(
         # Don't need to check the user, because a user who has already linked their account shouldn't get here.
         if models.Account.objects.filter(email=email).count():
             # The user already has a linked account, so redirect with a message.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_account_already_exists
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
             return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
 
         # Check if it exists on AnVIL.
         try:
             anvil_account_exists = email_entry.anvil_account_exists()
         except AnVILAPIError as e:
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
 
         if not anvil_account_exists:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_account_does_not_exist
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_account_does_not_exist)
             # Re-render the page with a message.
             return self.render_to_response(self.get_context_data(form=form))
 
@@ -431,9 +355,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
 
     message_already_linked = "You have already linked an AnVIL account."
     message_link_invalid = "AnVIL account verification link is invalid."
-    message_account_already_exists = (
-        "An AnVIL Account with this email already exists in this app."
-    )
+    message_account_already_exists = "An AnVIL Account with this email already exists in this app."
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_success = "Thank you for verifying your email."
 
@@ -443,9 +365,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     def get(self, request, *args, **kwargs):
         # Check if this user already has an account linked.
         if models.Account.objects.filter(user=request.user).count():
-            messages.add_message(
-                self.request, messages.ERROR, self.message_already_linked
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_already_linked)
             return super().get(request, *args, **kwargs)
 
         uuid = kwargs.get("uuid")
@@ -454,23 +374,17 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         try:
             email_entry = models.UserEmailEntry.objects.get(uuid=uuid)
         except models.UserEmailEntry.DoesNotExist:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_link_invalid
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_link_invalid)
             return super().get(request, *args, **kwargs)
 
         # Check if the email is already linked to an account.
         if models.Account.objects.filter(email=email_entry.email).count():
-            messages.add_message(
-                self.request, messages.ERROR, self.message_account_already_exists
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
             return super().get(request, *args, **kwargs)
 
         # Check that the token maches.
         if not account_verification_token.check_token(email_entry, token):
-            messages.add_message(
-                self.request, messages.ERROR, self.message_link_invalid
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_link_invalid)
             return super().get(request, *args, **kwargs)
 
         # Create an account for this user from this email.
@@ -485,15 +399,11 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         try:
             anvil_account_exists = account.anvil_exists()
         except AnVILAPIError as e:
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return super().get(request, *args, **kwargs)
 
         if not anvil_account_exists:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_account_does_not_exist
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_account_does_not_exist)
             return super().get(request, *args, **kwargs)
 
         # Mark the entry as verified.
@@ -566,7 +476,9 @@ class AccountDeactivate(
     form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
     context_table_name = "group_table"
-    message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    message_error_removing_from_groups = (
+        "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    )
     message_already_inactive = "This Account is already inactive."
     success_message = "Successfully deactivated Account in app."
 
@@ -584,9 +496,7 @@ class AccountDeactivate(
         response = super().get(self, *args, **kwargs)
         # Check if account is inactive.
         if self.object.status == self.object.INACTIVE_STATUS:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_already_inactive
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_already_inactive)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         return response
@@ -598,9 +508,7 @@ class AccountDeactivate(
         self.object = self.get_object()
 
         if self.object.status == self.object.INACTIVE_STATUS:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_already_inactive
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_already_inactive)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
 
@@ -630,7 +538,9 @@ class AccountReactivate(
     context_table_name = "group_table"
     form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
-    message_error_adding_to_groups = "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    message_error_adding_to_groups = (
+        "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    )
     message_already_active = "This Account is already active."
     success_message = "Successfully reactivated Account in app."
 
@@ -648,9 +558,7 @@ class AccountReactivate(
         self.object = self.get_object()
         # Check if account is inactive.
         if self.object.status == self.object.ACTIVE_STATUS:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_already_active
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_already_active)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         return super().get(self, *args, **kwargs)
@@ -660,9 +568,7 @@ class AccountReactivate(
         # Set the status to active.
         self.object = self.get_object()
         if self.object.status == self.object.ACTIVE_STATUS:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_already_active
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_already_active)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
 
@@ -688,7 +594,9 @@ class AccountDelete(
     DeleteView,
 ):
     model = models.Account
-    message_error_removing_from_groups = "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    message_error_removing_from_groups = (
+        "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+    )
     success_message = "Successfully deleted Account from app."
 
     def get_success_url(self):
@@ -710,9 +618,7 @@ class AccountDelete(
             return super().form_valid(form)
 
 
-class AccountAutocomplete(
-    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
-):
+class AccountAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for Accounts. Only active accounts are included."""
 
     def get_result_label(self, item):
@@ -725,9 +631,7 @@ class AccountAutocomplete(
 
     def get_queryset(self):
         # Only active accounts.
-        qs = models.Account.objects.filter(
-            status=models.Account.ACTIVE_STATUS
-        ).order_by("email")
+        qs = models.Account.objects.filter(status=models.Account.ACTIVE_STATUS).order_by("email")
 
         # Use the account adapter to process the query.
         adapter = get_account_adapter()
@@ -736,9 +640,7 @@ class AccountAutocomplete(
         return qs
 
 
-class AccountAudit(
-    auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView
-):
+class AccountAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Accounts and display the results."""
 
     template_name = "anvil_consortium_manager/account_audit.html"
@@ -785,15 +687,11 @@ class ManagedGroupDetail(
             self.object.workspacegroupsharing_set.all(), exclude="group"
         )
         context["active_account_table"] = tables.GroupAccountMembershipTable(
-            self.object.groupaccountmembership_set.filter(
-                account__status=models.Account.ACTIVE_STATUS
-            ),
+            self.object.groupaccountmembership_set.filter(account__status=models.Account.ACTIVE_STATUS),
             exclude="group",
         )
         context["inactive_account_table"] = tables.GroupAccountMembershipTable(
-            self.object.groupaccountmembership_set.filter(
-                account__status=models.Account.INACTIVE_STATUS
-            ),
+            self.object.groupaccountmembership_set.filter(account__status=models.Account.INACTIVE_STATUS),
             exclude="group",
         )
         context["group_table"] = tables.GroupGroupMembershipTable(
@@ -802,18 +700,12 @@ class ManagedGroupDetail(
         context["parent_table"] = tables.GroupGroupMembershipTable(
             self.object.parent_memberships.all(), exclude="child_group"
         )
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class ManagedGroupCreate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
-):
+class ManagedGroupCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     template_name = "anvil_consortium_manager/managedgroup_create.html"
@@ -830,9 +722,7 @@ class ManagedGroupCreate(
             self.object.anvil_create()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
         # The object is saved by the super's form_valid method.
         return super().form_valid(form)
@@ -852,9 +742,7 @@ class ManagedGroupUpdate(
     success_message = "Successfully updated ManagedGroup."
 
 
-class ManagedGroupList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
-):
+class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
     ordering = ("name",)
@@ -877,30 +765,16 @@ class ManagedGroupVisualization(
         self.graph = G
 
 
-class ManagedGroupDelete(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
-):
+class ManagedGroupDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
     model = models.ManagedGroup
     slug_field = "name"
-    message_not_managed_by_app = (
-        "Cannot delete group because it is not managed by this app."
-    )
-    message_is_auth_domain = (
-        "Cannot delete group since it is an authorization domain for a workspace."
-    )
-    message_is_member_of_another_group = (
-        "Cannot delete group since it is a member of another group."
-    )
-    message_has_access_to_workspace = (
-        "Cannot delete group because it has access to at least one workspace."
-    )
+    message_not_managed_by_app = "Cannot delete group because it is not managed by this app."
+    message_is_auth_domain = "Cannot delete group since it is an authorization domain for a workspace."
+    message_is_member_of_another_group = "Cannot delete group since it is a member of another group."
+    message_has_access_to_workspace = "Cannot delete group because it has access to at least one workspace."
     # In some cases the AnVIL API returns a successful code but the group is not deleted.
-    message_could_not_delete_group_from_app = (
-        "Cannot delete group from app due to foreign key restrictions."
-    )
-    message_could_not_delete_group_from_anvil = (
-        "Cannot not delete group from AnVIL - unknown reason."
-    )
+    message_could_not_delete_group_from_app = "Cannot delete group from app due to foreign key restrictions."
+    message_could_not_delete_group_from_anvil = "Cannot not delete group from AnVIL - unknown reason."
     success_message = "Successfully deleted Group on AnVIL."
 
     def get_success_url(self):
@@ -910,30 +784,22 @@ class ManagedGroupDelete(
         response = super().get(self, *args, **kwargs)
         # Check if managed by the app.
         if not self.object.is_managed_by_app:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_not_managed_by_app
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_not_managed_by_app)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Check authorization domains
         if self.object.workspaceauthorizationdomain_set.count() > 0:
             # Add a message and redirect.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_is_auth_domain
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_is_auth_domain)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Check that it is not a member of other groups.
         # This is enforced by AnVIL.
         if self.object.parent_memberships.count() > 0:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_is_member_of_another_group
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_is_member_of_another_group)
             return HttpResponseRedirect(self.object.get_absolute_url())
         if self.object.workspacegroupsharing_set.count() > 0:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_has_access_to_workspace
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_has_access_to_workspace)
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Otherwise, return the response.
         return response
@@ -945,30 +811,22 @@ class ManagedGroupDelete(
         self.object = self.get_object()
         # Check that the group is managed by the app.
         if not self.object.is_managed_by_app:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_not_managed_by_app
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_not_managed_by_app)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Check if it's an auth domain for any workspaces.
         if self.object.workspaceauthorizationdomain_set.count() > 0:
             # Add a message and redirect.
-            messages.add_message(
-                self.request, messages.ERROR, self.message_is_auth_domain
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_is_auth_domain)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Check that it is not a member of other groups.
         # This is enforced by AnVIL.
         if self.object.parent_memberships.count() > 0:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_is_member_of_another_group
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_is_member_of_another_group)
             return HttpResponseRedirect(self.object.get_absolute_url())
         if self.object.workspacegroupsharing_set.count() > 0:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_has_access_to_workspace
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_has_access_to_workspace)
             return HttpResponseRedirect(self.object.get_absolute_url())
 
         try:
@@ -988,17 +846,13 @@ class ManagedGroupDelete(
             response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             # Rerender the same page with an error message.
             response = self.render_to_response(self.get_context_data())
         return response
 
 
-class ManagedGroupAutocomplete(
-    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
-):
+class ManagedGroupAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for ManagedGroups."""
 
     def get_queryset(self):
@@ -1015,9 +869,7 @@ class ManagedGroupAutocomplete(
         return qs
 
 
-class ManagedGroupAudit(
-    auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView
-):
+class ManagedGroupAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on ManagedGroups and display the results."""
 
     template_name = "anvil_consortium_manager/managedgroup_audit.html"
@@ -1035,9 +887,7 @@ class ManagedGroupMembershipAudit(
     model = models.ManagedGroup
     slug_field = "name"
     template_name = "anvil_consortium_manager/managedgroup_membership_audit.html"
-    message_not_managed_by_app = (
-        "Cannot audit membership because group is not managed by this app."
-    )
+    message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -1066,12 +916,8 @@ class WorkspaceLandingPage(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
@@ -1093,16 +939,13 @@ class WorkspaceDetail(
         # Filter the queryset based on kwargs.
         billing_project_slug = self.kwargs.get("billing_project_slug", None)
         workspace_slug = self.kwargs.get("workspace_slug", None)
-        queryset = queryset.filter(
-            billing_project__name=billing_project_slug, name=workspace_slug
-        )
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
         try:
             # Get the single item from the filtered queryset
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -1125,12 +968,8 @@ class WorkspaceDetail(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
     def get_template_names(self):
@@ -1219,31 +1058,21 @@ class WorkspaceCreate(
                     return self.forms_invalid(form, workspace_data_formset)
                 # Now save the auth domains and the workspace_data_form.
                 for auth_domain in form.cleaned_data["authorization_domains"]:
-                    models.WorkspaceAuthorizationDomain.objects.create(
-                        workspace=self.workspace, group=auth_domain
-                    )
+                    models.WorkspaceAuthorizationDomain.objects.create(workspace=self.workspace, group=auth_domain)
                 workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL.
                 self.workspace.anvil_create()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(
-                self.get_context_data(
-                    form=form, workspace_data_formset=workspace_data_formset
-                )
+                self.get_context_data(form=form, workspace_data_formset=workspace_data_formset)
             )
         return super().form_valid(form)
 
     def forms_invalid(self, form, workspace_data_formset):
         """If the form(s) are invalid, render the invalid form."""
-        return self.render_to_response(
-            self.get_context_data(
-                form=form, workspace_data_formset=workspace_data_formset
-            )
-        )
+        return self.render_to_response(self.get_context_data(form=form, workspace_data_formset=workspace_data_formset))
 
     def get_success_url(self):
         return self.workspace.get_absolute_url()
@@ -1256,9 +1085,7 @@ class WorkspaceImport(
     FormView,
 ):
     template_name = "anvil_consortium_manager/workspace_import.html"
-    message_anvil_no_access_to_workspace = (
-        "Requested workspace doesn't exist or you don't have permission to see it."
-    )
+    message_anvil_no_access_to_workspace = "Requested workspace doesn't exist or you don't have permission to see it."
     message_anvil_not_owner = "Not an owner of this workspace."
     message_workspace_exists = "This workspace already exists in the web app."
     message_error_fetching_workspaces = "Unable to fetch workspaces from AnVIL."
@@ -1271,11 +1098,7 @@ class WorkspaceImport(
         """Return the form instance with the list of available workspaces to import."""
         try:
             all_workspaces = (
-                AnVILAPIClient()
-                .list_workspaces(
-                    fields="workspace.namespace,workspace.name,accessLevel"
-                )
-                .json()
+                AnVILAPIClient().list_workspaces(fields="workspace.namespace,workspace.name,accessLevel").json()
             )
             # Filter workspaces to only owners and not imported.
             workspaces = [
@@ -1292,19 +1115,13 @@ class WorkspaceImport(
             workspace_choices = [(x, x) for x in workspaces]
 
             if not len(workspace_choices):
-                messages.add_message(
-                    self.request, messages.INFO, self.message_no_available_workspaces
-                )
+                messages.add_message(self.request, messages.INFO, self.message_no_available_workspaces)
 
         except AnVILAPIError:
             workspace_choices = []
-            messages.add_message(
-                self.request, messages.ERROR, self.message_error_fetching_workspaces
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_error_fetching_workspaces)
 
-        return forms.WorkspaceImportForm(
-            workspace_choices=workspace_choices, **self.get_form_kwargs()
-        )
+        return forms.WorkspaceImportForm(workspace_choices=workspace_choices, **self.get_form_kwargs())
 
     def get_workspace_data_formset(self):
         """Return an instance of the workspace data form to be used in this view."""
@@ -1382,19 +1199,13 @@ class WorkspaceImport(
                 return self.forms_invalid(form, workspace_data_formset)
             workspace_data_formset.forms[0].save()
         except anvil_api.AnVILAPIError as e:
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
         return super().form_valid(form)
 
     def forms_invalid(self, form, workspace_data_formset):
         """If the form is invalid, render the invalid form."""
-        return self.render_to_response(
-            self.get_context_data(
-                form=form, workspace_data_formset=workspace_data_formset
-            )
-        )
+        return self.render_to_response(self.get_context_data(form=form, workspace_data_formset=workspace_data_formset))
 
 
 class WorkspaceClone(
@@ -1416,16 +1227,13 @@ class WorkspaceClone(
         # Filter the queryset based on kwargs.
         billing_project_slug = self.kwargs.get("billing_project_slug")
         workspace_slug = self.kwargs.get("workspace_slug")
-        queryset = queryset.filter(
-            billing_project__name=billing_project_slug, name=workspace_slug
-        )
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
         try:
             # Get the single item from the filtered queryset
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -1513,9 +1321,7 @@ class WorkspaceClone(
                     return self.forms_invalid(form, workspace_data_formset)
                 # Now save the auth domains and the workspace_data_form.
                 for auth_domain in form.cleaned_data["authorization_domains"]:
-                    models.WorkspaceAuthorizationDomain.objects.create(
-                        workspace=self.new_workspace, group=auth_domain
-                    )
+                    models.WorkspaceAuthorizationDomain.objects.create(workspace=self.new_workspace, group=auth_domain)
                 workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL.
                 authorization_domains = self.new_workspace.authorization_domains.all()
@@ -1526,23 +1332,15 @@ class WorkspaceClone(
                 )
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(
-                self.get_context_data(
-                    form=form, workspace_data_formset=workspace_data_formset
-                )
+                self.get_context_data(form=form, workspace_data_formset=workspace_data_formset)
             )
         return super().form_valid(form)
 
     def forms_invalid(self, form, workspace_data_formset):
         """If the form(s) are invalid, render the invalid form."""
-        return self.render_to_response(
-            self.get_context_data(
-                form=form, workspace_data_formset=workspace_data_formset
-            )
-        )
+        return self.render_to_response(self.get_context_data(form=form, workspace_data_formset=workspace_data_formset))
 
     def get_success_url(self):
         return self.new_workspace.get_absolute_url()
@@ -1584,16 +1382,13 @@ class WorkspaceUpdate(
         # Filter the queryset based on kwargs.
         billing_project_slug = self.kwargs.get("billing_project_slug", None)
         workspace_slug = self.kwargs.get("workspace_slug", None)
-        queryset = queryset.filter(
-            billing_project__name=billing_project_slug, name=workspace_slug
-        )
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
         try:
             # Get the single item from the filtered queryset
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -1630,9 +1425,7 @@ class WorkspaceUpdate(
                 initial=[{"workspace": self.object}],
             )
         else:
-            formset = formset_factory(
-                prefix=formset_prefix, initial=[{}], instance=self.object
-            )
+            formset = formset_factory(prefix=formset_prefix, initial=[{}], instance=self.object)
         return formset
 
     def get_context_data(self, **kwargs):
@@ -1664,19 +1457,13 @@ class WorkspaceUpdate(
 
     def forms_invalid(self, form, workspace_data_formset):
         """If the form(s) are invalid, render the invalid form."""
-        return self.render_to_response(
-            self.get_context_data(
-                form=form, workspace_data_formset=workspace_data_formset
-            )
-        )
+        return self.render_to_response(self.get_context_data(form=form, workspace_data_formset=workspace_data_formset))
 
     def get_success_url(self):
         return self.object.get_absolute_url()
 
 
-class WorkspaceList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView
-):
+class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
@@ -1719,14 +1506,10 @@ class WorkspaceListByType(
         return table_class
 
 
-class WorkspaceDelete(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
-):
+class WorkspaceDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
     model = models.Workspace
     success_message = "Successfully deleted Workspace on AnVIL."
-    message_could_not_delete_workspace_from_app = (
-        "Cannot delete workspace from app due to foreign key restrictions."
-    )
+    message_could_not_delete_workspace_from_app = "Cannot delete workspace from app due to foreign key restrictions."
     message_workspace_locked = "Cannot delete workspace because it is locked."
 
     def get(self, request, *args, **kwargs):
@@ -1758,16 +1541,13 @@ class WorkspaceDelete(
         # Filter the queryset based on kwargs.
         billing_project_slug = self.kwargs.get("billing_project_slug", None)
         workspace_slug = self.kwargs.get("workspace_slug", None)
-        queryset = queryset.filter(
-            billing_project__name=billing_project_slug, name=workspace_slug
-        )
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
         try:
             # Get the single item from the filtered queryset
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -1799,17 +1579,13 @@ class WorkspaceDelete(
             response = HttpResponseRedirect(self.object.get_absolute_url())
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             # Rerender the same page with an error message.
             response = self.render_to_response(self.get_context_data())
         return response
 
 
-class WorkspaceAudit(
-    auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView
-):
+class WorkspaceAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/workspace_audit.html"
@@ -1837,16 +1613,13 @@ class WorkspaceSharingAudit(
         # Filter the queryset based on kwargs.
         billing_project_slug = self.kwargs.get("billing_project_slug", None)
         workspace_slug = self.kwargs.get("workspace_slug", None)
-        queryset = queryset.filter(
-            billing_project__name=billing_project_slug, name=workspace_slug
-        )
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
         try:
             # Get the single item from the filtered queryset
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -1859,9 +1632,7 @@ class WorkspaceSharingAudit(
         return audit.WorkspaceSharingAudit(self.object)
 
 
-class WorkspaceAutocomplete(
-    auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView
-):
+class WorkspaceAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for Workspaces.
 
     Right now this only matches Workspace name, not billing project."""
@@ -1893,9 +1664,7 @@ class WorkspaceAutocompleteByType(
         )
 
         # Use the workspace adapter to process the query.
-        qs = self.adapter.get_autocomplete_queryset(
-            qs, self.q, forwarded=self.forwarded
-        )
+        qs = self.adapter.get_autocomplete_queryset(qs, self.q, forwarded=self.forwarded)
 
         return qs
 
@@ -1913,33 +1682,24 @@ class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, Detail
         # Filter the queryset based on kwargs.
         parent_group_slug = self.kwargs.get("parent_group_slug", None)
         child_group_slug = self.kwargs.get("child_group_slug", None)
-        queryset = queryset.filter(
-            parent_group__name=parent_group_slug, child_group__name=child_group_slug
-        )
+        queryset = queryset.filter(parent_group__name=parent_group_slug, child_group__name=child_group_slug)
         try:
             # Get the single item from the filtered queryset
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class GroupGroupMembershipCreate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
-):
+class GroupGroupMembershipCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
     model = models.GroupGroupMembership
     form_class = forms.GroupGroupMembershipForm
     success_message = "Successfully created group membership."
@@ -1956,9 +1716,7 @@ class GroupGroupMembershipCreate(
             self.object.anvil_create()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
         # The object is saved by the super's form_valid method.
         return super().form_valid(form)
@@ -2063,13 +1821,9 @@ class GroupGroupMembershipCreateByChild(GroupGroupMembershipCreate):
 class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
     """View to create a new GroupGroupMembership object for the parent and child groups specified in the url."""
 
-    template_name = (
-        "anvil_consortium_manager/groupgroupmembership_form_byparentchild.html"
-    )
+    template_name = "anvil_consortium_manager/groupgroupmembership_form_byparentchild.html"
 
-    message_already_exists = (
-        "Child group is already a member of the parent Managed Group."
-    )
+    message_already_exists = "Child group is already a member of the parent Managed Group."
     message_cannot_add_group_to_itself = "Cannot add a group to itself as a member."
     message_circular_relationship = "Cannot add a circular group relationship."
     message_not_managed_by_app = "Parent group is not managed by this app."
@@ -2107,9 +1861,7 @@ class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
             messages.error(self.request, error)
             return HttpResponseRedirect(self.parent_group.get_absolute_url())
         try:
-            obj = models.GroupGroupMembership.objects.get(
-                parent_group=self.parent_group, child_group=self.child_group
-            )
+            obj = models.GroupGroupMembership.objects.get(parent_group=self.parent_group, child_group=self.child_group)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
         except models.GroupGroupMembership.DoesNotExist:
@@ -2123,9 +1875,7 @@ class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
             messages.error(self.request, error)
             return HttpResponseRedirect(self.parent_group.get_absolute_url())
         try:
-            obj = models.GroupGroupMembership.objects.get(
-                parent_group=self.parent_group, child_group=self.child_group
-            )
+            obj = models.GroupGroupMembership.objects.get(parent_group=self.parent_group, child_group=self.child_group)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
         except models.GroupGroupMembership.DoesNotExist:
@@ -2154,16 +1904,12 @@ class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
         return self.object.get_absolute_url()
 
 
-class GroupGroupMembershipList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableView
-):
+class GroupGroupMembershipList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
 
 
-class GroupGroupMembershipDelete(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
-):
+class GroupGroupMembershipDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
     model = models.GroupGroupMembership
     success_message = "Successfully deleted group membership on AnVIL."
 
@@ -2181,16 +1927,13 @@ class GroupGroupMembershipDelete(
         # Filter the queryset based on kwargs.
         parent_group_slug = self.kwargs.get("parent_group_slug", None)
         child_group_slug = self.kwargs.get("child_group_slug", None)
-        queryset = queryset.filter(
-            parent_group__name=parent_group_slug, child_group__name=child_group_slug
-        )
+        queryset = queryset.filter(parent_group__name=parent_group_slug, child_group__name=child_group_slug)
         try:
             # Get the single item from the filtered queryset
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -2231,9 +1974,7 @@ class GroupGroupMembershipDelete(
             self.object.anvil_delete()
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
         return super().form_valid(form)
@@ -2258,25 +1999,18 @@ class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, Deta
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class GroupAccountMembershipCreate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
-):
+class GroupAccountMembershipCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
     model = models.GroupAccountMembership
     form_class = forms.GroupAccountMembershipForm
     success_message = "Successfully added account membership."
@@ -2293,9 +2027,7 @@ class GroupAccountMembershipCreate(
             self.object.anvil_create()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
         # The object is saved by the super's form_valid method.
         return super().form_valid(form)
@@ -2306,9 +2038,7 @@ class GroupAccountMembershipCreateByGroup(GroupAccountMembershipCreate):
 
     template_name = "anvil_consortium_manager/groupaccountmembership_form_bygroup.html"
 
-    message_not_managed_by_app = (
-        "Cannot add Account because this group is not managed by the app."
-    )
+    message_not_managed_by_app = "Cannot add Account because this group is not managed by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2359,13 +2089,9 @@ class GroupAccountMembershipCreateByGroup(GroupAccountMembershipCreate):
 class GroupAccountMembershipCreateByAccount(GroupAccountMembershipCreate):
     """View to create a new GroupAccountMembership for the account specified in the url."""
 
-    template_name = (
-        "anvil_consortium_manager/groupaccountmembership_form_byaccount.html"
-    )
+    template_name = "anvil_consortium_manager/groupaccountmembership_form_byaccount.html"
 
-    message_not_managed_by_app = (
-        "Cannot add Account because this group is not managed by the app."
-    )
+    message_not_managed_by_app = "Cannot add Account because this group is not managed by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2410,9 +2136,7 @@ class GroupAccountMembershipCreateByAccount(GroupAccountMembershipCreate):
 class GroupAccountMembershipCreateByGroupAccount(GroupAccountMembershipCreate):
     """View to create a new GroupAccountMembership object for the group and account specified in the url."""
 
-    template_name = (
-        "anvil_consortium_manager/groupaccountmembership_form_bygroupaccount.html"
-    )
+    template_name = "anvil_consortium_manager/groupaccountmembership_form_bygroupaccount.html"
 
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
@@ -2439,9 +2163,7 @@ class GroupAccountMembershipCreateByGroupAccount(GroupAccountMembershipCreate):
         self.account = self.get_account()
         self.group = self.get_group()
         try:
-            obj = models.GroupAccountMembership.objects.get(
-                account=self.account, group=self.group
-            )
+            obj = models.GroupAccountMembership.objects.get(account=self.account, group=self.group)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
         except models.GroupAccountMembership.DoesNotExist:
@@ -2451,9 +2173,7 @@ class GroupAccountMembershipCreateByGroupAccount(GroupAccountMembershipCreate):
         self.account = self.get_account()
         self.group = self.get_group()
         try:
-            obj = models.GroupAccountMembership.objects.get(
-                account=self.account, group=self.group
-            )
+            obj = models.GroupAccountMembership.objects.get(account=self.account, group=self.group)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
         except models.GroupAccountMembership.DoesNotExist:
@@ -2482,18 +2202,14 @@ class GroupAccountMembershipCreateByGroupAccount(GroupAccountMembershipCreate):
         return self.object.get_absolute_url()
 
 
-class GroupAccountMembershipList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableView
-):
+class GroupAccountMembershipList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     """Show a list of all group memberships regardless of account active/inactive status."""
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
 
 
-class GroupAccountMembershipActiveList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableView
-):
+class GroupAccountMembershipActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     """Show a list of all group memberships for active accounts."""
 
     model = models.GroupAccountMembership
@@ -2507,9 +2223,7 @@ class GroupAccountMembershipActiveList(
         return self.model.objects.filter(account__status=models.Account.ACTIVE_STATUS)
 
 
-class GroupAccountMembershipInactiveList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableView
-):
+class GroupAccountMembershipInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     """Show a list of all group memberships for inactive accounts."""
 
     model = models.GroupAccountMembership
@@ -2523,15 +2237,11 @@ class GroupAccountMembershipInactiveList(
         return self.model.objects.filter(account__status=models.Account.INACTIVE_STATUS)
 
 
-class GroupAccountMembershipDelete(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
-):
+class GroupAccountMembershipDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
     model = models.GroupAccountMembership
     success_message = "Successfully deleted account membership on AnVIL."
 
-    message_group_not_managed_by_app = (
-        "Cannot remove members from group because it is not managed by this app."
-    )
+    message_group_not_managed_by_app = "Cannot remove members from group because it is not managed by this app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -2549,8 +2259,7 @@ class GroupAccountMembershipDelete(
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -2561,9 +2270,7 @@ class GroupAccountMembershipDelete(
         response = super().get(self, *args, **kwargs)
         # Check if managed by the app.
         if not self.object.group.is_managed_by_app:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_group_not_managed_by_app
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_group_not_managed_by_app)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Otherwise, return the response.
@@ -2577,9 +2284,7 @@ class GroupAccountMembershipDelete(
         self.group = self.object.group
         # Check if managed by the app.
         if not self.object.group.is_managed_by_app:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_group_not_managed_by_app
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_group_not_managed_by_app)
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.object.get_absolute_url())
         # Try to delete from AnVIL.
@@ -2587,9 +2292,7 @@ class GroupAccountMembershipDelete(
             self.object.anvil_delete()
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
         return super().form_valid(form)
@@ -2619,25 +2322,18 @@ class WorkspaceGroupSharingDetail(auth.AnVILConsortiumManagerViewRequired, Detai
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = (
-            models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
-        )
-        context["show_edit_links"] = self.request.user.has_perm(
-            "anvil_consortium_manager." + edit_permission_codename
-        )
+        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class WorkspaceGroupSharingCreate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView
-):
+class WorkspaceGroupSharingCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
     """View to create a new WorkspaceGroupSharing object and share the Workspace with a Group on AnVIL."""
 
     model = models.WorkspaceGroupSharing
@@ -2660,15 +2356,11 @@ class WorkspaceGroupSharingCreate(
         try:
             self.object.anvil_create_or_update()
         except exceptions.AnVILGroupNotFound:
-            messages.add_message(
-                self.request, messages.ERROR, self.message_group_not_found
-            )
+            messages.add_message(self.request, messages.ERROR, self.message_group_not_found)
             return self.render_to_response(self.get_context_data(form=form))
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
         # The object is saved by the super's form_valid method.
         return super().form_valid(form)
@@ -2679,26 +2371,20 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
 
     model = models.WorkspaceGroupSharing
     form_class = forms.WorkspaceGroupSharingForm
-    template_name = (
-        "anvil_consortium_manager/workspacegroupsharing_form_byworkspace.html"
-    )
+    template_name = "anvil_consortium_manager/workspacegroupsharing_form_byworkspace.html"
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
-    message_already_exists = (
-        "This workspace has already been shared with this managed group."
-    )
+    message_already_exists = "This workspace has already been shared with this managed group."
 
     def get_workspace(self):
         try:
             billing_project_slug = self.kwargs["billing_project_slug"]
             workspace_slug = self.kwargs["workspace_slug"]
-            workspace = models.Workspace.objects.get(
-                billing_project__name=billing_project_slug, name=workspace_slug
-            )
+            workspace = models.Workspace.objects.get(billing_project__name=billing_project_slug, name=workspace_slug)
         except models.Workspace.DoesNotExist:
             raise Http404("Workspace not found.")
         return workspace
@@ -2743,9 +2429,7 @@ class WorkspaceGroupSharingCreateByGroup(WorkspaceGroupSharingCreate):
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
-    message_already_exists = (
-        "This workspace has already been shared with this managed group."
-    )
+    message_already_exists = "This workspace has already been shared with this managed group."
 
     def get_group(self):
         try:
@@ -2788,26 +2472,20 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
 
     model = models.WorkspaceGroupSharing
     form_class = forms.WorkspaceGroupSharingForm
-    template_name = (
-        "anvil_consortium_manager/workspacegroupsharing_form_byworkspacegroup.html"
-    )
+    template_name = "anvil_consortium_manager/workspacegroupsharing_form_byworkspacegroup.html"
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
-    message_already_exists = (
-        "This workspace has already been shared with this managed group."
-    )
+    message_already_exists = "This workspace has already been shared with this managed group."
 
     def get_workspace(self):
         try:
             billing_project_slug = self.kwargs["billing_project_slug"]
             workspace_slug = self.kwargs["workspace_slug"]
-            workspace = models.Workspace.objects.get(
-                billing_project__name=billing_project_slug, name=workspace_slug
-            )
+            workspace = models.Workspace.objects.get(billing_project__name=billing_project_slug, name=workspace_slug)
         except models.Workspace.DoesNotExist:
             raise Http404("Workspace not found.")
         return workspace
@@ -2824,9 +2502,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
         self.workspace = self.get_workspace()
         self.group = self.get_group()
         try:
-            obj = models.WorkspaceGroupSharing.objects.get(
-                workspace=self.workspace, group=self.group
-            )
+            obj = models.WorkspaceGroupSharing.objects.get(workspace=self.workspace, group=self.group)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
         except models.WorkspaceGroupSharing.DoesNotExist:
@@ -2836,9 +2512,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
         self.workspace = self.get_workspace()
         self.group = self.get_group()
         try:
-            obj = models.WorkspaceGroupSharing.objects.get(
-                workspace=self.workspace, group=self.group
-            )
+            obj = models.WorkspaceGroupSharing.objects.get(workspace=self.workspace, group=self.group)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
         except models.WorkspaceGroupSharing.DoesNotExist:
@@ -2867,9 +2541,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
         return self.object.get_absolute_url()
 
 
-class WorkspaceGroupSharingUpdate(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView
-):
+class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView):
     """View to update a WorkspaceGroupSharing object and on AnVIL."""
 
     model = models.WorkspaceGroupSharing
@@ -2902,8 +2574,7 @@ class WorkspaceGroupSharingUpdate(
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -2916,24 +2587,18 @@ class WorkspaceGroupSharingUpdate(
             self.object.anvil_create_or_update()
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
         # The object is saved by the super's form_valid method.
         return super().form_valid(form)
 
 
-class WorkspaceGroupSharingList(
-    auth.AnVILConsortiumManagerViewRequired, SingleTableView
-):
+class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
     model = models.WorkspaceGroupSharing
     table_class = tables.WorkspaceGroupSharingTable
 
 
-class WorkspaceGroupSharingDelete(
-    auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView
-):
+class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
     model = models.WorkspaceGroupSharing
     success_message = "Successfully removed workspace sharing on AnVIL."
 
@@ -2958,8 +2623,7 @@ class WorkspaceGroupSharingDelete(
             obj = queryset.get()
         except queryset.model.DoesNotExist:
             raise Http404(
-                _("No %(verbose_name)s found matching the query")
-                % {"verbose_name": queryset.model._meta.verbose_name}
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
 
@@ -2975,9 +2639,7 @@ class WorkspaceGroupSharingDelete(
             self.object.anvil_delete()
         except AnVILAPIError as e:
             # The AnVIL call has failed for some reason.
-            messages.add_message(
-                self.request, messages.ERROR, "AnVIL API Error: " + str(e)
-            )
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             # Rerender the same page with an error message.
             return self.render_to_response(self.get_context_data())
         return super().form_valid(form)

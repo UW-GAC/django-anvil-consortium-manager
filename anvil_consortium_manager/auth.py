@@ -13,9 +13,7 @@ class AnVILConsortiumManagerLimitedViewRequired(UserPassesTestMixin):
         apm_content_type = ContentType.objects.get_for_model(AnVILProjectManagerAccess)
         perm_1 = f"{apm_content_type.app_label}.{AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME}"
         perm_2 = f"{apm_content_type.app_label}.{AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME}"
-        has_perms = self.request.user.has_perms(
-            (perm_1,)
-        ) or self.request.user.has_perms((perm_2,))
+        has_perms = self.request.user.has_perms((perm_1,)) or self.request.user.has_perms((perm_2,))
         return has_perms
 
 

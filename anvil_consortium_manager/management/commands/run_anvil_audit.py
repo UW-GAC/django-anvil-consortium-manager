@@ -64,29 +64,21 @@ class Command(BaseCommand):
         else:
             if not audit_results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))
-                self.stdout.write(
-                    pprint.pformat(audit_results.export(include_verified=False))
-                )
+                self.stdout.write(pprint.pformat(audit_results.export(include_verified=False)))
             else:
                 self.stdout.write(self.style.SUCCESS("ok!"))
 
             if email and (not errors_only) or (errors_only and not audit_results.ok()):
                 # Set up the email message.
-                subject = "AnVIL audit {} -- {}".format(
-                    audit_name, "ok" if audit_results.ok() else "errors!"
-                )
+                subject = "AnVIL audit {} -- {}".format(audit_name, "ok" if audit_results.ok() else "errors!")
                 exported_results = audit_results.export()
                 html_body = render_to_string(
                     "anvil_consortium_manager/email_audit_report.html",
                     context={
                         "model_name": audit_name,
                         "verified_results": audit_results.get_verified_results(),
-                        "errors_table": ErrorTableWithLink(
-                            audit_results.get_error_results()
-                        ),
-                        "not_in_app_table": audit.NotInAppTable(
-                            audit_results.get_not_in_app_results()
-                        ),
+                        "errors_table": ErrorTableWithLink(audit_results.get_error_results()),
+                        "not_in_app_table": audit.NotInAppTable(audit_results.get_not_in_app_results()),
                     },
                 )
                 send_mail(

@@ -202,15 +202,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = (
-            self.sam_entry_point
-            + "/api/groups/v1/"
-            + group_name
-            + "/"
-            + role
-            + "/"
-            + user_email
-        )
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name + "/" + role + "/" + user_email
         return self.auth_session.put(url, 204)
 
     def remove_user_from_group(self, group_name, role, user_email):
@@ -226,15 +218,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = (
-            self.sam_entry_point
-            + "/api/groups/v1/"
-            + group_name
-            + "/"
-            + role
-            + "/"
-            + user_email
-        )
+        url = self.sam_entry_point + "/api/groups/v1/" + group_name + "/" + role + "/" + user_email
         return self.auth_session.delete(url, 204)
 
     def list_workspaces(self, fields=None):
@@ -267,18 +251,10 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = (
-            self.rawls_entry_point
-            + "/api/workspaces/"
-            + workspace_namespace
-            + "/"
-            + workspace_name
-        )
+        url = self.rawls_entry_point + "/api/workspaces/" + workspace_namespace + "/" + workspace_name
         return self.auth_session.get(url, 200)
 
-    def create_workspace(
-        self, workspace_namespace, workspace_name, authorization_domains=[]
-    ):
+    def create_workspace(self, workspace_namespace, workspace_name, authorization_domains=[]):
         """Create a workspace on AnVIL.
 
         Calls the /api/create_workspace POST method.
@@ -335,12 +311,9 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = (
-            self.rawls_entry_point
-            + "/api/workspaces/{namespace}/{name}/clone".format(
-                namespace=existing_workspace_namespace,
-                name=existing_workspace_name,
-            )
+        url = self.rawls_entry_point + "/api/workspaces/{namespace}/{name}/clone".format(
+            namespace=existing_workspace_namespace,
+            name=existing_workspace_name,
         )
         body = {
             "namespace": cloned_workspace_namespace,
@@ -372,13 +345,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = (
-            self.rawls_entry_point
-            + "/api/workspaces/"
-            + workspace_namespace
-            + "/"
-            + workspace_name
-        )
+        url = self.rawls_entry_point + "/api/workspaces/" + workspace_namespace + "/" + workspace_name
         return self.auth_session.delete(url, 202)
 
     def get_workspace_acl(self, workspace_namespace, workspace_name):
@@ -395,14 +362,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = (
-            self.rawls_entry_point
-            + "/api/workspaces/"
-            + workspace_namespace
-            + "/"
-            + workspace_name
-            + "/acl"
-        )
+        url = self.rawls_entry_point + "/api/workspaces/" + workspace_namespace + "/" + workspace_name + "/acl"
         return self.auth_session.get(url, 200)
 
     def update_workspace_acl(self, workspace_namespace, workspace_name, acl_updates):
@@ -421,17 +381,11 @@ class AnVILAPIClient:
             requests.Response
         """
         url = self.rawls_entry_point + (
-            "/api/workspaces/"
-            + workspace_namespace
-            + "/"
-            + workspace_name
-            + "/acl?inviteUsersNotFound=false"
+            "/api/workspaces/" + workspace_namespace + "/" + workspace_name + "/acl?inviteUsersNotFound=false"
         )
         # False here means do not invite unregistered users.
         updates = json.dumps(acl_updates)
-        return self.auth_session.patch(
-            url, 200, headers={"Content-type": "application/json"}, data=updates
-        )
+        return self.auth_session.patch(url, 200, headers={"Content-type": "application/json"}, data=updates)
 
 
 class AnVILAPISession(AuthorizedSession):

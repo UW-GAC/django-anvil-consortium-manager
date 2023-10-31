@@ -15,9 +15,7 @@ billing_project_patterns = (
         ),
         path("audit/", views.BillingProjectAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.BillingProjectDetail.as_view(), name="detail"),
-        path(
-            "<slug:slug>/update/", views.BillingProjectUpdate.as_view(), name="update"
-        ),
+        path("<slug:slug>/update/", views.BillingProjectUpdate.as_view(), name="update"),
     ],
     "billing_projects",
 )

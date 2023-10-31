@@ -43,8 +43,12 @@ dependencies = [
 [tool.setuptools.packages.find]
 include = ["anvil_consortium_manager*"]
 
+[tool.black]
+line-length = 119
+
 [tool.isort]
-line_length = 88
+profile = "black"
+line_length = 119
 known_first_party = ["anvil_consortium_manager", "example_site"]
 multi_line_output = 3
 default_section = "THIRDPARTY"

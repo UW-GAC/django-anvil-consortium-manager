@@ -43,17 +43,13 @@ class AnVILAPIMockTestMixin:
             mock.sentinel.credentials,
             mock.sentinel.project,
         )
-        self.anvil_response_mock = responses.RequestsMock(
-            assert_all_requests_are_fired=True
-        )
+        self.anvil_response_mock = responses.RequestsMock(assert_all_requests_are_fired=True)
         self.anvil_response_mock.start()
         # Get an instance of the API client to access entry points?
         self.api_client = AnVILAPIClient()
         # Set the auth session service account email here, since some functions need it.
         self.service_account_email = fake.email()
-        AnVILAPIClient().auth_session.credentials.service_account_email = (
-            self.service_account_email
-        )
+        AnVILAPIClient().auth_session.credentials.service_account_email = self.service_account_email
 
     def tearDown(self):
         super().tearDown()
