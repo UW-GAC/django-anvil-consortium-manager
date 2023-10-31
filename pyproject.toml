@@ -42,3 +42,14 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 include = ["anvil_consortium_manager*"]
+
+[tool.isort]
+line_length = 88
+known_first_party = ["anvil_consortium_manager", "example_site"]
+multi_line_output = 3
+default_section = "THIRDPARTY"
+skip = ["venv/"]
+skip_glob = ["**/migrations/*.py"]
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
