@@ -1,7 +1,7 @@
 [project]
 name = "django-anvil-consortium-manager"
 # Version needs to be updated such that the canonical version is only stored in one place.
-version = "0.19"
+# version = "0.19"
 authors = [
     {name="Adrienne Stilp", email="amstilp@uw.edu"},
 ]
@@ -31,6 +31,7 @@ dependencies = [
     "networkx >= 2.8.2",
     "numpy >= 1.24",
 ]
+dynamic = ["version"]
 
 
 [build-system]
@@ -42,6 +43,9 @@ build-backend = "setuptools.build_meta"
 "Homepage" = "https://github.com/UW-GAC/django-anvil-consortium-manager"
 "Bug Tracker" = "https://github.com/UW-GAC/django-anvil-consortium-manager/issues"
 
+
+[tool.setuptools.dynamic]
+version = {attr = "anvil_consortium_manager.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["anvil_consortium_manager*"]
