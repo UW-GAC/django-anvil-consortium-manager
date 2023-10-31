@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Switch to using `pyproject.toml` where possible.
+
 ## 0.19 (2023-10-27)
 
 * Add filtering in list views.
