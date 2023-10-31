@@ -57,3 +57,9 @@ skip_glob = ["**/migrations/*.py"]
 include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
+
+
+[tool.coverage.run]
+include = ["anvil_consortium_manager/*"]
+omit = ["*migrations*", "*tests*"]
+plugins = ["django_coverage_plugin"]
