@@ -68,3 +68,10 @@ use_parentheses = true
 include = ["anvil_consortium_manager/*"]
 omit = ["*migrations*", "*tests*"]
 plugins = ["django_coverage_plugin"]
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--ds=anvil_consortium_manager.tests.settings.test --reuse-db --ignore=anvil_consortium_manager/tests/test_app/"
+python_files = ["anvil_consortium_manager/tests/test*.py"]
+python_classes = ["!TestWorkspaceDataFactory"]
