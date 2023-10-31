@@ -168,10 +168,7 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {
-            "format": "%(levelname)s %(asctime)s %(module)s "
-            "%(process)d %(thread)d %(message)s"
-        }
+        "verbose": {"format": "%(levelname)s %(asctime)s %(module)s " "%(process)d %(thread)d %(message)s"}
     },
     "handlers": {
         "console": {
@@ -223,6 +220,4 @@ ANVIL_WORKSPACE_ADAPTERS = [
     "example_site.app.adapters.CustomWorkspaceAdapter",
 ]
 # Account adapter.
-ANVIL_ACCOUNT_ADAPTER = (
-    "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
-)
+ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"

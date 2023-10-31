@@ -78,9 +78,7 @@ class BaseWorkspaceAdapter(ABC):
     def get_list_table_class(self):
         """Return the table class to use for the WorkspaceListByType view."""
         if not self.list_table_class:
-            raise ImproperlyConfigured(
-                "Set `list_table_class` in `{}`.".format(type(self))
-            )
+            raise ImproperlyConfigured("Set `list_table_class` in `{}`.".format(type(self)))
         return self.list_table_class
 
     def get_workspace_form_class(self):
@@ -89,9 +87,7 @@ class BaseWorkspaceAdapter(ABC):
             raise ImproperlyConfigured("Set `workspace_data_form_class`.")
         # Make sure it is a model form
         if not issubclass(self.workspace_form_class, ModelForm):
-            raise ImproperlyConfigured(
-                "workspace_form_class must be a subclass of ModelForm."
-            )
+            raise ImproperlyConfigured("workspace_form_class must be a subclass of ModelForm.")
         # Make sure it has the correct model set.
         if self.workspace_form_class.Meta.model != models.Workspace:
             raise ImproperlyConfigured(
@@ -104,9 +100,7 @@ class BaseWorkspaceAdapter(ABC):
         if not self.workspace_data_model:
             raise ImproperlyConfigured("Set `workspace_data_model`.")
         elif not issubclass(self.workspace_data_model, models.BaseWorkspaceData):
-            raise ImproperlyConfigured(
-                "`workspace_data_model` must be a subclass of `BaseWorkspaceData`."
-            )
+            raise ImproperlyConfigured("`workspace_data_model` must be a subclass of `BaseWorkspaceData`.")
         return self.workspace_data_model
 
     def get_workspace_data_form_class(self):
@@ -118,9 +112,7 @@ class BaseWorkspaceAdapter(ABC):
             raise ImproperlyConfigured("Set `workspace_data_form_class`.")
         # Make sure it has the "workspace" field.
         if "workspace" not in self.workspace_data_form_class().fields:
-            raise ImproperlyConfigured(
-                "`workspace_data_form_class` must have a field for workspace."
-            )
+            raise ImproperlyConfigured("`workspace_data_form_class` must have a field for workspace.")
         return self.workspace_data_form_class
 
     def get_workspace_detail_template_name(self):
@@ -159,44 +151,32 @@ class WorkspaceAdapterRegistry:
         """Register an adapter class using its type."""
         # Make sure the adapter has the correct subclass.
         if not issubclass(adapter_class, BaseWorkspaceAdapter):
-            raise ImproperlyConfigured(
-                "`adapter_class` must inherit from `BaseWorkspaceAdapter`."
-            )
+            raise ImproperlyConfigured("`adapter_class` must inherit from `BaseWorkspaceAdapter`.")
         # Make sure that an adapter for this type is not already registered.
         adapter = adapter_class()
         type = adapter.get_type()
         if type in self._registry:
             if self._registry[type] is adapter_class:
-                raise AdapterAlreadyRegisteredError(
-                    "adapter {} already exists in registry.".format(adapter_class)
-                )
+                raise AdapterAlreadyRegisteredError("adapter {} already exists in registry.".format(adapter_class))
             else:
-                raise AdapterAlreadyRegisteredError(
-                    "type `{}` already exists in registry.".format(type)
-                )
+                raise AdapterAlreadyRegisteredError("type `{}` already exists in registry.".format(type))
         # Add the adapter to the registry.
         self._registry[type] = adapter_class
 
     def unregister(self, adapter_class):
         """Unregister an adapter class."""
         if not issubclass(adapter_class, BaseWorkspaceAdapter):
-            raise ImproperlyConfigured(
-                "`adapter_class` must inherit from `BaseWorkspaceAdapter`."
-            )
+            raise ImproperlyConfigured("`adapter_class` must inherit from `BaseWorkspaceAdapter`.")
         type = adapter_class().type
         if type in self._registry:
             # Check that the registered adapter is the same class and raise an exception if not.
             registered_adapter = self._registry[type]
             if registered_adapter is not adapter_class:
-                raise AdapterNotRegisteredError(
-                    "adapter {} has not been registered yet.".format(adapter_class)
-                )
+                raise AdapterNotRegisteredError("adapter {} has not been registered yet.".format(adapter_class))
             else:
                 del self._registry[type]
         else:
-            raise AdapterNotRegisteredError(
-                "adapter {} has not been registered yet.".format(adapter_class)
-            )
+            raise AdapterNotRegisteredError("adapter {} has not been registered yet.".format(adapter_class))
 
     def get_adapter(self, type):
         """ "Return an instance of the adapter for a given workspace ``type``."""

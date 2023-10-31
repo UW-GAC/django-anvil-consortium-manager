@@ -20,11 +20,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the run_anvil_audit command"""
 
     def get_api_url_billing_project(self, billing_project_name):
-        return (
-            self.api_client.rawls_entry_point
-            + "/api/billing/v2/"
-            + billing_project_name
-        )
+        return self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name
 
     def test_command_output_invalid_model(self):
         """Appropriate error is returned when an invalid model is specified."""
@@ -72,9 +68,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_command_output_billing_project_no_instances(self):
         """Test command output."""
         out = StringIO()
-        call_command(
-            "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
-        )
+        call_command("run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out)
         self.assertIn("BillingProjectAudit... ok!", out.getvalue())
 
     def test_command_output_account_no_instances(self):
@@ -92,9 +86,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         out = StringIO()
-        call_command(
-            "run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out
-        )
+        call_command("run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out)
         self.assertIn("ManagedGroupAudit... ok!", out.getvalue())
 
     def test_command_output_workspace_no_instances(self):
@@ -116,9 +108,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         api_url = self.get_api_url_billing_project(billing_project.name)
         self.anvil_response_mock.add(responses.GET, api_url, status=200)
         out = StringIO()
-        call_command(
-            "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
-        )
+        call_command("run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out)
         self.assertIn("BillingProjectAudit... ok!", out.getvalue())
         self.assertNotIn("errors", out.getvalue())
         self.assertNotIn("not_in_app", out.getvalue())
@@ -176,13 +166,9 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create()
         # Add a response.
         api_url = self.get_api_url_billing_project(billing_project.name)
-        self.anvil_response_mock.add(
-            responses.GET, api_url, status=404, json={"message": "error"}
-        )
+        self.anvil_response_mock.add(responses.GET, api_url, status=404, json={"message": "error"})
         out = StringIO()
-        call_command(
-            "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
-        )
+        call_command("run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out)
         self.assertIn("BillingProjectAudit... problems found.", out.getvalue())
         self.assertIn("""'errors':""", out.getvalue())
         self.assertIn(audit.BillingProjectAudit.ERROR_NOT_IN_ANVIL, out.getvalue())
@@ -192,9 +178,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create()
         # Add a response.
         api_url = self.get_api_url_billing_project(billing_project.name)
-        self.anvil_response_mock.add(
-            responses.GET, api_url, status=404, json={"message": "error"}
-        )
+        self.anvil_response_mock.add(responses.GET, api_url, status=404, json={"message": "error"})
         out = StringIO()
         call_command(
             "run_anvil_audit",
@@ -222,9 +206,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create()
         # Add a response.
         api_url = self.get_api_url_billing_project(billing_project.name)
-        self.anvil_response_mock.add(
-            responses.GET, api_url, status=404, json={"message": "error"}
-        )
+        self.anvil_response_mock.add(responses.GET, api_url, status=404, json={"message": "error"})
         out = StringIO()
         call_command(
             "run_anvil_audit",
@@ -248,9 +230,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create()
         # Add a response.
         api_url = self.get_api_url_billing_project(billing_project.name)
-        self.anvil_response_mock.add(
-            responses.GET, api_url, status=404, json={"message": "error"}
-        )
+        self.anvil_response_mock.add(responses.GET, api_url, status=404, json={"message": "error"})
         out = StringIO()
         call_command(
             "run_anvil_audit",
@@ -271,13 +251,9 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         billing_project = factories.BillingProjectFactory.create()
         # Add a response.
         api_url = self.get_api_url_billing_project(billing_project.name)
-        self.anvil_response_mock.add(
-            responses.GET, api_url, status=500, json={"message": "error"}
-        )
+        self.anvil_response_mock.add(responses.GET, api_url, status=500, json={"message": "error"})
         out = StringIO()
-        call_command(
-            "run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out
-        )
+        call_command("run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out)
         self.assertIn("BillingProjectAudit... API error.", out.getvalue())
 
     # This test is complicated so skipping for now.

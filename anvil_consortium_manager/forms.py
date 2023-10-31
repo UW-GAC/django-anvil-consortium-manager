@@ -49,9 +49,7 @@ class FilterForm(forms.Form):
                 # Add a submit button with col-auto. This makes auto-sizes the column to just fit the submit button.
                 layout.Div(
                     # mb-3 to match what is done in FloatingField - this centers the button vertically.
-                    layout.Submit(
-                        "submit", "Filter", css_class="btn btn-secondary mb-3"
-                    ),
+                    layout.Submit("submit", "Filter", css_class="btn btn-secondary mb-3"),
                     css_class="col-auto",
                 ),
                 css_class="row align-items-center"
@@ -113,9 +111,7 @@ class AccountUpdateForm(forms.ModelForm):
 class UserEmailEntryForm(forms.Form):
     """Form for user to enter their email attempting to link their AnVIL account."""
 
-    email = forms.EmailField(
-        label="Email", help_text="Enter the email associated with your AnVIL account."
-    )
+    email = forms.EmailField(label="Email", help_text="Enter the email associated with your AnVIL account.")
 
     def clean_email(self):
         """Custom validation.
@@ -178,9 +174,7 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     def clean_billing_project(self):
         billing_project = self.cleaned_data.get("billing_project")
         if billing_project and not billing_project.has_app_as_user:
-            raise ValidationError(
-                "Billing project must have has_app_as_user set to True"
-            )
+            raise ValidationError("Billing project must have has_app_as_user set to True")
         return billing_project
 
     def clean(self):
@@ -202,9 +196,7 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                 ).exists()
             ):
                 # The workspace already exists - raise a Validation error.
-                raise ValidationError(
-                    "Workspace with this Billing Project and Name already exists."
-                )
+                raise ValidationError("Workspace with this Billing Project and Name already exists.")
         return self.cleaned_data
 
 
@@ -213,9 +205,7 @@ class WorkspaceImportForm(forms.Form):
 
     title = "Import a workspace"
     workspace = forms.ChoiceField()
-    note = forms.CharField(
-        widget=forms.Textarea, help_text="Additional notes.", required=False
-    )
+    note = forms.CharField(widget=forms.Textarea, help_text="Additional notes.", required=False)
 
     def __init__(self, workspace_choices=[], *args, **kwargs):
         """Initialize form with a set of possible workspace choices."""
@@ -271,11 +261,7 @@ class WorkspaceCloneForm(Bootstrap5MediaFormMixin, forms.ModelForm):
         self.workspace_to_clone = workspace_to_clone
         # Add the list of required auth domains to the help text.
         if self.workspace_to_clone.authorization_domains.exists():
-            auth_domain_names = (
-                self.workspace_to_clone.authorization_domains.values_list(
-                    "name", flat=True
-                )
-            )
+            auth_domain_names = self.workspace_to_clone.authorization_domains.values_list("name", flat=True)
             extra_text = " You must also include the authorization domain(s) from the original workspace ({}).".format(
                 ", ".join(auth_domain_names)
             )
@@ -286,12 +272,8 @@ class WorkspaceCloneForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     def clean_authorization_domains(self):
         """Verify that all authorization domains from the original workspace are selected."""
         authorization_domains = self.cleaned_data["authorization_domains"]
-        required_authorization_domains = (
-            self.workspace_to_clone.authorization_domains.all()
-        )
-        missing = [
-            g for g in required_authorization_domains if g not in authorization_domains
-        ]
+        required_authorization_domains = self.workspace_to_clone.authorization_domains.all()
+        missing = [g for g in required_authorization_domains if g not in authorization_domains]
         if missing:
             msg = "Must contain all original workspace authorization domains: {}".format(
                 # ", ".join([g.name for g in self.workspace_to_clone.authorization_domains.all()])
@@ -313,9 +295,7 @@ class WorkspaceCloneForm(Bootstrap5MediaFormMixin, forms.ModelForm):
             ).exists()
         ):
             # The workspace already exists - raise a Validation error.
-            raise ValidationError(
-                "Workspace with this Billing Project and Name already exists."
-            )
+            raise ValidationError("Workspace with this Billing Project and Name already exists.")
         return self.cleaned_data
 
 

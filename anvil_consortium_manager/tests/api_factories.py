@@ -34,9 +34,7 @@ class ErrorResponseFactory(MockAPIResponseFactory):
 class GroupDetailsFactory(factory.DictFactory):
 
     groupName = factory.Faker("word")
-    groupEmail = factory.LazyAttribute(
-        lambda obj: "{}@firecloud.org".format(obj.groupName)
-    )
+    groupEmail = factory.LazyAttribute(lambda obj: "{}@firecloud.org".format(obj.groupName))
     role = FuzzyChoice(["admin", "member"])
 
 
@@ -61,9 +59,7 @@ class GetGroupsResponseFactory(factory.Factory):
     # Neither of these worked.
     # response = "foo"
     # response = factory.RelatedFactoryList(GetGroupDetailsFactory, size=3)
-    response = factory.LazyAttribute(
-        lambda o: [GroupDetailsFactory() for _ in range(o.n_groups)]
-    )
+    response = factory.LazyAttribute(lambda o: [GroupDetailsFactory() for _ in range(o.n_groups)])
 
     class Params:
         n_groups = 0
@@ -71,9 +67,7 @@ class GetGroupsResponseFactory(factory.Factory):
 
 class GetGroupMembershipResponseFactory(MockAPIResponseFactory):
 
-    response = factory.LazyAttribute(
-        lambda o: [fake.email() for _ in range(o.n_emails)]
-    )
+    response = factory.LazyAttribute(lambda o: [fake.email() for _ in range(o.n_emails)])
 
     class Params:
         n_emails = 0
@@ -83,6 +77,4 @@ class GetGroupMembershipAdminResponseFactory(GetGroupMembershipResponseFactory):
     @classmethod
     def _after_postgeneration(cls, obj, create, results=None):
         """Populate the response with the service account email."""
-        obj.response = obj.response + [
-            anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email
-        ]
+        obj.response = obj.response + [anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email]

@@ -15,9 +15,7 @@ class ModelInstanceResult:
         self.errors = set()
 
     def __eq__(self, other):
-        return (
-            self.model_instance == other.model_instance and self.errors == other.errors
-        )
+        return self.model_instance == other.model_instance and self.errors == other.errors
 
     def __str__(self):
         return str(self.model_instance)
@@ -93,9 +91,7 @@ class AnVILAudit(ABC):
         elif isinstance(result, ModelInstanceResult):
             self._add_model_instance_result(result)
         else:
-            raise ValueError(
-                "result must be a ModelInstanceResult or a NotInAppResult."
-            )
+            raise ValueError("result must be a ModelInstanceResult or a NotInAppResult.")
 
     def _add_not_in_app_result(self, result):
         # Check that it hasn't been added yet.
@@ -105,23 +101,13 @@ class AnVILAudit(ABC):
         self._not_in_app_results.append(result)
 
     def _add_model_instance_result(self, result):
-        check = [
-            x
-            for x in self._model_instance_results
-            if x.model_instance == result.model_instance
-        ]
+        check = [x for x in self._model_instance_results if x.model_instance == result.model_instance]
         if len(check) > 0:
-            raise ValueError(
-                "Already added a result for {}.".format(result.model_instance)
-            )
+            raise ValueError("Already added a result for {}.".format(result.model_instance))
         self._model_instance_results.append(result)
 
     def get_result_for_model_instance(self, model_instance):
-        results = [
-            x
-            for x in self._model_instance_results
-            if x.model_instance == model_instance
-        ]
+        results = [x for x in self._model_instance_results if x.model_instance == model_instance]
         if len(results) != 1:
             raise ValueError("model_instance is not in the results.")
         return results[0]
@@ -135,9 +121,7 @@ class AnVILAudit(ABC):
     def get_not_in_app_results(self):
         return self._not_in_app_results
 
-    def export(
-        self, include_verified=True, include_errors=True, include_not_in_app=True
-    ):
+    def export(self, include_verified=True, include_errors=True, include_not_in_app=True):
         """Return a dictionary representation of the audit results."""
         exported_results = {}
         if include_verified:
@@ -155,9 +139,7 @@ class AnVILAudit(ABC):
                 for result in self.get_error_results()
             ]
         if include_not_in_app:
-            exported_results["not_in_app"] = list(
-                sorted([x.record for x in self.get_not_in_app_results()])
-            )
+            exported_results["not_in_app"] = list(sorted([x.record for x in self.get_not_in_app_results()]))
         return exported_results
 
 
@@ -169,9 +151,7 @@ class BillingProjectAudit(AnVILAudit):
 
     def run_audit(self):
         # Check that all billing projects exist.
-        for billing_project in models.BillingProject.objects.filter(
-            has_app_as_user=True
-        ).all():
+        for billing_project in models.BillingProject.objects.filter(has_app_as_user=True).all():
             model_instance_result = ModelInstanceResult(billing_project)
             if not billing_project.anvil_exists():
                 model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
@@ -186,9 +166,7 @@ class AccountAudit(AnVILAudit):
 
     def run_audit(self):
         # Only checks active accounts.
-        for account in models.Account.objects.filter(
-            status=models.Account.ACTIVE_STATUS
-        ).all():
+        for account in models.Account.objects.filter(status=models.Account.ACTIVE_STATUS).all():
             model_instance_result = ModelInstanceResult(account)
             if not account.anvil_exists():
                 model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
@@ -269,14 +247,10 @@ class ManagedGroupMembershipAudit(AnVILAudit):
     ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL = "Account not a member in AnVIL"
     """Error when an Account is a member of a ManagedGroup on the app, but not in AnVIL."""
 
-    ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL = (
-        "Account is deactivated but is an admin in AnVIL."
-    )
+    ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL = "Account is deactivated but is an admin in AnVIL."
     """Error when a deactivated Account is an admin of a ManagedGroup in AnVIL."""
 
-    ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL = (
-        "Account is deactivated but is a member in AnVIL."
-    )
+    ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL = "Account is deactivated but is a member in AnVIL."
     """Error when a deactivated Account is a member of a ManagedGroup in AnVIL."""
 
     ERROR_GROUP_ADMIN_NOT_IN_ANVIL = "Group not an admin in AnVIL"
@@ -288,9 +262,7 @@ class ManagedGroupMembershipAudit(AnVILAudit):
     def __init__(self, managed_group, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not managed_group.is_managed_by_app:
-            raise exceptions.AnVILNotGroupAdminError(
-                "group {} is not managed by app".format(managed_group.name)
-            )
+            raise exceptions.AnVILNotGroupAdminError("group {} is not managed by app".format(managed_group.name))
         self.managed_group = managed_group
 
     def run_audit(self):
@@ -303,9 +275,7 @@ class ManagedGroupMembershipAudit(AnVILAudit):
         members_in_anvil = [x.lower() for x in response.json()]
         # Sometimes the service account is also listed as a member. Remove that too.
         try:
-            members_in_anvil.remove(
-                api_client.auth_session.credentials.service_account_email.lower()
-            )
+            members_in_anvil.remove(api_client.auth_session.credentials.service_account_email.lower())
         except ValueError:
             # Not listed as a member -- this is ok.
             pass
@@ -315,9 +285,7 @@ class ManagedGroupMembershipAudit(AnVILAudit):
         admins_in_anvil = [x.lower() for x in response.json()]
         # Remove the service account as admin.
         try:
-            admins_in_anvil.remove(
-                api_client.auth_session.credentials.service_account_email.lower()
-            )
+            admins_in_anvil.remove(api_client.auth_session.credentials.service_account_email.lower())
         except ValueError:
             # Not listed as an admin -- this is ok because it could be via group membership.
             pass
@@ -330,28 +298,20 @@ class ManagedGroupMembershipAudit(AnVILAudit):
                 try:
                     admins_in_anvil.remove(membership.account.email.lower())
                     if membership.account.status == models.Account.INACTIVE_STATUS:
-                        model_instance_result.add_error(
-                            self.ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL
-                        )
+                        model_instance_result.add_error(self.ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL)
                 except ValueError:
                     # For active accounts, this is an error - the email is not in the list of members.
                     if membership.account.status == models.Account.ACTIVE_STATUS:
-                        model_instance_result.add_error(
-                            self.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL
-                        )
+                        model_instance_result.add_error(self.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL)
             elif membership.role == models.GroupAccountMembership.MEMBER:
                 try:
                     members_in_anvil.remove(membership.account.email.lower())
                     if membership.account.status == models.Account.INACTIVE_STATUS:
-                        model_instance_result.add_error(
-                            self.ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL
-                        )
+                        model_instance_result.add_error(self.ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL)
                 except ValueError:
                     # For active accounts, this is an error - the email is not in the list of members.
                     if membership.account.status == models.Account.ACTIVE_STATUS:
-                        model_instance_result.add_error(
-                            self.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL
-                        )
+                        model_instance_result.add_error(self.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL)
             self.add_result(model_instance_result)
 
         # Check group-group membership.
@@ -375,25 +335,15 @@ class ManagedGroupMembershipAudit(AnVILAudit):
                     members_in_anvil.remove(membership.child_group.email.lower())
                 except ValueError:
                     # This email is not in the list of members.
-                    model_instance_result.add_error(
-                        self.ERROR_GROUP_MEMBER_NOT_IN_ANVIL
-                    )
+                    model_instance_result.add_error(self.ERROR_GROUP_MEMBER_NOT_IN_ANVIL)
             self.add_result(model_instance_result)
 
         # Add any admin that the app doesn't know about.
         for member in admins_in_anvil:
-            self.add_result(
-                NotInAppResult(
-                    "{}: {}".format(models.GroupAccountMembership.ADMIN, member)
-                )
-            )
+            self.add_result(NotInAppResult("{}: {}".format(models.GroupAccountMembership.ADMIN, member)))
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
-            self.add_result(
-                NotInAppResult(
-                    "{}: {}".format(models.GroupAccountMembership.MEMBER, member)
-                )
-            )
+            self.add_result(NotInAppResult("{}: {}".format(models.GroupAccountMembership.MEMBER, member)))
 
 
 class WorkspaceAudit(AnVILAudit):
@@ -433,8 +383,7 @@ class WorkspaceAudit(AnVILAudit):
                     for idx, x in enumerate(workspaces_on_anvil)
                     if (
                         x["workspace"]["name"] == workspace.name
-                        and x["workspace"]["namespace"]
-                        == workspace.billing_project.name
+                        and x["workspace"]["namespace"] == workspace.billing_project.name
                     )
                 )
             except StopIteration:
@@ -452,12 +401,9 @@ class WorkspaceAudit(AnVILAudit):
                         model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
                 # Check auth domains.
                 auth_domains_on_anvil = [
-                    x["membersGroupName"]
-                    for x in workspace_details["workspace"]["authorizationDomain"]
+                    x["membersGroupName"] for x in workspace_details["workspace"]["authorizationDomain"]
                 ]
-                auth_domains_in_app = workspace.authorization_domains.all().values_list(
-                    "name", flat=True
-                )
+                auth_domains_in_app = workspace.authorization_domains.all().values_list("name", flat=True)
                 if set(auth_domains_on_anvil) != set(auth_domains_in_app):
                     model_instance_result.add_error(self.ERROR_DIFFERENT_AUTH_DOMAINS)
                 # Check lock status.
@@ -498,15 +444,11 @@ class WorkspaceSharingAudit(AnVILAudit):
     def run_audit(self):
         """Run the audit for all workspace instances."""
         api_client = AnVILAPIClient()
-        response = api_client.get_workspace_acl(
-            self.workspace.billing_project.name, self.workspace.name
-        )
+        response = api_client.get_workspace_acl(self.workspace.billing_project.name, self.workspace.name)
         acl_in_anvil = {k.lower(): v for k, v in response.json()["acl"].items()}
         # Remove the service account.
         try:
-            acl_in_anvil.pop(
-                api_client.auth_session.credentials.service_account_email.lower()
-            )
+            acl_in_anvil.pop(api_client.auth_session.credentials.service_account_email.lower())
         except KeyError:
             # In some cases, the workspace is shared with a group we are part of instead of directly with us.
             pass
@@ -534,6 +476,4 @@ class WorkspaceSharingAudit(AnVILAudit):
 
         # Add any access that the app doesn't know about.
         for key in acl_in_anvil:
-            self.add_result(
-                NotInAppResult("{}: {}".format(acl_in_anvil[key]["accessLevel"], key))
-            )
+            self.add_result(NotInAppResult("{}: {}".format(acl_in_anvil[key]["accessLevel"], key)))

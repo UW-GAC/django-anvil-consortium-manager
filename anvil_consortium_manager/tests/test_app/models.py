@@ -1,11 +1,6 @@
 from django.db import models
 
-from anvil_consortium_manager.models import (
-    BaseWorkspaceData,
-    DefaultWorkspaceData,
-    ManagedGroup,
-    Workspace,
-)
+from anvil_consortium_manager.models import BaseWorkspaceData, DefaultWorkspaceData, ManagedGroup, Workspace
 
 
 # Create your models here.

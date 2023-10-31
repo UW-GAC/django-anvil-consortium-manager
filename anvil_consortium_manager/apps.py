@@ -12,8 +12,6 @@ class AnVILConsortiumManagerConfig(AppConfig):
         super().ready()
         # Register adapters sepcified in settings.
         # Import here because importing outside of this method raises the AppRegistryNotReady exception.
-        from anvil_consortium_manager.adapters.workspace import (
-            workspace_adapter_registry,
-        )
+        from anvil_consortium_manager.adapters.workspace import workspace_adapter_registry
 
         workspace_adapter_registry.populate_from_settings()

@@ -26,21 +26,15 @@ class BaseAccountAdapter(ABC):
     def get_list_table_class(self):
         """Return the table class to use for the AccountList view."""
         if not self.list_table_class:
-            raise ImproperlyConfigured(
-                "Set `list_table_class` in `{}`.".format(type(self))
-            )
+            raise ImproperlyConfigured("Set `list_table_class` in `{}`.".format(type(self)))
         return self.list_table_class
 
     def get_list_filterset_class(self):
         """Return the FilterSet subclass to use for Account filtering in the AccountList view."""
         if not self.list_filterset_class:
-            raise ImproperlyConfigured(
-                "Set `list_filterset_class` in `{}`.".format(type(self))
-            )
+            raise ImproperlyConfigured("Set `list_filterset_class` in `{}`.".format(type(self)))
         if not issubclass(self.list_filterset_class, FilterSet):
-            raise ImproperlyConfigured(
-                "list_filterset_class must be a subclass of FilterSet."
-            )
+            raise ImproperlyConfigured("list_filterset_class must be a subclass of FilterSet.")
         # Make sure it has the correct model set.
         if self.list_filterset_class.Meta.model != models.Account:
             raise ImproperlyConfigured(

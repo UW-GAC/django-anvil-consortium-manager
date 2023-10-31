@@ -11,21 +11,15 @@ class PopulateManagedGroupEmailTest(MigratorTestCase):
 
     def prepare(self):
         """Prepare some data before the migration."""
-        ManagedGroup = self.old_state.apps.get_model(
-            "anvil_consortium_manager", "ManagedGroup"
-        )
+        ManagedGroup = self.old_state.apps.get_model("anvil_consortium_manager", "ManagedGroup")
         ManagedGroup.objects.create(name="mygroup")
         ManagedGroup.objects.create(name="AnotherGroup")
 
     def test_migration_main0011(self):
         """Run the test."""
-        ManagedGroup = self.new_state.apps.get_model(
-            "anvil_consortium_manager", "ManagedGroup"
-        )
+        ManagedGroup = self.new_state.apps.get_model("anvil_consortium_manager", "ManagedGroup")
         self.assertEqual(ManagedGroup.objects.count(), 2)
-        self.assertEqual(
-            ManagedGroup.objects.get(name="mygroup").email, "mygroup@firecloud.org"
-        )
+        self.assertEqual(ManagedGroup.objects.get(name="mygroup").email, "mygroup@firecloud.org")
         self.assertEqual(
             ManagedGroup.objects.get(name="AnotherGroup").email,
             "anothergroup@firecloud.org",

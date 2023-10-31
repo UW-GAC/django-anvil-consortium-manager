@@ -728,9 +728,7 @@ class GroupGroupMembershipFormTest(TestCase):
 
     def test_invalid_parent_not_managed(self):
         """Form is invalid when the parent group is not managed by the app."""
-        parent = factories.ManagedGroupFactory.create(
-            name="parent", is_managed_by_app=False
-        )
+        parent = factories.ManagedGroupFactory.create(name="parent", is_managed_by_app=False)
         child = factories.ManagedGroupFactory.create(name="child")
         form_data = {
             "parent_group": parent,
@@ -827,9 +825,7 @@ class GroupAccountMembershipFormTest(TestCase):
 
     def test_account_includes_only_active_accounts(self):
         """Form only displays active accounts."""
-        inactive_account = factories.AccountFactory.create(
-            status=models.Account.INACTIVE_STATUS
-        )
+        inactive_account = factories.AccountFactory.create(status=models.Account.INACTIVE_STATUS)
         active_account = factories.AccountFactory.create()
         form = self.form_class()
         self.assertIn(active_account, form.fields["account"].queryset)

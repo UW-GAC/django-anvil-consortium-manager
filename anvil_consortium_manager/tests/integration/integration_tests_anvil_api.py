@@ -171,35 +171,23 @@ class AnVILAPIClientTest(TestCase):
         # Try adding the user as a member to a group that doesn't exist.
         # This is undocumented in the API.
         response = self.client.add_user_to_group(test_group_1, "MEMBER", test_user)
-        self.assertEqual(
-            response.status_code, 204
-        )  # Interesting - I'm surprised this isn't a 404.
+        self.assertEqual(response.status_code, 204)  # Interesting - I'm surprised this isn't a 404.
         self.assertEqual(response.text, "")
         # Try removing a user from a group that doesn't exist.
         # This is undocumented in the API.
         response = self.client.remove_user_from_group(test_group_1, "MEMBER", test_user)
-        self.assertEqual(
-            response.status_code, 204
-        )  # Interesting - I'm surprised this isn't a 404.
+        self.assertEqual(response.status_code, 204)  # Interesting - I'm surprised this isn't a 404.
         self.assertEqual(response.text, "")
 
         # Try adding a group that doesn't exist as a member to another group that doesn't exist.
         # This is undocumented in the API.
-        response = self.client.add_user_to_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
-        self.assertEqual(
-            response.status_code, 204
-        )  # Interesting - I'm surprised this isn't a 404.
+        response = self.client.add_user_to_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
+        self.assertEqual(response.status_code, 204)  # Interesting - I'm surprised this isn't a 404.
         self.assertEqual(response.text, "")
         # Try removing a user from a group that doesn't exist.
         # This is undocumented in the API.
-        response = self.client.remove_user_from_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
-        self.assertEqual(
-            response.status_code, 204
-        )  # Interesting - I'm surprised this isn't a 404.
+        response = self.client.remove_user_from_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
+        self.assertEqual(response.status_code, 204)  # Interesting - I'm surprised this isn't a 404.
         self.assertEqual(response.text, "")
 
         # Create the group.
@@ -211,18 +199,14 @@ class AnVILAPIClientTest(TestCase):
         # with self.assertRaises(anvil_api.AnVILAPIError404):
         #     response = self.client.add_user_to_group(test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com")
         # ACTUAL behavior:
-        response = self.client.add_user_to_group(
-            test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com"
-        )
+        response = self.client.add_user_to_group(test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com")
         self.assertEqual(response.status_code, 204)
         # Remove a user that doesn't exist from the group.
         # EXPECTED behavior:
         # with self.assertRaises(anvil_api.AnVILAPIError404):
         #     response = self.client.remove_user_from_group(test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com")
         # ACTUAL behavior:
-        response = self.client.remove_user_from_group(
-            test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com"
-        )
+        response = self.client.remove_user_from_group(test_group_1, "MEMBER", "asdfghjkl@asdfghjkl.com")
         self.assertEqual(response.status_code, 204)
 
         # Add a user that exists to the group.
@@ -309,18 +293,14 @@ class AnVILAPIClientTest(TestCase):
         # with self.assertRaises(anvil_api.AnVILAPIError404):
         #     response = self.client.add_user_to_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
         # ACTUAL behavior:
-        response = self.client.add_user_to_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
+        response = self.client.add_user_to_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
         self.assertEqual(response.status_code, 204)
         # Remove a group that doesn't exist from the group.
         # EXPECTED behavior:
         # with self.assertRaises(anvil_api.AnVILAPIError404):
         #     response = self.client.remove_user_from_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
         # ACTUAL behavior:
-        response = self.client.remove_user_from_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
+        response = self.client.remove_user_from_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
         self.assertEqual(response.status_code, 204)
 
         # Create another group.
@@ -328,38 +308,26 @@ class AnVILAPIClientTest(TestCase):
         self.assertEqual(response.status_code, 201)
 
         # Add the second group to the first group as a MEMBER.
-        response = self.client.add_user_to_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
+        response = self.client.add_user_to_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
         self.assertEqual(response.status_code, 204)
         # Check group membership.
         response = self.client.get_group(test_group_1)
         json = response.json()
         self.assertIn("adminsEmails", json.keys())
-        self.assertNotIn(
-            test_group_2 + "@firecloud.org", json["adminsEmails"]
-        )  # Not an admin.
+        self.assertNotIn(test_group_2 + "@firecloud.org", json["adminsEmails"])  # Not an admin.
         self.assertIn("membersEmails", json.keys())
-        self.assertIn(
-            test_group_2 + "@firecloud.org", json["membersEmails"]
-        )  # Added as a member.
+        self.assertIn(test_group_2 + "@firecloud.org", json["membersEmails"])  # Added as a member.
 
         # Remove the second group from the first group.
-        response = self.client.remove_user_from_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
+        response = self.client.remove_user_from_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
         self.assertEqual(response.status_code, 204)
         # Check group membership.
         response = self.client.get_group(test_group_1)
         json = response.json()
         self.assertIn("adminsEmails", json.keys())
-        self.assertNotIn(
-            test_group_2 + "@firecloud.org", json["adminsEmails"]
-        )  # Still not an admin.
+        self.assertNotIn(test_group_2 + "@firecloud.org", json["adminsEmails"])  # Still not an admin.
         self.assertIn("membersEmails", json.keys())
-        self.assertNotIn(
-            test_group_2 + "@firecloud.org", json["membersEmails"]
-        )  # No longer a member.
+        self.assertNotIn(test_group_2 + "@firecloud.org", json["membersEmails"])  # No longer a member.
 
         # Add the user to a group that we don't have permission for.
         response = self.client.add_user_to_group("test-group", "MEMBER", test_user)
@@ -374,21 +342,13 @@ class AnVILAPIClientTest(TestCase):
         self.client.delete_group(test_group_1)
 
         # Add a group that exists to a group that doesn't exist.
-        response = self.client.add_user_to_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
-        self.assertEqual(
-            response.status_code, 204
-        )  # Interesting - I'm surprised this isn't a 404.
+        response = self.client.add_user_to_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
+        self.assertEqual(response.status_code, 204)  # Interesting - I'm surprised this isn't a 404.
         self.assertEqual(response.text, "")
         # Try removing a group that exists from a group that doesn't exist.
         # This is undocumented in the API.
-        response = self.client.remove_user_from_group(
-            test_group_1, "MEMBER", test_group_2 + "@firecloud.org"
-        )
-        self.assertEqual(
-            response.status_code, 204
-        )  # Interesting - I'm surprised this isn't a 404.
+        response = self.client.remove_user_from_group(test_group_1, "MEMBER", test_group_2 + "@firecloud.org")
+        self.assertEqual(response.status_code, 204)  # Interesting - I'm surprised this isn't a 404.
         self.assertEqual(response.text, "")
 
         # Delete the second group.
@@ -465,12 +425,8 @@ class AnVILAPIClientTest(TestCase):
             self.client.auth_session.delete,
             "workspaces/" + test_billing_project + "/" + test_workspace,
         )
-        self.addCleanup(
-            self.client.auth_session.delete, "api/groups/" + test_auth_domain_1
-        )
-        self.addCleanup(
-            self.client.auth_session.delete, "api/groups/" + test_auth_domain_2
-        )
+        self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_auth_domain_1)
+        self.addCleanup(self.client.auth_session.delete, "api/groups/" + test_auth_domain_2)
 
         # Create a workspace with an auth domain group that doesn't exist. Should fail.
         with self.assertRaises(anvil_api.AnVILAPIError400):
@@ -485,9 +441,7 @@ class AnVILAPIClientTest(TestCase):
             self.client.create_workspace(
                 test_billing_project,
                 test_workspace,
-                authorization_domains=[
-                    "adrienne-test"
-                ],  # The service account is not a member of this group.
+                authorization_domains=["adrienne-test"],  # The service account is not a member of this group.
             )
 
         # Create the auth domain group.
@@ -578,26 +532,20 @@ class AnVILAPIClientTest(TestCase):
         # with self.assertRaises(anvil_api.AnVILAPIError404):
         #     self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
         # ACTUAL behavior.
-        response = self.client.update_workspace_acl(
-            test_billing_project, test_workspace, acl_updates
-        )
+        response = self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
         self.assertEqual(response.status_code, 200)
         json = response.json()
         self.assertIn("usersUpdated", json.keys())
         self.assertEqual(json["usersUpdated"], [])
         self.assertIn("usersNotFound", json.keys())
         self.assertEqual(len(json["usersNotFound"]), 1)
-        self.assertEqual(
-            json["usersNotFound"][0]["email"], test_group + "@firecloud.org"
-        )
+        self.assertEqual(json["usersNotFound"][0]["email"], test_group + "@firecloud.org")
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
 
         # Check ACLs for a workspace that doesn't exist.
         with self.assertRaises(anvil_api.AnVILAPIError404):
-            response = self.client.get_workspace_acl(
-                test_billing_project, test_workspace
-            )
+            response = self.client.get_workspace_acl(test_billing_project, test_workspace)
 
         # Create the workspace.
         response = self.client.create_workspace(test_billing_project, test_workspace)
@@ -617,18 +565,14 @@ class AnVILAPIClientTest(TestCase):
         # self.assertEqual(group_acl['pending'], False)
 
         # Try to add a group that doesn't exist to the workspace.
-        response = self.client.update_workspace_acl(
-            test_billing_project, test_workspace, acl_updates
-        )
+        response = self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
         self.assertEqual(response.status_code, 200)
         json = response.json()
         self.assertIn("usersUpdated", json.keys())
         self.assertEqual(json["usersUpdated"], [])
         self.assertIn("usersNotFound", json.keys())
         self.assertEqual(len(json["usersNotFound"]), 1)
-        self.assertEqual(
-            json["usersNotFound"][0]["email"], test_group + "@firecloud.org"
-        )
+        self.assertEqual(json["usersNotFound"][0]["email"], test_group + "@firecloud.org")
         self.assertIn("invitesSent", json.keys())
         self.assertEqual(json["invitesSent"], [])
 
@@ -644,16 +588,12 @@ class AnVILAPIClientTest(TestCase):
         response = self.client.create_group(test_group)
 
         # Share the workspace with the group.
-        response = self.client.update_workspace_acl(
-            test_billing_project, test_workspace, acl_updates
-        )
+        response = self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
         self.assertEqual(response.status_code, 200)
         json = response.json()
         self.assertIn("usersUpdated", json.keys())
         self.assertEqual(len(json["usersUpdated"]), 1)
-        self.assertEqual(
-            json["usersUpdated"][0]["email"], test_group + "@firecloud.org"
-        )
+        self.assertEqual(json["usersUpdated"][0]["email"], test_group + "@firecloud.org")
         self.assertEqual(json["usersUpdated"][0]["accessLevel"], "READER")
         self.assertIn("usersNotFound", json.keys())
         self.assertEqual(json["usersNotFound"], [])
@@ -666,9 +606,7 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("acl", json.keys())
         self.assertEqual(len(json["acl"]), 2)
         self.assertIn(owner, json["acl"])
-        self.assertEqual(
-            json["acl"][owner], owner_acl
-        )  # Service account permissions haven't changed.
+        self.assertEqual(json["acl"][owner], owner_acl)  # Service account permissions haven't changed.
         self.assertIn(test_group + "@firecloud.org", json["acl"])
         group_acl = json["acl"][test_group + "@firecloud.org"]
         self.assertIn("accessLevel", group_acl)
@@ -678,9 +616,7 @@ class AnVILAPIClientTest(TestCase):
         self.assertEqual(group_acl["pending"], False)
 
         # Share the workspace with the group a second time.
-        response = self.client.update_workspace_acl(
-            test_billing_project, test_workspace, acl_updates
-        )
+        response = self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
         self.assertEqual(response.status_code, 200)
         json = response.json()
         self.assertIn("usersUpdated", json.keys())
@@ -696,9 +632,7 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("acl", json.keys())
         self.assertEqual(len(json["acl"]), 2)
         self.assertIn(owner, json["acl"])
-        self.assertEqual(
-            json["acl"][owner], owner_acl
-        )  # Service account permissions haven't changed.
+        self.assertEqual(json["acl"][owner], owner_acl)  # Service account permissions haven't changed.
         self.assertIn(test_group + "@firecloud.org", json["acl"])
         group_acl = json["acl"][test_group + "@firecloud.org"]
         self.assertIn("accessLevel", group_acl)
@@ -709,16 +643,12 @@ class AnVILAPIClientTest(TestCase):
 
         # Change the group's access to WRITER.
         acl_updates[0]["accessLevel"] = "WRITER"
-        response = self.client.update_workspace_acl(
-            test_billing_project, test_workspace, acl_updates
-        )
+        response = self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
         self.assertEqual(response.status_code, 200)
         json = response.json()
         self.assertIn("usersUpdated", json.keys())
         self.assertEqual(len(json["usersUpdated"]), 1)
-        self.assertEqual(
-            json["usersUpdated"][0]["email"], test_group + "@firecloud.org"
-        )
+        self.assertEqual(json["usersUpdated"][0]["email"], test_group + "@firecloud.org")
         self.assertEqual(json["usersUpdated"][0]["accessLevel"], "WRITER")
         self.assertIn("usersNotFound", json.keys())
         self.assertEqual(json["usersNotFound"], [])
@@ -731,9 +661,7 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("acl", json.keys())
         self.assertEqual(len(json["acl"]), 2)
         self.assertIn(owner, json["acl"])
-        self.assertEqual(
-            json["acl"][owner], owner_acl
-        )  # Service account permissions haven't changed.
+        self.assertEqual(json["acl"][owner], owner_acl)  # Service account permissions haven't changed.
         self.assertIn(test_group + "@firecloud.org", json["acl"])
         group_acl = json["acl"][test_group + "@firecloud.org"]
         self.assertIn("accessLevel", group_acl)
@@ -745,22 +673,16 @@ class AnVILAPIClientTest(TestCase):
         # Try to share the workspace with an invalid access level.
         acl_updates[0]["accessLevel"] = "foo"
         with self.assertRaises(anvil_api.AnVILAPIError400):
-            self.client.update_workspace_acl(
-                test_billing_project, test_workspace, acl_updates
-            )
+            self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
 
         # Remove the group's access to the workspace.
         acl_updates[0]["accessLevel"] = "NO ACCESS"
-        response = self.client.update_workspace_acl(
-            test_billing_project, test_workspace, acl_updates
-        )
+        response = self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
         self.assertEqual(response.status_code, 200)
         json = response.json()
         self.assertIn("usersUpdated", json.keys())
         self.assertEqual(len(json["usersUpdated"]), 1)
-        self.assertEqual(
-            json["usersUpdated"][0]["email"], test_group + "@firecloud.org"
-        )
+        self.assertEqual(json["usersUpdated"][0]["email"], test_group + "@firecloud.org")
         self.assertEqual(json["usersUpdated"][0]["accessLevel"], "NO ACCESS")
         self.assertIn("usersNotFound", json.keys())
         self.assertEqual(json["usersNotFound"], [])
@@ -773,9 +695,7 @@ class AnVILAPIClientTest(TestCase):
         self.assertIn("acl", json.keys())
         self.assertEqual(len(json["acl"]), 1)
         self.assertIn(owner, json["acl"])
-        self.assertEqual(
-            json["acl"][owner], owner_acl
-        )  # Service account permissions haven't changed.
+        self.assertEqual(json["acl"][owner], owner_acl)  # Service account permissions haven't changed.
         self.assertNotIn(test_group + "@firecloud.org", json["acl"])
 
         # Delete the workspace.
@@ -785,9 +705,7 @@ class AnVILAPIClientTest(TestCase):
         # Try to share the workspace (which does not exist) with the group (which exists).
         acl_updates[0]["accessLevel"] = "READER"
         with self.assertRaises(anvil_api.AnVILAPIError404):
-            self.client.update_workspace_acl(
-                test_billing_project, test_workspace, acl_updates
-            )
+            self.client.update_workspace_acl(test_billing_project, test_workspace, acl_updates)
 
         # Delete the group
         self.client.delete_group(test_group)

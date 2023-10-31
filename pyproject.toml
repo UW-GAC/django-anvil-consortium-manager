@@ -1,3 +1,81 @@
+[project]
+name = "django-anvil-consortium-manager"
+# Version needs to be updated such that the canonical version is only stored in one place.
+# version = "0.19"
+authors = [
+    {name="Adrienne Stilp", email="amstilp@uw.edu"},
+]
+description = "A Django app to manage Consortium AnVIL groups, workspaces, and access."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Framework :: Django",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "Django >= 3.2",
+    "pytz >= 0",
+    "crispy-bootstrap5 >= 0.6",
+    "django-crispy-forms >= 1.12",
+    "google-auth >= 2.6",
+    "fontawesomefree >= 6.1",
+    "django-autocomplete-light >= 3.9",
+    "django-filter >= 23.0",
+    "django-tables2 >= 2.4",
+    "django-simple-history >= 3.1.1",
+    "django-extensions >= 3.1.5",
+    "plotly >= 5.11.0",
+    "networkx >= 2.8.2",
+    "numpy >= 1.24",
+]
+dynamic = ["version"]
+
+
 [build-system]
 requires = ['setuptools>=40.8.0', 'wheel']
 build-backend = "setuptools.build_meta"
+
+
+[project.urls]
+"Homepage" = "https://github.com/UW-GAC/django-anvil-consortium-manager"
+"Bug Tracker" = "https://github.com/UW-GAC/django-anvil-consortium-manager/issues"
+
+
+[tool.setuptools.dynamic]
+version = {attr = "anvil_consortium_manager.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["anvil_consortium_manager*"]
+
+
+[tool.black]
+line-length = 119
+
+
+[tool.isort]
+profile = "black"
+line_length = 119
+known_first_party = ["anvil_consortium_manager", "example_site"]
+multi_line_output = 3
+default_section = "THIRDPARTY"
+skip = ["venv/"]
+skip_glob = ["**/migrations/*.py"]
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+
+
+[tool.coverage.run]
+include = ["anvil_consortium_manager/*"]
+omit = ["*migrations*", "*tests*"]
+plugins = ["django_coverage_plugin"]
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--ds=anvil_consortium_manager.tests.settings.test --reuse-db --ignore=anvil_consortium_manager/tests/test_app/"
+python_files = ["anvil_consortium_manager/tests/test*.py"]
+python_classes = ["!TestWorkspaceDataFactory"]

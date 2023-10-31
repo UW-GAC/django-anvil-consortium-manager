@@ -50,17 +50,13 @@ class AccountAdapterTestCase(TestCase):
 
     def test_list_filterset_class_default(self):
         """get_list_filterset_class returns the correct filter when using the default adapter."""
-        self.assertEqual(
-            DefaultAccountAdapter().get_list_filterset_class(), AccountListFilter
-        )
+        self.assertEqual(DefaultAccountAdapter().get_list_filterset_class(), AccountListFilter)
 
     def test_list_filterset_class_custom(self):
         """get_list_filterset_class returns the correct filter when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "list_filterset_class", filters.TestAccountListFilter)
-        self.assertEqual(
-            TestAdapter().get_list_filterset_class(), filters.TestAccountListFilter
-        )
+        self.assertEqual(TestAdapter().get_list_filterset_class(), filters.TestAccountListFilter)
 
     def test_list_filterset_class_none(self):
         """get_list_filterset_class raises ImproperlyConfigured when get_list_filterset_class is not set."""
@@ -91,9 +87,7 @@ class AccountAdapterTestCase(TestCase):
         """get_autocomplete_queryset returns the correct queryset when using the default adapter."""
         account_1 = factories.AccountFactory.create(email="test@test.com")
         account_2 = factories.AccountFactory.create(email="foo@bar.com")
-        qs = DefaultAccountAdapter().get_autocomplete_queryset(
-            Account.objects.all(), "test"
-        )
+        qs = DefaultAccountAdapter().get_autocomplete_queryset(Account.objects.all(), "test")
         self.assertEqual(qs.count(), 1)
         self.assertIn(account_1, qs)
         self.assertNotIn(account_2, qs)
@@ -116,16 +110,12 @@ class AccountAdapterTestCase(TestCase):
     def test_get_autocomplete_label_default(self):
         """get_label_from_instance returns the correct queryset when using the default adapter."""
         account = factories.AccountFactory.create(email="test@test.com")
-        self.assertEqual(
-            DefaultAccountAdapter().get_autocomplete_label(account), "test@test.com"
-        )
+        self.assertEqual(DefaultAccountAdapter().get_autocomplete_label(account), "test@test.com")
 
     def test_get_autocomplete_label_custom(self):
         """get_label_from_instance returns the correct queryset when using a custom adapter."""
 
-        account = factories.AccountFactory.create(
-            verified=True, user__username="testuser"
-        )
+        account = factories.AccountFactory.create(verified=True, user__username="testuser")
 
         def foo(self, account):
             return account.user.username
@@ -155,17 +145,13 @@ class WorkspaceAdapterTest(TestCase):
 
     def test_list_table_class_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
-        self.assertEqual(
-            DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceTable
-        )
+        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceTable)
 
     def test_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "list_table_class", tables.TestWorkspaceDataTable)
-        self.assertEqual(
-            TestAdapter().get_list_table_class(), tables.TestWorkspaceDataTable
-        )
+        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestWorkspaceDataTable)
 
     def test_list_table_class_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
@@ -185,9 +171,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_form_class returns the correct form when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "workspace_form_class", forms.TestWorkspaceForm)
-        self.assertEqual(
-            TestAdapter().get_workspace_form_class(), forms.TestWorkspaceForm
-        )
+        self.assertEqual(TestAdapter().get_workspace_form_class(), forms.TestWorkspaceForm)
 
     def test_get_workspace_form_class_none(self):
         """get_workspace_form_class raises exception if form class is not set."""
@@ -233,9 +217,7 @@ class WorkspaceAdapterTest(TestCase):
         """get_workspace_data_form_class returns the correct form when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "workspace_data_form_class", forms.TestWorkspaceDataForm)
-        self.assertEqual(
-            TestAdapter().get_workspace_data_form_class(), forms.TestWorkspaceDataForm
-        )
+        self.assertEqual(TestAdapter().get_workspace_data_form_class(), forms.TestWorkspaceDataForm)
 
     def test_get_workspace_data_form_class_none(self):
         """get_workspace_data_form_class raises exception if form class is not set."""
@@ -259,17 +241,13 @@ class WorkspaceAdapterTest(TestCase):
 
     def test_get_workspace_data_model_default(self):
         """get_workspace_data_model returns the correct model when using the default adapter."""
-        self.assertEqual(
-            DefaultWorkspaceAdapter().get_workspace_data_model(), DefaultWorkspaceData
-        )
+        self.assertEqual(DefaultWorkspaceAdapter().get_workspace_data_model(), DefaultWorkspaceData)
 
     def test_get_workspace_data_model_custom(self):
         """get_workspace_data_model returns the correct model when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "workspace_data_model", models.TestWorkspaceData)
-        self.assertEqual(
-            TestAdapter().get_workspace_data_model(), models.TestWorkspaceData
-        )
+        self.assertEqual(TestAdapter().get_workspace_data_model(), models.TestWorkspaceData)
 
     def test_get_workspace_data_model_subclass(self):
         """workspace_data_model must be a subclass of models.BaseWorkspaceData"""
