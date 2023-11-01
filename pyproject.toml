@@ -90,3 +90,9 @@ dependencies = [
     "django-debug-toolbar",
     "django-environ",
 ]
+
+[tool.hatch.envs.test]
+dependencies = ["tox"]
+
+[tool.hatch.envs.dev.test]
+test = "tox"
