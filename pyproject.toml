@@ -158,7 +158,6 @@ dependencies = [
 [tool.hatch.envs.cov-combine.scripts]
 combine = [
     # Clean up old files first.
-    "rm -f .coverage",
     "coverage combine"
 ]
 report = ["coverage report"]
