@@ -75,7 +75,6 @@ plugins = ["django_coverage_plugin"]
 
 
 [tool.pytest.ini_options]
-addopts = "--reuse-db --ignore=anvil_consortium_manager/tests/test_app/"
 python_files = ["anvil_consortium_manager/tests/test*.py"]
 python_classes = ["!TestWorkspaceDataFactory"]
 
@@ -120,7 +119,7 @@ dependencies = [
 ]
 [tool.hatch.envs.test.scripts]
 test = [
-    "pytest --ds=anvil_consortium_manager.tests.settings.test {args}"
+    "pytest --ds=anvil_consortium_manager.tests.settings.test --reuse-db --ignore=anvil_consortium_manager/tests/test_app/ {args}"
 ]
 [[tool.hatch.envs.test.matrix]]
 python = ["3.8"]
