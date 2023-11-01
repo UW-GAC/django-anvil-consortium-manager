@@ -124,6 +124,9 @@ test = [
 [[tool.hatch.envs.test.matrix]]
 python = ["3.8"]
 django = ["3.2", "4.2"]
+[[tool.hatch.envs.test.matrix]]
+python = ["3.11"]
+django = ["4.2"]
 
 [tool.hatch.envs.test.overrides]
 matrix.django.dependencies = [
