@@ -20,7 +20,7 @@ dependencies = [
     "pytz >= 0",
     "crispy-bootstrap5 >= 0.6",
     "django-crispy-forms >= 1.12",
-    "google-auth >= 2.6",
+    "google-auth [requests] >= 2.6",
     "fontawesomefree >= 6.1",
     "django-autocomplete-light >= 3.9",
     "django-filter >= 23.0",
@@ -84,3 +84,9 @@ python_classes = ["!TestWorkspaceDataFactory"]
 
 [tool.hatch.version]
 path = "anvil_consortium_manager/__init__.py"
+
+[tool.hatch.envs.dev]
+dependencies = ["django-debug-toolbar"]
+
+[tool.hatch.envs.dev.scripts]
+dj = "python manage.py"
