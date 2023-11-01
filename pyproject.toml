@@ -86,7 +86,7 @@ python_classes = ["!TestWorkspaceDataFactory"]
 path = "anvil_consortium_manager/__init__.py"
 
 [tool.hatch.envs.dev]
-dependencies = ["django-debug-toolbar"]
-
-[tool.hatch.envs.dev.scripts]
-dj = "python manage.py"
+dependencies = [
+    "django-debug-toolbar",
+    "django-environ",
+]

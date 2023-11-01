@@ -35,6 +35,8 @@ $ pip install -r requirements/dev.txt
 $ export ANVIL_API_SERVICE_ACCOUNT_FILE="/<path>/<to>/<service_account>.json"
 ```
 
+You can also create a .env file to store environment variables.
+
 5. Run the example site:
 
 ```
