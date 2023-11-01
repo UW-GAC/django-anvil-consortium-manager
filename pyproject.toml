@@ -75,8 +75,7 @@ plugins = ["django_coverage_plugin"]
 
 
 [tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "--ds=anvil_consortium_manager.tests.settings.test --reuse-db --ignore=anvil_consortium_manager/tests/test_app/"
+addopts = "--reuse-db --ignore=anvil_consortium_manager/tests/test_app/"
 python_files = ["anvil_consortium_manager/tests/test*.py"]
 python_classes = ["!TestWorkspaceDataFactory"]
 
@@ -96,7 +95,7 @@ dependencies = [
 ]
 [tool.hatch.envs.default.scripts]
 dj = "python manage.py {args}"
-test = "hatch run +py=3.8 test:test"
+test = "hatch run +py=3.8 test:test {args}"
 all = [
     "hatch run test:test",
 ]
@@ -114,12 +113,21 @@ dependencies = [
     "factory-boy",
     # Set the system time in tests
     "freezegun",  # https://github.com/spulec/freezegun
-    "pytest",
+    "pytest >= 6.0",
     "pytest-django",
     # Mocked responses in tests
     "responses",  # https://github.com/getsentry/responses
 ]
 [tool.hatch.envs.test.scripts]
-test = "pytest {args}"
+test = [
+    "pytest --ds=anvil_consortium_manager.tests.settings.test {args}"
+]
 [[tool.hatch.envs.test.matrix]]
-python = ["3.8", '3.9']
+python = ["3.8"]
+django = ["3.2", "4.2"]
+
+[tool.hatch.envs.test.overrides]
+matrix.django.dependencies = [
+    { value = "django ~= 3.2.0", if = ["3.2"] },
+    { value = "django ~= 4.2.0", if = ["4.2"] },
+]
