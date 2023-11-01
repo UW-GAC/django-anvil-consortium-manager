@@ -74,7 +74,11 @@ omit = ["*migrations*", "*tests*"]
 plugins = ["django_coverage_plugin"]
 
 
+[tool.coverage.report]
+exclude_lines = ["@abstractproperty"]
+
 [tool.pytest.ini_options]
+addopts = "--reuse-db --ignore=anvil_consortium_manager/tests/test_app --ds=anvil_consortium_manager.tests.settings.test"
 python_files = ["anvil_consortium_manager/tests/test*.py"]
 python_classes = ["!TestWorkspaceDataFactory"]
 
@@ -95,12 +99,16 @@ dependencies = [
 [tool.hatch.envs.default.scripts]
 dj = "python manage.py {args}"
 test = "hatch run +py=3.8 test:test {args}"
-all = [
-    "hatch run test:test",
+cov = [
+    "hatch run test:cov",
+    "hatch run cov-combine:combine",
+    "hatch run cov-combine:html",
 ]
 
 [tool.hatch.envs.test]
 dependencies = [
+    # Coverage for django templates
+    "django-coverage-plugin",
     "django-debug-toolbar",
     # Process a .env file for environment variables
     "django-environ",
@@ -119,8 +127,12 @@ dependencies = [
 ]
 [tool.hatch.envs.test.scripts]
 test = [
-    "pytest --ds=anvil_consortium_manager.tests.settings.test --reuse-db --ignore=anvil_consortium_manager/tests/test_app/ {args}"
+    "pytest {args}"
 ]
+cov = [
+    "coverage run -p -m pytest",
+]
+
 [[tool.hatch.envs.test.matrix]]
 python = ["3.8"]
 django = ["3.2", "4.2"]
@@ -133,3 +145,21 @@ matrix.django.dependencies = [
     { value = "django ~= 3.2.0", if = ["3.2"] },
     { value = "django ~= 4.2.0", if = ["4.2"] },
 ]
+matrix.type.scripts = [
+    { key = "with-coverage", value = "_coverage", if = ["default"] },
+]
+
+[tool.hatch.envs.cov-combine]
+dependencies = [
+    # Coverage for django templates
+    "django-coverage-plugin",
+    "coverage[toml]>=6.5"
+]
+[tool.hatch.envs.cov-combine.scripts]
+combine = [
+    # Clean up old files first.
+    "rm -f .coverage",
+    "coverage combine"
+]
+report = ["coverage report"]
+html = ["coverage html"]

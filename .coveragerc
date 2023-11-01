@@ -1,8 +1,0 @@
-[run]
-plugins=django_coverage_plugin
-source=anvil_consortium_manager
-omit=anvil_consortium_manager/tests/integration/integration_tests_anvil_api.py
-
-[report]
-exclude_lines =
-  @abstractproperty
