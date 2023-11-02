@@ -44,8 +44,8 @@ jobs:
       - name: Install hatch
         run: python -m pip install --upgrade hatch
 
-      - name: Set environment variables for mysql
-        if: ${{ matrix.backend == "mysql" }}
+      - name: Set environment variables
+        if: ${{ matrix.backend == 'mysql' }}
         run: |
           echo "DBNAME=test" >> $GITHUB_ENV
           echo "DBUSER=root" >> $GITHUB_ENV
