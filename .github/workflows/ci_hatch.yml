@@ -1,4 +1,4 @@
-name: Run tests with hatch
+name: hatch-tests
 
 on:
   pull_request:
@@ -8,6 +8,10 @@ on:
   push:
     branches: [ "master", "main" ]
     paths-ignore: [ "docs/**" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
