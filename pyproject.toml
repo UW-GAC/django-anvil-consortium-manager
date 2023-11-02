@@ -98,7 +98,7 @@ dependencies = [
 ]
 [tool.hatch.envs.default.scripts]
 dj = "python manage.py {args}"
-test = "hatch run +py=3.8 test:test {args}"
+test = "hatch run +py=3.8 +django=4.2 test:test {args}"
 cov = [
     "rm -f .coverage.*",
     "hatch run test:cov",
