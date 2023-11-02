@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 
 import environ
-
 from django import VERSION as DJANGO_VERSION
 
 ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent.parent.parent
