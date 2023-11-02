@@ -107,6 +107,10 @@ cov = [
     "hatch run cov-combine:combine",
     "hatch run cov-combine:html",
 ]
+printenv = [
+    "echo DBBACKEND=$DBBACKEND",
+    "echo DBNAME=$DBNAME"
+]
 
 [tool.hatch.envs.test]
 dependencies = [
@@ -123,6 +127,8 @@ dependencies = [
     "factory-boy",
     # Set the system time in tests
     "freezegun",  # https://github.com/spulec/freezegun
+    # For interactive debugging if necessary.
+    "ipdb",
     "pytest >= 6.0",
     "pytest-django",
     # Mocked responses in tests
@@ -135,35 +141,37 @@ test = [
 cov = [
     "coverage run -p -m pytest",
 ]
-printenv = [
-    "echo DBBACKEND=$DBBACKEND",
-    "echo DBNAME=$DBNAME"
-]
 
-[[tool.hatch.envs.test.matrix]]
-python = ["3.8"]
+[tool.hatch.envs.test-sqlite]
+template = "test"
+[tool.hatch.envs.test-sqlite.env-vars]
+DBBACKEND = "sqlite3"
+DBNAME = ":memory:"
+[[tool.hatch.envs.test-sqlite.matrix]]
+python = ["3.8", "3.11"]
 django = ["3.2", "4.2"]
-backend = ["sqlite3", "mysql"]
-[[tool.hatch.envs.test.matrix]]
-python = ["3.11"]
-django = ["4.2"]
-backend = ["sqlite3", "mysql"]
-
-[tool.hatch.envs.test.overrides]
-matrix.django.dependencies = [
+[tool.hatch.envs.test-sqlite.overrides]
+matrix.django.extra-dependencies = [
     { value = "django ~= 3.2.0", if = ["3.2"] },
     { value = "django ~= 4.2.0", if = ["4.2"] },
 ]
-# Specify additional dependency for mysql tests.
-matrix.backend.dependencies = [
-    { value = "mysqlclient", if = ["mysql"] },
+
+[tool.hatch.envs.test-mysql]
+template = "test"
+extra-dependencies = [
+    "mysqlclient"
 ]
-# Set environment variables for testing using sqlite vs. mariadb.
-name."sqlite3".env-vars = [
-    "DBBACKEND=sqlite3",
-    "DBNAME=:memory:",
+[tool.hatch.envs.test-mysql.env-vars]
+DBBACKEND = "mysql"
+[[tool.hatch.envs.test-mysql.matrix]]
+python = ["3.8", "3.11"]
+django = ["3.2", "4.2"]
+[tool.hatch.envs.test-mysql.overrides]
+matrix.django.extra-dependencies = [
+    { value = "django ~= 3.2.0", if = ["3.2"] },
+    { value = "django ~= 4.2.0", if = ["4.2"] },
 ]
-name."mysql".env-vars = "DBBACKEND=mysql"
+
 
 [tool.hatch.envs.cov-combine]
 skip-install = true
