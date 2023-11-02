@@ -52,8 +52,8 @@ jobs:
           echo "DBPASSWORD=rootpw" >> $GITHUB_ENV
           echo "DBHOST=127.0.0.1" >> $GITHUB_ENV
 
-      - name: Run Tests (py${{ matrix.python-version }}, dj${{ matrix.django-version }}, ${{ matrix.backend }})
-        run: hatch run test.py${{ matrix.python-version }}-${{ matrix.django-version }}-${{ matrix.backend }}:cov
+      - name: Run Tests (test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }})
+        run: hatch run test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }}:cov
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v3
