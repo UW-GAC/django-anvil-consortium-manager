@@ -82,6 +82,8 @@ addopts = "--reuse-db --ignore=anvil_consortium_manager/tests/test_app --ds=anvi
 python_files = ["anvil_consortium_manager/tests/test*.py"]
 python_classes = ["!TestWorkspaceDataFactory"]
 
+# HATCH
+# ------------------------------------------------------------------------------
 [tool.hatch]
 
 [tool.hatch.version]
@@ -98,7 +100,7 @@ dependencies = [
 ]
 [tool.hatch.envs.default.scripts]
 dj = "python manage.py {args}"
-test = "hatch run +py=3.8 +django=4.2 test:test {args}"
+test = "hatch run -e py3.8-4.2 test:test {args}"
 cov = [
     "rm -f .coverage.*",
     "hatch run test:cov",
@@ -133,22 +135,35 @@ test = [
 cov = [
     "coverage run -p -m pytest",
 ]
+printenv = [
+    "echo DBBACKEND=$DBBACKEND",
+    "echo DBNAME=$DBNAME"
+]
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.8"]
 django = ["3.2", "4.2"]
+backend = ["sqlite3", "mysql"]
 [[tool.hatch.envs.test.matrix]]
 python = ["3.11"]
 django = ["4.2"]
+backend = ["sqlite3", "mysql"]
 
 [tool.hatch.envs.test.overrides]
 matrix.django.dependencies = [
     { value = "django ~= 3.2.0", if = ["3.2"] },
     { value = "django ~= 4.2.0", if = ["4.2"] },
 ]
-matrix.type.scripts = [
-    { key = "with-coverage", value = "_coverage", if = ["default"] },
+# Specify additional dependency for mysql tests.
+matrix.backend.dependencies = [
+    { value = "mysqlclient", if = ["mysql"] },
 ]
+# Set environment variables for testing using sqlite vs. mariadb.
+name."sqlite3".env-vars = [
+    "DBBACKEND=sqlite3",
+    "DBNAME=:memory:",
+]
+name."mysql".env-vars = "DBBACKEND=mysql"
 
 [tool.hatch.envs.cov-combine]
 skip-install = true
