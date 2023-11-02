@@ -8,7 +8,7 @@ import responses
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.management import CommandError, call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from ..audit import audit
 from ..management.commands.run_anvil_audit import ErrorTableWithLink
