@@ -78,7 +78,7 @@ plugins = ["django_coverage_plugin"]
 exclude_lines = ["@abstractproperty"]
 
 [tool.pytest.ini_options]
-addopts = "--reuse-db --ignore=anvil_consortium_manager/tests/test_app --ds=anvil_consortium_manager.tests.settings.test"
+addopts = "--maxfail=10 --reuse-db --ignore=anvil_consortium_manager/tests/test_app --ds=anvil_consortium_manager.tests.settings.test"
 python_files = ["anvil_consortium_manager/tests/test*.py"]
 python_classes = ["!TestWorkspaceDataFactory"]
 
