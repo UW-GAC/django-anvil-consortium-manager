@@ -31,7 +31,7 @@ class AnVILConsortiumManagerEditRequired(PermissionRequiredMixin):
 
     def get_permission_required(self):
         apm_content_type = ContentType.objects.get_for_model(AnVILProjectManagerAccess)
-        perm_required = f"{apm_content_type.app_label}.{AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME}"
+        perm_required = f"{apm_content_type.app_label}.{AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME}"
         return (perm_required,)
 
 
