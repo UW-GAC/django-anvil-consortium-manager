@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: "Test (test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }})"
+    name: "Test ($TEST_ENV)"
     strategy:
       fail-fast: false
       matrix:
@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTEST_ADDOPTS: "--maxfail=20"  # Stop testing after too many failures.
+      TEST_ENV: "test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }}"
 
     services:
       database:
@@ -53,8 +54,8 @@ jobs:
           echo "DBPASSWORD=rootpw" >> $GITHUB_ENV
           echo "DBHOST=127.0.0.1" >> $GITHUB_ENV
 
-      - name: Run Tests (test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }})
-        run: hatch run test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }}:cov
+      - name: Run Tests ($TEST_ENV)
+        run: hatch run $TEST_ENV:cov
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v3
