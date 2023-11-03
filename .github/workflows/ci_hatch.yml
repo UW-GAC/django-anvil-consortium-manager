@@ -1,0 +1,111 @@
+name: hatch-tests
+
+on:
+  pull_request:
+    branches: [ "master", "main" ]
+    paths-ignore: [ "docs/**" ]
+
+  push:
+    branches: [ "master", "main" ]
+    paths-ignore: [ "docs/**" ]
+
+
+jobs:
+
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+        django-version: ["3.2", "4.2"]
+        backend: ["sqlite", "mysql"]
+    runs-on: ubuntu-latest
+    env:
+      PYTEST_ADDOPTS: "--maxfail=20"  # Stop testing after too many failures.
+      TEST_ENV: "test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }}"
+
+    services:
+      database:
+        image: mariadb:10.4
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: test
+
+        ports:
+          - 3306:3306
+        options: --tmpfs /var/lib/mysql
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install hatch
+        run: python -m pip install --upgrade hatch
+
+      - name: Set environment variables
+        if: ${{ matrix.backend == 'mysql' }}
+        run: |
+          echo "DBNAME=test" >> $GITHUB_ENV
+          echo "DBUSER=root" >> $GITHUB_ENV
+          echo "DBPASSWORD=rootpw" >> $GITHUB_ENV
+          echo "DBHOST=127.0.0.1" >> $GITHUB_ENV
+
+      - name: Run Tests
+        run: hatch run $TEST_ENV:cov
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-data
+          path: ".coverage.*"
+
+
+  coverage:
+
+
+    name: Check coverage.
+    runs-on: "ubuntu-latest"
+    needs: [test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install hatch
+        run: python -m pip install --upgrade hatch
+
+      - name: Download coverage data.
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-data
+
+      - name: Combine coverage & check percentage
+        run: hatch run cov-combine:combine
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
