@@ -12,6 +12,7 @@ on:
 
 jobs:
   test:
+    name: "Test (test-${{ matrix.backend }}.py${{ matrix.python-version }}-${{ matrix.django-version }})"
     strategy:
       fail-fast: false
       matrix:
