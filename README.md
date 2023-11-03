@@ -22,9 +22,7 @@ $ git clone git@github.com:UW-GAC/django-anvil-consortium-manager.git
 2. Set up the environment:
 
 ```
-$ python -m venv venv
-$ source venv/bin/activate
-$ pip install -r requirements/dev.txt
+$ hatch env create
 ```
 
 3. Ask Ben to make a service account and register it with AnVIL.
@@ -35,42 +33,32 @@ $ pip install -r requirements/dev.txt
 $ export ANVIL_API_SERVICE_ACCOUNT_FILE="/<path>/<to>/<service_account>.json"
 ```
 
+You can also create a .env file to store environment variables.
+
 5. Run the example site:
 
 ```
-$ python manage.py migrate
-$ python manage.py createsuperuser
-$ python manage.py runserver
+hatch shell
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
 ```
 
 ### Tests
 
-#### Using pytest
+To run quick tests:
 
 ```
-$ pytest
-```
-#### Using manage.py
-
-```
-$ python manage.py test --settings=anvil_consortium_manager.tests.settings.test
+hatch run test
 ```
 
-#### Using tox
-
-Running tox will test the code using both the sqlite and the MariaDB backend.
+To run the full set of tests using different python versions, different django versions, and different backends, run:
 
 ```
-$ tox
+hatch run all
 ```
 
-#### Test coverage
-
-To run the tests, check your test coverage, and generate an HTML coverage report:
-
-    $ coverage run ./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.test
-    $ coverage html
-    $ open htmlcov/index.html
+This will also run test coverage and create an html report to view.
 
 
 ### Maria DB setup
@@ -133,14 +121,10 @@ GRANT ALL PRIVILEGES ON test_anvil_consortium_manager.* TO django@127.0.0.1;
 To run tests using MariaDB as the backend, run:
 
 ```
-./manage.py test anvil_consortium_manager --settings=anvil_consortium_manager.tests.settings.test_mariadb
+hatch run test-mysql.py3.11-4.2:test
 ```
 
-```
-pytest --ds=anvil_consortium_manager.tests.settings.test_mariadb
-```
-
-If you run into errors with `mysqclient>=2.2`, you will need to set some environment variables before installing mysqlclient:
+If you run into errors with `mysqclient>=2.2`, you may need to set some environment variables before installing mysqlclient:
 
 ```
 export PKG_CONFIG_PATH="/opt/local/lib/mariadb-10.5/pkgconfig/"

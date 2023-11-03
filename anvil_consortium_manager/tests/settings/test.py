@@ -2,8 +2,17 @@
 Base test settings file.
 """
 import os
+from pathlib import Path
 
+import environ
 from django import VERSION as DJANGO_VERSION
+
+ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent.parent.parent
+
+# Optionally read environment variables from a .env file.
+env = environ.Env()
+if os.path.exists(str(ROOT_DIR / ".env")):
+    env.read_env(str(ROOT_DIR / ".env"))
 
 # GENERAL
 # ------------------------------------------------------------------------------
@@ -30,12 +39,12 @@ INTERNAL_IPS = ["127.0.0.1"]
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.{}".format(os.getenv("DBBACKEND", default="sqlite3")),
-        "NAME": os.getenv("DBNAME", default="anvil_consortium_manager"),
-        "USER": os.getenv("DBUSER", default="django"),
-        "PASSWORD": os.getenv("DBPASSWORD", default="password"),
-        "HOST": os.getenv("DBHOST", default="127.0.0.1"),
-        "PORT": os.getenv("DBPORT", default="3306"),
+        "ENGINE": "django.db.backends.{}".format(env("DBBACKEND", default="sqlite3")),
+        "NAME": env("DBNAME", default="anvil_consortium_manager"),
+        "USER": env("DBUSER", default="django"),
+        "PASSWORD": env("DBPASSWORD", default="password"),
+        "HOST": env("DBHOST", default="127.0.0.1"),
+        "PORT": env("DBPORT", default="3306"),
     }
 }
 

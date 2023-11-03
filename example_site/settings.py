@@ -4,7 +4,14 @@ Settings file for example site.
 import os
 from pathlib import Path
 
+import environ
+
 ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent
+
+# Optionally read environment variables from a .env file.
+env = environ.Env()
+if os.path.exists(str(ROOT_DIR / ".env")):
+    env.read_env(str(ROOT_DIR / ".env"))
 
 # GENERAL
 # ------------------------------------------------------------------------------
@@ -206,7 +213,7 @@ INTERNAL_IPS = ["127.0.0.1"]
 # django-anvil-consortium-manager
 # ------------------------------------------------------------------------------
 # Specify the path to the service account to use for managing access on AnVIL.
-ANVIL_API_SERVICE_ACCOUNT_FILE = os.getenv("ANVIL_API_SERVICE_ACCOUNT_FILE")
+ANVIL_API_SERVICE_ACCOUNT_FILE = env("ANVIL_API_SERVICE_ACCOUNT_FILE")
 # Specify the URL for AccountLinkVerify view redirect
 ANVIL_ACCOUNT_LINK_REDIRECT = "home"
 # Specify the subject for AnVIL account verification emails.

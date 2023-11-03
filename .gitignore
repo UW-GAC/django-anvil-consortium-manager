@@ -277,3 +277,4 @@ example_site/media/
 ### My additions
 db.sqlite3
 *.sqlite3
+.env

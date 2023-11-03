@@ -20,7 +20,7 @@ dependencies = [
     "pytz >= 0",
     "crispy-bootstrap5 >= 0.6",
     "django-crispy-forms >= 1.12",
-    "google-auth >= 2.6",
+    "google-auth [requests] >= 2.6",
     "fontawesomefree >= 6.1",
     "django-autocomplete-light >= 3.9",
     "django-filter >= 23.0",
@@ -35,8 +35,8 @@ dynamic = ["version"]
 
 
 [build-system]
-requires = ['setuptools>=40.8.0', 'wheel']
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 
 [project.urls]
@@ -74,8 +74,133 @@ omit = ["*migrations*", "*tests*"]
 plugins = ["django_coverage_plugin"]
 
 
+[tool.coverage.report]
+exclude_lines = ["@abstractproperty"]
+
 [tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "--ds=anvil_consortium_manager.tests.settings.test --reuse-db --ignore=anvil_consortium_manager/tests/test_app/"
+addopts = "--reuse-db --ignore=anvil_consortium_manager/tests/test_app --ds=anvil_consortium_manager.tests.settings.test"
 python_files = ["anvil_consortium_manager/tests/test*.py"]
 python_classes = ["!TestWorkspaceDataFactory"]
+
+# HATCH
+# ------------------------------------------------------------------------------
+[tool.hatch]
+
+[tool.hatch.version]
+path = "anvil_consortium_manager/__init__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+    "Django >= 3.2,<=5.0",
+    "django-debug-toolbar",
+    # Process a .env file for environment variables
+    "django-environ",
+    # Interactive debugging
+    "ipdb",
+    # Pre-commit hooks
+    "pre-commit",
+]
+[tool.hatch.envs.default.scripts]
+dj = "python manage.py {args}"
+tests = "hatch run test-sqlite.py3.11-4.2:test {args}"
+all = [
+    "hatch run lint:run",
+    "rm -f .coverage.*",
+    "hatch run test-sqlite:cov",
+    "hatch run test-mysql:cov",
+    "hatch run cov-combine:combine",
+    "hatch run cov-combine:html",
+]
+printenv = [
+    "echo DBBACKEND=$DBBACKEND",
+    "echo DBNAME=$DBNAME"
+]
+lint = "hatch run lint:run"
+
+[tool.hatch.envs.testing]
+dependencies = [
+    # Coverage for django templates
+    "django-coverage-plugin",
+    "django-debug-toolbar",
+    # Process a .env file for environment variables
+    "django-environ",
+    # For testing migrations
+    "django-test-migrations",  # https://github.com/wemake-services/django-test-migrations
+    # Test coverage
+    "coverage[toml]>=6.5",
+    # Model factories
+    "factory-boy",
+    # Set the system time in tests
+    "freezegun",  # https://github.com/spulec/freezegun
+    # For interactive debugging if necessary.
+    "ipdb",
+    "pytest >= 6.0",
+    "pytest-django",
+    # Mocked responses in tests
+    "responses",  # https://github.com/getsentry/responses
+]
+[tool.hatch.envs.testing.scripts]
+test = [
+    "pytest {args}"
+]
+cov = [
+    "coverage run -p -m pytest",
+]
+
+[tool.hatch.envs.test-sqlite]
+template = "testing"
+[tool.hatch.envs.test-sqlite.env-vars]
+DBBACKEND = "sqlite3"
+DBNAME = ":memory:"
+[[tool.hatch.envs.test-sqlite.matrix]]
+python = ["3.8", "3.11"]
+django = ["3.2", "4.2"]
+[tool.hatch.envs.test-sqlite.overrides]
+matrix.django.extra-dependencies = [
+    { value = "django ~= 3.2.0", if = ["3.2"] },
+    { value = "django ~= 4.2.0", if = ["4.2"] },
+]
+
+[tool.hatch.envs.test-mysql]
+template = "testing"
+extra-dependencies = [
+    "mysqlclient"
+]
+[tool.hatch.envs.test-mysql.env-vars]
+DBBACKEND = "mysql"
+[[tool.hatch.envs.test-mysql.matrix]]
+python = ["3.8", "3.11"]
+django = ["3.2", "4.2"]
+[tool.hatch.envs.test-mysql.overrides]
+matrix.django.extra-dependencies = [
+    { value = "django ~= 3.2.0", if = ["3.2"] },
+    { value = "django ~= 4.2.0", if = ["4.2"] },
+]
+
+
+[tool.hatch.envs.cov-combine]
+skip-install = true
+dependencies = [
+    # Coverage for django templates
+    "django-coverage-plugin",
+    "Django ~= 4.2",
+    "coverage[toml]>=6.5"
+]
+[tool.hatch.envs.cov-combine.scripts]
+combine = [
+    # Clean up old files first.
+    "rm -f .coverage",
+    "coverage combine"
+]
+report = ["coverage report"]
+html = ["coverage html"]
+
+
+[tool.hatch.envs.lint]
+detached = true
+python = "3.11"
+dependencies = [
+    "pre-commit"
+]
+[tool.hatch.envs.lint.scripts]
+run = "pre-commit run --all-files"

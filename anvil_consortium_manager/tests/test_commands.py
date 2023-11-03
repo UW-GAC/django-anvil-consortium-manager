@@ -8,7 +8,7 @@ import responses
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.management import CommandError, call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from ..audit import audit
 from ..management.commands.run_anvil_audit import ErrorTableWithLink
@@ -222,29 +222,29 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertInHTML(html_fragment, email.alternatives[0][0])
 
-    @override_settings(SITE_ID=2)
     def test_command_run_audit_not_ok_email_has_html_link_different_domain(self):
         """Test command output when BillingProject audit is not ok with email specified."""
         site = Site.objects.create(domain="foobar.com", name="test")
         site.save()
-        billing_project = factories.BillingProjectFactory.create()
-        # Add a response.
-        api_url = self.get_api_url_billing_project(billing_project.name)
-        self.anvil_response_mock.add(responses.GET, api_url, status=404, json={"message": "error"})
-        out = StringIO()
-        call_command(
-            "run_anvil_audit",
-            "--no-color",
-            models=["BillingProject"],
-            email="test@example.com",
-            stdout=out,
-        )
-        email = mail.outbox[0]
-        self.assertEqual(len(email.alternatives), 1)
-        html_fragment = """<a href="https://foobar.com{url}">{obj}</a>""".format(
-            obj=str(billing_project), url=billing_project.get_absolute_url()
-        )
-        self.assertInHTML(html_fragment, email.alternatives[0][0])
+        with self.settings(SITE_ID=site.id):
+            billing_project = factories.BillingProjectFactory.create()
+            # Add a response.
+            api_url = self.get_api_url_billing_project(billing_project.name)
+            self.anvil_response_mock.add(responses.GET, api_url, status=404, json={"message": "error"})
+            out = StringIO()
+            call_command(
+                "run_anvil_audit",
+                "--no-color",
+                models=["BillingProject"],
+                email="test@example.com",
+                stdout=out,
+            )
+            email = mail.outbox[0]
+            self.assertEqual(len(email.alternatives), 1)
+            html_fragment = """<a href="https://foobar.com{url}">{obj}</a>""".format(
+                obj=str(billing_project), url=billing_project.get_absolute_url()
+            )
+            self.assertInHTML(html_fragment, email.alternatives[0][0])
 
     def test_command_run_audit_api_error(self):
         """Test command output when BillingProject audit is not ok."""
