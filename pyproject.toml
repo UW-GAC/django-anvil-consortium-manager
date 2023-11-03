@@ -100,10 +100,11 @@ dependencies = [
 ]
 [tool.hatch.envs.default.scripts]
 dj = "python manage.py {args}"
-test = "hatch run -e py3.8-4.2 test:test {args}"
-cov = [
+tests = "hatch run test-sqlite.py3.11-4.2:test {args}"
+all = [
     "rm -f .coverage.*",
-    "hatch run test:cov",
+    "hatch run test-sqlite:cov",
+    "hatch run test-mysql:cov",
     "hatch run cov-combine:combine",
     "hatch run cov-combine:html",
 ]
@@ -112,7 +113,7 @@ printenv = [
     "echo DBNAME=$DBNAME"
 ]
 
-[tool.hatch.envs.test]
+[tool.hatch.envs.testing]
 dependencies = [
     # Coverage for django templates
     "django-coverage-plugin",
@@ -134,7 +135,7 @@ dependencies = [
     # Mocked responses in tests
     "responses",  # https://github.com/getsentry/responses
 ]
-[tool.hatch.envs.test.scripts]
+[tool.hatch.envs.testing.scripts]
 test = [
     "pytest {args}"
 ]
@@ -143,7 +144,7 @@ cov = [
 ]
 
 [tool.hatch.envs.test-sqlite]
-template = "test"
+template = "testing"
 [tool.hatch.envs.test-sqlite.env-vars]
 DBBACKEND = "sqlite3"
 DBNAME = ":memory:"
@@ -157,7 +158,7 @@ matrix.django.extra-dependencies = [
 ]
 
 [tool.hatch.envs.test-mysql]
-template = "test"
+template = "testing"
 extra-dependencies = [
     "mysqlclient"
 ]
