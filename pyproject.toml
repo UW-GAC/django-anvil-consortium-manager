@@ -96,7 +96,9 @@ dependencies = [
     # Process a .env file for environment variables
     "django-environ",
     # Interactive debugging
-    # "ipdb",
+    "ipdb",
+    # Pre-commit hooks
+    "pre-commit",
 ]
 [tool.hatch.envs.default.scripts]
 dj = "python manage.py {args}"
