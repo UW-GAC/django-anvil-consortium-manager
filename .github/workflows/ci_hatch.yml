@@ -12,7 +12,6 @@ on:
 
 jobs:
   test:
-    name: "Test ($TEST_ENV)"
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +53,7 @@ jobs:
           echo "DBPASSWORD=rootpw" >> $GITHUB_ENV
           echo "DBHOST=127.0.0.1" >> $GITHUB_ENV
 
-      - name: Run Tests ($TEST_ENV)
+      - name: Run Tests
         run: hatch run $TEST_ENV:cov
 
       - name: Upload coverage data
