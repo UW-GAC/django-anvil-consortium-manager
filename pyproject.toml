@@ -102,6 +102,7 @@ dependencies = [
 dj = "python manage.py {args}"
 tests = "hatch run test-sqlite.py3.11-4.2:test {args}"
 all = [
+    "hatch run lint:run",
     "rm -f .coverage.*",
     "hatch run test-sqlite:cov",
     "hatch run test-mysql:cov",
@@ -112,6 +113,7 @@ printenv = [
     "echo DBBACKEND=$DBBACKEND",
     "echo DBNAME=$DBNAME"
 ]
+lint = "hatch run lint:run"
 
 [tool.hatch.envs.testing]
 dependencies = [
@@ -190,3 +192,13 @@ combine = [
 ]
 report = ["coverage report"]
 html = ["coverage html"]
+
+
+[tool.hatch.envs.lint]
+detached = true
+python = "3.11"
+dependencies = [
+    "pre-commit"
+]
+[tool.hatch.envs.lint.scripts]
+run = "pre-commit run --all-files"
