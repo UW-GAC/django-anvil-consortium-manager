@@ -51,45 +51,6 @@ def set_up_new_permissions(apps, schema_editor):
         pass
 
 
-# def undo_new_permissions(apps, schema_editor):
-#     # Map between original codename and updated codename.
-#     permissions_codename_map = {
-#         "anvil_project_manager_staff_edit": "anvil_consortium_manager_edit",
-#         "anvil_project_manager_staff_view": "anvil_consortium_manager_view",
-#         "anvil_project_manager_view": "anvil_consortium_manager_limited_view",
-#         "anvil_project_manager_account_link": "anvil_consortium_manager_account_link",
-#     }
-#     # Map between original codename and updated name.
-#     permissions_name_map = {
-#         "anvil_project_manager_staff_edit": "AnVIL Project Manager Staff Edit Permission",
-#         "anvil_project_manager_staff_view": "AnVIL Project Manager Staff View Permission",
-#         "anvil_project_manager_view": "AnVIL Project Manager View Permission",
-#         "anvil_project_manager_account_link": "AnVIL Project Manager Account Link Permission",
-#     }
-#     app_config = apps.get_app_config("anvil_consortium_manager")
-#     update_contenttypes(app_config)
-#     # Rename old permissions if they exist.
-#     Permission = apps.get_model("auth", "Permission")
-#     ContentType = apps.get_model("contenttypes", "ContentType")
-#     # This raised an Exception:
-#     # django.db.utils.OperationalError: no such column: django_content_type.name
-#     # Not sure why.
-#     model = ContentType.objects.get(app_label="anvil_consortium_manager", model="anvilprojectmanageraccess")
-#     for updated_codename in permissions_codename_map.keys():
-#         permission = Permission.objects.get(content_type=model, codename=updated_codename)
-#         print("\nOriginal: ")
-#         print("  " + permission.codename)
-#         print("  " + permission.name)
-#         # Update codename and name.
-#         permission.codename = permissions_codename_map[updated_codename]
-#         permission.name = permissions_name_map[updated_codename]
-#         print("Updated:")
-#         print("  " + permission.codename)
-#         print("  " + permission.name)
-#         # Don't save yet.
-#         permission.save()
-
-
 class Migration(migrations.Migration):
     dependencies = [
         ("anvil_consortium_manager", "0013_alter_anvilprojectmanageraccess_options"),
