@@ -11,7 +11,6 @@ from ...audit import audit
 
 
 class ErrorTableWithLink(audit.ErrorTable):
-
     model_instance = tables.Column(
         orderable=False,
         linkify=lambda value, table: "https://{domain}{url}".format(
@@ -26,7 +25,6 @@ class ErrorTableWithLink(audit.ErrorTable):
 
 
 class Command(BaseCommand):
-
     help = """Management command to run an AnVIL audit."""
 
     def add_arguments(self, parser):
@@ -91,7 +89,6 @@ class Command(BaseCommand):
                 )
 
     def handle(self, *args, **options):
-
         if options["models"]:
             models_to_audit = options["models"]
         else:

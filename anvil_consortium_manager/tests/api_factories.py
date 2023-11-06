@@ -32,7 +32,6 @@ class ErrorResponseFactory(MockAPIResponseFactory):
 
 
 class GroupDetailsFactory(factory.DictFactory):
-
     groupName = factory.Faker("word")
     groupEmail = factory.LazyAttribute(lambda obj: "{}@firecloud.org".format(obj.groupName))
     role = FuzzyChoice(["admin", "member"])
@@ -66,7 +65,6 @@ class GetGroupsResponseFactory(factory.Factory):
 
 
 class GetGroupMembershipResponseFactory(MockAPIResponseFactory):
-
     response = factory.LazyAttribute(lambda o: [fake.email() for _ in range(o.n_emails)])
 
     class Params:

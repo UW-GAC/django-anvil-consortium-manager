@@ -4,7 +4,6 @@ from anvil_consortium_manager import models as acm_models
 
 
 class CustomWorkspaceDataTable(tables.Table):
-
     name = tables.columns.Column(linkify=True)
 
     class Meta:

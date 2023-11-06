@@ -72,6 +72,7 @@ class AccountTableTest(TestCase):
 
     def test_render_user_with_get_absolute_url(self):
         """Table renders a link to the user profile when the user has a get_absolute_url method."""
+
         # Dynamically set the get_absolute_url method. This is hacky...
         def foo(self):
             return "test_profile_{}".format(self.username)

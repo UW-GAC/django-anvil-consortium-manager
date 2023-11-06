@@ -46,7 +46,6 @@ class AnVILAPIClient:
         This way, all instances should share the same authorized session.
         """
         if AnVILAPIClient.auth_session is None:
-
             credentials = service_account.Credentials.from_service_account_file(
                 settings.ANVIL_API_SERVICE_ACCOUNT_FILE
             )
