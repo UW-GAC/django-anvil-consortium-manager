@@ -92,7 +92,7 @@ def set_up_new_permissions(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("anvil_consortium_manager", "0014_add_new_permissions"),
+        ("anvil_consortium_manager", "0013_alter_anvilprojectmanageraccess_options"),
     ]
 
     operations = [
