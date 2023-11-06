@@ -21,8 +21,8 @@ class AnVILProjectManagerAccess(models.Model):
     """A meta model used to define app level permissions"""
 
     STAFF_EDIT_PERMISSION_CODENAME = "anvil_project_manager_staff_edit"
+    STAFF_VIEW_PERMISSION_CODENAME = "anvil_project_manager_staff_view"
     VIEW_PERMISSION_CODENAME = "anvil_project_manager_view"
-    LIMITED_VIEW_PERMISSION_CODENAME = "anvil_project_manager_limited_view"
     ACCOUNT_LINK_PERMISSION_CODENAME = "anvil_project_manager_account_link"
 
     class Meta:
@@ -34,15 +34,15 @@ class AnVILProjectManagerAccess(models.Model):
         default_permissions = ()
 
         permissions = [
-            ("anvil_project_manager_staff_edit", "AnVIL Project Manager Staff Edit Permission"),
-            ("anvil_project_manager_view", "AnVIL Project Manager View Permission"),
+            ("anvil_consortium_manager_staff_edit", "AnVIL Consortium Manager Staff Edit Permission"),
+            ("anvil_consortium_manager_staff_view", "AnVIL Consortium Manager Staff View Permission"),
             (
-                "anvil_project_manager_account_link",
-                "AnVIL Project Manager Account Link Permission",
+                "anvil_consortium_manager_account_link",
+                "AnVIL Consortium Manager Account Link Permission",
             ),
             (
-                "anvil_project_manager_limited_view",
-                "AnVIL Project Manager Limited View Permission",
+                "anvil_consortium_manager_view",
+                "AnVIL Consortium Manager View Permission",
             ),
         ]
 
