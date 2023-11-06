@@ -1473,6 +1473,7 @@ class AccountDetailTest(TestCase):
 
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
+
         # Dynamically set the get_absolute_url method. This is hacky...
         def foo(self):
             return "test_profile_{}".format(self.username)
@@ -4645,7 +4646,6 @@ class ManagedGroupDetailTest(TestCase):
 
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 201
 
     def setUp(self):
@@ -5095,7 +5095,6 @@ class ManagedGroupListTest(TestCase):
 
 
 class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -6785,7 +6784,6 @@ class WorkspaceDetailTest(TestCase):
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 201
 
     def setUp(self):
@@ -10681,7 +10679,6 @@ class WorkspaceListByTypeTest(TestCase):
 
 
 class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 202
 
     def setUp(self):
@@ -11864,7 +11861,6 @@ class GroupGroupMembershipDetailTest(TestCase):
 
 
 class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -12454,7 +12450,6 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -12962,7 +12957,6 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -13431,7 +13425,6 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -14489,7 +14482,6 @@ class GroupAccountMembershipDetailTest(TestCase):
 
 
 class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -15051,7 +15043,6 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -15552,7 +15543,6 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -16037,7 +16027,6 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
 
 
 class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -16819,7 +16808,6 @@ class GroupAccountMembershipInactiveListTest(TestCase):
 
 
 class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -17210,7 +17198,6 @@ class WorkspaceGroupSharingDetailTest(TestCase):
 
 
 class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -17920,7 +17907,6 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -18654,7 +18640,6 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
 
 
 class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -19325,7 +19310,6 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -20651,7 +20635,6 @@ class WorkspaceGroupSharingListTest(TestCase):
 
 
 class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):

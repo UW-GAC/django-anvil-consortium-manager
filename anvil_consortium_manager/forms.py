@@ -52,7 +52,7 @@ class FilterForm(forms.Form):
                     layout.Submit("submit", "Filter", css_class="btn btn-secondary mb-3"),
                     css_class="col-auto",
                 ),
-                css_class="row align-items-center"
+                css_class="row align-items-center",
             ),
         )
 
