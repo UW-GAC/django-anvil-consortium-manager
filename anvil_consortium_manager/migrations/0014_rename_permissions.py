@@ -33,15 +33,9 @@ def set_up_new_permissions(apps, schema_editor):
         model = ContentType.objects.get(app_label="anvil_consortium_manager", model="anvilprojectmanageraccess")
         for original_codename in permissions_codename_map.keys():
             permission = Permission.objects.get(content_type=model, codename=original_codename)
-            print("\nOriginal: ")
-            print("  " + permission.codename)
-            print("  " + permission.name)
             # Update codename and name.
             permission.codename = permissions_codename_map[original_codename]
             permission.name = permissions_name_map[original_codename]
-            print("Updated:")
-            print("  " + permission.codename)
-            print("  " + permission.name)
             # Save the new permission
             permission.save()
     except ContentType.DoesNotExist:
