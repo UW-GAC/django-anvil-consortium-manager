@@ -4,6 +4,13 @@
 
 * Switch to using `pyproject.toml` where possible.
 * Use hatch for backend building.
+* Rename permissions and associated auth mixins.
+    - anvil_project_manager_edit -> anvil_consortium_manager_staff_edit
+    - anvil_project_manager_view -> anvil_consortium_manager_staff_view
+    - anvil_project_manager_limited_view -> anvil_consortium_manager_view
+    - `AnVILConsortiumManagerEditRequired` -> `AnVILConsortiumManagerStaffEditRequired`
+    - `AnVILConsortiumManagerViewRequired` -> `AnVILConsortiumManagerStaffViewRequired`
+    - `AnVILConsortiumManagerLimitedViewRequired` -> `AnVILConsortiumManagerViewRequired`
 * Bugfix: Allow Workspace Data objects to have a second foreign key to `Workspace`.
 
 ## 0.19 (2023-10-27)
