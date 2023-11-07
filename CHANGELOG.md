@@ -4,6 +4,7 @@
 
 * Switch to using `pyproject.toml` where possible.
 * Use hatch for backend building.
+* Bugfix: Allow Workspace Data objects to have a second foreign key to `Workspace`.
 
 ## 0.19 (2023-10-27)
 
