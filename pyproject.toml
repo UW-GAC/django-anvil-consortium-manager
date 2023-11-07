@@ -89,6 +89,11 @@ python_classes = ["!TestWorkspaceDataFactory"]
 [tool.hatch.version]
 path = "anvil_consortium_manager/__init__.py"
 
+[tool.hatch.build]
+include = [
+  "anvil_consortium_manager/",
+]
+
 [tool.hatch.envs.default]
 dependencies = [
     "Django >= 3.2,<=5.0",
