@@ -39,7 +39,7 @@
               <a href="{% url 'anvil_consortium_manager:billing_projects:list' %}" class="icon-link">List billing projects</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
-            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
+            {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:billing_projects:import' %}" class="icon-link">Import a billing project</a>
               <span class="fa-solid fa-angle-right"></span>
@@ -58,7 +58,7 @@
           <h5 class="card-header"><span class="fa-solid fa-user mx-2"></span>Accounts</h5>
           <div class="card-body">
             <p>
-              View {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}or import{% endif %} accounts from AnVIL.
+              View {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}or import{% endif %} accounts from AnVIL.
             </p>
           </div>
           <ul class="list-group list-group-flush">
@@ -66,7 +66,7 @@
               <a href="{% url 'anvil_consortium_manager:accounts:list' %}" class="icon-link">List accounts</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
-            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
+            {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:accounts:import' %}" class="icon-link">Import an account</a>
               <span class="fa-solid fa-angle-right"></span>
@@ -86,7 +86,7 @@
           <div class="card-body">
             <p>
               Interact with Managed Groups on AnVIL.
-              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}You can add accounts to a group so a the access for set of related accounts can be managed together.{% endif %}
+              {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}You can add accounts to a group so a the access for set of related accounts can be managed together.{% endif %}
             </p>
           </div>
           <ul class="list-group list-group-flush">
@@ -98,7 +98,7 @@
               <a href="{% url 'anvil_consortium_manager:managed_groups:visualization' %}" class="icon-link">Group visualization</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
-            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
+            {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:managed_groups:new' %}" class="icon-link">Create a new group</a>
               <span class="fa-solid fa-angle-right"></span>
@@ -127,7 +127,7 @@
           <div class="card-body">
             <p>
               Interact with workspaces on AnVIL.
-              {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}You can create or import workspaces and then share them with a group.{% endif%}
+              {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}You can create or import workspaces and then share them with a group.{% endif%}
             </p>
           </div>
 
@@ -140,7 +140,7 @@
               <a href="{% url 'anvil_consortium_manager:workspaces:list_all' %}" class="icon-link">List all workspaces</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
-            {% if perms.anvil_consortium_manager.anvil_project_manager_edit %}
+            {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:workspace_group_sharing:new' %}" class="icon-link">Share a workspace with a group</a>
               <span class="fa-solid fa-angle-right"></span>

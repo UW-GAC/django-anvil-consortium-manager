@@ -20,10 +20,10 @@ from .tokens import account_verification_token
 class AnVILProjectManagerAccess(models.Model):
     """A meta model used to define app level permissions"""
 
-    STAFF_EDIT_PERMISSION_CODENAME = "anvil_project_manager_staff_edit"
-    STAFF_VIEW_PERMISSION_CODENAME = "anvil_project_manager_staff_view"
-    VIEW_PERMISSION_CODENAME = "anvil_project_manager_view"
-    ACCOUNT_LINK_PERMISSION_CODENAME = "anvil_project_manager_account_link"
+    STAFF_EDIT_PERMISSION_CODENAME = "anvil_consortium_manager_staff_edit"
+    STAFF_VIEW_PERMISSION_CODENAME = "anvil_consortium_manager_staff_view"
+    VIEW_PERMISSION_CODENAME = "anvil_consortium_manager_view"
+    ACCOUNT_LINK_PERMISSION_CODENAME = "anvil_consortium_manager_account_link"
 
     class Meta:
         """Not a concrete model."""

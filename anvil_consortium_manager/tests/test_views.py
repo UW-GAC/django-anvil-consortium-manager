@@ -46,7 +46,7 @@ class IndexTest(TestCase):
         # Create a user with view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -73,7 +73,7 @@ class IndexTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -145,13 +145,13 @@ class ViewEditUrlTest(TestCase):
         # Create a user with view permission.
         self.view_user = User.objects.create_user(username="test_view", password="view")
         self.view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         # Create a user with view permission.
         self.edit_user = User.objects.create_user(username="test_edit", password="test")
         self.edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
 
     def test_view_navbar(self):
@@ -202,7 +202,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_json_me_data(self):
@@ -259,7 +259,7 @@ class AnVILStatusTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -353,10 +353,10 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_api_url(self, billing_project_name):
@@ -392,7 +392,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
@@ -403,7 +403,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -588,10 +588,10 @@ class BillingProjectUpdateTest(TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -619,7 +619,7 @@ class BillingProjectUpdateTest(TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user_with_view_perm
@@ -630,7 +630,7 @@ class BillingProjectUpdateTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -695,7 +695,7 @@ class BillingProjectDetailTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -731,7 +731,7 @@ class BillingProjectDetailTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -806,7 +806,7 @@ class BillingProjectListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -833,7 +833,7 @@ class BillingProjectListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -939,7 +939,7 @@ class BillingProjectAutocompleteTest(TestCase):
         # Create a user with the correct permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -974,7 +974,7 @@ class BillingProjectAutocompleteTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -1044,7 +1044,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -1087,7 +1087,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -1191,7 +1191,7 @@ class AccountDetailTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def tearDown(self):
@@ -1236,7 +1236,7 @@ class AccountDetailTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid4()))
         request.user = user
@@ -1341,8 +1341,8 @@ class AccountDetailTest(TestCase):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         account = factories.AccountFactory.create()
@@ -1361,7 +1361,7 @@ class AccountDetailTest(TestCase):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
         )
         self.client.force_login(view_user)
         account = factories.AccountFactory.create()
@@ -1473,6 +1473,7 @@ class AccountDetailTest(TestCase):
 
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
+
         # Dynamically set the get_absolute_url method. This is hacky...
         def foo(self):
             return "test_profile_{}".format(self.username)
@@ -1497,10 +1498,10 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_api_url(self, email):
@@ -1539,7 +1540,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
@@ -1550,7 +1551,7 @@ class AccountImportTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -1795,10 +1796,10 @@ class AccountUpdateTest(TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -1828,7 +1829,7 @@ class AccountUpdateTest(TestCase):
         uuid = uuid4()
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid))
         request.user = user_with_view_perm
@@ -1839,7 +1840,7 @@ class AccountUpdateTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid4()))
         request.user = user
@@ -1949,7 +1950,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -2462,7 +2463,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid4(), "bar"))
         request.user = user
@@ -2731,7 +2732,7 @@ class AccountListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -2766,7 +2767,7 @@ class AccountListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -2906,7 +2907,7 @@ class AccountActiveListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -2941,7 +2942,7 @@ class AccountActiveListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -3088,7 +3089,7 @@ class AccountInactiveListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -3123,7 +3124,7 @@ class AccountInactiveListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -3265,10 +3266,10 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -3307,7 +3308,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         uuid = uuid4()
         request = self.factory.get(self.get_url(uuid))
@@ -3319,7 +3320,7 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid4()))
         request.user = user
@@ -3466,10 +3467,10 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -3508,7 +3509,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         uuid = uuid4()
         request = self.factory.get(self.get_url(uuid))
@@ -3520,7 +3521,7 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid4()))
         request.user = user
@@ -3726,10 +3727,10 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -3772,7 +3773,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         uuid = uuid4()
         request = self.factory.get(self.get_url(uuid))
@@ -3784,7 +3785,7 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid4()))
         request.user = user
@@ -3997,7 +3998,7 @@ class AccountAutocompleteTest(TestCase):
         # Create a user with the correct permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -4024,7 +4025,7 @@ class AccountAutocompleteTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -4127,7 +4128,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -4165,7 +4166,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -4277,7 +4278,7 @@ class ManagedGroupDetailTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -4305,7 +4306,7 @@ class ManagedGroupDetailTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -4599,8 +4600,8 @@ class ManagedGroupDetailTest(TestCase):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         obj = factories.ManagedGroupFactory.create()
@@ -4619,7 +4620,7 @@ class ManagedGroupDetailTest(TestCase):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
         )
         self.client.force_login(view_user)
         obj = factories.ManagedGroupFactory.create()
@@ -4645,7 +4646,6 @@ class ManagedGroupDetailTest(TestCase):
 
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 201
 
     def setUp(self):
@@ -4656,10 +4656,10 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -4689,7 +4689,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
@@ -4700,7 +4700,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -4867,10 +4867,10 @@ class ManagedGroupUpdateTest(TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -4898,7 +4898,7 @@ class ManagedGroupUpdateTest(TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user_with_view_perm
@@ -4909,7 +4909,7 @@ class ManagedGroupUpdateTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -4974,7 +4974,7 @@ class ManagedGroupListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -5001,7 +5001,7 @@ class ManagedGroupListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -5095,7 +5095,6 @@ class ManagedGroupListTest(TestCase):
 
 
 class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -5106,10 +5105,10 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -5141,7 +5140,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(1))
         request.user = user_with_view_perm
@@ -5152,7 +5151,7 @@ class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -5480,7 +5479,7 @@ class ManagedGroupAutocompleteTest(TestCase):
         # Create a user with the correct permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -5507,7 +5506,7 @@ class ManagedGroupAutocompleteTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -5597,7 +5596,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -5660,7 +5659,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -5850,7 +5849,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.group = factories.ManagedGroupFactory.create()
 
@@ -5908,7 +5907,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -6147,7 +6146,7 @@ class ManagedGroupVisualizationTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -6170,7 +6169,7 @@ class ManagedGroupVisualizationTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -6228,13 +6227,13 @@ class WorkspaceLandingPageTest(TestCase):
         # Create a user with view permission.
         self.view_user = User.objects.create_user(username="test_view", password="view")
         self.view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         # Create a user with edit permission.
         self.edit_user = User.objects.create_user(username="test_edit", password="test")
         self.edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
 
     def tearDown(self):
@@ -6268,7 +6267,7 @@ class WorkspaceLandingPageTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -6362,7 +6361,7 @@ class WorkspaceDetailTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def tearDown(self):
@@ -6399,7 +6398,7 @@ class WorkspaceDetailTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -6539,8 +6538,8 @@ class WorkspaceDetailTest(TestCase):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         obj = factories.DefaultWorkspaceDataFactory.create()
@@ -6593,7 +6592,7 @@ class WorkspaceDetailTest(TestCase):
         """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
         )
         self.client.force_login(view_user)
         obj = factories.DefaultWorkspaceDataFactory.create()
@@ -6697,8 +6696,8 @@ class WorkspaceDetailTest(TestCase):
         """Links appear correctly when the user has edit permission but the workspace is locked."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         obj = factories.DefaultWorkspaceDataFactory.create(workspace__is_locked=True)
@@ -6752,8 +6751,8 @@ class WorkspaceDetailTest(TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         obj = factories.DefaultWorkspaceDataFactory.create()
@@ -6785,7 +6784,6 @@ class WorkspaceDetailTest(TestCase):
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 201
 
     def setUp(self):
@@ -6796,10 +6794,10 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace_type = DefaultWorkspaceAdapter.type
         self.api_url = self.api_client.rawls_entry_point + "/api/workspaces"
@@ -6839,7 +6837,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user_with_view_perm
@@ -6850,7 +6848,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user
@@ -7658,10 +7656,10 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
         self.workspace_list_url = self.api_client.rawls_entry_point + "/api/workspaces"
@@ -7756,7 +7754,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user_with_view_perm
@@ -7767,7 +7765,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user
@@ -9017,10 +9015,10 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace_to_clone = factories.WorkspaceFactory.create()
         self.api_url = self.api_client.rawls_entry_point + "/api/workspaces/{}/{}/clone".format(
@@ -9081,7 +9079,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(
             self.get_url(
@@ -9103,7 +9101,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar", self.workspace_type))
         request.user = user
@@ -10069,10 +10067,10 @@ class WorkspaceUpdateTest(TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace_data = factories.DefaultWorkspaceDataFactory.create()
         self.workspace = self.workspace_data.workspace
@@ -10112,7 +10110,7 @@ class WorkspaceUpdateTest(TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user_with_view_perm
@@ -10123,7 +10121,7 @@ class WorkspaceUpdateTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -10335,7 +10333,7 @@ class WorkspaceListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
 
@@ -10374,7 +10372,7 @@ class WorkspaceListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -10501,7 +10499,7 @@ class WorkspaceListByTypeTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
 
@@ -10540,7 +10538,7 @@ class WorkspaceListByTypeTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.workspace_type))
         request.user = user
@@ -10681,7 +10679,6 @@ class WorkspaceListByTypeTest(TestCase):
 
 
 class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 202
 
     def setUp(self):
@@ -10692,10 +10689,10 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def tearDown(self):
@@ -10735,7 +10732,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo1", "foo2"))
         request.user = user_with_view_perm
@@ -10746,7 +10743,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -11019,7 +11016,7 @@ class WorkspaceAutocompleteTest(TestCase):
         # Create a user with the correct permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -11046,7 +11043,7 @@ class WorkspaceAutocompleteTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -11116,7 +11113,7 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         # Create a user with the correct permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.default_workspace_type = DefaultWorkspaceAdapter().get_type()
         workspace_adapter_registry.register(TestWorkspaceAdapter)
@@ -11151,7 +11148,7 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.default_workspace_type))
         request.user = user
@@ -11268,7 +11265,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -11340,7 +11337,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -11507,7 +11504,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
@@ -11571,7 +11568,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -11749,7 +11746,7 @@ class GroupGroupMembershipDetailTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -11780,7 +11777,7 @@ class GroupGroupMembershipDetailTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -11807,8 +11804,8 @@ class GroupGroupMembershipDetailTest(TestCase):
         """Links to delete url appears if the user has edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         obj = factories.GroupGroupMembershipFactory.create()
@@ -11830,7 +11827,7 @@ class GroupGroupMembershipDetailTest(TestCase):
         """Links to delete url appears if the user has edit permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
         )
         self.client.force_login(view_user)
         obj = factories.GroupGroupMembershipFactory.create()
@@ -11864,7 +11861,6 @@ class GroupGroupMembershipDetailTest(TestCase):
 
 
 class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -11875,10 +11871,10 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -11909,7 +11905,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
@@ -11920,7 +11916,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -12454,7 +12450,6 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -12465,10 +12460,10 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.parent_group = factories.ManagedGroupFactory.create()
         self.child_group = factories.ManagedGroupFactory.create()
@@ -12512,7 +12507,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.parent_group.name))
         request.user = user_with_view_perm
@@ -12523,7 +12518,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -12962,7 +12957,6 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -12973,10 +12967,10 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.parent_group = factories.ManagedGroupFactory.create()
         self.child_group = factories.ManagedGroupFactory.create()
@@ -13020,7 +13014,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.child_group.name))
         request.user = user_with_view_perm
@@ -13031,7 +13025,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -13431,7 +13425,6 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -13442,10 +13435,10 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.parent_group = factories.ManagedGroupFactory.create()
         self.child_group = factories.ManagedGroupFactory.create()
@@ -13492,7 +13485,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.parent_group.name, self.child_group.name))
         request.user = user_with_view_perm
@@ -13507,7 +13500,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -14014,7 +14007,7 @@ class GroupGroupMembershipListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -14041,7 +14034,7 @@ class GroupGroupMembershipListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -14097,10 +14090,10 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -14135,7 +14128,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("parent", "child"))
         request.user = user_with_view_perm
@@ -14146,7 +14139,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -14376,7 +14369,7 @@ class GroupAccountMembershipDetailTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -14408,7 +14401,7 @@ class GroupAccountMembershipDetailTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", uuid4()))
         request.user = user
@@ -14436,8 +14429,8 @@ class GroupAccountMembershipDetailTest(TestCase):
         """Links to delete url appears if the user has edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         obj = factories.GroupAccountMembershipFactory.create()
@@ -14459,7 +14452,7 @@ class GroupAccountMembershipDetailTest(TestCase):
         """Links to delete url appears if the user has edit permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
         )
         self.client.force_login(view_user)
         obj = factories.GroupAccountMembershipFactory.create()
@@ -14489,7 +14482,6 @@ class GroupAccountMembershipDetailTest(TestCase):
 
 
 class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -14500,10 +14492,10 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -14534,7 +14526,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
@@ -14545,7 +14537,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -15051,7 +15043,6 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -15062,10 +15053,10 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.account = factories.AccountFactory.create()
         self.group = factories.ManagedGroupFactory.create()
@@ -15109,7 +15100,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.group.name))
         request.user = user_with_view_perm
@@ -15120,7 +15111,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -15552,7 +15543,6 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -15563,10 +15553,10 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.account = factories.AccountFactory.create()
         self.group = factories.ManagedGroupFactory.create()
@@ -15611,7 +15601,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.account.uuid))
         request.user = user_with_view_perm
@@ -15622,7 +15612,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(uuid4()))
         request.user = user
@@ -16037,7 +16027,6 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
 
 
 class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -16048,10 +16037,10 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.account = factories.AccountFactory.create()
         self.group = factories.ManagedGroupFactory.create()
@@ -16098,7 +16087,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url(self.group.name, self.account.uuid))
         request.user = user_with_view_perm
@@ -16109,7 +16098,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", uuid4()))
         request.user = user
@@ -16575,7 +16564,7 @@ class GroupAccountMembershipListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -16602,7 +16591,7 @@ class GroupAccountMembershipListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -16654,7 +16643,7 @@ class GroupAccountMembershipActiveListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -16731,7 +16720,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -16758,7 +16747,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -16819,7 +16808,6 @@ class GroupAccountMembershipInactiveListTest(TestCase):
 
 
 class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 204
 
     def setUp(self):
@@ -16830,10 +16818,10 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -16869,7 +16857,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         uuid = uuid4()
         request = self.factory.get(self.get_url("foo", uuid))
@@ -16881,7 +16869,7 @@ class GroupAccountMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", uuid4()))
         request.user = user
@@ -17097,7 +17085,7 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -17128,7 +17116,7 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar", "tmp"))
         request.user = user
@@ -17165,8 +17153,8 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         """Links to delete url appears if the user has edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
         )
         self.client.force_login(edit_user)
         obj = factories.WorkspaceGroupSharingFactory.create()
@@ -17189,7 +17177,7 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         """Links to delete url appears if the user has edit permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
         )
         self.client.force_login(view_user)
         obj = factories.WorkspaceGroupSharingFactory.create()
@@ -17210,7 +17198,6 @@ class WorkspaceGroupSharingDetailTest(TestCase):
 
 
 class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -17221,10 +17208,10 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -17269,7 +17256,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user_with_view_perm
@@ -17280,7 +17267,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -17920,7 +17907,6 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -17931,10 +17917,10 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace = factories.WorkspaceFactory.create()
         self.group = factories.ManagedGroupFactory.create()
@@ -17999,7 +17985,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(
             self.get_url(
@@ -18019,7 +18005,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar"))
         request.user = user
@@ -18654,7 +18640,6 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
 
 
 class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -18665,10 +18650,10 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace = factories.WorkspaceFactory.create()
         self.group = factories.ManagedGroupFactory.create()
@@ -18730,7 +18715,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(
             self.get_url(
@@ -18748,7 +18733,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo"))
         request.user = user
@@ -19325,7 +19310,6 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
 
 
 class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -19336,10 +19320,10 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace = factories.WorkspaceFactory.create()
         self.group = factories.ManagedGroupFactory.create()
@@ -19407,7 +19391,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(
             self.get_url(
@@ -19429,7 +19413,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar", "tmp"))
         request.user = user
@@ -20120,10 +20104,10 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -20174,7 +20158,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("billing_project", "workspace", "group"))
         request.user = user_with_view_perm
@@ -20190,7 +20174,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar", "tmp"))
         request.user = user
@@ -20578,7 +20562,7 @@ class WorkspaceGroupSharingListTest(TestCase):
         # Create a user with both view and edit permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -20605,7 +20589,7 @@ class WorkspaceGroupSharingListTest(TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url())
         request.user = user
@@ -20651,7 +20635,6 @@ class WorkspaceGroupSharingListTest(TestCase):
 
 
 class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
-
     api_success_code = 200
 
     def setUp(self):
@@ -20662,10 +20645,10 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # Create a user with both view and edit permissions.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
     def get_url(self, *args):
@@ -20709,7 +20692,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
         user_with_view_perm.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("billing_project", "workspace", "group"))
         request.user = user_with_view_perm
@@ -20725,7 +20708,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.LIMITED_VIEW_PERMISSION_CODENAME)
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         request = self.factory.get(self.get_url("foo", "bar", "tmp"))
         request.user = user

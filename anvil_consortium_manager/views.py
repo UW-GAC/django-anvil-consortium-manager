@@ -71,7 +71,7 @@ else:
         template_name_suffix = "_confirm_delete"
 
 
-class Index(auth.AnVILConsortiumManagerViewRequired, TemplateView):
+class Index(auth.AnVILConsortiumManagerStaffViewRequired, TemplateView):
     template_name = "anvil_consortium_manager/index.html"
 
     def get_context_data(self, *args, **kwargs):
@@ -81,7 +81,7 @@ class Index(auth.AnVILConsortiumManagerViewRequired, TemplateView):
         return super().get_context_data(**kwargs)
 
 
-class AnVILStatus(auth.AnVILConsortiumManagerViewRequired, TemplateView):
+class AnVILStatus(auth.AnVILConsortiumManagerStaffViewRequired, TemplateView):
     template_name = "anvil_consortium_manager/status.html"
 
     def get_context_data(self, **kwargs):
@@ -113,7 +113,7 @@ class AnVILStatus(auth.AnVILConsortiumManagerViewRequired, TemplateView):
         return context
 
 
-class BillingProjectImport(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
+class BillingProjectImport(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
     model = models.BillingProject
     form_class = forms.BillingProjectImportForm
     template_name = "anvil_consortium_manager/billingproject_import.html"
@@ -140,7 +140,7 @@ class BillingProjectImport(auth.AnVILConsortiumManagerEditRequired, SuccessMessa
         return HttpResponseRedirect(self.get_success_url())
 
 
-class BillingProjectUpdate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView):
+class BillingProjectUpdate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView):
     """View to update information about a Billing Project."""
 
     model = models.BillingProject
@@ -150,7 +150,7 @@ class BillingProjectUpdate(auth.AnVILConsortiumManagerEditRequired, SuccessMessa
     success_message = "Successfully updated Billing Project."
 
 
-class BillingProjectDetail(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, DetailView):
+class BillingProjectDetail(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, DetailView):
     model = models.BillingProject
     slug_field = "name"
     context_table_name = "workspace_table"
@@ -161,12 +161,12 @@ class BillingProjectDetail(auth.AnVILConsortiumManagerViewRequired, SingleTableM
     def get_context_data(self, **kwargs):
         """Add show_edit_links to context data."""
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
+class BillingProjectList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
     model = models.BillingProject
     table_class = tables.BillingProjectTable
     ordering = ("name",)
@@ -175,7 +175,7 @@ class BillingProjectList(auth.AnVILConsortiumManagerViewRequired, SingleTableMix
     filterset_class = filters.BillingProjectListFilter
 
 
-class BillingProjectAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
+class BillingProjectAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for BillingProjects. Only billing project where the app is a user are included."""
 
     def get_queryset(self):
@@ -188,7 +188,7 @@ class BillingProjectAutocomplete(auth.AnVILConsortiumManagerViewRequired, autoco
         return qs
 
 
-class BillingProjectAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/billing_project_audit.html"
@@ -196,7 +196,7 @@ class BillingProjectAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.An
 
 
 class AccountDetail(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.SingleAccountMixin,
     DetailView,
 ):
@@ -206,7 +206,7 @@ class AccountDetail(
         context = super().get_context_data(**kwargs)
         # Add an indicator of whether the account is inactive.
         context["is_inactive"] = self.object.status == models.Account.INACTIVE_STATUS
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
@@ -225,7 +225,7 @@ class AccountDetail(
         return context
 
 
-class AccountImport(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
+class AccountImport(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
     """Import an account from AnVIL.
 
     This view checks that the specified email has a valid AnVIL account. If so, it saves a record in the database.
@@ -265,7 +265,7 @@ class AccountImport(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin
 
 
 class AccountUpdate(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     viewmixins.SingleAccountMixin,
     UpdateView,
@@ -422,7 +422,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
 
 
 class AccountList(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.AccountAdapterMixin,
     SingleTableMixin,
     FilterView,
@@ -437,7 +437,7 @@ class AccountList(
 
 
 class AccountActiveList(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.AccountAdapterMixin,
     SingleTableMixin,
     FilterView,
@@ -451,7 +451,7 @@ class AccountActiveList(
 
 
 class AccountInactiveList(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.AccountAdapterMixin,
     SingleTableMixin,
     FilterView,
@@ -465,7 +465,7 @@ class AccountInactiveList(
 
 
 class AccountDeactivate(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     SingleTableMixin,
     viewmixins.SingleAccountMixin,
@@ -526,7 +526,7 @@ class AccountDeactivate(
 
 
 class AccountReactivate(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     SingleTableMixin,
     viewmixins.SingleAccountMixin,
@@ -588,7 +588,7 @@ class AccountReactivate(
 
 
 class AccountDelete(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     viewmixins.SingleAccountMixin,
     DeleteView,
@@ -618,7 +618,7 @@ class AccountDelete(
             return super().form_valid(form)
 
 
-class AccountAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
+class AccountAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for Accounts. Only active accounts are included."""
 
     def get_result_label(self, item):
@@ -640,7 +640,7 @@ class AccountAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.
         return qs
 
 
-class AccountAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+class AccountAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Accounts and display the results."""
 
     template_name = "anvil_consortium_manager/account_audit.html"
@@ -648,7 +648,7 @@ class AccountAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAudi
 
 
 class ManagedGroupDetail(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.ManagedGroupGraphMixin,
     DetailView,
 ):
@@ -700,12 +700,12 @@ class ManagedGroupDetail(
         context["parent_table"] = tables.GroupGroupMembershipTable(
             self.object.parent_memberships.all(), exclude="child_group"
         )
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class ManagedGroupCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
+class ManagedGroupCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     template_name = "anvil_consortium_manager/managedgroup_create.html"
@@ -729,7 +729,7 @@ class ManagedGroupCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessage
 
 
 class ManagedGroupUpdate(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     UpdateView,
 ):
@@ -742,7 +742,7 @@ class ManagedGroupUpdate(
     success_message = "Successfully updated ManagedGroup."
 
 
-class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
+class ManagedGroupList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
     model = models.ManagedGroup
     table_class = tables.ManagedGroupTable
     ordering = ("name",)
@@ -752,7 +752,7 @@ class ManagedGroupList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin
 
 
 class ManagedGroupVisualization(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.ManagedGroupGraphMixin,
     TemplateView,
 ):
@@ -765,7 +765,7 @@ class ManagedGroupVisualization(
         self.graph = G
 
 
-class ManagedGroupDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
+class ManagedGroupDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
     model = models.ManagedGroup
     slug_field = "name"
     message_not_managed_by_app = "Cannot delete group because it is not managed by this app."
@@ -852,7 +852,7 @@ class ManagedGroupDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessage
         return response
 
 
-class ManagedGroupAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
+class ManagedGroupAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for ManagedGroups."""
 
     def get_queryset(self):
@@ -869,7 +869,7 @@ class ManagedGroupAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomp
         return qs
 
 
-class ManagedGroupAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+class ManagedGroupAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on ManagedGroups and display the results."""
 
     template_name = "anvil_consortium_manager/managedgroup_audit.html"
@@ -877,7 +877,7 @@ class ManagedGroupAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVI
 
 
 class ManagedGroupMembershipAudit(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     SingleObjectMixin,
     viewmixins.AnVILAuditMixin,
     TemplateView,
@@ -908,7 +908,7 @@ class ManagedGroupMembershipAudit(
 
 
 class WorkspaceLandingPage(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.RegisteredWorkspaceAdaptersMixin,
     TemplateView,
 ):
@@ -916,13 +916,13 @@ class WorkspaceLandingPage(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
 class WorkspaceDetail(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.RegisteredWorkspaceAdaptersMixin,
     viewmixins.WorkspaceAdapterMixin,
     DetailView,
@@ -968,7 +968,7 @@ class WorkspaceDetail(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
@@ -980,7 +980,7 @@ class WorkspaceDetail(
 
 
 class WorkspaceCreate(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     viewmixins.WorkspaceAdapterMixin,
     FormView,
@@ -1079,7 +1079,7 @@ class WorkspaceCreate(
 
 
 class WorkspaceImport(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     viewmixins.WorkspaceAdapterMixin,
     FormView,
@@ -1209,7 +1209,7 @@ class WorkspaceImport(
 
 
 class WorkspaceClone(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     viewmixins.WorkspaceAdapterMixin,
     SingleObjectMixin,
@@ -1347,7 +1347,7 @@ class WorkspaceClone(
 
 
 class WorkspaceUpdate(
-    auth.AnVILConsortiumManagerEditRequired,
+    auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
     viewmixins.WorkspaceAdapterMixin,
     UpdateView,
@@ -1463,7 +1463,7 @@ class WorkspaceUpdate(
         return self.object.get_absolute_url()
 
 
-class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
+class WorkspaceList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
@@ -1482,7 +1482,7 @@ class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, F
 
 
 class WorkspaceListByType(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.WorkspaceAdapterMixin,
     SingleTableMixin,
     FilterView,
@@ -1506,7 +1506,7 @@ class WorkspaceListByType(
         return table_class
 
 
-class WorkspaceDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
+class WorkspaceDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
     model = models.Workspace
     success_message = "Successfully deleted Workspace on AnVIL."
     message_could_not_delete_workspace_from_app = "Cannot delete workspace from app due to foreign key restrictions."
@@ -1585,7 +1585,7 @@ class WorkspaceDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMix
         return response
 
 
-class WorkspaceAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+class WorkspaceAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/workspace_audit.html"
@@ -1593,7 +1593,7 @@ class WorkspaceAudit(auth.AnVILConsortiumManagerViewRequired, viewmixins.AnVILAu
 
 
 class WorkspaceSharingAudit(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     SingleObjectMixin,
     viewmixins.AnVILAuditMixin,
     TemplateView,
@@ -1632,7 +1632,7 @@ class WorkspaceSharingAudit(
         return audit.WorkspaceSharingAudit(self.object)
 
 
-class WorkspaceAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplete.Select2QuerySetView):
+class WorkspaceAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autocomplete.Select2QuerySetView):
     """View to provide autocompletion for Workspaces.
 
     Right now this only matches Workspace name, not billing project."""
@@ -1648,7 +1648,7 @@ class WorkspaceAutocomplete(auth.AnVILConsortiumManagerViewRequired, autocomplet
 
 
 class WorkspaceAutocompleteByType(
-    auth.AnVILConsortiumManagerViewRequired,
+    auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.WorkspaceAdapterMixin,
     autocomplete.Select2QuerySetView,
 ):
@@ -1669,7 +1669,7 @@ class WorkspaceAutocompleteByType(
         return qs
 
 
-class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
+class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
     model = models.GroupGroupMembership
 
     def get_object(self, queryset=None):
@@ -1694,12 +1694,12 @@ class GroupGroupMembershipDetail(auth.AnVILConsortiumManagerViewRequired, Detail
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class GroupGroupMembershipCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
+class GroupGroupMembershipCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
     model = models.GroupGroupMembership
     form_class = forms.GroupGroupMembershipForm
     success_message = "Successfully created group membership."
@@ -1904,12 +1904,12 @@ class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
         return self.object.get_absolute_url()
 
 
-class GroupGroupMembershipList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class GroupGroupMembershipList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     model = models.GroupGroupMembership
     table_class = tables.GroupGroupMembershipTable
 
 
-class GroupGroupMembershipDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
+class GroupGroupMembershipDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
     model = models.GroupGroupMembership
     success_message = "Successfully deleted group membership on AnVIL."
 
@@ -1980,7 +1980,7 @@ class GroupGroupMembershipDelete(auth.AnVILConsortiumManagerEditRequired, Succes
         return super().form_valid(form)
 
 
-class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
+class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
     model = models.GroupAccountMembership
 
     def get_object(self, queryset=None):
@@ -2005,12 +2005,12 @@ class GroupAccountMembershipDetail(auth.AnVILConsortiumManagerViewRequired, Deta
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class GroupAccountMembershipCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
+class GroupAccountMembershipCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
     model = models.GroupAccountMembership
     form_class = forms.GroupAccountMembershipForm
     success_message = "Successfully added account membership."
@@ -2202,14 +2202,14 @@ class GroupAccountMembershipCreateByGroupAccount(GroupAccountMembershipCreate):
         return self.object.get_absolute_url()
 
 
-class GroupAccountMembershipList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class GroupAccountMembershipList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     """Show a list of all group memberships regardless of account active/inactive status."""
 
     model = models.GroupAccountMembership
     table_class = tables.GroupAccountMembershipTable
 
 
-class GroupAccountMembershipActiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class GroupAccountMembershipActiveList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     """Show a list of all group memberships for active accounts."""
 
     model = models.GroupAccountMembership
@@ -2223,7 +2223,7 @@ class GroupAccountMembershipActiveList(auth.AnVILConsortiumManagerViewRequired, 
         return self.model.objects.filter(account__status=models.Account.ACTIVE_STATUS)
 
 
-class GroupAccountMembershipInactiveList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class GroupAccountMembershipInactiveList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     """Show a list of all group memberships for inactive accounts."""
 
     model = models.GroupAccountMembership
@@ -2237,7 +2237,7 @@ class GroupAccountMembershipInactiveList(auth.AnVILConsortiumManagerViewRequired
         return self.model.objects.filter(account__status=models.Account.INACTIVE_STATUS)
 
 
-class GroupAccountMembershipDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
+class GroupAccountMembershipDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
     model = models.GroupAccountMembership
     success_message = "Successfully deleted account membership on AnVIL."
 
@@ -2298,7 +2298,7 @@ class GroupAccountMembershipDelete(auth.AnVILConsortiumManagerEditRequired, Succ
         return super().form_valid(form)
 
 
-class WorkspaceGroupSharingDetail(auth.AnVILConsortiumManagerViewRequired, DetailView):
+class WorkspaceGroupSharingDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
     model = models.WorkspaceGroupSharing
 
     def get_object(self, queryset=None):
@@ -2328,12 +2328,12 @@ class WorkspaceGroupSharingDetail(auth.AnVILConsortiumManagerViewRequired, Detai
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        edit_permission_codename = models.AnVILProjectManagerAccess.EDIT_PERMISSION_CODENAME
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context
 
 
-class WorkspaceGroupSharingCreate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, CreateView):
+class WorkspaceGroupSharingCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
     """View to create a new WorkspaceGroupSharing object and share the Workspace with a Group on AnVIL."""
 
     model = models.WorkspaceGroupSharing
@@ -2541,7 +2541,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
         return self.object.get_absolute_url()
 
 
-class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, UpdateView):
+class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView):
     """View to update a WorkspaceGroupSharing object and on AnVIL."""
 
     model = models.WorkspaceGroupSharing
@@ -2593,12 +2593,12 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerEditRequired, Succe
         return super().form_valid(form)
 
 
-class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerViewRequired, SingleTableView):
+class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     model = models.WorkspaceGroupSharing
     table_class = tables.WorkspaceGroupSharingTable
 
 
-class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerEditRequired, SuccessMessageMixin, DeleteView):
+class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
     model = models.WorkspaceGroupSharing
     success_message = "Successfully removed workspace sharing on AnVIL."
 
