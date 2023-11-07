@@ -95,12 +95,17 @@ Permissions
 
 The app provides four different permissions settings.
 
-1. ``anvil_project_manager_edit`` - users with this permission can add, delete, or edit models, for example import an account from AnVIL or create a workspace.
+1. ``anvil_consortium_manager_staff_edit`` - users with this permission can add, delete, or edit models, for example import an account from AnVIL or create a workspace.
 
-2. ``anvil_project_manager_view`` - users with this permission can view information, for example lists of users or workspace details.
+2. ``anvil_consortium_manager_staff_view`` - users with this permission can view the full set of information in the app, for example lists of users or workspace details.
 
-3. ``anvil_project_manager_account_link`` - users with this permission can link their AnVIL accounts in the app using the `AccountLink` and `AccountLinkVerify` views.
+3. ``anvil_consortium_manager_account_link`` - users with this permission can link their AnVIL accounts in the app using the `AccountLink` and `AccountLinkVerify` views.
 
-4. ``anvil_project_manager_limited_view`` - in the future, this permission will be used to allow users to view a limited set of information within the site. Rigt now, it is not used by the app.
+4. ``anvil_consortium_manager_view`` - in the future, this permission will be used to allow users to view a limited set of information within the site. Rigt now, it is not used by the app.
 
-We suggest creating three groups, viewers (with ``anvil_project_manager_view`` permission), editors (with both ``anvil_project_manager_view`` and ``anvil_project_manager_edit`` permission), and a final group for users who are allowed to link their AnVIL account. Users can then be added to the appropriate group. Note that users with edit permission but not view permission will not be able to see lists or detail pages, so anyone granted edit permission should also be granted view permission.
+We suggest creating three groups,
+staff viewers (with ``anvil_consortium_manager_staff_view`` permission),
+staff editors (with both ``anvil_consortium_manager_staff_view`` and ``anvil_consortium_manager_staff_edit`` permission),
+and a final group for users who are allowed to link their AnVIL account (with ``anvil_consortium_manager_account_link`` permission).
+Users can then be added to the appropriate group.
+Note that users with staff edit permission but not view permission will not be able to see lists or detail pages, so anyone granted edit permission should also be granted staff view permission.
