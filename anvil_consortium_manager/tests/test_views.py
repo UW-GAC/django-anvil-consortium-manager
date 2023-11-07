@@ -29,7 +29,7 @@ from . import factories
 from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
-from .test_app.adapters import TestWorkspaceAdapter
+from .test_app.adapters import TestForeignKeyWorkspaceAdapter, TestWorkspaceAdapter
 from .test_app.factories import TestWorkspaceDataFactory
 from .test_app.filters import TestAccountListFilter
 from .utils import AnVILAPIMockTestMixin, TestCase  # Redefined to work with Django < 4.2 and Django=4.2.
@@ -7642,6 +7642,64 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(len(responses.calls), 0)
 
+    def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        self.workspace_type = "test_fk"
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
+        """Posting valid data to the form creates a workspace data object when using a custom adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        other_workspace = factories.WorkspaceFactory.create()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-other_workspace": other_workspace.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # The workspace is created.
+        new_workspace = models.Workspace.objects.latest("pk")
+        # workspace_type is set properly.
+        self.assertEqual(
+            new_workspace.workspace_type,
+            TestForeignKeyWorkspaceAdapter().get_type(),
+        )
+        # Workspace data is added.
+        self.assertEqual(app_models.TestForeignKeyWorkspaceData.objects.count(), 1)
+        new_workspace_data = app_models.TestForeignKeyWorkspaceData.objects.latest("pk")
+        self.assertEqual(new_workspace_data.workspace, new_workspace)
+        self.assertEqual(new_workspace_data.other_workspace, other_workspace)
+
 
 class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the WorkspaceImport view."""
@@ -9000,6 +9058,87 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Did not create any objects.
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        other_workspace = factories.WorkspaceFactory.create()
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        url = self.get_api_url(billing_project.name, workspace_name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-other_workspace": other_workspace.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # The workspace is created.
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(
+            new_workspace.workspace_type,
+            TestForeignKeyWorkspaceAdapter().get_type(),
+        )
+        # Workspace data is added.
+        self.assertEqual(app_models.TestForeignKeyWorkspaceData.objects.count(), 1)
+        new_workspace_data = app_models.TestForeignKeyWorkspaceData.objects.latest("pk")
+        self.assertEqual(new_workspace_data.workspace, new_workspace)
+        self.assertEqual(new_workspace_data.other_workspace, other_workspace)
 
 
 class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):

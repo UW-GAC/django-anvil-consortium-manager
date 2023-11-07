@@ -65,7 +65,6 @@ class ErrorTable(tables.Table):
 
 
 class NotInAppTable(tables.Table):
-
     record = tables.columns.Column(orderable=False, empty_values=())
 
 
