@@ -28,3 +28,11 @@ class TestWorkspaceForm(WorkspaceForm):
         if name and name == "test-fail":
             raise ValidationError("Workspace name cannot be 'test-fail'!")
         return name
+
+
+class TestForeignKeyWorkspaceDataForm(forms.ModelForm):
+    """Form for a TestForeignKeyWorkspace object."""
+
+    class Meta:
+        model = models.TestForeignKeyWorkspaceData
+        fields = ("other_workspace", "workspace")
