@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.20 (2023-11-08)
 
 * Switch to using `pyproject.toml` where possible.
 * Use hatch for backend building.
@@ -12,6 +12,7 @@
     - `AnVILConsortiumManagerViewRequired` -> `AnVILConsortiumManagerStaffViewRequired`
     - `AnVILConsortiumManagerLimitedViewRequired` -> `AnVILConsortiumManagerViewRequired`
 * Bugfix: Allow Workspace Data objects to have a second foreign key to `Workspace`.
+* Remove ACM Home link from navbar.
 
 ## 0.19 (2023-10-27)
 
