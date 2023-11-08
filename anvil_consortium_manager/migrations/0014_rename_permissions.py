@@ -32,12 +32,17 @@ def set_up_new_permissions(apps, schema_editor):
     try:
         model = ContentType.objects.get(app_label="anvil_consortium_manager", model="anvilprojectmanageraccess")
         for original_codename in permissions_codename_map.keys():
-            permission = Permission.objects.get(content_type=model, codename=original_codename)
-            # Update codename and name.
-            permission.codename = permissions_codename_map[original_codename]
-            permission.name = permissions_name_map[original_codename]
-            # Save the new permission
-            permission.save()
+            try:
+                permission = Permission.objects.get(content_type=model, codename=original_codename)
+                # Update codename and name.
+                permission.codename = permissions_codename_map[original_codename]
+                permission.name = permissions_name_map[original_codename]
+                # Save the new permission
+                permission.save()
+            except Permission.DoesNotExist:
+                # This permission has not been added to the app yet, so this ok.
+                # Same comment as below.
+                pass
     except ContentType.DoesNotExist:
         # Permissions and ContentTypes are created after all migrations are completed using
         # post-migrate signals. If the ContentType for this app does not exist, then this is
