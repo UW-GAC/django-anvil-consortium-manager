@@ -12,6 +12,7 @@
     - `AnVILConsortiumManagerViewRequired` -> `AnVILConsortiumManagerStaffViewRequired`
     - `AnVILConsortiumManagerLimitedViewRequired` -> `AnVILConsortiumManagerViewRequired`
 * Bugfix: Allow Workspace Data objects to have a second foreign key to `Workspace`.
+* Remove ACM Home link from navbar.
 
 ## 0.19 (2023-10-27)
 
