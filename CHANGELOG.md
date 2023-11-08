@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.20 (2023-11-08)
 
 * Switch to using `pyproject.toml` where possible.
 * Use hatch for backend building.
