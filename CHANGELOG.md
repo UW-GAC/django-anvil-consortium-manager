@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.20.1 (2023-11-09)
 
 * Bugfix: Fix `WorkspaceClone` and `WorkspaceImport` views to work with a `WorkspaceData` model that has a second foreign key to `Workspace`.
 
