@@ -10197,6 +10197,75 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 1)
         self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
 
+    def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        self.workspace_type = "test_fk"
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
+        """Posting valid data to the form creates a workspace data object when using a custom adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        other_workspace = factories.WorkspaceFactory.create()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-other_workspace": other_workspace.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # The workspace is created.
+        new_workspace = models.Workspace.objects.latest("pk")
+        # workspace_type is set properly.
+        self.assertEqual(
+            new_workspace.workspace_type,
+            TestForeignKeyWorkspaceAdapter().get_type(),
+        )
+        # Workspace data is added.
+        self.assertEqual(app_models.TestForeignKeyWorkspaceData.objects.count(), 1)
+        new_workspace_data = app_models.TestForeignKeyWorkspaceData.objects.latest("pk")
+        self.assertEqual(new_workspace_data.workspace, new_workspace)
+        self.assertEqual(new_workspace_data.other_workspace, other_workspace)
+
 
 class WorkspaceUpdateTest(TestCase):
     def setUp(self):

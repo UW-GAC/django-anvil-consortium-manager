@@ -1269,6 +1269,7 @@ class WorkspaceClone(
             absolute_max=1,
             max_num=1,
             min_num=1,
+            fk_name="workspace",
         )
         if self.request.method in ("POST"):
             formset = formset_factory(
