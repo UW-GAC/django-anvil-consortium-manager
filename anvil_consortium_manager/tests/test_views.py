@@ -10464,6 +10464,46 @@ class WorkspaceUpdateTest(TestCase):
         self.assertEqual(len(form.fields), 1)
         self.assertIn("note", form.fields)
 
+    def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        other_workspace = factories.WorkspaceFactory.create()
+        workspace = factories.WorkspaceFactory(workspace_type=TestForeignKeyWorkspaceAdapter().get_type())
+        app_models.TestForeignKeyWorkspaceData.objects.create(workspace=workspace, other_workspace=other_workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
+        """Posting valid data to the form creates a workspace data object when using a custom adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
+        other_workspace = factories.WorkspaceFactory.create()
+        workspace = factories.WorkspaceFactory(workspace_type=TestForeignKeyWorkspaceAdapter().get_type())
+        app_models.TestForeignKeyWorkspaceData.objects.create(workspace=workspace, other_workspace=other_workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "note": "Foo",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 1,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-id": self.workspace_data.pk,
+                "workspacedata-0-other_workspace": other_workspace,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.workspace_data.refresh_from_db()
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.workspace.note, "Foo")
+
 
 class WorkspaceListTest(TestCase):
     def setUp(self):
