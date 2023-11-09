@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Bugfix: Fix `WorkspaceClone` and `WorkspaceImport` views to work with a `WorkspaceData` model that has a second foreign key to `Workspace`.
+
 ## 0.20 (2023-11-08)
 
 * Switch to using `pyproject.toml` where possible.
