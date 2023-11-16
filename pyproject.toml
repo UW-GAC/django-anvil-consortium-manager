@@ -209,3 +209,11 @@ dependencies = [
 ]
 [tool.hatch.envs.lint.scripts]
 run = "pre-commit run --all-files"
+
+
+[tool.hatch.envs.docs]
+extra-dependencies = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autobuild"
+]
