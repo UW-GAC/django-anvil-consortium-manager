@@ -9,6 +9,9 @@ on:
     branches: [ "master", "main" ]
     paths-ignore: [ "docs/**" ]
 
+  schedule:
+    - cron: '0 12 * * 0'
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
