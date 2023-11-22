@@ -20,7 +20,7 @@ dependencies = [
     "pytz >= 0",
     "crispy-bootstrap5 >= 0.6",
     "django-crispy-forms >= 1.12",
-    "google-auth [requests] >= 2.6",
+    "google-auth >= 2.6",
     "fontawesomefree >= 6.1",
     "django-autocomplete-light >= 3.9",
     "django-filter >= 23.0",
@@ -30,6 +30,7 @@ dependencies = [
     "plotly >= 5.11.0",
     "networkx >= 2.8.2",
     "numpy >= 1.24",
+    "requests",
 ]
 dynamic = ["version"]
 

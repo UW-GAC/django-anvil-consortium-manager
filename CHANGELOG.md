@@ -3,6 +3,7 @@
 ## Devel
 
 * Add docs dependencies to hatch via pyproject.toml.
+* Add requests as a direct dependency instead of as an extra to google-auth.
 
 ## 0.20.1 (2023-11-09)
 
