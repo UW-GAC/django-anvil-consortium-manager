@@ -77,6 +77,9 @@ extend-select = [
     "E501", # line-too-long
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["anvil_consortium_manager", "example_site"]
+
 [tool.isort]
 profile = "black"
 line_length = 119
