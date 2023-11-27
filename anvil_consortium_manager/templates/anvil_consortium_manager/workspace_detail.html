@@ -69,8 +69,10 @@
 {% endblock after_panel %}
 
 {% block action_buttons %}
-  <p>
+<p>
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
     <a href="{% url 'anvil_consortium_manager:workspaces:audit_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
+  {% endif %}
 
   {% if show_edit_links %}
     <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>

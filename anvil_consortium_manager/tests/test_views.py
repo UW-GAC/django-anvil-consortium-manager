@@ -6534,8 +6534,8 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertEqual(len(response.context_data["authorization_domain_table"].rows), 0)
 
-    def test_edit_permission(self):
-        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+    def test_staff_edit_permission(self):
+        """Links in template when user has staff edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
@@ -6587,9 +6587,19 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:audit_sharing",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
 
-    def test_view_permission(self):
-        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+    def test_staff_view_permission(self):
+        """Links in template when user has staff view permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
@@ -6637,6 +6647,79 @@ class WorkspaceDetailTest(TestCase):
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:audit_sharing",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links in template when user has view permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+        )
+        self.client.force_login(view_user)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:audit_sharing",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
