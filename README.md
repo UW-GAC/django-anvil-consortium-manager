@@ -2,7 +2,6 @@
 
 A Django app to manage Consortium AnVIL groups, workspaces, and access.
 
-[![Built with Cookiecutter Django](https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter-django/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/UW-GAC/django-anvil-consortium-manager/main.svg)](https://results.pre-commit.ci/latest/github/UW-GAC/django-anvil-consortium-manager/main)
 
