@@ -2146,9 +2146,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.child_group.email]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.child_group.email]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -2369,9 +2367,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.child_group.email]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.child_group.email]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
@@ -2512,9 +2508,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url_admins,
             status=200,
-            json=api_factories.GetGroupMembershipAdminResponseFactory(
-                response=[membership.child_group.email]
-            ).response,
+            json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.child_group.email]).response,
         )
         audit_results = audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()

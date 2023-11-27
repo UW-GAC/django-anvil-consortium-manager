@@ -6387,23 +6387,23 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(url)
         self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + url)
 
-    def test_status_code_with_user_permission(self):
+    def test_status_code_with_staff_view_permission(self):
         """Returns successful response code."""
         obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_limited_view_permission(self):
+    def test_access_with_view_permission(self):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
-        request = self.factory.get(self.get_url("foo", "bar"))
-        request.user = user
-        with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -6534,8 +6534,8 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertEqual(len(response.context_data["authorization_domain_table"].rows), 0)
 
-    def test_edit_permission(self):
-        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+    def test_staff_edit_permission(self):
+        """Links in template when user has staff edit permission."""
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
@@ -6587,9 +6587,19 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:audit_sharing",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
 
-    def test_view_permission(self):
-        """Links to reactivate/deactivate/delete pages appear if the user has edit permission."""
+    def test_staff_view_permission(self):
+        """Links in template when user has staff view permission."""
         view_user = User.objects.create_user(username="view", password="test")
         view_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
@@ -6637,6 +6647,79 @@ class WorkspaceDetailTest(TestCase):
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
                     "workspace_type": "workspace",
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:audit_sharing",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+
+    def test_view_permission(self):
+        """Links in template when user has view permission."""
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+        )
+        self.client.force_login(view_user)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:audit_sharing",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
                 },
             ),
         )
@@ -20397,9 +20480,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Returns successful response code."""
         obj = factories.WorkspaceGroupSharingFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name)
-        )
+        response = self.client.get(self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -20446,9 +20527,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a form."""
         obj = factories.WorkspaceGroupSharingFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name)
-        )
+        response = self.client.get(self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name))
         self.assertTrue("form" in response.context_data)
 
     def test_view_with_invalid_pk(self):
@@ -20931,9 +21010,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Returns successful response code."""
         obj = factories.WorkspaceGroupSharingFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name)
-        )
+        response = self.client.get(self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):

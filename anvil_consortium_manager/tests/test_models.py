@@ -382,9 +382,7 @@ class AccountTest(TestCase):
         user_1 = factories.UserFactory.create()
         user_2 = factories.UserFactory.create()
         email_entry = factories.UserEmailEntryFactory.create(user=user_1, date_verified=timezone.now())
-        account = factories.AccountFactory.build(
-            user=user_2, email=email_entry.email, verified_email_entry=email_entry
-        )
+        account = factories.AccountFactory.build(user=user_2, email=email_entry.email, verified_email_entry=email_entry)
         with self.assertRaises(ValidationError) as e:
             account.full_clean()
         self.assertEqual(len(e.exception.error_dict), 1)
