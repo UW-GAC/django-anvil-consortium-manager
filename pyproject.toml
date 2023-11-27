@@ -55,6 +55,14 @@ include = ["anvil_consortium_manager*"]
 [tool.black]
 line-length = 119
 
+[tool.ruff]
+line-length = 120
+exclude = ["**/migrations/*.py"]
+
+[tool.ruff.lint]
+extend-select = [
+    "E501", # line-too-long
+]
 
 [tool.isort]
 profile = "black"
