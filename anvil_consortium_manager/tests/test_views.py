@@ -760,7 +760,7 @@ class BillingProjectDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("workspace_table", response.context_data)
-        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceTable)
+        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceStaffTable)
 
     def test_workspace_table_none(self):
         """No workspaces are shown if the billing project does not have any workspaces."""
@@ -4496,7 +4496,7 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertIsInstance(
             response.context_data["workspace_authorization_domain_table"],
-            tables.WorkspaceTable,
+            tables.WorkspaceStaffTable,
         )
 
     def test_workspace_auth_domain_table_none(self):
@@ -10761,7 +10761,7 @@ class WorkspaceListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -10934,7 +10934,7 @@ class WorkspaceListByTypeTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)

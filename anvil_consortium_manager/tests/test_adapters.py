@@ -13,7 +13,7 @@ from ..adapters.workspace import (
 from ..filters import AccountListFilter, BillingProjectListFilter
 from ..forms import DefaultWorkspaceDataForm, WorkspaceForm
 from ..models import Account, DefaultWorkspaceData
-from ..tables import AccountStaffTable, WorkspaceTable
+from ..tables import AccountStaffTable, WorkspaceStaffTable
 from . import factories
 from .test_app import filters, forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
@@ -145,7 +145,7 @@ class WorkspaceAdapterTest(TestCase):
 
     def test_list_table_class_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
-        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceTable)
+        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceStaffTable)
 
     def test_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""

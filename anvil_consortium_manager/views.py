@@ -155,7 +155,7 @@ class BillingProjectDetail(auth.AnVILConsortiumManagerStaffViewRequired, SingleT
     context_table_name = "workspace_table"
 
     def get_table(self):
-        return tables.WorkspaceTable(self.object.workspace_set.all(), exclude="billing_project")
+        return tables.WorkspaceStaffTable(self.object.workspace_set.all(), exclude="billing_project")
 
     def get_context_data(self, **kwargs):
         """Add show_edit_links to context data."""
@@ -674,7 +674,7 @@ class ManagedGroupDetail(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["workspace_authorization_domain_table"] = tables.WorkspaceTable(
+        context["workspace_authorization_domain_table"] = tables.WorkspaceStaffTable(
             self.object.workspace_set.all(),
             exclude=(
                 "number_groups",
@@ -1470,7 +1470,7 @@ class WorkspaceList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMix
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
-    table_class = tables.WorkspaceTable
+    table_class = tables.WorkspaceStaffTable
     ordering = (
         "billing_project__name",
         "name",

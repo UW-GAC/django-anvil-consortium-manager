@@ -1,7 +1,7 @@
 from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
-from anvil_consortium_manager.tables import WorkspaceTable
+from anvil_consortium_manager.tables import WorkspaceStaffTable
 
 from . import filters, forms, models, tables
 
@@ -49,7 +49,7 @@ class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     name = "Test foreign key workspace"
     type = "test_fk"
     description = "Workspace type for testing"
-    list_table_class = WorkspaceTable
+    list_table_class = WorkspaceStaffTable
     workspace_form_class = WorkspaceForm
     workspace_data_model = models.TestForeignKeyWorkspaceData
     workspace_data_form_class = forms.TestForeignKeyWorkspaceDataForm

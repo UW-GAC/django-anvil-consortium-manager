@@ -144,10 +144,10 @@ class ManagedGroupStaffTableTest(TestCase):
         self.assertEqual(table.rows[0].get_cell("number_accounts"), table.default)
 
 
-class WorkspaceTableTest(TestCase):
+class WorkspaceStaffTableTest(TestCase):
     model = models.Workspace
     model_factory = factories.WorkspaceFactory
-    table_class = tables.WorkspaceTable
+    table_class = tables.WorkspaceStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

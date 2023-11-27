@@ -76,7 +76,7 @@ class ManagedGroupStaffTable(tables.Table):
             return value
 
 
-class WorkspaceTable(tables.Table):
+class WorkspaceStaffTable(tables.Table):
     """Class to display a Workspace table."""
 
     name = tables.Column(linkify=True, verbose_name="Workspace")
