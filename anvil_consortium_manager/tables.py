@@ -41,7 +41,7 @@ class AccountStaffTable(tables.Table):
             return str(record.user)
 
 
-class ManagedGroupTable(tables.Table):
+class ManagedGroupStaffTable(tables.Table):
     """Class to display a Group table."""
 
     name = tables.Column(linkify=True)

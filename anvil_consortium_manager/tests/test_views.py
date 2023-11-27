@@ -5020,7 +5020,7 @@ class ManagedGroupListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.ManagedGroupTable)
+        self.assertIsInstance(response.context_data["table"], tables.ManagedGroupStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -6485,7 +6485,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertIsInstance(
             response.context_data["authorization_domain_table"],
-            tables.ManagedGroupTable,
+            tables.ManagedGroupStaffTable,
         )
 
     def test_auth_domain_table_none(self):

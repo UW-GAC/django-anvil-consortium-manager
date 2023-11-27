@@ -86,10 +86,10 @@ class AccountStaffTableTest(TestCase):
         self.assertIn("test_profile_testuser", table.rows[0].get_cell("user"))
 
 
-class ManagedGroupTableTest(TestCase):
+class ManagedGroupStaffTableTest(TestCase):
     model = models.ManagedGroup
     model_factory = factories.ManagedGroupFactory
-    table_class = tables.ManagedGroupTable
+    table_class = tables.ManagedGroupStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

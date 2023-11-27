@@ -743,7 +743,7 @@ class ManagedGroupUpdate(
 
 class ManagedGroupList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
     model = models.ManagedGroup
-    table_class = tables.ManagedGroupTable
+    table_class = tables.ManagedGroupStaffTable
     ordering = ("name",)
     template_name = "anvil_consortium_manager/managedgroup_list.html"
 
@@ -963,7 +963,7 @@ class WorkspaceDetail(
         context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
             self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )
-        context["authorization_domain_table"] = tables.ManagedGroupTable(
+        context["authorization_domain_table"] = tables.ManagedGroupStaffTable(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
