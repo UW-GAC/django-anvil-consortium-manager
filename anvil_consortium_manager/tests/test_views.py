@@ -6556,6 +6556,17 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        # Billing project link
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:billing_projects:detail",
+                kwargs={
+                    "slug": obj.workspace.billing_project.name,
+                },
+            ),
+        )
+        # Action buttons
         self.assertContains(
             response,
             reverse(
@@ -6619,6 +6630,17 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        # Billing project link
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:billing_projects:detail",
+                kwargs={
+                    "slug": obj.workspace.billing_project.name,
+                },
+            ),
+        )
+        # Action buttons
         self.assertNotContains(
             response,
             reverse(
@@ -6672,6 +6694,17 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertFalse(response.context_data["show_edit_links"])
+        # Billing project link
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:billing_projects:detail",
+                kwargs={
+                    "slug": obj.workspace.billing_project.name,
+                },
+            ),
+        )
+        # Action buttons
         self.assertNotContains(
             response,
             reverse(

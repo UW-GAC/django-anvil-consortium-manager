@@ -21,7 +21,15 @@
 
 {% block panel %}
 <dl class="row">
-  <dt class="col-sm-2">Billing project</dt> <dd class="col-sm-10"><a href="{{ object.billing_project.get_absolute_url }}">{{ object.billing_project }}</a></dd>
+  <dt class="col-sm-2">Billing project</dt> <dd class="col-sm-10">
+    {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
+      <a href="{{ object.billing_project.get_absolute_url }}">
+    {% endif %}
+      {{ object.billing_project }}
+    {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
+    </a>
+    {% endif %}
+  </dd>
   <dt class="col-sm-2">Name</dt> <dd class="col-sm-10">{{ object.name }}</dd>
   <dt class="col-sm-2">Date added</dt> <dd class="col-sm-10">{{ object.created }}</dd>
   <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
