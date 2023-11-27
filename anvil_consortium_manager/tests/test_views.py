@@ -6387,23 +6387,23 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(url)
         self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + url)
 
-    def test_status_code_with_user_permission(self):
+    def test_status_code_with_staff_view_permission(self):
         """Returns successful response code."""
         obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_limited_view_permission(self):
+    def test_access_with_view_permission(self):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
-        request = self.factory.get(self.get_url("foo", "bar"))
-        request.user = user
-        with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""

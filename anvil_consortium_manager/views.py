@@ -922,7 +922,7 @@ class WorkspaceLandingPage(
 
 
 class WorkspaceDetail(
-    auth.AnVILConsortiumManagerStaffViewRequired,
+    auth.AnVILConsortiumManagerViewRequired,
     viewmixins.RegisteredWorkspaceAdaptersMixin,
     viewmixins.WorkspaceAdapterMixin,
     DetailView,
