@@ -63,6 +63,7 @@ exclude = ["**/migrations/*.py"]
 extend-select = [
     "I", # isort
     "W", # pycodestyle warnings
+    "DJ", # flake8-django
     "E501", # line-too-long
 ]
 

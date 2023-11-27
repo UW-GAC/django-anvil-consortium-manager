@@ -17,7 +17,7 @@ from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
 
 
-class AnVILProjectManagerAccess(models.Model):
+class AnVILProjectManagerAccess(models.Model):  # noqa: DJ008
     """A meta model used to define app level permissions"""
 
     STAFF_EDIT_PERMISSION_CODENAME = "anvil_consortium_manager_staff_edit"
@@ -119,6 +119,10 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         """String method."""
         return "{email} for {user}".format(email=self.email, user=self.user)
 
+    def save(self, *args, **kwargs):
+        self.email = self.email.lower()
+        return super().save(*args, **kwargs)
+
     def anvil_account_exists(self):
         """Check if this account exists on AnVIL."""
         try:
@@ -131,10 +135,6 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             else:
                 raise
         return True
-
-    def save(self, *args, **kwargs):
-        self.email = self.email.lower()
-        return super().save(*args, **kwargs)
 
     def send_verification_email(self, domain):
         """Send a verification email to the email on record.

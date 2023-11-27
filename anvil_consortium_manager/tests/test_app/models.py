@@ -10,19 +10,19 @@ class TestWorkspaceData(BaseWorkspaceData):
     study_name = models.CharField(max_length=255, unique=True)
 
 
-class ProtectedManagedGroup(models.Model):
+class ProtectedManagedGroup(models.Model):  # noqa: DJ008
     """Model to test having a protected foreign key to ManagedGroup."""
 
     group = models.ForeignKey(ManagedGroup, on_delete=models.PROTECT)
 
 
-class ProtectedWorkspace(models.Model):
+class ProtectedWorkspace(models.Model):  # noqa: DJ008
     """Model to test having a protected foreign key to Workspace."""
 
     workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT)
 
 
-class ProtectedWorkspaceData(models.Model):
+class ProtectedWorkspaceData(models.Model):  # noqa: DJ008
     """Model to test having a protected foreign key to DefaultWorkspaceData."""
 
     workspace_data = models.ForeignKey(DefaultWorkspaceData, on_delete=models.PROTECT)
