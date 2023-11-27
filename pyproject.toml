@@ -56,13 +56,23 @@ include = ["anvil_consortium_manager*"]
 line-length = 119
 
 [tool.ruff]
+exclude = [
+    ".git",
+    "*/migrations/*",
+    "*/static/CACHE/*",
+    "docs",
+    "node_modules",
+    "venv",
+]
+ignore = []
 line-length = 120
-exclude = ["**/migrations/*.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    "I", # isort
+    "E",
+    "F",
     "W", # pycodestyle warnings
+    "I", # isort
     "DJ", # flake8-django
     "E501", # line-too-long
 ]
