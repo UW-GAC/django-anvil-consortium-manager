@@ -31,7 +31,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
 class TestAccountAdapter(BaseAccountAdapter):
     """Test adapter for accounts."""
 
-    list_table_class = tables.TestAccountTable
+    list_table_class = tables.TestAccountStaffTable
     list_filterset_class = filters.TestAccountListFilter
 
     def get_autocomplete_queryset(self, queryset, q):

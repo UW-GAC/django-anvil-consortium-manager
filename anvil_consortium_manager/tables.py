@@ -21,7 +21,7 @@ class BillingProjectStaffTable(tables.Table):
         fields = ("name", "has_app_as_user")
 
 
-class AccountTable(tables.Table):
+class AccountStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
     email = tables.Column(linkify=True)

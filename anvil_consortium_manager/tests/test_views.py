@@ -2778,7 +2778,7 @@ class AccountListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+        self.assertIsInstance(response.context_data["table"], tables.AccountStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -2896,7 +2896,7 @@ class AccountListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
@@ -2953,7 +2953,7 @@ class AccountActiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+        self.assertIsInstance(response.context_data["table"], tables.AccountStaffTable)
 
     def test_filterset_class(self):
         factories.AccountFactory.create(email="account_test1@example.com")
@@ -3078,7 +3078,7 @@ class AccountActiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
@@ -3135,7 +3135,7 @@ class AccountInactiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+        self.assertIsInstance(response.context_data["table"], tables.AccountStaffTable)
 
     def test_filterset_class(self):
         factories.AccountFactory.create(email="account_test1@example.com")
@@ -3254,7 +3254,7 @@ class AccountInactiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 

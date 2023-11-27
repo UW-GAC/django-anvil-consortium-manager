@@ -37,10 +37,10 @@ class BillingProjectStaffTableTest(TestCase):
         self.assertEqual(table.rows[2].get_cell("number_workspaces"), 2)
 
 
-class AccountTableTest(TestCase):
+class AccountStaffTableTest(TestCase):
     model = models.Account
     model_factory = factories.AccountFactory
-    table_class = tables.AccountTable
+    table_class = tables.AccountStaffTable
 
     def tearDown(self):
         # One of the testes dynamically sets the get_absolute_url method..
