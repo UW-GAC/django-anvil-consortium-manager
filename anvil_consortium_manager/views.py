@@ -11,9 +11,8 @@ from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import CreateView
+from django.views.generic import CreateView, DetailView, FormView, RedirectView, TemplateView, UpdateView
 from django.views.generic import DeleteView as DjangoDeleteView
-from django.views.generic import DetailView, FormView, RedirectView, TemplateView, UpdateView
 from django.views.generic.detail import BaseDetailView, SingleObjectMixin, SingleObjectTemplateResponseMixin
 from django.views.generic.edit import BaseDeleteView as DjangoBaseDeleteView
 from django.views.generic.edit import DeletionMixin, FormMixin
