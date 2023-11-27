@@ -20480,9 +20480,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Returns successful response code."""
         obj = factories.WorkspaceGroupSharingFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name)
-        )
+        response = self.client.get(self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):
@@ -20529,9 +20527,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         """Response includes a form."""
         obj = factories.WorkspaceGroupSharingFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name)
-        )
+        response = self.client.get(self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name))
         self.assertTrue("form" in response.context_data)
 
     def test_view_with_invalid_pk(self):
@@ -21014,9 +21010,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         """Returns successful response code."""
         obj = factories.WorkspaceGroupSharingFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name)
-        )
+        response = self.client.get(self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_view_permission(self):

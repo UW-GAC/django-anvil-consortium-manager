@@ -265,9 +265,7 @@ class WorkspaceCloneForm(Bootstrap5MediaFormMixin, forms.ModelForm):
             extra_text = " You must also include the authorization domain(s) from the original workspace ({}).".format(
                 ", ".join(auth_domain_names)
             )
-            self.fields["authorization_domains"].help_text = (
-                self.fields["authorization_domains"].help_text + extra_text
-            )
+            self.fields["authorization_domains"].help_text = self.fields["authorization_domains"].help_text + extra_text
 
     def clean_authorization_domains(self):
         """Verify that all authorization domains from the original workspace are selected."""

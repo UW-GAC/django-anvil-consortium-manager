@@ -31,6 +31,4 @@ class ProtectedWorkspaceData(models.Model):
 class TestForeignKeyWorkspaceData(BaseWorkspaceData):
     """Custom model with a second fk to Workspace."""
 
-    other_workspace = models.ForeignKey(
-        Workspace, related_name="test_foreign_key_workspaces", on_delete=models.PROTECT
-    )
+    other_workspace = models.ForeignKey(Workspace, related_name="test_foreign_key_workspaces", on_delete=models.PROTECT)

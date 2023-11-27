@@ -46,9 +46,7 @@ class AnVILAPIClient:
         This way, all instances should share the same authorized session.
         """
         if AnVILAPIClient.auth_session is None:
-            credentials = service_account.Credentials.from_service_account_file(
-                settings.ANVIL_API_SERVICE_ACCOUNT_FILE
-            )
+            credentials = service_account.Credentials.from_service_account_file(settings.ANVIL_API_SERVICE_ACCOUNT_FILE)
             scoped_credentials = credentials.with_scopes(
                 [
                     "https://www.googleapis.com/auth/userinfo.profile",
