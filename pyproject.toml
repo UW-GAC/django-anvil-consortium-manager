@@ -62,6 +62,7 @@ exclude = ["**/migrations/*.py"]
 [tool.ruff.lint]
 extend-select = [
     "I", # isort
+    "W", # pycodestyle warnings
     "E501", # line-too-long
 ]
 
