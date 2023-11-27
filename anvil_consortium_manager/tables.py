@@ -5,7 +5,7 @@ from . import models
 from .adapters.workspace import workspace_adapter_registry
 
 
-class BillingProjectTable(tables.Table):
+class BillingProjectStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
     name = tables.Column(linkify=True)

@@ -858,7 +858,7 @@ class BillingProjectListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.BillingProjectTable)
+        self.assertIsInstance(response.context_data["table"], tables.BillingProjectStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)

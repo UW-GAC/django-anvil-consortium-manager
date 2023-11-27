@@ -6,10 +6,10 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from . import factories
 
 
-class BillingProjectTableTest(TestCase):
+class BillingProjectStaffTableTest(TestCase):
     model = models.BillingProject
     model_factory = factories.BillingProjectFactory
-    table_class = tables.BillingProjectTable
+    table_class = tables.BillingProjectStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

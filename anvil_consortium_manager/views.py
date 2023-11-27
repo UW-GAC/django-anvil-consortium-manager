@@ -167,7 +167,7 @@ class BillingProjectDetail(auth.AnVILConsortiumManagerStaffViewRequired, SingleT
 
 class BillingProjectList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
     model = models.BillingProject
-    table_class = tables.BillingProjectTable
+    table_class = tables.BillingProjectStaffTable
     ordering = ("name",)
     template_name = "anvil_consortium_manager/billingproject_list.html"
 
