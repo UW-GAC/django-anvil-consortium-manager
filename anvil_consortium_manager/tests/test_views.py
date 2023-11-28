@@ -6952,6 +6952,35 @@ class WorkspaceDetailTest(TestCase):
         self.assertTrue(response.context["has_access"])
         self.assertContains(response, "You have access to this workspace")
 
+    def test_anvil_link_with_access(self):
+        """Link to AnVIL appears on the page when the user has access."""
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, obj.workspace.get_anvil_url())
+
+    def test_anvil_link_no_access(self):
+        """Link to AnVIL does not appear on the page when the user does not have access."""
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertNotContains(response, "View on AnVIL")
+        self.assertNotContains(response, obj.workspace.get_anvil_url())
+
+    def test_anvil_link_no_access_superuser(self):
+        """Link to AnVIL does appears on the page when the user does not have access but is a superuser."""
+        superuser = User.objects.create_superuser(username="test-superuser", password="test-superuser")
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(superuser)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, obj.workspace.get_anvil_url())
+
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 201
