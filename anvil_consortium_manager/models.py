@@ -691,15 +691,6 @@ class Workspace(TimeStampedModel):
         is_shared = self.workspacegroupsharing_set.filter(models.Q(group=group) | models.Q(group__in=parents)).exists()
         return is_shared
 
-    def has_access(self, group):
-        """Check if a group has access to a workspace.
-
-        Both criteria need to be met for a group to have access to a workspace:
-        1. The workspace must be shared with the group (or a group that it is in).
-        2. The group (or a group that it is in) must be in all auth domains for the workspace.
-        """
-        return self.is_shared(group) and self.is_in_authorization_domain(group)
-
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""
         try:

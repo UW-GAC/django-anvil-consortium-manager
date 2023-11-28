@@ -1684,46 +1684,6 @@ class WorkspaceGroupSharingMethodsTest(TestCase):
         self.assertFalse(self.workspace.is_shared(self.group))
         self.assertFalse(self.group.is_shared(self.workspace))
 
-    def test_has_access_shared_no_auth_domain(self):
-        """Returns True when the group is shared and there is no auth domain."""
-        factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace, group=self.group)
-        self.assertTrue(self.workspace.has_access(self.group))
-        self.assertTrue(self.group.has_access(self.workspace))
-
-    def test_has_access_not_shared_no_auth_domain(self):
-        """Returns False when the group is not shared and there is no auth domain."""
-        self.assertFalse(self.workspace.has_access(self.group))
-        self.assertFalse(self.group.has_access(self.workspace))
-
-    def test_has_access_shared_in_auth_domain(self):
-        """Returns True when the group is shared and in the auth domain."""
-        self.workspace.authorization_domains.add(self.auth_domain)
-        factories.GroupGroupMembershipFactory.create(parent_group=self.auth_domain, child_group=self.group)
-        factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace, group=self.group)
-        self.assertTrue(self.workspace.has_access(self.group))
-        self.assertTrue(self.group.has_access(self.workspace))
-
-    def test_has_access_shared_not_in_auth_domain(self):
-        """Returns False when the group is shared but not in the auth domain."""
-        self.workspace.authorization_domains.add(self.auth_domain)
-        factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace, group=self.group)
-        self.assertFalse(self.workspace.has_access(self.group))
-        self.assertFalse(self.group.has_access(self.workspace))
-
-    def test_has_access_not_shared_in_auth_domain(self):
-        """Returns False when the group is not shared but in the auth domain."""
-        self.workspace.authorization_domains.add(self.auth_domain)
-        factories.GroupGroupMembershipFactory.create(parent_group=self.auth_domain, child_group=self.group)
-        self.assertFalse(self.workspace.has_access(self.group))
-        self.assertFalse(self.group.has_access(self.workspace))
-
-    def test_has_access_not_shared_not_in_auth_domain(self):
-        """Returns False when the group is not shared and not in the auth domain."""
-        self.workspace.authorization_domains.add(self.auth_domain)
-        factories.WorkspaceGroupSharingFactory.create(workspace=self.workspace, group=self.group)
-        self.assertFalse(self.workspace.has_access(self.group))
-        self.assertFalse(self.group.has_access(self.workspace))
-
 
 class WorkspaceDataTest(TestCase):
     """Tests for the WorkspaceData models (default and base)."""
