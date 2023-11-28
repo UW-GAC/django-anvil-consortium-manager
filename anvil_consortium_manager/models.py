@@ -342,6 +342,11 @@ class Account(TimeStampedModel, ActivatorModel):
                 groups.add(group)
         return groups
 
+    def has_workspace_access(self, workspace):
+        """Return a boolean indicator of whether the workspace can be accessed by this Account."""
+        accessible_workspaces = self.get_accessible_workspaces()
+        return workspace in accessible_workspaces
+
 
 class ManagedGroup(TimeStampedModel):
     """A model to store information about AnVIL Managed Groups."""
