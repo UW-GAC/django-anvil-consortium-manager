@@ -220,7 +220,7 @@ class AccountDetail(
             group__in=self.object.get_all_groups(),
         ).order_by("workspace", "group")
 
-        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingTable(workspace_sharing)
+        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingStaffTable(workspace_sharing)
         return context
 
 
@@ -682,7 +682,7 @@ class ManagedGroupDetail(
                 "billing_project",
             ),
         )
-        context["workspace_table"] = tables.WorkspaceGroupSharingTable(
+        context["workspace_table"] = tables.WorkspaceGroupSharingStaffTable(
             self.object.workspacegroupsharing_set.all(), exclude="group"
         )
         context["active_account_table"] = tables.GroupAccountMembershipStaffTable(
@@ -960,7 +960,7 @@ class WorkspaceDetail(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["workspace_data_object"] = self.get_workspace_data_object()
-        context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
+        context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
             self.object.workspacegroupsharing_set.all(), exclude="workspace"
         )
         context["authorization_domain_table"] = tables.ManagedGroupStaffTable(
@@ -2598,7 +2598,7 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
 
 class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     model = models.WorkspaceGroupSharing
-    table_class = tables.WorkspaceGroupSharingTable
+    table_class = tables.WorkspaceGroupSharingStaffTable
 
 
 class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):

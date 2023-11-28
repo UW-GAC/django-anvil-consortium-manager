@@ -242,10 +242,10 @@ class GroupAccountMembershipStaffTableTest(TestCase):
         self.assertEqual(len(table.rows), 1)
 
 
-class WorkspaceGroupSharingTable(TestCase):
+class WorkspaceGroupSharingStaffTable(TestCase):
     model = models.WorkspaceGroupSharing
     model_factory = factories.WorkspaceGroupSharingFactory
-    table_class = tables.WorkspaceGroupSharingTable
+    table_class = tables.WorkspaceGroupSharingStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

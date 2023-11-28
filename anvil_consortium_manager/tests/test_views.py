@@ -1384,7 +1384,7 @@ class AccountDetailTest(TestCase):
         self.assertIn("accessible_workspace_table", response.context_data)
         self.assertIsInstance(
             response.context_data["accessible_workspace_table"],
-            tables.WorkspaceGroupSharingTable,
+            tables.WorkspaceGroupSharingStaffTable,
         )
 
     def test_accessible_workspace_none(self):
@@ -4343,7 +4343,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("workspace_table", response.context_data)
-        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceGroupSharingTable)
+        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceGroupSharingStaffTable)
 
     def test_workspace_table_none(self):
         """No workspaces are shown if the group does not have access to any workspaces."""
@@ -6438,7 +6438,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("group_sharing_table", response.context_data)
         self.assertIsInstance(
             response.context_data["group_sharing_table"],
-            tables.WorkspaceGroupSharingTable,
+            tables.WorkspaceGroupSharingStaffTable,
         )
 
     def test_group_sharing_table_none(self):
@@ -20968,7 +20968,7 @@ class WorkspaceGroupSharingListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.WorkspaceGroupSharingTable)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceGroupSharingStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)

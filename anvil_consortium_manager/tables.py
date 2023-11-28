@@ -140,7 +140,7 @@ class GroupAccountMembershipStaffTable(tables.Table):
         return "See details"
 
 
-class WorkspaceGroupSharingTable(tables.Table):
+class WorkspaceGroupSharingStaffTable(tables.Table):
     """Class to render a WorkspaceGroupSharing table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
