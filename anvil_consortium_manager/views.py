@@ -960,15 +960,19 @@ class WorkspaceDetail(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["workspace_data_object"] = self.get_workspace_data_object()
-        context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
-            self.object.workspacegroupsharing_set.all(), exclude="workspace"
-        )
         context["authorization_domain_table"] = tables.ManagedGroupStaffTable(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
         edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
-        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
+        has_edit_perms = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
+        context["show_edit_links"] = has_edit_perms
+        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
+        has_staff_view_perms = self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename)
+        if has_staff_view_perms:
+            context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
+                self.object.workspacegroupsharing_set.all(), exclude="workspace"
+            )
         return context
 
     def get_template_names(self):

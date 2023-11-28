@@ -53,6 +53,8 @@
       </div>
     </div>
   </div>
+
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
   <div class="my-3">
     <div class="accordion" id="accordionGroups">
       <div class="accordion-item">
@@ -74,6 +76,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
 {% endblock after_panel %}
 
 {% block action_buttons %}

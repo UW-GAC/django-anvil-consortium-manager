@@ -6467,6 +6467,18 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("group_sharing_table", response.context_data)
         self.assertEqual(len(response.context_data["group_sharing_table"].rows), 2)
 
+    def test_group_sharing_table_view_permission(self):
+        """Workspace-group sharing table is not present in context when user has view permission only."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertNotIn("group_sharing_table", response.context_data)
+        self.assertNotContains(response, "View groups that this workspace is shared with")
+
     def test_shows_workspace_group_sharing_for_only_that_workspace(self):
         """Only shows groups that this workspace has been shared with."""
         workspace = factories.DefaultWorkspaceDataFactory.create(workspace__name="workspace-1")
