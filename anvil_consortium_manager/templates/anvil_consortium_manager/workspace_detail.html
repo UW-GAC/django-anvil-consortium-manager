@@ -5,16 +5,6 @@
 
 {% block title %}{{ workspace_type_display_name }}: {{ object }}{% endblock %}
 
-
-{% block after_title %}
-  {% if has_access or user.is_superuser %}
-  <a class="btn btn-light" href="{{ object.get_anvil_url }}" target="_blank" role="button">
-    <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
-    View on AnVIL
-  </a>
-  {% endif %}
-{% endblock after_title %}
-
 {% block pills %}
   {% if object.is_locked %}
   <span class="badge bg-danger"><span class="fa-solid fa-lock me-2"></span>Locked</span>
@@ -33,6 +23,13 @@
       No access to workspace
     {% endif %}
   </span>
+
+  {% if has_access or user.is_superuser %}
+  <a class="badge bg-light text-dark btn btn-light" href="{{ object.get_anvil_url }}" target="_blank" role="button">
+    <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
+    View on AnVIL
+  </a>
+  {% endif %}
 
 {% endblock pills %}
 
