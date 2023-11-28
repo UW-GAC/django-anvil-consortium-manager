@@ -195,10 +195,10 @@ class WorkspaceStaffTableTest(TestCase):
         # self.assertEqual(table.rows[2].get_cell("number_groups"), 2)
 
 
-class GroupGroupMembershipTableTest(TestCase):
+class GroupGroupMembershipStaffTableTest(TestCase):
     model = models.GroupGroupMembership
     model_factory = factories.GroupGroupMembershipFactory
-    table_class = tables.GroupGroupMembershipTable
+    table_class = tables.GroupGroupMembershipStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
@@ -215,10 +215,10 @@ class GroupGroupMembershipTableTest(TestCase):
         self.assertEqual(len(table.rows), 2)
 
 
-class GroupAccountMembershipTableTest(TestCase):
+class GroupAccountMembershipStaffTableTest(TestCase):
     model = models.GroupAccountMembership
     model_factory = factories.GroupAccountMembershipFactory
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())

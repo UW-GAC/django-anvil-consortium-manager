@@ -210,7 +210,7 @@ class AccountDetail(
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
 
-        context["group_table"] = tables.GroupAccountMembershipTable(
+        context["group_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
         )
@@ -482,7 +482,7 @@ class AccountDeactivate(
     success_message = "Successfully deactivated Account in app."
 
     def get_table(self):
-        return tables.GroupAccountMembershipTable(
+        return tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
         )
@@ -548,7 +548,7 @@ class AccountReactivate(
         # exceptions.AnVILRemoveAccountFromGroupError
 
     def get_table(self):
-        return tables.GroupAccountMembershipTable(
+        return tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
         )
@@ -685,18 +685,18 @@ class ManagedGroupDetail(
         context["workspace_table"] = tables.WorkspaceGroupSharingTable(
             self.object.workspacegroupsharing_set.all(), exclude="group"
         )
-        context["active_account_table"] = tables.GroupAccountMembershipTable(
+        context["active_account_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.filter(account__status=models.Account.ACTIVE_STATUS),
             exclude="group",
         )
-        context["inactive_account_table"] = tables.GroupAccountMembershipTable(
+        context["inactive_account_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.filter(account__status=models.Account.INACTIVE_STATUS),
             exclude="group",
         )
-        context["group_table"] = tables.GroupGroupMembershipTable(
+        context["group_table"] = tables.GroupGroupMembershipStaffTable(
             self.object.child_memberships.all(), exclude="parent_group"
         )
-        context["parent_table"] = tables.GroupGroupMembershipTable(
+        context["parent_table"] = tables.GroupGroupMembershipStaffTable(
             self.object.parent_memberships.all(), exclude="child_group"
         )
         edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
@@ -1909,7 +1909,7 @@ class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
 
 class GroupGroupMembershipList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     model = models.GroupGroupMembership
-    table_class = tables.GroupGroupMembershipTable
+    table_class = tables.GroupGroupMembershipStaffTable
 
 
 class GroupGroupMembershipDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
@@ -2209,14 +2209,14 @@ class GroupAccountMembershipList(auth.AnVILConsortiumManagerStaffViewRequired, S
     """Show a list of all group memberships regardless of account active/inactive status."""
 
     model = models.GroupAccountMembership
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
 
 
 class GroupAccountMembershipActiveList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     """Show a list of all group memberships for active accounts."""
 
     model = models.GroupAccountMembership
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
     ordering = (
         "group__name",
         "account__email",
@@ -2230,7 +2230,7 @@ class GroupAccountMembershipInactiveList(auth.AnVILConsortiumManagerStaffViewReq
     """Show a list of all group memberships for inactive accounts."""
 
     model = models.GroupAccountMembership
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
     ordering = (
         "group__name",
         "account__email",

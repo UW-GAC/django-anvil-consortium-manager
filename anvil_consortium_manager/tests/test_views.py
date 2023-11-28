@@ -1299,7 +1299,7 @@ class AccountDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.uuid))
         self.assertIn("group_table", response.context_data)
-        self.assertIsInstance(response.context_data["group_table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["group_table"], tables.GroupAccountMembershipStaffTable)
 
     def test_group_account_membership_none(self):
         """No groups are shown if the account is not part of any groups."""
@@ -4389,7 +4389,7 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("active_account_table", response.context_data)
         self.assertIsInstance(
             response.context_data["active_account_table"],
-            tables.GroupAccountMembershipTable,
+            tables.GroupAccountMembershipStaffTable,
         )
 
     def test_active_account_table_none(self):
@@ -4434,7 +4434,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("group_table", response.context_data)
-        self.assertIsInstance(response.context_data["group_table"], tables.GroupGroupMembershipTable)
+        self.assertIsInstance(response.context_data["group_table"], tables.GroupGroupMembershipStaffTable)
 
     def test_group_table_none(self):
         """No groups are shown if the group has no member groups."""
@@ -4552,7 +4552,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("parent_table", response.context_data)
-        self.assertIsInstance(response.context_data["parent_table"], tables.GroupGroupMembershipTable)
+        self.assertIsInstance(response.context_data["parent_table"], tables.GroupGroupMembershipStaffTable)
 
     def test_parent_table_none(self):
         """No groups are shown if the group is not a part of any other groups."""
@@ -14417,7 +14417,7 @@ class GroupGroupMembershipListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupGroupMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupGroupMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -16974,7 +16974,7 @@ class GroupAccountMembershipListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -17042,7 +17042,7 @@ class GroupAccountMembershipActiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -17130,7 +17130,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)

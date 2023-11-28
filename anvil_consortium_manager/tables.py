@@ -104,7 +104,7 @@ class WorkspaceStaffTable(tables.Table):
         return self.registered_names[record.workspace_type]
 
 
-class GroupGroupMembershipTable(tables.Table):
+class GroupGroupMembershipStaffTable(tables.Table):
     """Class to render a GroupGroupMembership table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
@@ -121,7 +121,7 @@ class GroupGroupMembershipTable(tables.Table):
         return "See details"
 
 
-class GroupAccountMembershipTable(tables.Table):
+class GroupAccountMembershipStaffTable(tables.Table):
     """Class to render a GroupAccountMembership table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
