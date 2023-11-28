@@ -18,7 +18,12 @@
   <span class="badge bg-danger"><span class="fa-solid fa-lock me-2"></span>Locked</span>
   {% endif %}
 
-  <span class="badge bg-{% if has_access %}success{% else %}danger{% endif %}">
+  <span
+    class="badge bg-{% if has_access %}success{% else %}danger{% endif %}"
+    data-bs-toggle="tooltip"
+    data-bs-placement="bottom"
+    data-bs-title="To have access to a workspace, you must be in all of the authorization doains for the workspace and the workspace must be shared with you."
+    >
     <span class="me-2 fa-solid fa-{% if has_access %}lock-open{% else %}lock{% endif %}"></span>
     {% if has_access %}
       You have access to this workspace
