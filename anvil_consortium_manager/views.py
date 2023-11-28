@@ -973,6 +973,9 @@ class WorkspaceDetail(
             context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
                 self.object.workspacegroupsharing_set.all(), exclude="workspace"
             )
+        context["has_access"] = hasattr(
+            self.request.user, "account"
+        ) and self.request.user.account.has_workspace_access(self.object)
         return context
 
     def get_template_names(self):

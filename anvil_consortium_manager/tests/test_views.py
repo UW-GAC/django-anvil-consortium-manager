@@ -6910,6 +6910,35 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
 
+    def test_access_badge_no_linked_account(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertFalse(response.context["has_access"])
+        self.assertContains(response, "No access to workspace")
+
+    def test_access_badge_no_access(self):
+        factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertFalse(response.context["has_access"])
+        self.assertContains(response, "No access to workspace")
+
+    def test_access_badge_access(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertTrue(response.context["has_access"])
+        self.assertContains(response, "You have access to this workspace")
+
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 201

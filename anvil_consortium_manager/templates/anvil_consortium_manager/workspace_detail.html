@@ -17,6 +17,11 @@
   {% if object.is_locked %}
   <span class="badge bg-danger"><span class="fa-solid fa-lock me-2"></span>Locked</span>
   {% endif %}
+  {% if has_access %}
+  <span class="badge bg-success"><span class="fa-solid fa-lock-open me-2"></span>You have access to this workspace</span>
+  {% else %}
+  <span class="badge bg-danger"><span class="fa-solid fa-lock me-2"></span>No access to workspace</span>
+  {% endif %}
 {% endblock pills %}
 
 {% block panel %}
