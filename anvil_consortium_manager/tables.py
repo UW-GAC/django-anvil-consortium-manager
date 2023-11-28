@@ -76,6 +76,16 @@ class ManagedGroupStaffTable(tables.Table):
             return value
 
 
+class ManagedGroupUserTable(tables.Table):
+    """Class to display a Group table for users with view permission."""
+
+    name = tables.Column()
+
+    class Meta:
+        model = models.ManagedGroup
+        fields = ("name",)
+
+
 class WorkspaceStaffTable(tables.Table):
     """Class to display a Workspace table."""
 

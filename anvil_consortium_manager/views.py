@@ -958,24 +958,29 @@ class WorkspaceDetail(
         return model.objects.get(workspace=self.object)
 
     def get_context_data(self, **kwargs):
+        # Get info about permissions.
+        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
+        has_staff_view_perms = self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename)
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
+        has_edit_perms = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
+        # Get the default context data.
         context = super().get_context_data(**kwargs)
+        # Add custom variables for this view.
         context["workspace_data_object"] = self.get_workspace_data_object()
-        context["authorization_domain_table"] = tables.ManagedGroupStaffTable(
+        context["show_edit_links"] = has_edit_perms
+        context["has_access"] = hasattr(
+            self.request.user, "account"
+        ) and self.request.user.account.has_workspace_access(self.object)
+        # Tables.
+        table_class = tables.ManagedGroupStaffTable if has_staff_view_perms else tables.ManagedGroupUserTable
+        context["authorization_domain_table"] = table_class(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
-        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
-        has_edit_perms = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
-        context["show_edit_links"] = has_edit_perms
-        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
-        has_staff_view_perms = self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename)
         if has_staff_view_perms:
             context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
                 self.object.workspacegroupsharing_set.all(), exclude="workspace"
             )
-        context["has_access"] = hasattr(
-            self.request.user, "account"
-        ) and self.request.user.account.has_workspace_access(self.object)
         return context
 
     def get_template_names(self):

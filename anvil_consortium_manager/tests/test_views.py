@@ -6535,6 +6535,19 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn(group_1, table.data)
         self.assertIn(group_2, table.data)
 
+    def test_auth_domain_table_view_permission(self):
+        """Auth domain table has correct class when user has view permission only."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace.workspace)
+        self.client.force_login(user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertIn("authorization_domain_table", response.context_data)
+        self.assertIsInstance(response.context_data["authorization_domain_table"], tables.ManagedGroupUserTable)
+
     def test_shows_auth_domains_for_only_that_workspace(self):
         """Only shows auth domains for this workspace."""
         workspace = factories.DefaultWorkspaceDataFactory.create(workspace__name="workspace-1")
