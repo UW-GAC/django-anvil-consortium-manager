@@ -10827,22 +10827,21 @@ class WorkspaceListTest(TestCase):
             resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(),
         )
 
-    def test_status_code_with_user_permission(self):
+    def test_status_code_with_staff_view_permission(self):
         """Returns successful response code."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_limited_view_permission(self):
-        """Raises permission denied if user has limited view permission."""
+    def test_access_with_view_permission(self):
+        """Returns successful response code if user has view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
         user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
-        request = self.factory.get(self.get_url())
-        request.user = user
-        with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+        self.client.force_login(user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -10858,11 +10857,23 @@ class WorkspaceListTest(TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_view_has_correct_table_class(self):
+    def test_view_has_correct_table_class_staff_view(self):
+        """Context has correct table class when user has staff view permission."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.WorkspaceStaffTable)
+
+    def test_view_has_correct_table_class_view(self):
+        """Context has correct table class when user has view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        self.client.force_login(user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceUserTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
