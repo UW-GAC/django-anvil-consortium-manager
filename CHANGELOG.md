@@ -4,6 +4,8 @@
 
 * Add docs dependencies to hatch via pyproject.toml.
 * Add requests as a direct dependency instead of as an extra to google-auth.
+* Rename existing tables to include "Staff" in the name, in preparation for adding tables that are viewable by non-staff users.
+* Modify the WorkspaceDetail view to be viewable by users with anvil_consortium_manager_view permission. A limited set of information is shown to users with this permission compared to those with anvil_consortium_manager_staff_view permission.
 
 ## 0.20.1 (2023-11-09)
 
