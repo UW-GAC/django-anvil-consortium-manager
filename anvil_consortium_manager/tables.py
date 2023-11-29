@@ -86,27 +86,6 @@ class ManagedGroupUserTable(tables.Table):
         fields = ("name",)
 
 
-class WorkspaceUserTable(tables.Table):
-    """Class to display a Workspace table."""
-
-    name = tables.Column(linkify=True, verbose_name="Workspace")
-    billing_project = tables.Column()
-    workspace_type = tables.Column()
-
-    class Meta:
-        model = models.Workspace
-        fields = ("name", "billing_project", "workspace_type")
-        order_by = ("name",)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.registered_names = workspace_adapter_registry.get_registered_names()
-
-    def render_workspace_type(self, record):
-        """Show the name of the workspace specified in the adapter for this workspace type."""
-        return self.registered_names[record.workspace_type]
-
-
 class WorkspaceStaffTable(tables.Table):
     """Class to display a Workspace table."""
 
