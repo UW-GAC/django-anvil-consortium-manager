@@ -135,7 +135,7 @@ class WorkspaceAdapterTest(TestCase):
             name = "Test"
             type = "test"
             description = "test desc"
-            list_table_class = tables.TestWorkspaceDataTable
+            staff_list_table_class = tables.TestWorkspaceDataTable
             workspace_form_class = forms.WorkspaceForm
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -143,22 +143,22 @@ class WorkspaceAdapterTest(TestCase):
 
         return TestAdapter
 
-    def test_list_table_class_default(self):
+    def test_staff_list_table_class_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
-        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceStaffTable)
+        self.assertEqual(DefaultWorkspaceAdapter().get_staff_list_table_class(), WorkspaceStaffTable)
 
-    def test_list_table_class_custom(self):
+    def test_staff_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", tables.TestWorkspaceDataTable)
-        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestWorkspaceDataTable)
+        setattr(TestAdapter, "staff_list_table_class", tables.TestWorkspaceDataTable)
+        self.assertEqual(TestAdapter().get_staff_list_table_class(), tables.TestWorkspaceDataTable)
 
-    def test_list_table_class_none(self):
+    def test_staff_list_table_class_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", None)
+        setattr(TestAdapter, "staff_list_table_class", None)
         with self.assertRaises(ImproperlyConfigured):
-            TestAdapter().get_list_table_class()
+            TestAdapter().get_staff_list_table_class()
 
     def test_get_workspace_form_class_default(self):
         """get_workspace_form_class returns the correct form when using the default adapter."""
@@ -366,7 +366,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter1"
             description = "one"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -376,7 +376,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter2"
             description = "two"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -398,7 +398,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -419,7 +419,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -429,7 +429,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -467,7 +467,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -485,7 +485,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -495,7 +495,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -531,7 +531,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -549,7 +549,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter1"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -559,7 +559,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = None
             type = "adapter2"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -585,7 +585,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = "Adapter"
             type = "adapter"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -603,7 +603,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = "Adapter 1"
             type = "adapter1"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
@@ -613,7 +613,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = "Adapter 2"
             type = "adapter2"
             description = "desc"
-            list_table_class = None
+            staff_list_table_class = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None

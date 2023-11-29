@@ -12,7 +12,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     name = "Test workspace"
     type = "test"
     description = "Workspace type for testing"
-    list_table_class = tables.TestWorkspaceDataTable
+    staff_list_table_class = tables.TestWorkspaceDataTable
     workspace_form_class = forms.TestWorkspaceForm
     workspace_data_model = models.TestWorkspaceData
     workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -49,7 +49,7 @@ class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     name = "Test foreign key workspace"
     type = "test_fk"
     description = "Workspace type for testing"
-    list_table_class = WorkspaceStaffTable
+    staff_list_table_class = WorkspaceStaffTable
     workspace_form_class = WorkspaceForm
     workspace_data_model = models.TestForeignKeyWorkspaceData
     workspace_data_form_class = forms.TestForeignKeyWorkspaceDataForm

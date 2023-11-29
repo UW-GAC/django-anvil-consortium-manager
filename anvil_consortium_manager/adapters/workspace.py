@@ -33,8 +33,8 @@ class BaseWorkspaceAdapter(ABC):
         ...
 
     @abstractproperty
-    def list_table_class(self):
-        """Table class to use in a list of workspaces."""
+    def staff_list_table_class(self):
+        """Table class to use in a list of workspaces for staff."""
         ...
 
     @abstractproperty
@@ -75,11 +75,11 @@ class BaseWorkspaceAdapter(ABC):
             raise ImproperlyConfigured("Set `description`.")
         return self.description
 
-    def get_list_table_class(self):
-        """Return the table class to use for the WorkspaceListByType view."""
-        if not self.list_table_class:
-            raise ImproperlyConfigured("Set `list_table_class` in `{}`.".format(type(self)))
-        return self.list_table_class
+    def get_staff_list_table_class(self):
+        """Return the table class to use for the WorkspaceListByType view for staff."""
+        if not self.staff_list_table_class:
+            raise ImproperlyConfigured("Set `staff_list_table_class` in `{}`.".format(type(self)))
+        return self.staff_list_table_class
 
     def get_workspace_form_class(self):
         """Return the form used to create a `Workspace`."""

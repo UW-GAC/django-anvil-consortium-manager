@@ -1523,7 +1523,7 @@ class WorkspaceListByType(
 
     def get_table_class(self):
         """Use the adapter to get the table class."""
-        table_class = self.adapter.get_list_table_class()
+        table_class = self.adapter.get_staff_list_table_class()
         return table_class
 
 
