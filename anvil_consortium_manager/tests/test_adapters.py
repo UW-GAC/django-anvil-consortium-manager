@@ -13,7 +13,7 @@ from ..adapters.workspace import (
 from ..filters import AccountListFilter, BillingProjectListFilter
 from ..forms import DefaultWorkspaceDataForm, WorkspaceForm
 from ..models import Account, DefaultWorkspaceData
-from ..tables import AccountStaffTable, WorkspaceStaffTable
+from ..tables import AccountStaffTable, WorkspaceStaffTable, WorkspaceUserTable
 from . import factories
 from .test_app import filters, forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
@@ -135,7 +135,8 @@ class WorkspaceAdapterTest(TestCase):
             name = "Test"
             type = "test"
             description = "test desc"
-            list_table_class = tables.TestWorkspaceDataTable
+            list_table_class_staff_view = tables.TestWorkspaceDataStaffTable
+            list_table_class_view = tables.TestWorkspaceDataUserTable
             workspace_form_class = forms.WorkspaceForm
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -143,22 +144,39 @@ class WorkspaceAdapterTest(TestCase):
 
         return TestAdapter
 
-    def test_list_table_class_default(self):
+    def test_list_table_class_staff_view_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
-        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceStaffTable)
+        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class_staff_view(), WorkspaceStaffTable)
 
-    def test_list_table_class_custom(self):
+    def test_list_table_class_staff_view_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", tables.TestWorkspaceDataTable)
-        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestWorkspaceDataTable)
+        setattr(TestAdapter, "list_table_class_staff_view", tables.TestWorkspaceDataStaffTable)
+        self.assertEqual(TestAdapter().get_list_table_class_staff_view(), tables.TestWorkspaceDataStaffTable)
 
-    def test_list_table_class_none(self):
+    def test_list_table_class_staff_view_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", None)
+        setattr(TestAdapter, "list_table_class_staff_view", None)
         with self.assertRaises(ImproperlyConfigured):
-            TestAdapter().get_list_table_class()
+            TestAdapter().get_list_table_class_staff_view()
+
+    def test_list_table_class_view_default(self):
+        """get_list_table_class returns the correct table when using the default adapter."""
+        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class_view(), WorkspaceUserTable)
+
+    def test_list_table_class_view_custom(self):
+        """get_list_table_class returns the correct table when using a custom adapter."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_view", tables.TestWorkspaceDataUserTable)
+        self.assertEqual(TestAdapter().get_list_table_class_view(), tables.TestWorkspaceDataUserTable)
+
+    def test_list_table_class_view_none(self):
+        """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_view", None)
+        with self.assertRaises(ImproperlyConfigured):
+            TestAdapter().get_list_table_class_view()
 
     def test_get_workspace_form_class_default(self):
         """get_workspace_form_class returns the correct form when using the default adapter."""
@@ -350,6 +368,22 @@ class WorkspaceAdapterTest(TestCase):
 class WorkspaceAdapterRegistryTest(TestCase):
     """Tests for the WorkspaceAdapterRegstry model."""
 
+    def get_test_adapter(self):
+        """Return a test adapter class for use in tests."""
+
+        class Adapter(BaseWorkspaceAdapter):
+            name = "Test"
+            type = "test"
+            description = "test desc"
+            list_table_class_staff_view = tables.TestWorkspaceDataStaffTable
+            list_table_class_view = tables.TestWorkspaceDataUserTable
+            workspace_form_class = forms.WorkspaceForm
+            workspace_data_model = models.TestWorkspaceData
+            workspace_data_form_class = forms.TestWorkspaceDataForm
+            workspace_detail_template_name = "custom/workspace_detail.html"
+
+        return Adapter
+
     def test_can_register_adapter(self):
         """Can register an adapter."""
         registry = WorkspaceAdapterRegistry()
@@ -361,26 +395,15 @@ class WorkspaceAdapterRegistryTest(TestCase):
     def test_register_two_adapters(self):
         """Cannot register an adapter with the same type as another registered adapter."""
         registry = WorkspaceAdapterRegistry()
+        AdapterSuperclass = self.get_test_adapter()
 
-        class Adapter1(BaseWorkspaceAdapter):
-            name = None
+        class Adapter1(AdapterSuperclass):
             type = "adapter1"
             description = "one"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
-        class Adapter2(BaseWorkspaceAdapter):
-            name = None
+        class Adapter2(AdapterSuperclass):
             type = "adapter2"
             description = "two"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
         registry.register(Adapter1)
         registry.register(Adapter2)
@@ -393,16 +416,11 @@ class WorkspaceAdapterRegistryTest(TestCase):
     def test_cannot_register_adapter_twice(self):
         """Cannot register the same adapter twice."""
         registry = WorkspaceAdapterRegistry()
+        AdapterSuperclass = self.get_test_adapter()
 
-        class TestAdapter(BaseWorkspaceAdapter):
-            name = None
+        class TestAdapter(AdapterSuperclass):
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
         registry.register(TestAdapter)
         with self.assertRaises(AdapterAlreadyRegisteredError):
@@ -415,25 +433,15 @@ class WorkspaceAdapterRegistryTest(TestCase):
         """Cannot register an adapter with the same type as another registered adapter."""
         registry = WorkspaceAdapterRegistry()
 
-        class Adapter1(BaseWorkspaceAdapter):
-            name = None
-            type = "adapter_type"
-            description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
+        AdapterSuperclass = self.get_test_adapter()
 
-        class Adapter2(BaseWorkspaceAdapter):
-            name = None
+        class Adapter1(AdapterSuperclass):
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
+
+        class Adapter2(AdapterSuperclass):
+            type = "adapter_type"
+            description = "desc"
 
         registry.register(Adapter1)
         with self.assertRaises(AdapterAlreadyRegisteredError):
@@ -463,15 +471,11 @@ class WorkspaceAdapterRegistryTest(TestCase):
         """Cannot unregister an adapter that has not been registered yet."""
         registry = WorkspaceAdapterRegistry()
 
-        class TestAdapter(BaseWorkspaceAdapter):
-            name = None
+        AdapterSuperclass = self.get_test_adapter()
+
+        class TestAdapter(AdapterSuperclass):
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
         with self.assertRaises(AdapterNotRegisteredError):
             registry.unregister(TestAdapter)
@@ -481,25 +485,15 @@ class WorkspaceAdapterRegistryTest(TestCase):
         """Cannot unregister an adapter with the same type as another registered adapter."""
         registry = WorkspaceAdapterRegistry()
 
-        class Adapter1(BaseWorkspaceAdapter):
-            name = None
-            type = "adapter_type"
-            description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
+        AdapterSuperclass = self.get_test_adapter()
 
-        class Adapter2(BaseWorkspaceAdapter):
-            name = None
+        class Adapter1(AdapterSuperclass):
             type = "adapter_type"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
+
+        class Adapter2(AdapterSuperclass):
+            type = "adapter_type"
+            description = "desc"
 
         registry.register(Adapter1)
         with self.assertRaises(AdapterNotRegisteredError):
@@ -527,49 +521,34 @@ class WorkspaceAdapterRegistryTest(TestCase):
         """get_registered_adapters returns the correct dictionary when one adapter is registered."""
         registry = WorkspaceAdapterRegistry()
 
-        class Adapter(BaseWorkspaceAdapter):
-            name = None
+        AdapterSuperclass = self.get_test_adapter()
+
+        class TestAdapter(AdapterSuperclass):
             type = "adapter"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
-        registry.register(Adapter)
-        self.assertEqual(registry.get_registered_adapters(), {"adapter": Adapter})
+        registry.register(TestAdapter)
+        self.assertEqual(registry.get_registered_adapters(), {"adapter": TestAdapter})
 
     def test_get_registered_apdaters_two(self):
         """get_registered_adapters returns the correct dictionary when two adapters are registered."""
 
         registry = WorkspaceAdapterRegistry()
+        AdapterSuperclass = self.get_test_adapter()
 
-        class Adapter1(BaseWorkspaceAdapter):
-            name = None
+        class TestAdapter1(AdapterSuperclass):
             type = "adapter1"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
-        class Adapter2(BaseWorkspaceAdapter):
-            name = None
+        class TestAdapter2(AdapterSuperclass):
             type = "adapter2"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
-        registry.register(Adapter1)
-        registry.register(Adapter2)
+        registry.register(TestAdapter1)
+        registry.register(TestAdapter2)
         self.assertEqual(
             registry.get_registered_adapters(),
-            {"adapter1": Adapter1, "adapter2": Adapter2},
+            {"adapter1": TestAdapter1, "adapter2": TestAdapter2},
         )
 
     def test_get_registered_names_zero(self):
@@ -580,47 +559,39 @@ class WorkspaceAdapterRegistryTest(TestCase):
     def test_get_registered_names_one(self):
         """get_registered_names returns the correct dictionary when one adapter is registered."""
         registry = WorkspaceAdapterRegistry()
+        AdapterSuperclass = self.get_test_adapter()
 
-        class Adapter(BaseWorkspaceAdapter):
+        class TestAdapter(AdapterSuperclass):
             name = "Adapter"
             type = "adapter"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
-        registry.register(Adapter)
+        registry.register(TestAdapter)
         self.assertEqual(registry.get_registered_names(), {"adapter": "Adapter"})
 
     def test_get_registered_names_two(self):
         """get_registered_names returns the correct dictionary when two adapters are registered."""
 
         registry = WorkspaceAdapterRegistry()
+        AdapterSuperclass = self.get_test_adapter()
 
-        class Adapter1(BaseWorkspaceAdapter):
+        class TestAdapter1(AdapterSuperclass):
             name = "Adapter 1"
             type = "adapter1"
             description = "desc"
-            list_table_class = None
+            list_table_class_staff_view = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
             workspace_detail_template_name = None
 
-        class Adapter2(BaseWorkspaceAdapter):
+        class TestAdapter2(AdapterSuperclass):
             name = "Adapter 2"
             type = "adapter2"
             description = "desc"
-            list_table_class = None
-            workspace_form_class = None
-            workspace_data_model = None
-            workspace_data_form_class = None
-            workspace_detail_template_name = None
 
-        registry.register(Adapter1)
-        registry.register(Adapter2)
+        registry.register(TestAdapter1)
+        registry.register(TestAdapter2)
         self.assertEqual(
             registry.get_registered_names(),
             {"adapter1": "Adapter 1", "adapter2": "Adapter 2"},

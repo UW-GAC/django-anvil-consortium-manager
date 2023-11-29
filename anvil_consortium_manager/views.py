@@ -907,7 +907,7 @@ class ManagedGroupMembershipAudit(
 
 
 class WorkspaceLandingPage(
-    auth.AnVILConsortiumManagerStaffViewRequired,
+    auth.AnVILConsortiumManagerViewRequired,
     viewmixins.RegisteredWorkspaceAdaptersMixin,
     TemplateView,
 ):
@@ -1478,11 +1478,10 @@ class WorkspaceUpdate(
         return self.object.get_absolute_url()
 
 
-class WorkspaceList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
+class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
-    table_class = tables.WorkspaceStaffTable
     ordering = (
         "billing_project__name",
         "name",
@@ -1495,9 +1494,16 @@ class WorkspaceList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMix
         context["workspace_type_display_name"] = "All workspace"
         return context
 
+    def get_table_class(self):
+        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
+        if self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename):
+            return tables.WorkspaceStaffTable
+        else:
+            return tables.WorkspaceUserTable
+
 
 class WorkspaceListByType(
-    auth.AnVILConsortiumManagerStaffViewRequired,
+    auth.AnVILConsortiumManagerViewRequired,
     viewmixins.WorkspaceAdapterMixin,
     SingleTableMixin,
     FilterView,
@@ -1517,8 +1523,11 @@ class WorkspaceListByType(
 
     def get_table_class(self):
         """Use the adapter to get the table class."""
-        table_class = self.adapter.get_list_table_class()
-        return table_class
+        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
+        if self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename):
+            return self.adapter.get_list_table_class_staff_view()
+        else:
+            return self.adapter.get_list_table_class_view()
 
 
 class WorkspaceDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):

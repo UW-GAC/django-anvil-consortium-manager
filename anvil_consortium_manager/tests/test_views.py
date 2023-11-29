@@ -6227,6 +6227,11 @@ class WorkspaceLandingPageTest(TestCase):
         # Create a user with view permission.
         self.view_user = User.objects.create_user(username="test_view", password="view")
         self.view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        # Create a user with staff view permission.
+        self.staff_view_user = User.objects.create_user(username="test_staff_view", password="view")
+        self.staff_view_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         # Create a user with edit permission.
@@ -6257,28 +6262,45 @@ class WorkspaceLandingPageTest(TestCase):
             resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(),
         )
 
-    def test_status_code_with_view_permission(self):
-        """Returns successful response code."""
+    def test_status_code_with_staff_view_permission(self):
+        """Returns successful response code if user has staff_view permission."""
+        self.client.force_login(self.staff_view_user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Returns successful response code if user has view permission."""
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_limited_view_permission(self):
-        """Raises permission denied if user has limited view permission."""
-        user = User.objects.create_user(username="test-limited", password="test-limited")
-        user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+    def test_staff_view_permission(self):
+        """Links to edit required do not appear in the page when user only has staff_view permission."""
+        self.client.force_login(self.staff_view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:import",
+                kwargs={"workspace_type": "workspace"},
+            ),
         )
-        request = self.factory.get(self.get_url())
-        request.user = user
-        with self.assertRaises(PermissionDenied):
-            views.WorkspaceLandingPage.as_view()(request)
-
-    def test_status_code_with_edit_permission(self):
-        """Returns successful response code."""
-        self.client.force_login(self.view_user)
-        response = self.client.get(self.get_url())
-        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:new",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
 
     def test_view_permission(self):
         """Links to edit required do not appear in the page when user only has view permission."""
@@ -6309,7 +6331,7 @@ class WorkspaceLandingPageTest(TestCase):
         )
 
     def test_edit_permission(self):
-        """Links to edit required do not appear in the page when user only has view permission."""
+        """Links to edit required appear in the page when user also has edit permission."""
         self.client.force_login(self.edit_user)
         response = self.client.get(self.get_url())
         self.assertIn("show_edit_links", response.context_data)
@@ -10796,9 +10818,14 @@ class WorkspaceListTest(TestCase):
         """Set up test class."""
         self.factory = RequestFactory()
         # Create a user with both view and edit permission.
-        self.user = User.objects.create_user(username="test", password="test")
-        self.user.user_permissions.add(
+        self.staff_view_user = User.objects.create_user(username="test-staff-view", password="test")
+        self.staff_view_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        # Create a user with view permission
+        self.view_user = User.objects.create_user(username="test-view", password="test")
+        self.view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
 
@@ -10827,24 +10854,19 @@ class WorkspaceListTest(TestCase):
             resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(),
         )
 
-    def test_status_code_with_user_permission(self):
+    def test_status_code_with_staff_view_permission(self):
         """Returns successful response code."""
-        self.client.force_login(self.user)
+        self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_limited_view_permission(self):
-        """Raises permission denied if user has limited view permission."""
-        user = User.objects.create_user(username="test-limited", password="test-limited")
-        user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
-        )
-        request = self.factory.get(self.get_url())
-        request.user = user
-        with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+    def test_access_with_view_permission(self):
+        """Returns successful response code if user has view permission."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
 
-    def test_access_without_user_permission(self):
+    def test_access_without_view_permission(self):
         """Raises permission denied if user has no permissions."""
         user_no_perms = User.objects.create_user(username="test-none", password="test-none")
         request = self.factory.get(self.get_url())
@@ -10852,20 +10874,22 @@ class WorkspaceListTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
-    def test_view_status_code_client(self):
-        factories.WorkspaceFactory()
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertEqual(response.status_code, 200)
-
-    def test_view_has_correct_table_class(self):
-        self.client.force_login(self.user)
+    def test_view_has_correct_table_class_staff_view(self):
+        """Context has correct table class when user has staff view permission."""
+        self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.WorkspaceStaffTable)
 
+    def test_view_has_correct_table_class_view(self):
+        """Context has correct table class when user has view permission."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceUserTable)
+
     def test_view_with_no_objects(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10873,7 +10897,7 @@ class WorkspaceListTest(TestCase):
 
     def test_view_with_one_object(self):
         factories.WorkspaceFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10881,7 +10905,7 @@ class WorkspaceListTest(TestCase):
 
     def test_view_with_two_objects(self):
         factories.WorkspaceFactory.create_batch(2)
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10892,7 +10916,7 @@ class WorkspaceListTest(TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         test_workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         default_workspace = factories.WorkspaceFactory(workspace_type=DefaultWorkspaceAdapter().get_type())
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10902,7 +10926,7 @@ class WorkspaceListTest(TestCase):
 
     def test_context_workspace_type_display_name(self):
         """Context contains workspace_type_display_name and is set properly."""
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
         self.assertIn("workspace_type_display_name", response.context_data)
@@ -10911,7 +10935,7 @@ class WorkspaceListTest(TestCase):
     def test_view_with_filter_return_no_object(self):
         factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(), {"name__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10920,7 +10944,7 @@ class WorkspaceListTest(TestCase):
     def test_view_with_filter_returns_one_object_exact(self):
         instance = factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(), {"name__icontains": "workspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10930,7 +10954,7 @@ class WorkspaceListTest(TestCase):
     def test_view_with_filter_returns_one_object_case_insensitive(self):
         instance = factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(), {"name__icontains": "Workspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10940,7 +10964,7 @@ class WorkspaceListTest(TestCase):
     def test_view_with_filter_returns_one_object_case_contains(self):
         instance = factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(), {"name__icontains": "orkspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10950,7 +10974,7 @@ class WorkspaceListTest(TestCase):
     def test_view_with_filter_returns_mutiple_objects(self):
         factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="wOrkspace1")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(), {"name__icontains": "Workspace"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -10961,10 +10985,15 @@ class WorkspaceListByTypeTest(TestCase):
     def setUp(self):
         """Set up test class."""
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
-        self.user = User.objects.create_user(username="test", password="test")
-        self.user.user_permissions.add(
+        # Create a user with staff view permission.
+        self.staff_view_user = User.objects.create_user(username="test-staff-view", password="test")
+        self.staff_view_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        # Create a user with view permission
+        self.view_user = User.objects.create_user(username="test-view", password="test")
+        self.view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
         )
         self.workspace_type = DefaultWorkspaceAdapter().get_type()
 
@@ -10993,22 +11022,17 @@ class WorkspaceListByTypeTest(TestCase):
             resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(self.workspace_type),
         )
 
-    def test_status_code_with_user_permission(self):
+    def test_status_code_with_staff_view_permission(self):
         """Returns successful response code."""
-        self.client.force_login(self.user)
+        self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_limited_view_permission(self):
+    def test_access_with_view_permission(self):
         """Raises permission denied if user has limited view permission."""
-        user = User.objects.create_user(username="test-limited", password="test-limited")
-        user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
-        )
-        request = self.factory.get(self.get_url(self.workspace_type))
-        request.user = user
-        with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertEqual(response.status_code, 200)
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -11018,27 +11042,27 @@ class WorkspaceListByTypeTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, workspace_type=self.workspace_type)
 
-    def test_view_status_code_client(self):
-        factories.WorkspaceFactory()
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type))
-        self.assertEqual(response.status_code, 200)
-
     def test_get_workspace_type_not_registered(self):
         """Raises 404 with get request if workspace type is not registered with adapter."""
         request = self.factory.get(self.get_url("foo"))
-        request.user = self.user
+        request.user = self.view_user
         with self.assertRaises(Http404):
             self.get_view()(request, workspace_type="foo")
 
-    def test_view_has_correct_table_class(self):
-        self.client.force_login(self.user)
+    def test_view_has_correct_table_class_staff_view(self):
+        self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], tables.WorkspaceStaffTable)
 
+    def test_view_has_correct_table_class_view(self):
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceUserTable)
+
     def test_view_with_no_objects(self):
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11046,7 +11070,7 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_view_with_one_object(self):
         factories.WorkspaceFactory()
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11054,13 +11078,13 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_view_with_two_objects(self):
         factories.WorkspaceFactory.create_batch(2)
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
-    def test_adapter(self):
+    def test_adapter_table_class_staff_view(self):
         """Displays the correct table if specified in the adapter."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
@@ -11068,17 +11092,30 @@ class WorkspaceListByTypeTest(TestCase):
         workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
-        self.client.force_login(self.user)
+        self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestWorkspaceDataTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestWorkspaceDataStaffTable)
+
+    def test_adapter_table_class_view(self):
+        """Displays the correct table if specified in the adapter."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = TestWorkspaceAdapter().get_type()
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestWorkspaceDataUserTable)
 
     def test_only_shows_workspaces_with_correct_type(self):
         """Only workspaces with the same workspace_type are shown in the table."""
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         default_type = DefaultWorkspaceAdapter().get_type()
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(default_type))
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11087,7 +11124,7 @@ class WorkspaceListByTypeTest(TestCase):
     def test_view_with_filter_return_no_object(self):
         factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type), {"name__icontains": "abc"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11096,7 +11133,7 @@ class WorkspaceListByTypeTest(TestCase):
     def test_view_with_filter_returns_one_object_exact(self):
         instance = factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type), {"name__icontains": "workspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11106,7 +11143,7 @@ class WorkspaceListByTypeTest(TestCase):
     def test_view_with_filter_returns_one_object_case_insensitive(self):
         instance = factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type), {"name__icontains": "Workspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11116,7 +11153,7 @@ class WorkspaceListByTypeTest(TestCase):
     def test_view_with_filter_returns_one_object_case_contains(self):
         instance = factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type), {"name__icontains": "orkspace1"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11126,7 +11163,7 @@ class WorkspaceListByTypeTest(TestCase):
     def test_view_with_filter_workspace_type(self):
         instance = factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="workspace2", workspace_type=TestWorkspaceAdapter().get_type())
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type), {"name__icontains": "workspace"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
@@ -11136,7 +11173,7 @@ class WorkspaceListByTypeTest(TestCase):
     def test_view_with_filter_returns_mutiple_objects(self):
         factories.WorkspaceFactory.create(name="workspace1")
         factories.WorkspaceFactory.create(name="wOrkspace1")
-        self.client.force_login(self.user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type), {"name__icontains": "Workspace"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)

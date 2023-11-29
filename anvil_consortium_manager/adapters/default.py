@@ -21,5 +21,6 @@ class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_form_class = forms.WorkspaceForm
     workspace_data_model = models.DefaultWorkspaceData
     workspace_data_form_class = forms.DefaultWorkspaceDataForm
-    list_table_class = tables.WorkspaceStaffTable
+    list_table_class_staff_view = tables.WorkspaceStaffTable
+    list_table_class_view = tables.WorkspaceUserTable
     workspace_detail_template_name = "anvil_consortium_manager/workspace_detail.html"
