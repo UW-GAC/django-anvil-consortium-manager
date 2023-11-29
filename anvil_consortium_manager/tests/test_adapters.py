@@ -135,7 +135,7 @@ class WorkspaceAdapterTest(TestCase):
             name = "Test"
             type = "test"
             description = "test desc"
-            staff_list_table_class = tables.TestWorkspaceDataTable
+            list_table_class_staff_view = tables.TestWorkspaceDataTable
             workspace_form_class = forms.WorkspaceForm
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -143,22 +143,22 @@ class WorkspaceAdapterTest(TestCase):
 
         return TestAdapter
 
-    def test_staff_list_table_class_default(self):
+    def test_list_table_class_staff_view_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
-        self.assertEqual(DefaultWorkspaceAdapter().get_staff_list_table_class(), WorkspaceStaffTable)
+        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class_staff_view(), WorkspaceStaffTable)
 
-    def test_staff_list_table_class_custom(self):
+    def test_list_table_class_staff_view_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "staff_list_table_class", tables.TestWorkspaceDataTable)
-        self.assertEqual(TestAdapter().get_staff_list_table_class(), tables.TestWorkspaceDataTable)
+        setattr(TestAdapter, "list_table_class_staff_view", tables.TestWorkspaceDataTable)
+        self.assertEqual(TestAdapter().get_list_table_class_staff_view(), tables.TestWorkspaceDataTable)
 
-    def test_staff_list_table_class_none(self):
+    def test_list_table_class_staff_view_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "staff_list_table_class", None)
+        setattr(TestAdapter, "list_table_class_staff_view", None)
         with self.assertRaises(ImproperlyConfigured):
-            TestAdapter().get_staff_list_table_class()
+            TestAdapter().get_list_table_class_staff_view()
 
     def test_get_workspace_form_class_default(self):
         """get_workspace_form_class returns the correct form when using the default adapter."""
@@ -357,7 +357,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = "Test"
             type = "test"
             description = "test desc"
-            staff_list_table_class = tables.TestWorkspaceDataTable
+            list_table_class_staff_view = tables.TestWorkspaceDataTable
             workspace_form_class = forms.WorkspaceForm
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -560,7 +560,7 @@ class WorkspaceAdapterRegistryTest(TestCase):
             name = "Adapter 1"
             type = "adapter1"
             description = "desc"
-            staff_list_table_class = None
+            list_table_class_staff_view = None
             workspace_form_class = None
             workspace_data_model = None
             workspace_data_form_class = None
