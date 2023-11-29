@@ -81,6 +81,12 @@ class BaseWorkspaceAdapter(ABC):
             raise ImproperlyConfigured("Set `list_table_class_staff_view` in `{}`.".format(type(self)))
         return self.list_table_class_staff_view
 
+    def get_list_table_class_view(self):
+        """Return the table class to use for the WorkspaceListByType view for non-staff users."""
+        if not self.list_table_class_view:
+            raise ImproperlyConfigured("Set `list_table_class_view` in `{}`.".format(type(self)))
+        return self.list_table_class_view
+
     def get_workspace_form_class(self):
         """Return the form used to create a `Workspace`."""
         if not self.workspace_form_class:
