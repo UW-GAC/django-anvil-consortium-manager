@@ -6981,6 +6981,24 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(response, "View on AnVIL")
         self.assertContains(response, obj.workspace.get_anvil_url())
 
+    def test_dates_present_for_staff_view_permission(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "Date added")
+        self.assertContains(response, "Date modified")
+
+    def test_no_dates_for_view_permission(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+        )
+        self.client.force_login(view_user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertNotContains(response, "Date added")
+        self.assertNotContains(response, "Date modified")
+
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 201
