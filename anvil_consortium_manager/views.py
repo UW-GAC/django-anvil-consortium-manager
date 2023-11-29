@@ -907,7 +907,7 @@ class ManagedGroupMembershipAudit(
 
 
 class WorkspaceLandingPage(
-    auth.AnVILConsortiumManagerStaffViewRequired,
+    auth.AnVILConsortiumManagerViewRequired,
     viewmixins.RegisteredWorkspaceAdaptersMixin,
     TemplateView,
 ):

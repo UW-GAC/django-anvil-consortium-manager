@@ -6225,7 +6225,12 @@ class WorkspaceLandingPageTest(TestCase):
         """Set up test class."""
         self.factory = RequestFactory()
         # Create a user with view permission.
-        self.staff_view_user = User.objects.create_user(username="test_view", password="view")
+        self.view_user = User.objects.create_user(username="test_view", password="view")
+        self.view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        # Create a user with staff view permission.
+        self.staff_view_user = User.objects.create_user(username="test_staff_view", password="view")
         self.staff_view_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
@@ -6257,31 +6262,20 @@ class WorkspaceLandingPageTest(TestCase):
             resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(),
         )
 
-    def test_status_code_with_view_permission(self):
-        """Returns successful response code."""
+    def test_status_code_with_staff_view_permission(self):
+        """Returns successful response code if user has staff_view permission."""
         self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_access_with_limited_view_permission(self):
-        """Raises permission denied if user has limited view permission."""
-        user = User.objects.create_user(username="test-limited", password="test-limited")
-        user.user_permissions.add(
-            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
-        )
-        request = self.factory.get(self.get_url())
-        request.user = user
-        with self.assertRaises(PermissionDenied):
-            views.WorkspaceLandingPage.as_view()(request)
-
-    def test_status_code_with_edit_permission(self):
-        """Returns successful response code."""
-        self.client.force_login(self.staff_view_user)
+    def test_access_with_view_permission(self):
+        """Returns successful response code if user has view permission."""
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_view_permission(self):
-        """Links to edit required do not appear in the page when user only has view permission."""
+    def test_staff_view_permission(self):
+        """Links to edit required do not appear in the page when user only has staff_view permission."""
         self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url())
         self.assertIn("show_edit_links", response.context_data)
@@ -6308,8 +6302,36 @@ class WorkspaceLandingPageTest(TestCase):
             ),
         )
 
-    def test_edit_permission(self):
+    def test_view_permission(self):
         """Links to edit required do not appear in the page when user only has view permission."""
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertFalse(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:import",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:new",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:list",
+                kwargs={"workspace_type": "workspace"},
+            ),
+        )
+
+    def test_edit_permission(self):
+        """Links to edit required appear in the page when user also has edit permission."""
         self.client.force_login(self.edit_user)
         response = self.client.get(self.get_url())
         self.assertIn("show_edit_links", response.context_data)
@@ -6338,7 +6360,7 @@ class WorkspaceLandingPageTest(TestCase):
 
     def test_one_registered_workspace_in_context(self):
         """One registered workspace in context when only DefaultWorkspaceAdapter is registered"""
-        self.client.force_login(self.staff_view_user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertIn("registered_workspace_adapters", response.context_data)
         self.assertEqual(len(response.context_data["registered_workspace_adapters"]), 1)
@@ -6346,7 +6368,7 @@ class WorkspaceLandingPageTest(TestCase):
     def test_two_registered_workspaces_in_context(self):
         """Two registered workspaces in context when two workspace adapters are registered"""
         workspace_adapter_registry.register(TestWorkspaceAdapter)
-        self.client.force_login(self.staff_view_user)
+        self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertIn("registered_workspace_adapters", response.context_data)
         self.assertEqual(len(response.context_data["registered_workspace_adapters"]), 2)
