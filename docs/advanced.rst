@@ -78,7 +78,8 @@ Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapte
 * ``workspace_form_class``: the form to use to create an instance of the ``Workspace`` model. The default adapter uses :class:`~anvil_consortium_manager.forms.WorkspaceForm``.
 * ``workspace_data_model``: the model used to store additional data about a workspace, subclassed from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`
 * ``workspace_data_form_class``: the form to use to create an instance of the ``workspace_data_model``
-* ``list_table_class``: the table to use to display the list of workspaces
+* ``list_table_class_staff_view``: the table to use to display the list of workspaces for Staff viewers
+* ``list_table_class_view``: the table to use to display the list of workspaces for non-Staff Viewers.
 * ``workspace_detail_template_name``: the template to use to render the detail of the workspace
 
 You may also override default settings and methods:
@@ -99,7 +100,8 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
         name = "Custom workspace"
         type = "custom"
         description = "Example custom workspace type for demo app"
-        list_table_class = tables.CustomWorkspaceDataTable
+        list_table_class_staff_view = tables.CustomWorkspaceDataStaffTable
+        list_table_class_view = tables.CustomWorkspaceDataUserTable
         workspace_form_class = WorkspaceForm
         workspace_data_model = models.CustomWorkspaceData
         workspace_data_form_class = forms.CustomWorkspaceDataForm
