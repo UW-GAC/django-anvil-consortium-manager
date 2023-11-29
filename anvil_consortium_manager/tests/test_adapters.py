@@ -13,7 +13,7 @@ from ..adapters.workspace import (
 from ..filters import AccountListFilter, BillingProjectListFilter
 from ..forms import DefaultWorkspaceDataForm, WorkspaceForm
 from ..models import Account, DefaultWorkspaceData
-from ..tables import AccountTable, WorkspaceTable
+from ..tables import AccountStaffTable, WorkspaceStaffTable
 from . import factories
 from .test_app import filters, forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
@@ -26,20 +26,20 @@ class AccountAdapterTestCase(TestCase):
         """Return a test adapter class for use in tests."""
 
         class TestAdapter(BaseAccountAdapter):
-            list_table_class = tables.TestAccountTable
+            list_table_class = tables.TestAccountStaffTable
             list_filterset_class = filters.TestAccountListFilter
 
         return TestAdapter
 
     def test_list_table_class_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
-        self.assertEqual(DefaultAccountAdapter().get_list_table_class(), AccountTable)
+        self.assertEqual(DefaultAccountAdapter().get_list_table_class(), AccountStaffTable)
 
     def test_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", tables.TestAccountTable)
-        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestAccountTable)
+        setattr(TestAdapter, "list_table_class", tables.TestAccountStaffTable)
+        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestAccountStaffTable)
 
     def test_list_table_class_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
@@ -145,7 +145,7 @@ class WorkspaceAdapterTest(TestCase):
 
     def test_list_table_class_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
-        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceTable)
+        self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class(), WorkspaceStaffTable)
 
     def test_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""

@@ -5,7 +5,7 @@ from . import models
 from .adapters.workspace import workspace_adapter_registry
 
 
-class BillingProjectTable(tables.Table):
+class BillingProjectStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
     name = tables.Column(linkify=True)
@@ -21,7 +21,7 @@ class BillingProjectTable(tables.Table):
         fields = ("name", "has_app_as_user")
 
 
-class AccountTable(tables.Table):
+class AccountStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
     email = tables.Column(linkify=True)
@@ -41,7 +41,7 @@ class AccountTable(tables.Table):
             return str(record.user)
 
 
-class ManagedGroupTable(tables.Table):
+class ManagedGroupStaffTable(tables.Table):
     """Class to display a Group table."""
 
     name = tables.Column(linkify=True)
@@ -76,7 +76,17 @@ class ManagedGroupTable(tables.Table):
             return value
 
 
-class WorkspaceTable(tables.Table):
+class ManagedGroupUserTable(tables.Table):
+    """Class to display a Group table for users with view permission."""
+
+    name = tables.Column()
+
+    class Meta:
+        model = models.ManagedGroup
+        fields = ("name",)
+
+
+class WorkspaceStaffTable(tables.Table):
     """Class to display a Workspace table."""
 
     name = tables.Column(linkify=True, verbose_name="Workspace")
@@ -104,7 +114,7 @@ class WorkspaceTable(tables.Table):
         return self.registered_names[record.workspace_type]
 
 
-class GroupGroupMembershipTable(tables.Table):
+class GroupGroupMembershipStaffTable(tables.Table):
     """Class to render a GroupGroupMembership table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
@@ -121,7 +131,7 @@ class GroupGroupMembershipTable(tables.Table):
         return "See details"
 
 
-class GroupAccountMembershipTable(tables.Table):
+class GroupAccountMembershipStaffTable(tables.Table):
     """Class to render a GroupAccountMembership table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
@@ -140,7 +150,7 @@ class GroupAccountMembershipTable(tables.Table):
         return "See details"
 
 
-class WorkspaceGroupSharingTable(tables.Table):
+class WorkspaceGroupSharingStaffTable(tables.Table):
     """Class to render a WorkspaceGroupSharing table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)

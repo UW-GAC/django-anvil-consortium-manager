@@ -342,6 +342,11 @@ class Account(TimeStampedModel, ActivatorModel):
                 groups.add(group)
         return groups
 
+    def has_workspace_access(self, workspace):
+        """Return a boolean indicator of whether the workspace can be accessed by this Account."""
+        accessible_workspaces = self.get_accessible_workspaces()
+        return workspace in accessible_workspaces
+
 
 class ManagedGroup(TimeStampedModel):
     """A model to store information about AnVIL Managed Groups."""
@@ -690,15 +695,6 @@ class Workspace(TimeStampedModel):
         parents = group.get_all_parents()
         is_shared = self.workspacegroupsharing_set.filter(models.Q(group=group) | models.Q(group__in=parents)).exists()
         return is_shared
-
-    def has_access(self, group):
-        """Check if a group has access to a workspace.
-
-        Both criteria need to be met for a group to have access to a workspace:
-        1. The workspace must be shared with the group (or a group that it is in).
-        2. The group (or a group that it is in) must be in all auth domains for the workspace.
-        """
-        return self.is_shared(group) and self.is_in_authorization_domain(group)
 
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""

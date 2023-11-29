@@ -155,7 +155,7 @@ class BillingProjectDetail(auth.AnVILConsortiumManagerStaffViewRequired, SingleT
     context_table_name = "workspace_table"
 
     def get_table(self):
-        return tables.WorkspaceTable(self.object.workspace_set.all(), exclude="billing_project")
+        return tables.WorkspaceStaffTable(self.object.workspace_set.all(), exclude="billing_project")
 
     def get_context_data(self, **kwargs):
         """Add show_edit_links to context data."""
@@ -167,7 +167,7 @@ class BillingProjectDetail(auth.AnVILConsortiumManagerStaffViewRequired, SingleT
 
 class BillingProjectList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
     model = models.BillingProject
-    table_class = tables.BillingProjectTable
+    table_class = tables.BillingProjectStaffTable
     ordering = ("name",)
     template_name = "anvil_consortium_manager/billingproject_list.html"
 
@@ -210,7 +210,7 @@ class AccountDetail(
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
 
-        context["group_table"] = tables.GroupAccountMembershipTable(
+        context["group_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
         )
@@ -220,7 +220,7 @@ class AccountDetail(
             group__in=self.object.get_all_groups(),
         ).order_by("workspace", "group")
 
-        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingTable(workspace_sharing)
+        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingStaffTable(workspace_sharing)
         return context
 
 
@@ -482,7 +482,7 @@ class AccountDeactivate(
     success_message = "Successfully deactivated Account in app."
 
     def get_table(self):
-        return tables.GroupAccountMembershipTable(
+        return tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
         )
@@ -548,7 +548,7 @@ class AccountReactivate(
         # exceptions.AnVILRemoveAccountFromGroupError
 
     def get_table(self):
-        return tables.GroupAccountMembershipTable(
+        return tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],
         )
@@ -674,7 +674,7 @@ class ManagedGroupDetail(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["workspace_authorization_domain_table"] = tables.WorkspaceTable(
+        context["workspace_authorization_domain_table"] = tables.WorkspaceStaffTable(
             self.object.workspace_set.all(),
             exclude=(
                 "number_groups",
@@ -682,21 +682,21 @@ class ManagedGroupDetail(
                 "billing_project",
             ),
         )
-        context["workspace_table"] = tables.WorkspaceGroupSharingTable(
+        context["workspace_table"] = tables.WorkspaceGroupSharingStaffTable(
             self.object.workspacegroupsharing_set.all(), exclude="group"
         )
-        context["active_account_table"] = tables.GroupAccountMembershipTable(
+        context["active_account_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.filter(account__status=models.Account.ACTIVE_STATUS),
             exclude="group",
         )
-        context["inactive_account_table"] = tables.GroupAccountMembershipTable(
+        context["inactive_account_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.filter(account__status=models.Account.INACTIVE_STATUS),
             exclude="group",
         )
-        context["group_table"] = tables.GroupGroupMembershipTable(
+        context["group_table"] = tables.GroupGroupMembershipStaffTable(
             self.object.child_memberships.all(), exclude="parent_group"
         )
-        context["parent_table"] = tables.GroupGroupMembershipTable(
+        context["parent_table"] = tables.GroupGroupMembershipStaffTable(
             self.object.parent_memberships.all(), exclude="child_group"
         )
         edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
@@ -743,7 +743,7 @@ class ManagedGroupUpdate(
 
 class ManagedGroupList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
     model = models.ManagedGroup
-    table_class = tables.ManagedGroupTable
+    table_class = tables.ManagedGroupStaffTable
     ordering = ("name",)
     template_name = "anvil_consortium_manager/managedgroup_list.html"
 
@@ -958,17 +958,29 @@ class WorkspaceDetail(
         return model.objects.get(workspace=self.object)
 
     def get_context_data(self, **kwargs):
+        # Get info about permissions.
+        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
+        has_staff_view_perms = self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename)
+        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
+        has_edit_perms = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
+        # Get the default context data.
         context = super().get_context_data(**kwargs)
+        # Add custom variables for this view.
         context["workspace_data_object"] = self.get_workspace_data_object()
-        context["group_sharing_table"] = tables.WorkspaceGroupSharingTable(
-            self.object.workspacegroupsharing_set.all(), exclude="workspace"
-        )
-        context["authorization_domain_table"] = tables.ManagedGroupTable(
+        context["show_edit_links"] = has_edit_perms
+        context["has_access"] = hasattr(
+            self.request.user, "account"
+        ) and self.request.user.account.has_workspace_access(self.object)
+        # Tables.
+        table_class = tables.ManagedGroupStaffTable if has_staff_view_perms else tables.ManagedGroupUserTable
+        context["authorization_domain_table"] = table_class(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
-        edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
-        context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
+        if has_staff_view_perms:
+            context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
+                self.object.workspacegroupsharing_set.all(), exclude="workspace"
+            )
         return context
 
     def get_template_names(self):
@@ -1470,7 +1482,7 @@ class WorkspaceList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMix
     """Display a list of all workspaces using the default table."""
 
     model = models.Workspace
-    table_class = tables.WorkspaceTable
+    table_class = tables.WorkspaceStaffTable
     ordering = (
         "billing_project__name",
         "name",
@@ -1909,7 +1921,7 @@ class GroupGroupMembershipCreateByParentChild(GroupGroupMembershipCreate):
 
 class GroupGroupMembershipList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     model = models.GroupGroupMembership
-    table_class = tables.GroupGroupMembershipTable
+    table_class = tables.GroupGroupMembershipStaffTable
 
 
 class GroupGroupMembershipDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
@@ -2209,14 +2221,14 @@ class GroupAccountMembershipList(auth.AnVILConsortiumManagerStaffViewRequired, S
     """Show a list of all group memberships regardless of account active/inactive status."""
 
     model = models.GroupAccountMembership
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
 
 
 class GroupAccountMembershipActiveList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     """Show a list of all group memberships for active accounts."""
 
     model = models.GroupAccountMembership
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
     ordering = (
         "group__name",
         "account__email",
@@ -2230,7 +2242,7 @@ class GroupAccountMembershipInactiveList(auth.AnVILConsortiumManagerStaffViewReq
     """Show a list of all group memberships for inactive accounts."""
 
     model = models.GroupAccountMembership
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
     ordering = (
         "group__name",
         "account__email",
@@ -2598,7 +2610,7 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
 
 class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
     model = models.WorkspaceGroupSharing
-    table_class = tables.WorkspaceGroupSharingTable
+    table_class = tables.WorkspaceGroupSharingStaffTable
 
 
 class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):

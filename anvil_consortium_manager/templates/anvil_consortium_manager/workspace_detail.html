@@ -5,26 +5,51 @@
 
 {% block title %}{{ workspace_type_display_name }}: {{ object }}{% endblock %}
 
-
-{% block after_title %}
-  <a class="btn btn-light" href="{{ object.get_anvil_url }}" target="_blank" role="button">
-    <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
-    View on AnVIL
-  </a>
-{% endblock after_title %}
-
 {% block pills %}
   {% if object.is_locked %}
   <span class="badge bg-danger"><span class="fa-solid fa-lock me-2"></span>Locked</span>
   {% endif %}
+
+  <span class="badge bg-{% if has_access %}success{% else %}danger{% endif %}">
+    <span class="me-2 fa-solid fa-{% if has_access %}lock-open{% else %}lock{% endif %}"></span>
+    {% if has_access %}
+      You have access to this workspace
+    {% else %}
+      No access to workspace
+    {% endif %}
+    <span class="ms-2 fa-solid fa-circle-question"
+    data-bs-toggle="tooltip"
+    data-bs-placement="bottom"
+    data-bs-title="To have access to a workspace, you must have linked an AnVIL account, be in all of the authorization domains for the workspace, and have the workspace shared with you."
+    ></span>
+  </span>
+
+  {% if has_access or user.is_superuser %}
+  <a class="badge bg-light text-dark btn btn-light" href="{{ object.get_anvil_url }}" target="_blank" role="button">
+    <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
+    View on AnVIL
+  </a>
+  {% endif %}
+
 {% endblock pills %}
 
 {% block panel %}
 <dl class="row">
-  <dt class="col-sm-2">Billing project</dt> <dd class="col-sm-10"><a href="{{ object.billing_project.get_absolute_url }}">{{ object.billing_project }}</a></dd>
+  <dt class="col-sm-2">Billing project</dt> <dd class="col-sm-10">
+    {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
+      <a href="{{ object.billing_project.get_absolute_url }}">
+    {% endif %}
+      {{ object.billing_project }}
+    {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
+    </a>
+    {% endif %}
+  </dd>
   <dt class="col-sm-2">Name</dt> <dd class="col-sm-10">{{ object.name }}</dd>
+
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
   <dt class="col-sm-2">Date added</dt> <dd class="col-sm-10">{{ object.created }}</dd>
   <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
+  {% endif %}
 </dl>
   {% block workspace_data %}
   {% endblock workspace_data %}
@@ -45,6 +70,8 @@
       </div>
     </div>
   </div>
+
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
   <div class="my-3">
     <div class="accordion" id="accordionGroups">
       <div class="accordion-item">
@@ -66,6 +93,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
 {% endblock after_panel %}
 
 {% block action_buttons %}
@@ -102,3 +130,12 @@
   {% endif %}
   </p>
 {% endblock action_buttons %}
+
+
+{% block inline_javascript %}
+<script>
+  $(document).ready(function(){
+      $('[data-bs-toggle="tooltip"]').tooltip();
+  });
+</script>
+{% endblock inline_javascript %}

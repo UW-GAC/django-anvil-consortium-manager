@@ -13,7 +13,7 @@ class TestWorkspaceDataTable(tables.Table):
         fields = ("testworkspacedata__study_name", "name")
 
 
-class TestAccountTable(tables.Table):
+class TestAccountStaffTable(tables.Table):
     """Table for testing the Account adapter."""
 
     email = tables.columns.Column(linkify=True)

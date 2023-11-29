@@ -12,7 +12,7 @@ By default, the app uses :class:`~anvil_consortium_manager.adapters.default.Defa
 To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseAccountAdapter`
 and set the following attributes:
 
-- ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountTable`.
+- ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountStaffTable`.
 - ``list_filterset_class``: an attribute set to the class of the table used to filter accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.filters.AccountListFilter`. This must subclass ``FilterSet`` from `django-filter <https://django-filter.readthedocs.io/en/stable/>`_.
 
 Optionally, you can override the following methods:
@@ -53,10 +53,10 @@ You must also define a form containing the additional fields. You must include t
             fields = ("study_name", "consent_code", workspace")
 
 
-Optionally, you can define a new ``django-tables2`` table to use in place of the default ``WorkspaceTable`` that comes with the app.
+Optionally, you can define a new ``django-tables2`` table to use in place of the default ``WorkspaceStaffTable`` that comes with the app.
 This is helpful if you would like to display fields from your custom workspace data model in the :class:`~anvil_consortium_manager.models.Workspace` list view.
 This table will need to operate on the :class:`~anvil_consortium_manager.models.Workspace` model, but it can include fields from your custom workspace data model.
-If you do not want to define a custom table, you can use the default table provided by the app: :class:`anvil_consortium_manager.tables.WorkspaceTable`.
+If you do not want to define a custom table, you can use the default table provided by the app: :class:`anvil_consortium_manager.tables.WorkspaceStaffTable`.
 
 .. code-block:: python
 
@@ -93,7 +93,7 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
     from anvil_consortium_manager.forms import WorkspaceForm
     from my_app.models import CustomWorkspaceData
     from my_app.forms import CustomWorkspaceDataForm
-    from my_app.tables import CustomWorkspaceTable
+    from my_app.tables import CustomWorkspaceStaffTable
 
     class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
         name = "Custom workspace"

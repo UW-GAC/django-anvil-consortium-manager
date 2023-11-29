@@ -760,7 +760,7 @@ class BillingProjectDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("workspace_table", response.context_data)
-        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceTable)
+        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceStaffTable)
 
     def test_workspace_table_none(self):
         """No workspaces are shown if the billing project does not have any workspaces."""
@@ -858,7 +858,7 @@ class BillingProjectListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.BillingProjectTable)
+        self.assertIsInstance(response.context_data["table"], tables.BillingProjectStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -1299,7 +1299,7 @@ class AccountDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.uuid))
         self.assertIn("group_table", response.context_data)
-        self.assertIsInstance(response.context_data["group_table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["group_table"], tables.GroupAccountMembershipStaffTable)
 
     def test_group_account_membership_none(self):
         """No groups are shown if the account is not part of any groups."""
@@ -1384,7 +1384,7 @@ class AccountDetailTest(TestCase):
         self.assertIn("accessible_workspace_table", response.context_data)
         self.assertIsInstance(
             response.context_data["accessible_workspace_table"],
-            tables.WorkspaceGroupSharingTable,
+            tables.WorkspaceGroupSharingStaffTable,
         )
 
     def test_accessible_workspace_none(self):
@@ -2778,7 +2778,7 @@ class AccountListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+        self.assertIsInstance(response.context_data["table"], tables.AccountStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -2896,7 +2896,7 @@ class AccountListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
@@ -2953,7 +2953,7 @@ class AccountActiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+        self.assertIsInstance(response.context_data["table"], tables.AccountStaffTable)
 
     def test_filterset_class(self):
         factories.AccountFactory.create(email="account_test1@example.com")
@@ -3078,7 +3078,7 @@ class AccountActiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
@@ -3135,7 +3135,7 @@ class AccountInactiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.AccountTable)
+        self.assertIsInstance(response.context_data["table"], tables.AccountStaffTable)
 
     def test_filterset_class(self):
         factories.AccountFactory.create(email="account_test1@example.com")
@@ -3254,7 +3254,7 @@ class AccountInactiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
 
 
@@ -4343,7 +4343,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("workspace_table", response.context_data)
-        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceGroupSharingTable)
+        self.assertIsInstance(response.context_data["workspace_table"], tables.WorkspaceGroupSharingStaffTable)
 
     def test_workspace_table_none(self):
         """No workspaces are shown if the group does not have access to any workspaces."""
@@ -4389,7 +4389,7 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("active_account_table", response.context_data)
         self.assertIsInstance(
             response.context_data["active_account_table"],
-            tables.GroupAccountMembershipTable,
+            tables.GroupAccountMembershipStaffTable,
         )
 
     def test_active_account_table_none(self):
@@ -4434,7 +4434,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("group_table", response.context_data)
-        self.assertIsInstance(response.context_data["group_table"], tables.GroupGroupMembershipTable)
+        self.assertIsInstance(response.context_data["group_table"], tables.GroupGroupMembershipStaffTable)
 
     def test_group_table_none(self):
         """No groups are shown if the group has no member groups."""
@@ -4496,7 +4496,7 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("workspace_authorization_domain_table", response.context_data)
         self.assertIsInstance(
             response.context_data["workspace_authorization_domain_table"],
-            tables.WorkspaceTable,
+            tables.WorkspaceStaffTable,
         )
 
     def test_workspace_auth_domain_table_none(self):
@@ -4552,7 +4552,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("parent_table", response.context_data)
-        self.assertIsInstance(response.context_data["parent_table"], tables.GroupGroupMembershipTable)
+        self.assertIsInstance(response.context_data["parent_table"], tables.GroupGroupMembershipStaffTable)
 
     def test_parent_table_none(self):
         """No groups are shown if the group is not a part of any other groups."""
@@ -5020,7 +5020,7 @@ class ManagedGroupListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.ManagedGroupTable)
+        self.assertIsInstance(response.context_data["table"], tables.ManagedGroupStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -6438,7 +6438,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("group_sharing_table", response.context_data)
         self.assertIsInstance(
             response.context_data["group_sharing_table"],
-            tables.WorkspaceGroupSharingTable,
+            tables.WorkspaceGroupSharingStaffTable,
         )
 
     def test_group_sharing_table_none(self):
@@ -6467,6 +6467,18 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("group_sharing_table", response.context_data)
         self.assertEqual(len(response.context_data["group_sharing_table"].rows), 2)
 
+    def test_group_sharing_table_view_permission(self):
+        """Workspace-group sharing table is not present in context when user has view permission only."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertNotIn("group_sharing_table", response.context_data)
+        self.assertNotContains(response, "View groups that this workspace is shared with")
+
     def test_shows_workspace_group_sharing_for_only_that_workspace(self):
         """Only shows groups that this workspace has been shared with."""
         workspace = factories.DefaultWorkspaceDataFactory.create(workspace__name="workspace-1")
@@ -6485,7 +6497,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertIsInstance(
             response.context_data["authorization_domain_table"],
-            tables.ManagedGroupTable,
+            tables.ManagedGroupStaffTable,
         )
 
     def test_auth_domain_table_none(self):
@@ -6523,6 +6535,19 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn(group_1, table.data)
         self.assertIn(group_2, table.data)
 
+    def test_auth_domain_table_view_permission(self):
+        """Auth domain table has correct class when user has view permission only."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace.workspace)
+        self.client.force_login(user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertIn("authorization_domain_table", response.context_data)
+        self.assertIsInstance(response.context_data["authorization_domain_table"], tables.ManagedGroupUserTable)
+
     def test_shows_auth_domains_for_only_that_workspace(self):
         """Only shows auth domains for this workspace."""
         workspace = factories.DefaultWorkspaceDataFactory.create(workspace__name="workspace-1")
@@ -6556,6 +6581,17 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        # Billing project link
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:billing_projects:detail",
+                kwargs={
+                    "slug": obj.workspace.billing_project.name,
+                },
+            ),
+        )
+        # Action buttons
         self.assertContains(
             response,
             reverse(
@@ -6619,6 +6655,17 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+        # Billing project link
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:billing_projects:detail",
+                kwargs={
+                    "slug": obj.workspace.billing_project.name,
+                },
+            ),
+        )
+        # Action buttons
         self.assertNotContains(
             response,
             reverse(
@@ -6672,6 +6719,17 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
         self.assertFalse(response.context_data["show_edit_links"])
+        # Billing project link
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:billing_projects:detail",
+                kwargs={
+                    "slug": obj.workspace.billing_project.name,
+                },
+            ),
+        )
+        # Action buttons
         self.assertNotContains(
             response,
             reverse(
@@ -6864,6 +6922,82 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+
+    def test_access_badge_no_linked_account(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertFalse(response.context["has_access"])
+        self.assertContains(response, "No access to workspace")
+
+    def test_access_badge_no_access(self):
+        factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertFalse(response.context["has_access"])
+        self.assertContains(response, "No access to workspace")
+
+    def test_access_badge_access(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertTrue(response.context["has_access"])
+        self.assertContains(response, "You have access to this workspace")
+
+    def test_anvil_link_with_access(self):
+        """Link to AnVIL appears on the page when the user has access."""
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, obj.workspace.get_anvil_url())
+
+    def test_anvil_link_no_access(self):
+        """Link to AnVIL does not appear on the page when the user does not have access."""
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertNotContains(response, "View on AnVIL")
+        self.assertNotContains(response, obj.workspace.get_anvil_url())
+
+    def test_anvil_link_no_access_superuser(self):
+        """Link to AnVIL does appears on the page when the user does not have access but is a superuser."""
+        superuser = User.objects.create_superuser(username="test-superuser", password="test-superuser")
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(superuser)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, obj.workspace.get_anvil_url())
+
+    def test_dates_present_for_staff_view_permission(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "Date added")
+        self.assertContains(response, "Date modified")
+
+    def test_no_dates_for_view_permission(self):
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        view_user = User.objects.create_user(username="view", password="test")
+        view_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME),
+        )
+        self.client.force_login(view_user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertNotContains(response, "Date added")
+        self.assertNotContains(response, "Date modified")
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -10728,7 +10862,7 @@ class WorkspaceListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -10901,7 +11035,7 @@ class WorkspaceListByTypeTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.WorkspaceTable)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -14384,7 +14518,7 @@ class GroupGroupMembershipListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupGroupMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupGroupMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -16941,7 +17075,7 @@ class GroupAccountMembershipListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -17009,7 +17143,7 @@ class GroupAccountMembershipActiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -17097,7 +17231,7 @@ class GroupAccountMembershipInactiveListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipTable)
+        self.assertIsInstance(response.context_data["table"], tables.GroupAccountMembershipStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)
@@ -20935,7 +21069,7 @@ class WorkspaceGroupSharingListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], tables.WorkspaceGroupSharingTable)
+        self.assertIsInstance(response.context_data["table"], tables.WorkspaceGroupSharingStaffTable)
 
     def test_view_with_no_objects(self):
         self.client.force_login(self.user)

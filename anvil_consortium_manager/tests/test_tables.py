@@ -6,10 +6,10 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from . import factories
 
 
-class BillingProjectTableTest(TestCase):
+class BillingProjectStaffTableTest(TestCase):
     model = models.BillingProject
     model_factory = factories.BillingProjectFactory
-    table_class = tables.BillingProjectTable
+    table_class = tables.BillingProjectStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
@@ -37,10 +37,10 @@ class BillingProjectTableTest(TestCase):
         self.assertEqual(table.rows[2].get_cell("number_workspaces"), 2)
 
 
-class AccountTableTest(TestCase):
+class AccountStaffTableTest(TestCase):
     model = models.Account
     model_factory = factories.AccountFactory
-    table_class = tables.AccountTable
+    table_class = tables.AccountStaffTable
 
     def tearDown(self):
         # One of the testes dynamically sets the get_absolute_url method..
@@ -86,10 +86,30 @@ class AccountTableTest(TestCase):
         self.assertIn("test_profile_testuser", table.rows[0].get_cell("user"))
 
 
-class ManagedGroupTableTest(TestCase):
+class ManagedGroupUserTableTest(TestCase):
     model = models.ManagedGroup
     model_factory = factories.ManagedGroupFactory
-    table_class = tables.ManagedGroupTable
+    table_class = tables.ManagedGroupUserTable
+
+    def test_row_count_with_no_objects(self):
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(len(table.rows), 0)
+
+    def test_row_count_with_one_object(self):
+        self.model_factory.create()
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(len(table.rows), 1)
+
+    def test_row_count_with_two_objects(self):
+        self.model_factory.create_batch(2)
+        table = self.table_class(self.model.objects.all())
+        self.assertEqual(len(table.rows), 2)
+
+
+class ManagedGroupStaffTableTest(TestCase):
+    model = models.ManagedGroup
+    model_factory = factories.ManagedGroupFactory
+    table_class = tables.ManagedGroupStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
@@ -144,10 +164,10 @@ class ManagedGroupTableTest(TestCase):
         self.assertEqual(table.rows[0].get_cell("number_accounts"), table.default)
 
 
-class WorkspaceTableTest(TestCase):
+class WorkspaceStaffTableTest(TestCase):
     model = models.Workspace
     model_factory = factories.WorkspaceFactory
-    table_class = tables.WorkspaceTable
+    table_class = tables.WorkspaceStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
@@ -195,10 +215,10 @@ class WorkspaceTableTest(TestCase):
         # self.assertEqual(table.rows[2].get_cell("number_groups"), 2)
 
 
-class GroupGroupMembershipTableTest(TestCase):
+class GroupGroupMembershipStaffTableTest(TestCase):
     model = models.GroupGroupMembership
     model_factory = factories.GroupGroupMembershipFactory
-    table_class = tables.GroupGroupMembershipTable
+    table_class = tables.GroupGroupMembershipStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
@@ -215,10 +235,10 @@ class GroupGroupMembershipTableTest(TestCase):
         self.assertEqual(len(table.rows), 2)
 
 
-class GroupAccountMembershipTableTest(TestCase):
+class GroupAccountMembershipStaffTableTest(TestCase):
     model = models.GroupAccountMembership
     model_factory = factories.GroupAccountMembershipFactory
-    table_class = tables.GroupAccountMembershipTable
+    table_class = tables.GroupAccountMembershipStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
@@ -242,10 +262,10 @@ class GroupAccountMembershipTableTest(TestCase):
         self.assertEqual(len(table.rows), 1)
 
 
-class WorkspaceGroupSharingTable(TestCase):
+class WorkspaceGroupSharingStaffTable(TestCase):
     model = models.WorkspaceGroupSharing
     model_factory = factories.WorkspaceGroupSharingFactory
-    table_class = tables.WorkspaceGroupSharingTable
+    table_class = tables.WorkspaceGroupSharingStaffTable
 
     def test_row_count_with_no_objects(self):
         table = self.table_class(self.model.objects.all())
