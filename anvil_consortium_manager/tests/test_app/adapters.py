@@ -27,6 +27,10 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
             queryset = queryset.filter(workspace__name=q)
         return queryset
 
+    def get_extra_detail_context_data(self, extra_context={}):
+        extra_context["extra_text"] = "Extra text"
+        return extra_context
+
 
 class TestAccountAdapter(BaseAccountAdapter):
     """Test adapter for accounts."""

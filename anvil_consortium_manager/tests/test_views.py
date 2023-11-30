@@ -6678,6 +6678,16 @@ class WorkspaceDetailTest(TestCase):
             TestWorkspaceAdapter().get_name(),
         )
 
+    def test_context_workspace_with_extra_context(self):
+        """workspace_type_display_name is present in context with a custom adapter."""
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = TestWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertIn("extra_text", response.context)
+        self.assertEqual(response.context["extra_text"], "Extra text")
+
     def test_is_locked_true(self):
         """An indicator of whether a workspace is locked appears on the page."""
         workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_locked=True)
