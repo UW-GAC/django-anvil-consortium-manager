@@ -1,6 +1,6 @@
 # Change log
 
-## 0.21.0 (YYYY-MM-DD)
+## 0.21.0 (2023-12-04)
 
 * Add docs dependencies to hatch via pyproject.toml.
 * Add requests as a direct dependency instead of as an extra to google-auth.
