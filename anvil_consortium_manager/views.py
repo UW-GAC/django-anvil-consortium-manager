@@ -971,7 +971,7 @@ class WorkspaceDetail(
         edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
 
-        context.update(self.adapter.get_extra_detail_context_data())
+        context.update(self.adapter.get_extra_detail_context_data(self.request))
         return context
 
     def get_template_names(self):
