@@ -66,7 +66,7 @@ jobs:
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-data-${{ strategy.job-index }}
           path: ".coverage.*"
 
 
@@ -88,14 +88,20 @@ jobs:
       - name: Install hatch
         run: python -m pip install --upgrade hatch
 
-      - name: Download coverage data.
-        uses: actions/download-artifact@v3
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
         with:
-          name: coverage-data
+          path: ./artifacts/
 
-      - name: Combine coverage & check percentage
-        run: hatch run cov-combine:combine
+      - name: Merge coverage files
+        run: |
+          mv ./artifacts/coverage-data*/.coverage* .
+          ls -la .coverage*
 
+      - name: Combine coverage data
+        run: |
+          python -m coverage combine
+          python -m coverage xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
