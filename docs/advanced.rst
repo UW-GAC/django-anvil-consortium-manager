@@ -85,6 +85,7 @@ Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapte
 You may also override default settings and methods:
 
 - ``get_autocomplete_queryset``: a method to filter a workspace queryset for use in the :class:`~anvil_consortium_manager.views.WorkspaceAutocompleteByType` view. This queryset passed to this method is the workspace data model specified by the adapter, not the `Workspace` model.
+- ``get_extra_detail_context_data``: a method to add extra context data to the :class:`~anvil_consortium_manager.views.WorkspaceDetail` view. This method is passed the `Workspace` model, not the workspace data model specified by the adapter.
 
 Here is example of the custom adapter for ``my_app`` with the model, form and table defined above.
 
