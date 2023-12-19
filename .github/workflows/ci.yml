@@ -99,9 +99,8 @@ jobs:
           ls -la .coverage*
 
       - name: Combine coverage data
-        run: |
-          python -m coverage combine
-          python -m coverage xml
+        run: hatch run cov-combine:combine
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
