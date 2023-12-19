@@ -137,7 +137,7 @@ class BaseWorkspaceAdapter(ABC):
             queryset = queryset.filter(workspace__name__icontains=q)
         return queryset
 
-    def get_extra_detail_context_data(self, request):
+    def get_extra_detail_context_data(self, workspace, request):
         """Return the extra context specified in the adapter."""
 
         return {}

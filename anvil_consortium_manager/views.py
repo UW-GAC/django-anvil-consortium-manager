@@ -982,7 +982,7 @@ class WorkspaceDetail(
                 self.object.workspacegroupsharing_set.all(), exclude="workspace"
             )
 
-        context.update(self.adapter.get_extra_detail_context_data(self.request))
+        context.update(self.adapter.get_extra_detail_context_data(self.object, self.request))
         return context
 
     def get_template_names(self):
