@@ -64,10 +64,11 @@ jobs:
         run: hatch run $TEST_ENV:cov
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-data-${{ strategy.job-index }}
           path: ".coverage.*"
+          if-no-files-found: error
 
 
   coverage:
@@ -88,12 +89,17 @@ jobs:
       - name: Install hatch
         run: python -m pip install --upgrade hatch
 
-      - name: Download coverage data.
-        uses: actions/download-artifact@v3
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
         with:
-          name: coverage-data
+          path: ./artifacts/
 
-      - name: Combine coverage & check percentage
+      - name: Merge coverage files
+        run: |
+          mv ./artifacts/coverage-data*/.coverage* .
+          ls -la .coverage*
+
+      - name: Combine coverage data
         run: hatch run cov-combine:combine
 
       - name: Upload coverage to Codecov
