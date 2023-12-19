@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Add customizeable `get_extra_detail_context_data` method for workspace adapters. Users can override this method to provide additional context data on a workspace detail page.
+
 ## 0.21.0 (2023-12-04)
 
 * Add docs dependencies to hatch via pyproject.toml.
