@@ -9,7 +9,8 @@ class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
     name = "Custom workspace"
     type = "custom"
     description = "Example custom workspace type for demo app"
-    list_table_class = tables.CustomWorkspaceDataTable
+    list_table_class_staff_view = tables.CustomWorkspaceDataTable
+    list_table_class_view = tables.CustomWorkspaceDataTable
     workspace_form_class = forms.CustomWorkspaceForm
     workspace_data_model = models.CustomWorkspaceData
     workspace_data_form_class = forms.CustomWorkspaceDataForm

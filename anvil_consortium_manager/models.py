@@ -17,7 +17,7 @@ from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
 
 
-class AnVILProjectManagerAccess(models.Model):
+class AnVILProjectManagerAccess(models.Model):  # noqa: DJ008
     """A meta model used to define app level permissions"""
 
     STAFF_EDIT_PERMISSION_CODENAME = "anvil_consortium_manager_staff_edit"
@@ -119,6 +119,10 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         """String method."""
         return "{email} for {user}".format(email=self.email, user=self.user)
 
+    def save(self, *args, **kwargs):
+        self.email = self.email.lower()
+        return super().save(*args, **kwargs)
+
     def anvil_account_exists(self):
         """Check if this account exists on AnVIL."""
         try:
@@ -131,10 +135,6 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             else:
                 raise
         return True
-
-    def save(self, *args, **kwargs):
-        self.email = self.email.lower()
-        return super().save(*args, **kwargs)
 
     def send_verification_email(self, domain):
         """Send a verification email to the email on record.
@@ -341,6 +341,11 @@ class Account(TimeStampedModel, ActivatorModel):
             for group in parents:
                 groups.add(group)
         return groups
+
+    def has_workspace_access(self, workspace):
+        """Return a boolean indicator of whether the workspace can be accessed by this Account."""
+        accessible_workspaces = self.get_accessible_workspaces()
+        return workspace in accessible_workspaces
 
 
 class ManagedGroup(TimeStampedModel):
@@ -690,15 +695,6 @@ class Workspace(TimeStampedModel):
         parents = group.get_all_parents()
         is_shared = self.workspacegroupsharing_set.filter(models.Q(group=group) | models.Q(group__in=parents)).exists()
         return is_shared
-
-    def has_access(self, group):
-        """Check if a group has access to a workspace.
-
-        Both criteria need to be met for a group to have access to a workspace:
-        1. The workspace must be shared with the group (or a group that it is in).
-        2. The group (or a group that it is in) must be in all auth domains for the workspace.
-        """
-        return self.is_shared(group) and self.is_in_authorization_domain(group)
 
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""

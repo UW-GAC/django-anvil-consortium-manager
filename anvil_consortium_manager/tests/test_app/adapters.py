@@ -1,7 +1,7 @@
 from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
-from anvil_consortium_manager.tables import WorkspaceTable
+from anvil_consortium_manager.tables import WorkspaceStaffTable, WorkspaceUserTable
 
 from . import filters, forms, models, tables
 
@@ -12,7 +12,8 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     name = "Test workspace"
     type = "test"
     description = "Workspace type for testing"
-    list_table_class = tables.TestWorkspaceDataTable
+    list_table_class_staff_view = tables.TestWorkspaceDataStaffTable
+    list_table_class_view = tables.TestWorkspaceDataUserTable
     workspace_form_class = forms.TestWorkspaceForm
     workspace_data_model = models.TestWorkspaceData
     workspace_data_form_class = forms.TestWorkspaceDataForm
@@ -36,7 +37,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
 class TestAccountAdapter(BaseAccountAdapter):
     """Test adapter for accounts."""
 
-    list_table_class = tables.TestAccountTable
+    list_table_class = tables.TestAccountStaffTable
     list_filterset_class = filters.TestAccountListFilter
 
     def get_autocomplete_queryset(self, queryset, q):
@@ -54,7 +55,8 @@ class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     name = "Test foreign key workspace"
     type = "test_fk"
     description = "Workspace type for testing"
-    list_table_class = WorkspaceTable
+    list_table_class_staff_view = WorkspaceStaffTable
+    list_table_class_view = WorkspaceUserTable
     workspace_form_class = WorkspaceForm
     workspace_data_model = models.TestForeignKeyWorkspaceData
     workspace_data_form_class = forms.TestForeignKeyWorkspaceDataForm

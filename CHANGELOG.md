@@ -1,9 +1,13 @@
 # Change log
 
-## Devel
+## 0.21.0 (2023-12-04)
 
 * Add docs dependencies to hatch via pyproject.toml.
 * Add requests as a direct dependency instead of as an extra to google-auth.
+* Rename existing tables to include "Staff" in the name, in preparation for adding tables that are viewable by non-staff users.
+* Rename the `list_table_class` property of Workspace adapters to `list_table_class_staff_view`.
+* Add a new required `list_table_class_view` property to Workspace adapters. This table will be shown to users with anvil_consortium_manager_view permission, and `list_table_class_staff_view` will be shown to users with anvil_consortium_manager_staff_view permission.
+* Allow users with anvil_consortium_manager_view permission to see the `WorkspaceDetail`, `WorkspaceList`, `WorkspaceListByType`, and `WorkspaceLanding` views.
 
 ## 0.20.1 (2023-11-09)
 

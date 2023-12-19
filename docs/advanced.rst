@@ -12,7 +12,7 @@ By default, the app uses :class:`~anvil_consortium_manager.adapters.default.Defa
 To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseAccountAdapter`
 and set the following attributes:
 
-- ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountTable`.
+- ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountStaffTable`.
 - ``list_filterset_class``: an attribute set to the class of the table used to filter accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.filters.AccountListFilter`. This must subclass ``FilterSet`` from `django-filter <https://django-filter.readthedocs.io/en/stable/>`_.
 
 Optionally, you can override the following methods:
@@ -53,10 +53,10 @@ You must also define a form containing the additional fields. You must include t
             fields = ("study_name", "consent_code", workspace")
 
 
-Optionally, you can define a new ``django-tables2`` table to use in place of the default ``WorkspaceTable`` that comes with the app.
+Optionally, you can define a new ``django-tables2`` table to use in place of the default ``WorkspaceStaffTable`` that comes with the app.
 This is helpful if you would like to display fields from your custom workspace data model in the :class:`~anvil_consortium_manager.models.Workspace` list view.
 This table will need to operate on the :class:`~anvil_consortium_manager.models.Workspace` model, but it can include fields from your custom workspace data model.
-If you do not want to define a custom table, you can use the default table provided by the app: :class:`anvil_consortium_manager.tables.WorkspaceTable`.
+If you do not want to define a custom table, you can use the default table provided by the app: :class:`anvil_consortium_manager.tables.WorkspaceStaffTable`.
 
 .. code-block:: python
 
@@ -78,7 +78,8 @@ Next, set up the adapter by subclassing :class:`~anvil_consortium_manager.adapte
 * ``workspace_form_class``: the form to use to create an instance of the ``Workspace`` model. The default adapter uses :class:`~anvil_consortium_manager.forms.WorkspaceForm``.
 * ``workspace_data_model``: the model used to store additional data about a workspace, subclassed from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`
 * ``workspace_data_form_class``: the form to use to create an instance of the ``workspace_data_model``
-* ``list_table_class``: the table to use to display the list of workspaces
+* ``list_table_class_staff_view``: the table to use to display the list of workspaces for Staff viewers
+* ``list_table_class_view``: the table to use to display the list of workspaces for non-Staff Viewers.
 * ``workspace_detail_template_name``: the template to use to render the detail of the workspace
 
 You may also override default settings and methods:
@@ -93,13 +94,14 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
     from anvil_consortium_manager.forms import WorkspaceForm
     from my_app.models import CustomWorkspaceData
     from my_app.forms import CustomWorkspaceDataForm
-    from my_app.tables import CustomWorkspaceTable
+    from my_app.tables import CustomWorkspaceStaffTable
 
     class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
         name = "Custom workspace"
         type = "custom"
         description = "Example custom workspace type for demo app"
-        list_table_class = tables.CustomWorkspaceDataTable
+        list_table_class_staff_view = tables.CustomWorkspaceDataStaffTable
+        list_table_class_view = tables.CustomWorkspaceDataUserTable
         workspace_form_class = WorkspaceForm
         workspace_data_model = models.CustomWorkspaceData
         workspace_data_form_class = forms.CustomWorkspaceDataForm
