@@ -138,7 +138,15 @@ class BaseWorkspaceAdapter(ABC):
         return queryset
 
     def get_extra_detail_context_data(self, workspace, request):
-        """Return the extra context specified in the adapter."""
+        """Return the extra context specified in the adapter.
+
+        Args:
+            workspace (anvil_consortium_manager.models.Workspace): The workspace for which to get the extra context.
+            request (django.http.HttpRequest): The request for the view.
+
+        Returns:
+            dict: Extra context to add to or update the workspace detail view.
+        """
 
         return {}
 
