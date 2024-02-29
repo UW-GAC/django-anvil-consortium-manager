@@ -135,29 +135,29 @@ export MYSQLCLIENT_CFLAGS=`pkg-config --cflags libmariadb`
 
 1. Check out the main branch
 
-```
-git checkout main
-```
+    ```
+    git checkout main
+    ```
 
 1. Create a new branch with naming convention `release/vX.Y.Z`.
 
-```
-git checkout -b release/vX.Y.Z
-```
+    ```
+    git checkout -b release/vX.Y.Z
+    ```
 
 1. Update the version number in `anvil_consortium_manager/__init__.py`. Select major, minor, or patch based on standard semantic versioning principles.
 
-```
-hatch version <major,minor,patch>
-```
+    ```
+    hatch version <major,minor,patch>
+    ```
 
 1. Update the CHANGELOG to include the release version and date
 
 1. Push the branch to GitHub
 
-```
-git push -u origin release/vX.Y.Z
-```
+    ```
+    git push -u origin release/vX.Y.Z
+    ```
 
 1. Create a pull request on GitHub to merge the release branch into main.
 
@@ -168,9 +168,3 @@ git push -u origin release/vX.Y.Z
     1. Enter the tag version (e.g. `vX.Y.Z`) and the release title (e.g. `vX.Y.Z`).
     1. Click on the "Generate release notes" button.
     1. Click on "Publish release".
-
-1. After the release is published, update the version number in `anvil_consortium_manager/__init__.py` to the next dev version.
-
-```
-hatch version dev
-```
