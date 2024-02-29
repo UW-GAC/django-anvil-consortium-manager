@@ -63,6 +63,7 @@ class WorkspaceAdmin(SimpleHistoryAdmin):
 
     list_display = ("__str__", "billing_project", "is_locked")
     list_filter = (
+        "workspace_type",
         "billing_project",
         "is_locked",
     )
