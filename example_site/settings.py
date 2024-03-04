@@ -1,6 +1,7 @@
 """
 Settings file for example site.
 """
+
 import os
 from pathlib import Path
 

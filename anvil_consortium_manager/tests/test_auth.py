@@ -1,4 +1,5 @@
 """Tests for the auth.py source file classes that aren't tested elsewhere."""
+
 from django.contrib.auth.models import Permission, User
 from django.test import RequestFactory, TestCase
 
