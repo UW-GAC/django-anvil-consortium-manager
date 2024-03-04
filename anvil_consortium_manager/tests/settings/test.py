@@ -1,6 +1,7 @@
 """
 Base test settings file.
 """
+
 import os
 from pathlib import Path
 
