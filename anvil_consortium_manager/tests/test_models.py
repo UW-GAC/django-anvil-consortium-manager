@@ -1006,6 +1006,14 @@ class ManagedGroupTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance2.save()
 
+    def test_name_max_length(self):
+        """ValidationError is raised when the group name is too long."""
+        instance = factories.ManagedGroupFactory.build(name="a" * 60)
+        instance.full_clean()
+        instance = factories.ManagedGroupFactory.build(name="a" * 61)
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
     def test_unique_email(self):
         """Saving a model with a duplicate name fails."""
         instance = factories.ManagedGroupFactory.create()
@@ -1479,6 +1487,15 @@ class WorkspaceTest(TestCase):
         )
         instance.save()
         self.assertIsInstance(instance, Workspace)
+
+    def test_name_max_length(self):
+        """ValidationError is raised when the group name is too long."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = factories.WorkspaceFactory.build(billing_project=billing_project, name="a" * 254)
+        instance.full_clean()
+        instance = factories.WorkspaceFactory.build(billing_project=billing_project, name="a" * 255)
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
 
     def test_note_field(self):
         """Creation using the model constructor and .save() works when note is set."""

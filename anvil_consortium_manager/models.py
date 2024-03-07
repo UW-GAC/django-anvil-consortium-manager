@@ -351,7 +351,11 @@ class Account(TimeStampedModel, ActivatorModel):
 class ManagedGroup(TimeStampedModel):
     """A model to store information about AnVIL Managed Groups."""
 
-    name = models.SlugField(max_length=64, unique=True, help_text="Name of the group on AnVIL.")
+    name = models.SlugField(
+        max_length=60,  # Max allowed by AnVIL.
+        unique=True,
+        help_text="Name of the group on AnVIL.",
+    )
     email = models.EmailField(
         help_text="Email for this group.",
         blank=False,
@@ -630,7 +634,7 @@ class Workspace(TimeStampedModel):
         help_text="Billing project associated with this Workspace.",
     )
     name = models.SlugField(
-        max_length=64,
+        max_length=254,  # Max allowed by AnVIL.
         help_text="Name of the workspace on AnVIL, not including billing project name.",
     )
     # This makes it possible to easily select the authorization domains in the WorkspaceForm.
