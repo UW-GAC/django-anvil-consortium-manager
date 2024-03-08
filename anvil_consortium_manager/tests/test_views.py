@@ -10634,7 +10634,7 @@ class WorkspaceUpdateTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
         form = response.context_data.get("form")
-        self.assertEqual(len(form.fields), 1)
+        self.assertEqual(len(form.fields), 2)  # is_requester_pays and is_locked
         self.assertIn("note", form.fields)
 
     def test_has_formset_in_context(self):
@@ -10793,7 +10793,7 @@ class WorkspaceUpdateTest(TestCase):
         self.assertTrue("form" in response.context_data)
         form = response.context_data["form"]
         self.assertIsInstance(form, TestWorkspaceAdapter().get_workspace_form_class())
-        self.assertEqual(len(form.fields), 1)
+        self.assertEqual(len(form.fields), 2)  # is_requester_pays and is_locked
         self.assertIn("note", form.fields)
 
     def test_get_workspace_data_with_second_foreign_key_to_workspace(self):

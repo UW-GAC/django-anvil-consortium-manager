@@ -158,6 +158,7 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
             "billing_project",
             "name",
             "authorization_domains",
+            "is_requester_pays",
             "note",
         )
         widgets = {

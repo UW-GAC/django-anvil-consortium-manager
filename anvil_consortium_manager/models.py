@@ -653,6 +653,7 @@ class Workspace(TimeStampedModel):
         default=False,
     )
     is_requester_pays = models.BooleanField(
+        verbose_name="Requester pays",
         help_text="Indicator of whether the workspace is set to requester pays.",
         default=False,
     )
