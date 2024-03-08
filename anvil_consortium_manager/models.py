@@ -652,7 +652,10 @@ class Workspace(TimeStampedModel):
         help_text="Indicator of whether the workspace is locked or not.",
         default=False,
     )
-
+    is_requester_pays = models.BooleanField(
+        help_text="Indicator of whether the workspace is set to requester pays.",
+        default=False,
+    )
     history = HistoricalRecords()
 
     class Meta:
