@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.11"]
+        python-version: ["3.8", "3.12"]
         django-version: ["3.2", "4.2"]
         backend: ["sqlite", "mysql"]
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install hatch
         run: python -m pip install --upgrade hatch

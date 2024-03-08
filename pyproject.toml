@@ -117,7 +117,7 @@ dependencies = [
 ]
 [tool.hatch.envs.default.scripts]
 dj = "python manage.py {args}"
-tests = "hatch run test-sqlite.py3.11-4.2:test {args}"
+tests = "hatch run test-sqlite.py3.12-4.2:test {args}"
 all = [
     "hatch run lint:run",
     "rm -f .coverage.*",
@@ -168,7 +168,7 @@ template = "testing"
 DBBACKEND = "sqlite3"
 DBNAME = ":memory:"
 [[tool.hatch.envs.test-sqlite.matrix]]
-python = ["3.8", "3.11"]
+python = ["3.8", "3.12"]
 django = ["3.2", "4.2"]
 [tool.hatch.envs.test-sqlite.overrides]
 matrix.django.extra-dependencies = [
@@ -184,7 +184,7 @@ extra-dependencies = [
 [tool.hatch.envs.test-mysql.env-vars]
 DBBACKEND = "mysql"
 [[tool.hatch.envs.test-mysql.matrix]]
-python = ["3.8", "3.11"]
+python = ["3.8", "3.12"]
 django = ["3.2", "4.2"]
 [tool.hatch.envs.test-mysql.overrides]
 matrix.django.extra-dependencies = [
@@ -213,7 +213,7 @@ html = ["coverage html"]
 
 [tool.hatch.envs.lint]
 detached = true
-python = "3.11"
+python = "3.12"
 dependencies = [
     "pre-commit"
 ]
