@@ -6919,6 +6919,20 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
 
+    def test_is_requester_pays_true(self):
+        """An indicator of whether a workspace is requester_pays appears on the page."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_requester_pays=True)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertContains(response, "Requester pays")
+
+    def test_is_requester_pays_false(self):
+        """An indicator of whether a workspace is requester_pays appears on the page."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_requester_pays=False)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertNotContains(response, "Requester pays")
+
     def test_clone_links_with_two_registered_workspace_adapters(self):
         """Links to clone into each type of workspace appear when there are two registered workspace types."""
         workspace_adapter_registry.register(TestWorkspaceAdapter)

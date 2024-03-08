@@ -24,6 +24,16 @@
     ></span>
   </span>
 
+  {% if object.is_requester_pays %}
+  <span class="badge bg-warning text-dark"><span class="fa-solid fa-circle-dollar-to-slot me-2"></span>Requester pays
+    <span class="ms-2 fa-solid fa-circle-question"
+    data-bs-toggle="tooltip"
+    data-bs-placement="bottom"
+    data-bs-title="You must select a billing project when listing files or using data in this workspace."
+    ></span>
+  </span>
+  {% endif %}
+
   {% if has_access or user.is_superuser %}
   <a class="badge bg-light text-dark btn btn-light" href="{{ object.get_anvil_url }}" target="_blank" role="button">
     <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
