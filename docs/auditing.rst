@@ -76,6 +76,8 @@ The :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit` method runs t
     3. The :class:`~anvil_consortium_manager.models.Workspace` has the same authorization domains in the app as on AnVIL.
     4. The access to each :class:`~anvil_consortium_manager.models.Workspace` in the app matches the access on AnVIL (using :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit_access` method for each Workspace).
     5. No workspaces that have the app service account as an owner exist on AnVIL.
+    6. The workspace ``is_locked`` status matches AnVIL.
+    7. The workspace ``is_requester_pays`` status matches AnVIL.
 
 The :meth:`~anvil_consortium_manager.models.Workspace.anvil_audit_membership` method runs the following checks for a single :class:`~anvil_consortium_manager.models.Workspace` instance:
 
