@@ -1531,6 +1531,27 @@ class WorkspaceTest(TestCase):
         )
         self.assertTrue(instance.is_locked)
 
+    def test_is_requester_pays_default(self):
+        """Default value for is_requester_pays is set as expected."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        self.assertFalse(instance.is_requester_pays)
+
+    def test_is_requester_pays_true(self):
+        """is_requester_pays can be set to True."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="my-name",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            is_requester_pays=True,
+        )
+        self.assertTrue(instance.is_requester_pays)
+
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
         instance = factories.WorkspaceFactory.build(

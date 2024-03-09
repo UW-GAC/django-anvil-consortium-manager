@@ -2696,6 +2696,13 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             }
         }
 
+    def get_api_bucket_options_url(self, billing_project_name, workspace_name):
+        return self.api_client.rawls_entry_point + "/api/workspaces/" + billing_project_name + "/" + workspace_name
+
+    def get_api_bucket_options_response(self):
+        """Return a json for the workspace/acl method that is not requester pays."""
+        return {"bucketOptions": {"requesterPays": False}}
+
     def test_anvil_audit_no_workspaces(self):
         """anvil_audit works correct if there are no Workspaces in the app."""
         api_url = self.get_api_url()
@@ -2729,6 +2736,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -2769,6 +2784,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -2788,6 +2811,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "WRITER")],
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -2824,6 +2855,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -2859,6 +2898,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -2868,6 +2915,89 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertFalse(record_result.ok())
         self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_LOCK]))
+
+    def test_anvil_audit_one_workspace_is_requester_pays_in_app_not_on_anvil(self):
+        """anvil_audit raises exception if workspace is requester_pays in the app but not on AnVIL."""
+        workspace = factories.WorkspaceFactory.create(is_requester_pays=True)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    is_locked=False,
+                )
+            ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        audit_results = audit.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_REQUESTER_PAYS]))
+
+    def test_anvil_audit_one_workspace_is_not_requester_pays_in_app_but_is_on_anvil(self):
+        """anvil_audit raises exception if workspace is requester_pays in the app but not on AnVIL."""
+        workspace = factories.WorkspaceFactory.create(is_requester_pays=False)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    "OWNER",
+                    is_locked=False,
+                )
+            ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        response = self.get_api_bucket_options_response()
+        response["bucketOptions"]["requesterPays"] = True
+        self.anvil_response_mock.add(responses.GET, workspace_acl_url, status=200, json=response)
+        audit_results = audit.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_REQUESTER_PAYS]))
 
     def test_anvil_audit_two_workspaces_no_errors(self):
         """anvil_audit returns None if if two workspaces exist in both the app and AnVIL."""
@@ -2898,6 +3028,22 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url_2,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_1.billing_project.name, workspace_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_2.billing_project.name, workspace_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -2940,6 +3086,22 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_1.billing_project.name, workspace_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_2.billing_project.name, workspace_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
@@ -2971,6 +3133,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url_2,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_2.billing_project.name, workspace_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3005,6 +3175,22 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url_2,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_1.billing_project.name, workspace_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_2.billing_project.name, workspace_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3163,6 +3349,16 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
@@ -3198,6 +3394,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3235,6 +3439,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
@@ -3268,6 +3480,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3306,6 +3526,16 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -3340,6 +3570,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3378,6 +3616,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -3415,6 +3661,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -3451,6 +3705,16 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3501,6 +3765,22 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url_2,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_1.billing_project.name, workspace_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_2.billing_project.name, workspace_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3554,6 +3834,22 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_1.billing_project.name, workspace_1.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace_2.billing_project.name, workspace_2.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -3577,6 +3873,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             api_url,
             status=200,
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()
@@ -3621,6 +3925,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url,
             status=200,
             json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         audit_results = audit.WorkspaceAudit()
         audit_results.run_audit()

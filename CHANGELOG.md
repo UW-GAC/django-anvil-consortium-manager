@@ -5,6 +5,7 @@
 * Add customizeable `get_extra_detail_context_data` method for workspace adapters. Users can override this method to provide additional context data on a workspace detail page.
 * Add filtering by workspace type to the admin interface.
 * Set max_length for `ManagedGroup` and `Workspace` models to match what AnVIL allows.
+* Track requester pays status for `Workspace` objects.
 
 ## 0.21.0 (2023-12-04)
 

@@ -6919,6 +6919,20 @@ class WorkspaceDetailTest(TestCase):
             ),
         )
 
+    def test_is_requester_pays_true(self):
+        """An indicator of whether a workspace is requester_pays appears on the page."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_requester_pays=True)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertContains(response, "Requester pays")
+
+    def test_is_requester_pays_false(self):
+        """An indicator of whether a workspace is requester_pays appears on the page."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_requester_pays=False)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertNotContains(response, "Requester pays")
+
     def test_clone_links_with_two_registered_workspace_adapters(self):
         """Links to clone into each type of workspace appear when there are two registered workspace types."""
         workspace_adapter_registry.register(TestWorkspaceAdapter)
@@ -10620,7 +10634,7 @@ class WorkspaceUpdateTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
         form = response.context_data.get("form")
-        self.assertEqual(len(form.fields), 1)
+        self.assertEqual(len(form.fields), 2)  # is_requester_pays and is_locked
         self.assertIn("note", form.fields)
 
     def test_has_formset_in_context(self):
@@ -10779,7 +10793,7 @@ class WorkspaceUpdateTest(TestCase):
         self.assertTrue("form" in response.context_data)
         form = response.context_data["form"]
         self.assertIsInstance(form, TestWorkspaceAdapter().get_workspace_form_class())
-        self.assertEqual(len(form.fields), 1)
+        self.assertEqual(len(form.fields), 2)  # is_requester_pays and is_locked
         self.assertIn("note", form.fields)
 
     def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
@@ -11822,6 +11836,13 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             }
         }
 
+    def get_api_bucket_options_url(self, billing_project_name, workspace_name):
+        return self.api_client.rawls_entry_point + "/api/workspaces/" + billing_project_name + "/" + workspace_name
+
+    def get_api_bucket_options_response(self):
+        """Return a json for the workspace/acl method that is not requester pays."""
+        return {"bucketOptions": {"requesterPays": False}}
+
     def get_view(self):
         """Return the view being tested."""
         return views.WorkspaceAudit.as_view()
@@ -11910,6 +11931,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("verified_table", response.context_data)
@@ -11940,6 +11969,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             # Error - we are not an owner.
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -11999,6 +12036,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             # Error - we are not admin.
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())

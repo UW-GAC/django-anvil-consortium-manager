@@ -363,6 +363,9 @@ class WorkspaceAudit(AnVILAudit):
     ERROR_DIFFERENT_LOCK = "Workspace lock status does not match on AnVIL"
     """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
 
+    ERROR_DIFFERENT_REQUESTER_PAYS = "Workspace bucket requester_pays status does not match on AnVIL"
+    """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
+
     def run_audit(self):
         """Run an audit on Workspaces in the app."""
         # Check the list of workspaces.
@@ -370,7 +373,8 @@ class WorkspaceAudit(AnVILAudit):
             "workspace.namespace",
             "workspace.name",
             "workspace.authorizationDomain",
-            "workspace.isLocked,accessLevel",
+            "workspace.isLocked",
+            "accessLevel",
         ]
         response = AnVILAPIClient().list_workspaces(fields=",".join(fields))
         workspaces_on_anvil = response.json()
@@ -408,6 +412,14 @@ class WorkspaceAudit(AnVILAudit):
                 # Check lock status.
                 if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
                     model_instance_result.add_error(self.ERROR_DIFFERENT_LOCK)
+                # Check is_requester_pays status. Unfortunately we have to make a separate API call.
+                response = AnVILAPIClient().get_workspace(
+                    workspace.billing_project.name,
+                    workspace.name,
+                    fields=["bucketOptions"],
+                )
+                if workspace.is_requester_pays != response.json()["bucketOptions"]["requesterPays"]:
+                    model_instance_result.add_error(self.ERROR_DIFFERENT_REQUESTER_PAYS)
 
             self.add_result(model_instance_result)
 
