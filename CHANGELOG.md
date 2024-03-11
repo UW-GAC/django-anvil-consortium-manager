@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.22.0 (2024-03-11)
 
 * Add customizeable `get_extra_detail_context_data` method for workspace adapters. Users can override this method to provide additional context data on a workspace detail page.
 * Add filtering by workspace type to the admin interface.
