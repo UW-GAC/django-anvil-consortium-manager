@@ -24,10 +24,11 @@ jobs:
       matrix:
         python-version: ["3.8", "3.12"]
         django-version: ["3.2", "4.2"]
+        mariadb-version: ["10.4"]
         backend: ["sqlite", "mysql"]
-        include:
-          - mariadb-version: "10.4"
-            backend: "mysql"
+        # include:
+        #   - mariadb-version: "10.4"
+        #     backend: "mysql"
 
     runs-on: ubuntu-latest
     env:
