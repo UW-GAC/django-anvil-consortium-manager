@@ -25,6 +25,10 @@ jobs:
         python-version: ["3.8", "3.12"]
         django-version: ["3.2", "4.2"]
         backend: ["sqlite", "mysql"]
+        include:
+          - mariadb-version: "10.4"
+            backend: "mysql"
+
     runs-on: ubuntu-latest
     env:
       PYTEST_ADDOPTS: "--maxfail=20"  # Stop testing after too many failures.
@@ -32,7 +36,7 @@ jobs:
 
     services:
       database:
-        image: mariadb:10.4
+        image: mariadb:{{ matrix.mariadb-version }}
         env:
           MYSQL_ROOT_PASSWORD: rootpw
           MYSQL_DATABASE: test
