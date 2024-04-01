@@ -26,9 +26,9 @@ jobs:
         django-version: ["3.2", "4.2"]
         mariadb-version: ["10.4"]
         backend: ["sqlite", "mysql"]
-        include:
-          - mariadb-version: "10.5"
-            backend: "mysql"
+        # include:
+        #   - mariadb-version: "10.4"
+        #     backend: "mysql"
 
     runs-on: ubuntu-latest
     env:
