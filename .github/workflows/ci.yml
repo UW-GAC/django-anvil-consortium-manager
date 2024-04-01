@@ -24,11 +24,10 @@ jobs:
       matrix:
         python-version: ["3.8", "3.12"]
         django-version: ["3.2", "4.2"]
-        # mariadb-version: ["10.4"]
-        backend: ["sqlite", "mysql"]
         include:
-          - mariadb-version: "10.4"
-            # backend: "mysql"
+          - backend: sqlite
+          - backend: mariadb
+            mariadb-version: "10.4"
 
     runs-on: ubuntu-latest
     env:
@@ -37,7 +36,10 @@ jobs:
 
     services:
       database:
-        image: mariadb:${{ matrix.mariadb-version }}
+        # Conditional way to include the service
+        # See https://github.com/actions/runner/issues/822
+        image: ${{ ( matrix.backend != '' ) && format('mariadb:{0}', inputs.maraidb-version) || '' }}
+        # image: mariadb:${{ matrix.mariadb-version }}
         env:
           MYSQL_ROOT_PASSWORD: rootpw
           MYSQL_DATABASE: test
