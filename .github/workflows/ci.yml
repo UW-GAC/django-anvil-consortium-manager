@@ -27,14 +27,14 @@ jobs:
         backend: ["sqlite", "mysql"]
         mariadb-version: ["10.4"]  # What we're currently running with.
         include:
-          - mariadb-version: "10.5"  # Possible future update.
-            python-version: "3.12"
+          - python-version: "3.12"  # Possible future update.
             django-version: "4.2"
             backend: "mysql"
-          - mariadb-version: "10.11"  # Possible future update.
-            python-version: "3.12"
+            mariadb-version: "10.5"
+          - python-version: "3.12"  # Possible future update.
             django-version: "4.2"
             backend: "mysql"
+            mariadb-version: "10.11"
 
     runs-on: ubuntu-latest
     env:
