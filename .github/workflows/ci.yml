@@ -35,6 +35,7 @@ jobs:
             django-version: "4.2"
             backend: "mysql"
             mariadb-version: "10.11"
+      name: "py${{ matrix.python-version }}-dj${{ matrix.django-version }}-${{ matrix.backend }}-${{ matrix.mariadb-version }}"
 
     runs-on: ubuntu-latest
     env:
