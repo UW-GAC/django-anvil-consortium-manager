@@ -25,11 +25,11 @@ jobs:
         python-version: ["3.8", "3.12"]
         django-version: ["3.2", "4.2"]
         backend: ["sqlite", "mysql"]
-        mariadb-version: ["10.4", "10.5", "10.11"]
-        exclude:
-          - backend: sqlite
+        include:
+          - mariadb-version: "10.4"
+          - backend: "mysql"
             mariadb-version: "10.5"
-          - backend: sqlite
+          - backend: "mysql"
             mariadb-version: "10.11"
 
     runs-on: ubuntu-latest
