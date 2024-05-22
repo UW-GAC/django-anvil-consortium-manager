@@ -1,5 +1,9 @@
 # Change log
 
+## 0.22.1 (devel)
+
+* Maintenance: specify different numpy version requirement for python 3.12.
+
 ## 0.22.0 (2024-03-11)
 
 * Add customizeable `get_extra_detail_context_data` method for workspace adapters. Users can override this method to provide additional context data on a workspace detail page.
