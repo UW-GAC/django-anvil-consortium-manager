@@ -1,6 +1,6 @@
 # Change log
 
-## 0.22.1 (devel)
+## 0.22.1 (2024-05-22)
 
 * Maintenance: specify different numpy version requirement for python 3.12.
 
