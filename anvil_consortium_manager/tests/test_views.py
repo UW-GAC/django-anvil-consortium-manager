@@ -3454,9 +3454,10 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Account.objects.count(), 1)
         models.Account.objects.get(pk=object.pk)
         # Does not remove the user from any groups.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
-        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
+        # Removes the user from only the groups where the API call succeeded.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        self.assertNotIn(memberships[0], models.GroupAccountMembership.objects.all())
+        self.assertIn(memberships[1], models.GroupAccountMembership.objects.all())
 
 
 class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
@@ -3621,10 +3622,10 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
-        # Memberships are *not* deleted from the app.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        # Memberships are deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         # History for group-account membership is *not* added.
-        self.assertEqual(models.GroupAccountMembership.history.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.history.count(), 2)
 
     def test_removes_account_from_all_groups(self):
         """Deactivating an account from the app also removes it from all groups that it is in."""
@@ -3642,8 +3643,8 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Status was updated.
         object.refresh_from_db()
         self.assertEqual(object.status, object.INACTIVE_STATUS)
-        # Memberships are *not* deleted from the app.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        # Memberships are deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_api_error_when_removing_account_from_groups(self):
         """Message when an API error occurred when removing a user from a group."""
@@ -3673,10 +3674,10 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # The Account is not marked as inactive.
         object.refresh_from_db()
         self.assertEqual(object.status, object.ACTIVE_STATUS)
-        # Does not remove the user from any groups.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
-        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
+        # Removes the user from only the groups where the API call succeeded.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        self.assertNotIn(memberships[0], models.GroupAccountMembership.objects.all())
+        self.assertIn(memberships[1], models.GroupAccountMembership.objects.all())
 
     def test_account_already_inactive_get(self):
         """Redirects with a message if account is already deactivated."""
@@ -3886,75 +3887,6 @@ class AccountReactivateTest(AnVILAPIMockTestMixin, TestCase):
             response,
             reverse("anvil_consortium_manager:accounts:detail", args=[object.uuid]),
         )
-
-    def test_adds_account_from_one_group(self):
-        """Reactivating an account from the app also adds it from one group on AnVIL."""
-        object = factories.AccountFactory.create()
-        membership = factories.GroupAccountMembershipFactory.create(account=object)
-        group = membership.group
-        object.status = object.INACTIVE_STATUS
-        object.save()
-        add_to_group_url = self.get_api_add_to_group_url(group.name, object.email)
-        self.anvil_response_mock.add(responses.PUT, add_to_group_url, status=204)
-        self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
-        self.assertEqual(response.status_code, 302)
-        # History is not added for the GroupAccountMembership.
-        self.assertEqual(models.GroupAccountMembership.history.count(), 1)
-
-    def test_adds_account_to_all_groups(self):
-        """Reactivating an account from the app also adds it from all groups that it is in."""
-        object = factories.AccountFactory.create()
-        memberships = factories.GroupAccountMembershipFactory.create_batch(2, account=object)
-        object.status = object.INACTIVE_STATUS
-        object.save()
-        group_1 = memberships[0].group
-        group_2 = memberships[1].group
-        add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name, object.email)
-        self.anvil_response_mock.add(responses.PUT, add_to_group_url_1, status=204)
-        add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name, object.email)
-        self.anvil_response_mock.add(responses.PUT, add_to_group_url_2, status=204)
-        self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.uuid), {"submit": ""})
-        self.assertEqual(response.status_code, 302)
-        # Status was updated.
-        object.refresh_from_db()
-        self.assertEqual(object.status, object.ACTIVE_STATUS)
-
-    def test_api_error_when_adding_account_to_groups(self):
-        """Message when an API error occurred when adding a user to a group."""
-        object = factories.AccountFactory.create()
-        memberships = factories.GroupAccountMembershipFactory.create_batch(2, account=object)
-        object.status = object.INACTIVE_STATUS
-        object.save()
-        group_1 = memberships[0].group
-        group_2 = memberships[1].group
-        add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name, object.email)
-        self.anvil_response_mock.add(responses.PUT, add_to_group_url_1, status=204)
-        add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name, object.email)
-        self.anvil_response_mock.add(
-            responses.PUT,
-            add_to_group_url_2,
-            status=409,
-            json={"message": "test error"},
-        )
-        # Need a client for messages.
-        self.client.force_login(self.user)
-        response = self.client.post(self.get_url(object.uuid), {"submit": ""}, follow=True)
-        self.assertRedirects(response, object.get_absolute_url())
-        messages = [m.message for m in get_messages(response.wsgi_request)]
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(
-            views.AccountReactivate.message_error_adding_to_groups.format("test error"),
-            str(messages[0]),
-        )
-        # The Account is not marked as inactive.
-        object.refresh_from_db()
-        self.assertEqual(object.status, object.ACTIVE_STATUS)
-        # Does not remove the user from any groups.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
-        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
 
     def test_account_already_active_get(self):
         """Redirects with a message if account is already active."""
@@ -4381,52 +4313,61 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 
-    def test_active_account_table(self):
-        """The active account table exists."""
+    def test_account_table(self):
+        """The account table exists."""
         obj = factories.ManagedGroupFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
-        self.assertIn("active_account_table", response.context_data)
+        self.assertIn("account_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["active_account_table"],
+            response.context_data["account_table"],
             tables.GroupAccountMembershipStaffTable,
         )
 
-    def test_active_account_table_none(self):
-        """No accounts are shown if the group has no active accounts."""
+    def test_account_table_none(self):
+        """No accounts are shown if the group has no accounts."""
         group = factories.ManagedGroupFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 0)
 
-    def test_active_account_table_one(self):
-        """One accounts is shown if the group has only that active account."""
+    def test_account_table_one(self):
+        """One accounts is shown if the group has only that account."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 1)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 1)
 
-    def test_active_account_table_two(self):
-        """Two accounts are shown if the group has only those active accounts."""
+    def test_account_table_two(self):
+        """Two accounts are shown if the group has only those accounts."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, group=group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 2)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 2)
 
-    def test_shows_active_account_for_only_this_group(self):
+    def test_account_table_shows_account_for_only_this_group(self):
         """Only shows accounts that are in this group."""
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupAccountMembershipFactory.create(group=other_group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 0)
+
+    def test_account_table_includes_inactive_accounts(self):
+        """Shows inactive accounts in the table. Not that this would represent an internal data consistency issue."""
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account__status=models.Account.INACTIVE_STATUS)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name))
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 1)
 
     def test_group_table(self):
         """The group table exists."""

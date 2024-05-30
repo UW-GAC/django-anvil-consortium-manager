@@ -124,8 +124,8 @@ all = [
     "rm -f .coverage.*",
     "hatch run test-sqlite:cov",
     "hatch run test-mysql:cov",
-    "hatch run cov-combine:combine",
-    "hatch run cov-combine:html",
+    "hatch run cov:combine",
+    "hatch run cov:html",
 ]
 printenv = [
     "echo DBBACKEND=$DBBACKEND",
@@ -194,7 +194,7 @@ matrix.django.extra-dependencies = [
 ]
 
 
-[tool.hatch.envs.cov-combine]
+[tool.hatch.envs.cov]
 skip-install = true
 dependencies = [
     # Coverage for django templates
@@ -202,14 +202,15 @@ dependencies = [
     "Django ~= 4.2",
     "coverage[toml]>=6.5"
 ]
-[tool.hatch.envs.cov-combine.scripts]
+[tool.hatch.envs.cov.scripts]
 combine = [
     # Clean up old files first.
     "rm -f .coverage",
-    "coverage combine"
+    "coverage combine",
 ]
 report = ["coverage report"]
 html = ["coverage html"]
+xml = ["coverage xml"]
 
 
 [tool.hatch.envs.lint]

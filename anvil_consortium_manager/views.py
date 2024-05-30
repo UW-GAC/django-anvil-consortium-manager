@@ -630,7 +630,7 @@ class AccountAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autocomp
 
     def get_queryset(self):
         # Only active accounts.
-        qs = models.Account.objects.filter(status=models.Account.ACTIVE_STATUS).order_by("email")
+        qs = models.Account.objects.active().order_by("email")
 
         # Use the account adapter to process the query.
         adapter = get_account_adapter()
@@ -685,12 +685,8 @@ class ManagedGroupDetail(
         context["workspace_table"] = tables.WorkspaceGroupSharingStaffTable(
             self.object.workspacegroupsharing_set.all(), exclude="group"
         )
-        context["active_account_table"] = tables.GroupAccountMembershipStaffTable(
-            self.object.groupaccountmembership_set.filter(account__status=models.Account.ACTIVE_STATUS),
-            exclude="group",
-        )
-        context["inactive_account_table"] = tables.GroupAccountMembershipStaffTable(
-            self.object.groupaccountmembership_set.filter(account__status=models.Account.INACTIVE_STATUS),
+        context["account_table"] = tables.GroupAccountMembershipStaffTable(
+            self.object.groupaccountmembership_set.all(),
             exclude="group",
         )
         context["group_table"] = tables.GroupGroupMembershipStaffTable(

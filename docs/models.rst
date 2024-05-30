@@ -51,6 +51,21 @@ For a valid account, the ``anvil_exists`` method returns ``True``:
 
 By default, the :attr:`~anvil_consortium_manager.models.Account.status` field of an :class:`~anvil_consortium_manager.models.Account` is set to active (:attr:`anvil_consortium_manager.models.Account.STATUS_ACTIVE`).
 The status can be changed to inactive (:attr:`anvil_consortium_manager.models.Account.STATUS_INACTIVE`) by calling the :meth:`~anvil_consortium_manager.models.Account.deactivate` method on the :class:`~anvil_consortium_manager.models.Account` instance.
-This will keep the record of all :class:`~anvil_consortium_manager.models.ManagedGroup`\ s that an :class:`~anvil_consortium_manager.models.Account` is part of, but will remove that Account from all groups
-on AnVIL.
-If the :class:`~anvil_consortium_manager.models.Account` is reactivated (using the :meth:`~anvil_consortium_manager.models.Account.reactivate` method :class:`~anvil_consortium_manager.models.Account`), it will be added back to all previous Managed Groups on AnVIL.
+Deactivating an Account will remove that Account from all groups on AnVIL and delete the :class:`~anvil_consortium_manager.models.GroupAccountMembership`\ records for that Account.
+
+.. code-block:: pycon
+
+    >>> account = Account(email="foo@bar.com", is_service_account=False)
+    >>> account.deactivate()
+    >>>  account.get_status_display()
+    'Inactive'
+
+The Account can be reactivated using the :meth:`~anvil_consortium_manager.models.Account.reactivate` method.
+
+.. code-block:: pycon
+
+    >>> account = Account(email="foo@bar.com", is_service_account=False)
+    >>> account.deactivate()
+    >>> account.reactivate()
+    >>> account.get_status_display()
+    'Active'

@@ -112,9 +112,17 @@ jobs:
           ls -la .coverage*
 
       - name: Combine coverage data
-        run: hatch run cov-combine:combine
+        run: |
+          hatch run cov:combine
+          ls -la .coverage*
+
+      - name: Create coverage xml file
+        run: |
+          hatch run cov:xml
+          ls -la .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
+          fail_ci_if_error: true # optional (default = false)
           token: ${{ secrets.CODECOV_TOKEN }}

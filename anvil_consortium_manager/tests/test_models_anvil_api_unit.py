@@ -200,7 +200,7 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.DELETE, remove_from_group_url, status=204)
         self.object.anvil_remove_from_groups()
         # The membership was removed.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_anvil_remove_from_groups_in_two_groups(self):
         """anvil_remove_from_groups succeeds if the account is in two groups."""
@@ -213,7 +213,7 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.DELETE, remove_from_group_url_2, status=204)
         self.object.anvil_remove_from_groups()
         # The membership was removed.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_anvil_remove_from_groups_api_failure(self):
         """anvil_remove_from_groups does not remove group memberships if any API call failed."""
@@ -231,8 +231,8 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         )
         with self.assertRaises(anvil_api.AnVILAPIError):
             self.object.anvil_remove_from_groups()
-        # No memberships were removed.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        # Only the successful membership was removed.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
     def test_deactivate_no_groups(self):
         """deactivate properly sets the status field if the account is not in any groups."""
@@ -250,8 +250,8 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.deactivate()
         self.object.refresh_from_db()
         self.assertEqual(self.object.status, self.object.INACTIVE_STATUS)
-        # The membership was not removed from the app.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        # The membership was removed from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_deactivate_two_groups(self):
         """deactivate succeeds if the account is in two groups."""
@@ -265,8 +265,29 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.deactivate()
         self.object.refresh_from_db()
         self.assertEqual(self.object.status, self.object.INACTIVE_STATUS)
-        # The memberships were not removed.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        # The memberships were removed.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
+
+    def test_deactivate_api_failure(self):
+        """deactivate does not remove from any groups or set the status if an API call failed."""
+        memberships = factories.GroupAccountMembershipFactory.create_batch(2, account=self.object)
+        group_1 = memberships[0].group
+        group_2 = memberships[1].group
+        remove_from_group_url_1 = self.get_api_remove_from_group_url(group_1.name)
+        remove_from_group_url_2 = self.get_api_remove_from_group_url(group_2.name)
+        self.anvil_response_mock.add(responses.DELETE, remove_from_group_url_1, status=204)
+        self.anvil_response_mock.add(
+            responses.DELETE,
+            remove_from_group_url_2,
+            status=409,
+            json={"message": "api error"},
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError):
+            self.object.deactivate()
+        self.object.refresh_from_db()
+        self.assertEqual(self.object.status, self.object.ACTIVE_STATUS)
+        # Only the one membership was removed.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
 
     def test_reactivate_no_groups(self):
         """reactivate properly sets the status field if the account is not in any groups."""
@@ -276,37 +297,6 @@ class AccountAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.object.reactivate()
         self.object.refresh_from_db()
         self.assertEqual(self.object.status, self.object.ACTIVE_STATUS)
-
-    def test_reactivate_one_group(self):
-        """reactivate succeeds if the account is in one group."""
-        self.object.status = self.object.INACTIVE_STATUS
-        self.object.save()
-        membership = factories.GroupAccountMembershipFactory.create(account=self.object)
-        group = membership.group
-        add_to_group_url = self.get_api_add_to_group_url(group.name)
-        self.anvil_response_mock.add(responses.PUT, add_to_group_url, status=204)
-        self.object.reactivate()
-        self.object.refresh_from_db()
-        self.assertEqual(self.object.status, self.object.ACTIVE_STATUS)
-        # The membership was not removed from the app.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
-
-    def test_reactivate_two_groups(self):
-        """reactivate succeeds if the account is in two groups."""
-        self.object.status = self.object.INACTIVE_STATUS
-        self.object.save()
-        memberships = factories.GroupAccountMembershipFactory.create_batch(2, account=self.object)
-        group_1 = memberships[0].group
-        group_2 = memberships[1].group
-        add_to_group_url_1 = self.get_api_add_to_group_url(group_1.name)
-        add_to_group_url_2 = self.get_api_add_to_group_url(group_2.name)
-        self.anvil_response_mock.add(responses.PUT, add_to_group_url_1, status=204)
-        self.anvil_response_mock.add(responses.PUT, add_to_group_url_2, status=204)
-        self.object.reactivate()
-        self.object.refresh_from_db()
-        self.assertEqual(self.object.status, self.object.ACTIVE_STATUS)
-        # The memberships were not removed.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
 
 
 class ManagedGroupAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
