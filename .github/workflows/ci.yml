@@ -116,9 +116,13 @@ jobs:
           hatch run cov-combine:combine
           ls -la .coverage*
 
+      - name: Create coverage xml file
+        run: |
+          hatch run cov-combine:xml
+          ls -la coverage.xml
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true # optional (default = false)
-          file: .coverage
           token: ${{ secrets.CODECOV_TOKEN }}

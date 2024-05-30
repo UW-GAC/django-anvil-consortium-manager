@@ -206,10 +206,11 @@ dependencies = [
 combine = [
     # Clean up old files first.
     "rm -f .coverage",
-    "coverage combine"
+    "coverage combine",
 ]
 report = ["coverage report"]
 html = ["coverage html"]
+xml = ["coverage xml"]
 
 
 [tool.hatch.envs.lint]
