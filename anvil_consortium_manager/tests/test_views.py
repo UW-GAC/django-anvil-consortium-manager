@@ -4313,52 +4313,61 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["workspace_table"].rows), 0)
 
-    def test_active_account_table(self):
-        """The active account table exists."""
+    def test_account_table(self):
+        """The account table exists."""
         obj = factories.ManagedGroupFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
-        self.assertIn("active_account_table", response.context_data)
+        self.assertIn("account_table", response.context_data)
         self.assertIsInstance(
-            response.context_data["active_account_table"],
+            response.context_data["account_table"],
             tables.GroupAccountMembershipStaffTable,
         )
 
-    def test_active_account_table_none(self):
-        """No accounts are shown if the group has no active accounts."""
+    def test_account_table_none(self):
+        """No accounts are shown if the group has no accounts."""
         group = factories.ManagedGroupFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 0)
 
-    def test_active_account_table_one(self):
-        """One accounts is shown if the group has only that active account."""
+    def test_account_table_one(self):
+        """One accounts is shown if the group has only that account."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 1)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 1)
 
-    def test_active_account_table_two(self):
-        """Two accounts are shown if the group has only those active accounts."""
+    def test_account_table_two(self):
+        """Two accounts are shown if the group has only those accounts."""
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create_batch(2, group=group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 2)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 2)
 
-    def test_shows_active_account_for_only_this_group(self):
+    def test_account_table_shows_account_for_only_this_group(self):
         """Only shows accounts that are in this group."""
         group = factories.ManagedGroupFactory.create(name="group-1")
         other_group = factories.ManagedGroupFactory.create(name="group-2")
         factories.GroupAccountMembershipFactory.create(group=other_group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
-        self.assertIn("active_account_table", response.context_data)
-        self.assertEqual(len(response.context_data["active_account_table"].rows), 0)
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 0)
+
+    def test_account_table_includes_inactive_accounts(self):
+        """Shows inactive accounts in the table. Not that this would represent an internal data consistency issue."""
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account__status=models.Account.INACTIVE_STATUS)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name))
+        self.assertIn("account_table", response.context_data)
+        self.assertEqual(len(response.context_data["account_table"].rows), 1)
 
     def test_group_table(self):
         """The group table exists."""
