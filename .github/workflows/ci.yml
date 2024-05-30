@@ -120,4 +120,5 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true # optional (default = false)
+          file: .coverage
           token: ${{ secrets.CODECOV_TOKEN }}
