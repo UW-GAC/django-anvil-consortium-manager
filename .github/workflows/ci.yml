@@ -112,7 +112,9 @@ jobs:
           ls -la .coverage*
 
       - name: Combine coverage data
-        run: hatch run cov-combine:combine
+        run: |
+          hatch run cov-combine:combine
+          ls -la .coverage*
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
