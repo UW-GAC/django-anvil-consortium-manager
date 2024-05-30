@@ -219,6 +219,13 @@ class Account(TimeStampedModel, ActivatorModel):
         help_text="""The UserEmailEntry object used to verify the email,
         if the account was created by a user linking their email.""",
     )
+    archived_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="archived_accounts",
+        help_text="Previous users that this account has been linked to.",
+        null=True,
+        through="AccountUserArchive",
+    )
     note = models.TextField(blank=True, help_text="Additional notes.")
 
     history = HistoricalRecords()
@@ -344,6 +351,17 @@ class Account(TimeStampedModel, ActivatorModel):
         """Return a boolean indicator of whether the workspace can be accessed by this Account."""
         accessible_workspaces = self.get_accessible_workspaces()
         return workspace in accessible_workspaces
+
+
+class AccountUserArchive(TimeStampedModel):
+    """A model to store information about the previous users of an Account."""
+
+    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return "{user} for {account}".format(user=self.user, account=self.account)
 
 
 class ManagedGroup(TimeStampedModel):
