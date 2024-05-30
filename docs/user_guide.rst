@@ -241,8 +241,8 @@ If successful, you will be shown a message and information about the account tha
 Deactivate an account
 ---------------------
 
-The app provides the ability to deactivate an Account.
-When an Account is deactivated, it is removed from all groups on AnVIL but keeps the `GroupAccountMembership` records in the app.
+The app provides the ability to deactivate an :class:`~anvil_consortium_manager.models.Account`.
+When an Account is deactivated, it is removed from all groups on AnVIL and all :class:`~anvil_consortium_manager.models.GroupAccountMembership`` records for that Account are deleted.
 After deactivating, it can no longer be added to new groups unless it is reactivated.
 
 To deactivate an Account, navigate to the Account detail page and click on the "Deactivate account" button.
@@ -251,6 +251,4 @@ Reactivate an account
 ---------------------
 
 Accounts that have been deactivated can be reactivated.
-Reactivating a deactivated account adds the account back to all groups on AnVIL that it had been a part of before it was deactivated.
-
-To deactivate an Account, navigate to the Account detail page and click on the "Reactivate account" button.
+To reactivate an Account, navigate to the Account detail page and click on the "Reactivate account" button.

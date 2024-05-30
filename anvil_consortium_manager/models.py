@@ -277,7 +277,7 @@ class Account(TimeStampedModel, ActivatorModel):
         self.save()
 
     def reactivate(self):
-        """Set status to reactivated and add to any AnVIL groups."""
+        """Set status to reactivated."""
         self.status = self.ACTIVE_STATUS
         self.save()
 
@@ -299,7 +299,7 @@ class Account(TimeStampedModel, ActivatorModel):
         return True
 
     def anvil_remove_from_groups(self):
-        """Remove this account from all groups on AnVIL."""
+        """Remove this account from all groups on AnVIL and delete membership records from the app."""
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
