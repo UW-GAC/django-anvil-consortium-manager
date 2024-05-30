@@ -306,6 +306,7 @@ class Account(TimeStampedModel, ActivatorModel):
         group_memberships = self.groupaccountmembership_set.all()
         for membership in group_memberships:
             membership.anvil_delete()
+            membership.delete()
 
     def get_accessible_workspaces(self):
         """Get a list of workspaces an Account has access to.
