@@ -280,9 +280,6 @@ class Account(TimeStampedModel, ActivatorModel):
         """Set status to reactivated and add to any AnVIL groups."""
         self.status = self.ACTIVE_STATUS
         self.save()
-        group_memberships = self.groupaccountmembership_set.all()
-        for membership in group_memberships:
-            membership.anvil_create()
 
     def anvil_exists(self):
         """Check if this account exists on AnVIL.
