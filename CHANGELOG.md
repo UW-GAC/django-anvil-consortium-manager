@@ -1,5 +1,10 @@
 # Change log
 
+## 0.23.0 (devel)
+
+* Do not track previous groups for inactive accounts.
+* Add an audit error if any group membership records exist for inactive accounts.
+
 ## 0.22.1 (2024-05-22)
 
 * Maintenance: specify different numpy version requirement for python 3.12.
