@@ -113,13 +113,13 @@ jobs:
 
       - name: Combine coverage data
         run: |
-          hatch run cov-combine:combine
+          hatch run cov:combine
           ls -la .coverage*
 
       - name: Create coverage xml file
         run: |
-          hatch run cov-combine:xml
-          ls -la coverage.xml
+          hatch run cov:xml
+          ls -la .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
