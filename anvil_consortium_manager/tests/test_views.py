@@ -3454,9 +3454,10 @@ class AccountDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Account.objects.count(), 1)
         models.Account.objects.get(pk=object.pk)
         # Does not remove the user from any groups.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
-        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
+        # Removes the user from only the groups where the API call succeeded.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        self.assertNotIn(memberships[0], models.GroupAccountMembership.objects.all())
+        self.assertIn(memberships[1], models.GroupAccountMembership.objects.all())
 
 
 class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
@@ -3621,10 +3622,10 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(object.uuid), {"submit": ""})
         self.assertEqual(response.status_code, 302)
-        # Memberships are *not* deleted from the app.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        # Memberships are deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
         # History for group-account membership is *not* added.
-        self.assertEqual(models.GroupAccountMembership.history.count(), 1)
+        self.assertEqual(models.GroupAccountMembership.history.count(), 2)
 
     def test_removes_account_from_all_groups(self):
         """Deactivating an account from the app also removes it from all groups that it is in."""
@@ -3642,8 +3643,8 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # Status was updated.
         object.refresh_from_db()
         self.assertEqual(object.status, object.INACTIVE_STATUS)
-        # Memberships are *not* deleted from the app.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
+        # Memberships are deleted from the app.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 0)
 
     def test_api_error_when_removing_account_from_groups(self):
         """Message when an API error occurred when removing a user from a group."""
@@ -3673,10 +3674,10 @@ class AccountDeactivateTest(AnVILAPIMockTestMixin, TestCase):
         # The Account is not marked as inactive.
         object.refresh_from_db()
         self.assertEqual(object.status, object.ACTIVE_STATUS)
-        # Does not remove the user from any groups.
-        self.assertEqual(models.GroupAccountMembership.objects.count(), 2)
-        models.GroupAccountMembership.objects.get(pk=memberships[0].pk)
-        models.GroupAccountMembership.objects.get(pk=memberships[1].pk)
+        # Removes the user from only the groups where the API call succeeded.
+        self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
+        self.assertNotIn(memberships[0], models.GroupAccountMembership.objects.all())
+        self.assertIn(memberships[1], models.GroupAccountMembership.objects.all())
 
     def test_account_already_inactive_get(self):
         """Redirects with a message if account is already deactivated."""
