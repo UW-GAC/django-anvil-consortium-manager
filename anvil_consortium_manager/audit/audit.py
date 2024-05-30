@@ -246,12 +246,6 @@ class ManagedGroupMembershipAudit(AnVILAudit):
     ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL = "Account not a member in AnVIL"
     """Error when an Account is a member of a ManagedGroup on the app, but not in AnVIL."""
 
-    # ERROR_DEACTIVATED_ACCOUNT_IS_ADMIN_IN_ANVIL = "Account is deactivated but is an admin in AnVIL."
-    # """Error when a deactivated Account is an admin of a ManagedGroup in AnVIL."""
-
-    # ERROR_DEACTIVATED_ACCOUNT_IS_MEMBER_IN_ANVIL = "Account is deactivated but is a member in AnVIL."
-    # """Error when a deactivated Account is a member of a ManagedGroup in AnVIL."""
-
     ERROR_DEACTIVATED_ACCOUNT = "Account is deactivated but still has membership records in the app."
     """Error when a deactivated Account still has membership records in the app."""
 
