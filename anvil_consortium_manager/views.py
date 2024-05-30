@@ -630,7 +630,7 @@ class AccountAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autocomp
 
     def get_queryset(self):
         # Only active accounts.
-        qs = models.Account.objects.filter(status=models.Account.ACTIVE_STATUS).order_by("email")
+        qs = models.Account.objects.active().order_by("email")
 
         # Use the account adapter to process the query.
         adapter = get_account_adapter()
