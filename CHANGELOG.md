@@ -1,6 +1,6 @@
 # Change log
 
-## 0.23.0 (devel)
+## 0.23.0 (2024-05-31)
 
 * Do not track previous groups for inactive accounts.
 * Add an audit error if any group membership records exist for inactive accounts.
