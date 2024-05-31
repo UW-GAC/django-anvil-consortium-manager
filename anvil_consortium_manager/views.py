@@ -653,8 +653,6 @@ class AccountUnlinkUser(
 ):
     """Unlink an Account from a User."""
 
-    """Deactivate an account and remove it from all groups on AnVIL."""
-
     # model = models.Account
     form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_unlink_user.html"

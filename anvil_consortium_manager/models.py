@@ -353,7 +353,14 @@ class Account(TimeStampedModel, ActivatorModel):
         return workspace in accessible_workspaces
 
     def unlink_user(self):
-        """Unlink the user from this account."""
+        """Unlink the user from this account.
+
+        This will remove the user from the account and add the user (and verified email entry, if applicable) to the
+        unlinked_users field.
+
+        Raises:
+            ValueError: If there is no user linked to the account.
+        """
         if not self.user:
             raise ValueError("No user is linked to this account.")
         self.unlinked_users.add(self.user, through_defaults={"verified_email_entry": self.verified_email_entry})
