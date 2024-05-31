@@ -4117,6 +4117,7 @@ class AccountUnlinkUserTest(TestCase):
         self.assertEqual(response.status_code, 302)
         instance.refresh_from_db()
         self.assertEqual(instance.user, None)
+        self.assertEqual(instance.verified_email_entry, None)
 
     def test_adds_user_to_unlinked_users(self):
         """A record is added to unlinked_users."""
