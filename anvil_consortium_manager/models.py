@@ -219,6 +219,13 @@ class Account(TimeStampedModel, ActivatorModel):
         help_text="""The UserEmailEntry object used to verify the email,
         if the account was created by a user linking their email.""",
     )
+    unlinked_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="unlinked_accounts",
+        help_text="Previous users that this account has been linked to.",
+        blank=True,
+        through="AccountUserArchive",
+    )
     note = models.TextField(blank=True, help_text="Additional notes.")
 
     history = HistoricalRecords()
@@ -344,6 +351,34 @@ class Account(TimeStampedModel, ActivatorModel):
         """Return a boolean indicator of whether the workspace can be accessed by this Account."""
         accessible_workspaces = self.get_accessible_workspaces()
         return workspace in accessible_workspaces
+
+    def unlink_user(self):
+        """Unlink the user from this account.
+
+        This will remove the user from the account and add the user (and verified email entry, if applicable) to the
+        unlinked_users field.
+
+        Raises:
+            ValueError: If there is no user linked to the account.
+        """
+        if not self.user:
+            raise ValueError("No user is linked to this account.")
+        self.unlinked_users.add(self.user, through_defaults={"verified_email_entry": self.verified_email_entry})
+        self.user = None
+        self.verified_email_entry = None
+        self.save()
+
+
+class AccountUserArchive(TimeStampedModel):
+    """A model to store information about the previous users of an Account."""
+
+    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    verified_email_entry = models.ForeignKey(UserEmailEntry, on_delete=models.CASCADE, null=True, blank=True)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return "{user} for {account}".format(user=self.user, account=self.account)
 
 
 class ManagedGroup(TimeStampedModel):

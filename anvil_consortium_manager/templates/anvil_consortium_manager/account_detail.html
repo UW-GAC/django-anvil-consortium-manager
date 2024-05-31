@@ -14,7 +14,7 @@
       Service account
     </span>
   {% endif %}
-  {% if object.verified_email_entry %}
+  {% if object.user and object.verified_email_entry %}
     <span class="badge bg-success">
       <span class="fa-solid fa-user-check me-1"></span>
       Verified by user
@@ -33,7 +33,7 @@
   <dt class="col-sm-2">Email</dt> <dd class="col-sm-10">{{ object.email }}</dd>
   <dt class="col-sm-2">Status</dt> <dd class="col-sm-10">{{ object.get_status_display }}</dd>
   <dt class="col-sm-2">User</dt> <dd class="col-sm-10">
-    {% if object.verified_email_entry %}
+    {% if object.user and object.verified_email_entry %}
       {% if object.verified_email_entry.user.get_absolute_url %}
         <a href="{{ object.verified_email_entry.user.get_absolute_url }}">{{ object.verified_email_entry.user }}</a>
       {% else %}
@@ -43,14 +43,31 @@
       &mdash;
     {% endif %}
   </dd>
-  <dt class="col-sm-2">Date verified</dt> <dd class="col-sm-10">{% if object.verified_email_entry %}{{ object.verified_email_entry.date_verified }}{% else %} &mdash; {% endif %}</dd>
+  <dt class="col-sm-2">Date verified</dt> <dd class="col-sm-10">{% if object.user and object.verified_email_entry %}{{ object.verified_email_entry.date_verified }}{% else %} &mdash; {% endif %}</dd>
   <dt class="col-sm-2">Date created</dt> <dd class="col-sm-10">{{ object.created }}</dd>
   <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
 </dl>
+
 {% endblock panel %}
 
 
 {% block after_panel %}
+{% if object.unlinked_users.count %}
+<div class="card">
+  <div class="card-body bg-light">
+    <h5 class="card-title"><span class="fa-solid fa-link-slash mx-2"></span> Unlinked users</h5>
+    <p class="card-text">Ths account was previously linked to the following user(s):</p>
+  </div>
+  <ul class="list-group list-group-flush">
+      {% for unlinked_user in object.unlinked_users.all %}
+        <li class="list-group-item">
+          <a href="{{ unlinked_user.get_absolute_url }}">{{ unlinked_user }}</a>
+        </li>
+      {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
   <div class="my-3">
     <div class="accordion" id="accordionGroups">
       <div class="accordion-item">
@@ -113,6 +130,9 @@
     {% endif %}
     {% if show_reactivate_button %}
       <a href="{% url 'anvil_consortium_manager:accounts:reactivate' uuid=object.uuid %}" class="btn btn-secondary" role="button">Reactivate account</a>
+    {% endif %}
+    {% if show_unlink_button %}
+      <a href="{% url 'anvil_consortium_manager:accounts:unlink' uuid=object.uuid %}" class="btn btn-secondary" role="button">Unlink user</a>
     {% endif %}
     <a href="{% url 'anvil_consortium_manager:accounts:delete' uuid=object.uuid %}" class="btn btn-danger" role="button">Delete from app</a>
   </p>

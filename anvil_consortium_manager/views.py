@@ -209,6 +209,8 @@ class AccountDetail(
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
+        context["show_unlink_button"] = self.object.user is not None
+        context["unlinked_users"] = self.object.unlinked_users.all()
 
         context["group_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
@@ -644,6 +646,41 @@ class AccountAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVI
 
     template_name = "anvil_consortium_manager/account_audit.html"
     audit_class = audit.AccountAudit
+
+
+class AccountUnlinkUser(
+    auth.AnVILConsortiumManagerStaffEditRequired, viewmixins.SingleAccountMixin, SuccessMessageMixin, FormView
+):
+    """Unlink an Account from a User."""
+
+    # model = models.Account
+    form_class = Form
+    template_name = "anvil_consortium_manager/account_confirm_unlink_user.html"
+    success_message = "Successfully unlinked user from Account."
+    message_no_user = "This Account is not linked to a user."
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.object.user:
+            messages.add_message(self.request, messages.ERROR, self.message_no_user)
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.object.user:
+            messages.add_message(self.request, messages.ERROR, self.message_no_user)
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        """Unlink the user from the account."""
+        self.object.unlink_user()
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
 
 
 class ManagedGroupDetail(

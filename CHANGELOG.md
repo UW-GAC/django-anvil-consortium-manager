@@ -4,6 +4,7 @@
 
 * Do not track previous groups for inactive accounts.
 * Add an audit error if any group membership records exist for inactive accounts.
+* Add the ability to unlink a user from an account.
 
 ## 0.22.1 (2024-05-22)
 
