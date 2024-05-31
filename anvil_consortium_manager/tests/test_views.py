@@ -1269,6 +1269,72 @@ class AccountDetailTest(TestCase):
         self.assertIn("show_reactivate_button", context)
         self.assertTrue(context["show_reactivate_button"])
 
+    def test_context_show_unlink_button_linked_account(self):
+        """An is_inactive flag is included in the context."""
+        account = factories.AccountFactory.create(verified=True)
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        response = self.client.get(self.get_url(account.uuid))
+        context = response.context_data
+        self.assertIn("show_unlink_button", context)
+        self.assertTrue(context["show_unlink_button"])
+        self.assertContains(
+            response, reverse("anvil_consortium_manager:accounts:unlink", kwargs={"uuid": account.uuid})
+        )
+
+    def test_context_show_unlink_button_linked_account_view_permission(self):
+        """An is_inactive flag is included in the context."""
+        account = factories.AccountFactory.create(verified=True)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        context = response.context_data
+        self.assertIn("show_unlink_button", context)
+        self.assertTrue(context["show_unlink_button"])
+        self.assertNotContains(
+            response, reverse("anvil_consortium_manager:accounts:unlink", kwargs={"uuid": account.uuid})
+        )
+
+    def test_context_show_unlink_button_unlinked_account(self):
+        """An is_inactive flag is included in the context."""
+        account = factories.AccountFactory.create(verified=False)
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        response = self.client.get(self.get_url(account.uuid))
+        context = response.context_data
+        self.assertIn("show_unlink_button", context)
+        self.assertFalse(context["show_unlink_button"])
+        self.assertNotContains(
+            response, reverse("anvil_consortium_manager:accounts:unlink", kwargs={"uuid": account.uuid})
+        )
+
+    def test_context_show_unlink_button_previously_linked(self):
+        """An is_inactive flag is included in the context."""
+        account = factories.AccountFactory.create(verified=True)
+        account.unlinked_users.add(self.user)
+        account.user = None
+        account.save()
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        response = self.client.get(self.get_url(account.uuid))
+        context = response.context_data
+        self.assertIn("show_unlink_button", context)
+        self.assertFalse(context["show_unlink_button"])
+        self.assertNotContains(
+            response, reverse("anvil_consortium_manager:accounts:unlink", kwargs={"uuid": account.uuid})
+        )
+
     def test_template_verified_account(self):
         """The template renders with a verified account."""
         obj = factories.AccountFactory.create(verified=True)

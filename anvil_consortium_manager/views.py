@@ -209,6 +209,7 @@ class AccountDetail(
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
+        context["show_unlink_button"] = self.object.user is not None
 
         context["group_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
