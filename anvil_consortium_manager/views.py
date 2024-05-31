@@ -210,6 +210,7 @@ class AccountDetail(
         context["show_deactivate_button"] = not context["is_inactive"]
         context["show_reactivate_button"] = context["is_inactive"]
         context["show_unlink_button"] = self.object.user is not None
+        context["unlinked_users"] = self.object.unlinked_users.all()
 
         context["group_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),

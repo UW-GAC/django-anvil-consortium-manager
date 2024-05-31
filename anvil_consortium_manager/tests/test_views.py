@@ -1269,6 +1269,41 @@ class AccountDetailTest(TestCase):
         self.assertIn("show_reactivate_button", context)
         self.assertTrue(context["show_reactivate_button"])
 
+    def test_context_unlinked_users_no_unlinked_user(self):
+        account = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        context = response.context_data
+        self.assertIn("unlinked_users", context)
+        self.assertEqual(len(context["unlinked_users"]), 0)
+
+    def test_context_unlinked_users_one_unlinked_user(self):
+        account = factories.AccountFactory.create()
+        user = User.objects.create_user(username="test_unlinked", password="test")
+        account.unlinked_users.add(user)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        context = response.context_data
+        self.assertIn("unlinked_users", context)
+        self.assertEqual(len(context["unlinked_users"]), 1)
+        self.assertIn(user, context["unlinked_users"])
+        self.assertIn(str(user), response.content.decode())
+
+    def test_context_unlinked_users_two_unlinked_users(self):
+        account = factories.AccountFactory.create()
+        user_1 = User.objects.create_user(username="test_unlinked_1", password="test")
+        user_2 = User.objects.create_user(username="test_unlinked_2", password="test")
+        account.unlinked_users.add(user_1, user_2)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        context = response.context_data
+        self.assertIn("unlinked_users", context)
+        self.assertEqual(len(context["unlinked_users"]), 2)
+        self.assertIn(user_1, context["unlinked_users"])
+        self.assertIn(user_2, context["unlinked_users"])
+        self.assertIn(str(user_1), response.content.decode())
+        self.assertIn(str(user_2), response.content.decode())
+
     def test_context_show_unlink_button_linked_account(self):
         """An is_inactive flag is included in the context."""
         account = factories.AccountFactory.create(verified=True)
