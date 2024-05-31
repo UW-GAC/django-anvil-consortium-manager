@@ -358,6 +358,7 @@ class AccountUserArchive(TimeStampedModel):
 
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    verified_email_entry = models.ForeignKey(UserEmailEntry, on_delete=models.CASCADE, null=True, blank=True)
     history = HistoricalRecords()
 
     def __str__(self):

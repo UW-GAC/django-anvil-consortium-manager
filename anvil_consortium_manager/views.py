@@ -678,7 +678,9 @@ class AccountUnlinkUser(
 
     def form_valid(self, form):
         """Unlink the user from the account."""
-        self.object.unlinked_users.add(self.object.user)
+        self.object.unlinked_users.add(
+            self.object.user, through_defaults={"verified_email_entry": self.object.verified_email_entry}
+        )
         self.object.user = None
         self.object.verified_email_entry = None
         self.object.save()

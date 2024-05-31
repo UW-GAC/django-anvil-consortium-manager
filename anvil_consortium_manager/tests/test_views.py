@@ -4119,9 +4119,23 @@ class AccountUnlinkUserTest(TestCase):
         self.assertEqual(instance.user, None)
         self.assertEqual(instance.verified_email_entry, None)
 
+    def test_unlinks_user_not_verified(self):
+        """Successful post request unlinks the user from the account."""
+        instance = factories.AccountFactory.create()
+        user = factories.UserFactory.create()
+        instance.user = user
+        instance.save()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(instance.uuid), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.user, None)
+        self.assertEqual(instance.verified_email_entry, None)
+
     def test_adds_user_to_unlinked_users(self):
         """A record is added to unlinked_users."""
         instance = factories.AccountFactory.create(verified=True)
+        verified_email_entry = instance.verified_email_entry
         user = instance.user
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(instance.uuid), {"submit": ""})
@@ -4134,6 +4148,26 @@ class AccountUnlinkUserTest(TestCase):
         self.assertEqual(archive.account, instance)
         self.assertEqual(archive.user, user)
         self.assertIsNotNone(archive.created)
+        self.assertEqual(archive.verified_email_entry, verified_email_entry)
+
+    def test_adds_user_to_unlinked_users_not_verified(self):
+        """A record is added to unlinked_users."""
+        instance = factories.AccountFactory.create()
+        user = factories.UserFactory.create()
+        instance.user = user
+        instance.save()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(instance.uuid), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        instance.refresh_from_db()
+        # User link was archived.
+        self.assertIn(user, instance.unlinked_users.all())
+        self.assertEqual(models.AccountUserArchive.objects.count(), 1)
+        archive = models.AccountUserArchive.objects.first()
+        self.assertEqual(archive.account, instance)
+        self.assertEqual(archive.user, user)
+        self.assertIsNotNone(archive.created)
+        self.assertIsNone(archive.verified_email_entry)
 
     def test_can_add_second_user_to_unlinked_users(self):
         """A record is added to unlinked_users."""
