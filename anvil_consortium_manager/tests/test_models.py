@@ -950,6 +950,55 @@ class AccountTest(TestCase):
         # Sharing membership.
         self.assertFalse(account.has_workspace_access(workspace))
 
+    def test_unlink_user(self):
+        """The unlink_user method removes the user and verified_email_entry."""
+        account = factories.AccountFactory.create(verified=True)
+        account.unlink_user()
+        self.assertIsNone(account.user)
+        self.assertIsNone(account.verified_email_entry)
+
+    def test_unlink_user_adds_to_archive(self):
+        """The unlink_user method adds the user to the AccountUserArchive."""
+        account = factories.AccountFactory.create(verified=True)
+        user = account.user
+        verified_email_entry = account.verified_email_entry
+        account.unlink_user()
+        self.assertEqual(AccountUserArchive.objects.count(), 1)
+        archive = AccountUserArchive.objects.first()
+        self.assertEqual(archive.user, user)
+        self.assertEqual(archive.account, account)
+        self.assertEqual(archive.verified_email_entry, verified_email_entry)
+
+    def test_unlink_user_no_verified_email(self):
+        """The unlink_user method removes the user and verified_email_entry."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.create(user=user)
+        account.unlink_user()
+        self.assertIsNone(account.user)
+        self.assertIsNone(account.verified_email_entry)
+        self.assertEqual(AccountUserArchive.objects.count(), 1)
+        archive = AccountUserArchive.objects.first()
+        self.assertEqual(archive.user, user)
+        self.assertEqual(archive.account, account)
+        self.assertIsNone(archive.verified_email_entry)
+
+    def test_can_archive_more_than_one_account_for_one_user(self):
+        """The unlink_user method adds the user to the AccountUserArchive."""
+        user = factories.UserFactory.create()
+        account_1 = factories.AccountFactory.create(user=user)
+        account_1.unlink_user()
+        account_2 = factories.AccountFactory.create(user=user)
+        account_2.unlink_user()
+        self.assertEqual(AccountUserArchive.objects.count(), 2)
+        AccountUserArchive.objects.get(account=account_1, user=user)
+        AccountUserArchive.objects.get(account=account_2, user=user)
+
+    def test_raises_value_error_no_user(self):
+        """Raises a ValueError if the account has no user."""
+        account = factories.AccountFactory.create()
+        with self.assertRaises(ValueError):
+            account.unlink_user()
+
 
 class AccountUserArchiveTestCase(TestCase):
     """Tests for the AccountUserArchive model."""

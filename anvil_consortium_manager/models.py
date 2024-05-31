@@ -352,6 +352,15 @@ class Account(TimeStampedModel, ActivatorModel):
         accessible_workspaces = self.get_accessible_workspaces()
         return workspace in accessible_workspaces
 
+    def unlink_user(self):
+        """Unlink the user from this account."""
+        if not self.user:
+            raise ValueError("No user is linked to this account.")
+        self.unlinked_users.add(self.user, through_defaults={"verified_email_entry": self.verified_email_entry})
+        self.user = None
+        self.verified_email_entry = None
+        self.save()
+
 
 class AccountUserArchive(TimeStampedModel):
     """A model to store information about the previous users of an Account."""
