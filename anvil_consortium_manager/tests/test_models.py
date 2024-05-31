@@ -15,6 +15,7 @@ from freezegun import freeze_time
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..models import (
     Account,
+    AccountUserArchive,
     BillingProject,
     DefaultWorkspaceData,
     GroupAccountMembership,
@@ -948,6 +949,54 @@ class AccountTest(TestCase):
         factories.GroupAccountMembershipFactory.create(group=auth_domain_2.group, account=account)
         # Sharing membership.
         self.assertFalse(account.has_workspace_access(workspace))
+
+
+class AccountUserArchiveTestCase(TestCase):
+    """Tests for the AccountUserArchive model."""
+
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.create()
+        instance = AccountUserArchive(user=user, account=account)
+        instance.save()
+        self.assertIsInstance(instance, AccountUserArchive)
+
+    def test_created_timestamp(self):
+        """created timestamp is set."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.create()
+        instance = AccountUserArchive(user=user, account=account)
+        instance.save()
+        self.assertIsNotNone(instance.created)
+
+    def test_verified_email_entry(self):
+        """Creation using the model constructor and .save() works."""
+        account = factories.AccountFactory.create(verified=True)
+        instance = AccountUserArchive(
+            user=account.user, account=account, verified_email_entry=account.verified_email_entry
+        )
+        instance.save()
+        self.assertIsInstance(instance, AccountUserArchive)
+
+    def test_one_account_two_users(self):
+        """Multiple AccountUserArchive records for one user."""
+        user = factories.UserFactory.create()
+        account_1 = factories.AccountFactory.create()
+        account_2 = factories.AccountFactory.create()
+        instance = AccountUserArchive(user=user, account=account_1)
+        instance.save()
+        instance_2 = AccountUserArchive(user=user, account=account_2)
+        instance_2.save()
+        self.assertEqual(AccountUserArchive.objects.count(), 2)
+
+    def test_str_method(self):
+        """The custom __str__ method returns a string."""
+        user = factories.UserFactory.create()
+        account = factories.AccountFactory.create()
+        instance = AccountUserArchive(user=user, account=account)
+        instance.save()
+        self.assertIsInstance(instance.__str__(), str)
 
 
 class ManagedGroupTest(TestCase):
