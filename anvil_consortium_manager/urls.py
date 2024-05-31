@@ -50,6 +50,7 @@ account_patterns = (
             views.AccountLinkVerify.as_view(),
             name="verify",
         ),
+        path("<uuid:uuid>/unlink/", views.AccountUnlinkUser.as_view(), name="unlink"),
         path(
             "<uuid:uuid>/add_to_group/",
             views.GroupAccountMembershipCreateByAccount.as_view(),

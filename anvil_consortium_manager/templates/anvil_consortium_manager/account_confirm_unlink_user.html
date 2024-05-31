@@ -1,0 +1,33 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% load render_table from django_tables2 %}
+
+{% block title %}Unlink user{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+
+      <h2>Unlink user from account</h2>
+
+      <p>
+        Are you sure you want to unlink <a href="{{ object.user.get_absolute_url }}">{{ object.user }} </a> from <a href="{{ object.get_absolute_url }}">{{ object }}</a>?
+      </p>
+
+      <form method="POST">{% csrf_token %}
+          {{ form }}
+          <input type="submit" class="btn btn-danger" value="Yes, unlink"/>
+          <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">
+          No, cancel</a>
+      </form>
+
+    </div>
+  </div>
+
+
+</div>
+{% endblock content %}

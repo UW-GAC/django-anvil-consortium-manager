@@ -646,6 +646,45 @@ class AccountAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVI
     audit_class = audit.AccountAudit
 
 
+class AccountUnlinkUser(
+    auth.AnVILConsortiumManagerStaffEditRequired, viewmixins.SingleAccountMixin, SuccessMessageMixin, FormView
+):
+    """Unlink an Account from a User."""
+
+    """Deactivate an account and remove it from all groups on AnVIL."""
+
+    # model = models.Account
+    form_class = Form
+    template_name = "anvil_consortium_manager/account_confirm_unlink_user.html"
+    success_message = "Successfully unlinked user from Account."
+    message_no_user = "This Account is not linked to a user."
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.object.user:
+            messages.add_message(self.request, messages.ERROR, self.message_no_user)
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.object.user:
+            messages.add_message(self.request, messages.ERROR, self.message_no_user)
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        """Unlink the user from the account."""
+        self.object.unlinked_users.add(self.object.user)
+        self.object.user = None
+        self.object.save()
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
+
 class ManagedGroupDetail(
     auth.AnVILConsortiumManagerStaffViewRequired,
     viewmixins.ManagedGroupGraphMixin,
