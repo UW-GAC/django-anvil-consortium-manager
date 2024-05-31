@@ -219,11 +219,11 @@ class Account(TimeStampedModel, ActivatorModel):
         help_text="""The UserEmailEntry object used to verify the email,
         if the account was created by a user linking their email.""",
     )
-    archived_users = models.ManyToManyField(
+    unlinked_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name="archived_accounts",
+        related_name="unlinked_accounts",
         help_text="Previous users that this account has been linked to.",
-        null=True,
+        blank=True,
         through="AccountUserArchive",
     )
     note = models.TextField(blank=True, help_text="Additional notes.")
