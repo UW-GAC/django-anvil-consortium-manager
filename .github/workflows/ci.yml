@@ -35,6 +35,9 @@ jobs:
             django-version: "4.2"
             backend: "mysql"
             mariadb-version: "10.11"
+        exclude:
+          - python-version: "3.8"  # Django 5.0 is not supported on Python 3.8.
+            django-version: "5.0"
     name: "py${{ matrix.python-version }}-dj${{ matrix.django-version }}-${{ matrix.backend }}-${{ matrix.mariadb-version }}"
 
     runs-on: ubuntu-latest
