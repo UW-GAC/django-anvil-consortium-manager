@@ -129,7 +129,7 @@ LOGIN_URL = "test_login"
 
 # Django is switching how forms are handled (divs). Set the FORM_RENDERER temporary setting until
 # it is removed in Django 6.0.
-if DJANGO_VERSION >= (4, 1):
+if DJANGO_VERSION >= (4, 1) and DJANGO_VERSION < (5, 0):
     FORM_RENDERER = "django.forms.renderers.DjangoDivFormRenderer"
 
 # Your stuff...
