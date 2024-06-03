@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Add AccountUserArchive model to the admin interface.
+
 ## 0.23.0 (2024-05-31)
 
 * Do not track previous groups for inactive accounts.
