@@ -3,6 +3,7 @@
 ## Devel
 
 * Add AccountUserArchive model to the admin interface.
+* Add support for Django 5.0.
 
 ## 0.23.0 (2024-05-31)
 
