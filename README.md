@@ -48,7 +48,13 @@ python manage.py runserver
 To run quick tests:
 
 ```
-hatch run test
+hatch run tests
+```
+
+To run tests using a specific version of python and django:
+
+```
+hatch run test-sqlite.py3.12-5.0:test
 ```
 
 To run the full set of tests using different python versions, different django versions, and different backends, run:
