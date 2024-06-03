@@ -48,6 +48,13 @@ class AccountAdmin(SimpleHistoryAdmin):
     search_fields = ("email",)
 
 
+@admin.register(models.AccountUserArchive)
+class AccountUserArchiveAdmin(SimpleHistoryAdmin):
+    """Admin class for the AccountUserArchive model."""
+
+    list_display = ("account", "user", "created")
+
+
 @admin.register(models.ManagedGroup)
 class ManagedGroupAdmin(SimpleHistoryAdmin):
     """Admin class for the ManagedGroup model."""
