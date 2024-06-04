@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.management import CommandError, call_command
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 
 from ..audit import audit
 from ..management.commands.run_anvil_audit import ErrorTableWithLink
@@ -302,7 +302,7 @@ class RunAnVILAuditTablesTest(TestCase):
         self.assertEqual(table.rows[0].get_cell("errors"), "Test error 1, Test error 2")
 
 
-class ConvertMariaDbUUIDFieldsTest(TestCase):
+class ConvertMariaDbUUIDFieldsTest(TransactionTestCase):
     @skipUnless(settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql", "Only for MariaDB")
     def test_convert_mariadb_uuid_fields(self):
         """Test convert_mariadb_uuid_fields command."""
