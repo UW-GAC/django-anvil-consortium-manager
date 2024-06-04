@@ -2,9 +2,10 @@
 
 import pprint
 from io import StringIO
-from unittest import skip
+from unittest import skip, skipUnless
 
 import responses
+from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.management import CommandError, call_command
@@ -299,3 +300,13 @@ class RunAnVILAuditTablesTest(TestCase):
         self.audit_results.add_result(audit.NotInAppResult("foo"))
         table = ErrorTableWithLink(self.audit_results.get_error_results())
         self.assertEqual(table.rows[0].get_cell("errors"), "Test error 1, Test error 2")
+
+
+class ConvertMariaDbUUIDFieldsTest(TestCase):
+    @skipUnless(settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql", "Only for MariaDB")
+    def test_convert_mariadb_uuid_fields(self):
+        """Test convert_mariadb_uuid_fields command."""
+        # Add a response.
+        out = StringIO()
+        # Just make sure the command runs?
+        call_command("convert_mariadb_uuid_fields", stdout=out)
