@@ -782,7 +782,8 @@ class BillingProjectDetailTest(TestCase):
     def test_workspace_table_two(self):
         """Two workspaces are shown if the group have access to two workspaces."""
         billing_project = factories.BillingProjectFactory.create()
-        factories.WorkspaceFactory.create_batch(2, billing_project=billing_project)
+        factories.WorkspaceFactory.create(billing_project=billing_project, name="w1")
+        factories.WorkspaceFactory.create(billing_project=billing_project, name="w2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(billing_project.name))
         self.assertIn("workspace_table", response.context_data)
@@ -876,7 +877,8 @@ class BillingProjectListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.BillingProjectFactory.create_batch(2)
+        factories.BillingProjectFactory.create(name="bp1")
+        factories.BillingProjectFactory.create(name="bp2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
@@ -1422,7 +1424,8 @@ class AccountDetailTest(TestCase):
     def test_group_account_membership_two(self):
         """Two groups are shown if the account is part of two groups."""
         account = factories.AccountFactory.create()
-        factories.GroupAccountMembershipFactory.create_batch(2, account=account)
+        factories.GroupAccountMembershipFactory.create(group__name="g1", account=account)
+        factories.GroupAccountMembershipFactory.create(group__name="g2", account=account)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(account.uuid))
         self.assertIn("group_table", response.context_data)
@@ -1511,8 +1514,8 @@ class AccountDetailTest(TestCase):
     def test_accessible_workspace_two(self):
         """Two accessible_workspaces are shown if there are two accessible workspaces for the account."""
         account = factories.AccountFactory.create()
-        workspace_1 = factories.WorkspaceFactory.create()
-        workspace_2 = factories.WorkspaceFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create(name="w1")
+        workspace_2 = factories.WorkspaceFactory.create(name="w2")
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace_2, group=group)
@@ -4619,7 +4622,8 @@ class ManagedGroupDetailTest(TestCase):
     def test_workspace_table_two(self):
         """Two workspaces are shown if the group have access to two workspaces."""
         group = factories.ManagedGroupFactory.create()
-        factories.WorkspaceGroupSharingFactory.create_batch(2, group=group)
+        factories.WorkspaceGroupSharingFactory.create(workspace__name="w1", group=group)
+        factories.WorkspaceGroupSharingFactory.create(workspace__name="w2", group=group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
         self.assertIn("workspace_table", response.context_data)
@@ -4719,7 +4723,8 @@ class ManagedGroupDetailTest(TestCase):
     def test_group_table_two(self):
         """Two groups are shown if the group has only those member groups."""
         group = factories.ManagedGroupFactory.create()
-        factories.GroupGroupMembershipFactory.create_batch(2, parent_group=group)
+        factories.GroupGroupMembershipFactory.create(child_group__name="g1", parent_group=group)
+        factories.GroupGroupMembershipFactory.create(child_group__name="g2", parent_group=group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
         self.assertIn("group_table", response.context_data)
@@ -4785,9 +4790,9 @@ class ManagedGroupDetailTest(TestCase):
     def test_workspace_auth_domain_table_two(self):
         """Two workspaces are shown in if the group is the auth domain for them."""
         group = factories.ManagedGroupFactory.create()
-        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_1 = factories.WorkspaceFactory.create(name="w1")
         workspace_1.authorization_domains.add(group)
-        workspace_2 = factories.WorkspaceFactory.create()
+        workspace_2 = factories.WorkspaceFactory.create(name="w2")
         workspace_2.authorization_domains.add(group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
@@ -4837,7 +4842,8 @@ class ManagedGroupDetailTest(TestCase):
     def test_parent_table_two(self):
         """Two groups are shown if the group is a part of both groups."""
         group = factories.ManagedGroupFactory.create(name="group")
-        factories.GroupGroupMembershipFactory.create_batch(2, child_group=group)
+        factories.GroupGroupMembershipFactory.create(parent_group__name="g1", child_group=group)
+        factories.GroupGroupMembershipFactory.create(parent_group__name="g2", child_group=group)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
         self.assertIn("parent_table", response.context_data)
@@ -5301,7 +5307,8 @@ class ManagedGroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.ManagedGroupFactory.create_batch(2)
+        factories.ManagedGroupFactory.create(name="g1")
+        factories.ManagedGroupFactory.create(name="g2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
@@ -6460,7 +6467,8 @@ class ManagedGroupVisualizationTest(TestCase):
 
     def test_two_groups(self):
         """Visualization when there are two groups."""
-        factories.ManagedGroupFactory.create_batch(2)
+        factories.ManagedGroupFactory.create(name="g1")
+        factories.ManagedGroupFactory.create(name="g2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("graph", response.context_data)
@@ -6746,7 +6754,8 @@ class WorkspaceDetailTest(TestCase):
     def test_group_sharing_table_two(self):
         """Two groups are shown if the workspace has been shared with two groups."""
         workspace = factories.DefaultWorkspaceDataFactory.create()
-        factories.WorkspaceGroupSharingFactory.create_batch(2, workspace=workspace.workspace)
+        factories.WorkspaceGroupSharingFactory.create(group__name="g1", workspace=workspace.workspace)
+        factories.WorkspaceGroupSharingFactory.create(group__name="g2", workspace=workspace.workspace)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertIn("group_sharing_table", response.context_data)
@@ -6808,9 +6817,9 @@ class WorkspaceDetailTest(TestCase):
     def test_auth_domain_table_two(self):
         """Two groups are shown if the workspace has two auth domains."""
         workspace = factories.DefaultWorkspaceDataFactory.create()
-        group_1 = factories.ManagedGroupFactory.create()
+        group_1 = factories.ManagedGroupFactory.create(name="g1")
         workspace.workspace.authorization_domains.add(group_1)
-        group_2 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create(name="g2")
         workspace.workspace.authorization_domains.add(group_2)
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
@@ -11191,7 +11200,8 @@ class WorkspaceListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.WorkspaceFactory.create_batch(2)
+        factories.WorkspaceFactory.create(name="w1")
+        factories.WorkspaceFactory.create(name="w2")
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
@@ -11364,7 +11374,8 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.WorkspaceFactory.create_batch(2)
+        factories.WorkspaceFactory.create(name="w1")
+        factories.WorkspaceFactory.create(name="w2")
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
@@ -21442,7 +21453,8 @@ class WorkspaceGroupSharingListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
 
     def test_view_with_two_objects(self):
-        factories.WorkspaceGroupSharingFactory.create_batch(2)
+        factories.WorkspaceGroupSharingFactory.create(workspace__name="w1")
+        factories.WorkspaceGroupSharingFactory.create(workspace__name="w2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
