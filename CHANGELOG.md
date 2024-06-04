@@ -3,6 +3,7 @@
 ## Devel
 
 * Add AccountUserArchive model to the admin interface.
+* Drop support for Django 3.2.
 * Add support for Django 5.0.
 * Add `convert_mariadb_uuid_fields` command to convert UUID fields for MariaDB 10.7+ and Django 5.0+. See the documentation of this command for more information.
 
