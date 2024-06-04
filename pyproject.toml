@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "Django >= 4.0",
+    "Django >= 4.2",
     "pytz >= 0",
     "crispy-bootstrap5 >= 0.6",
     "django-crispy-forms >= 1.12",
