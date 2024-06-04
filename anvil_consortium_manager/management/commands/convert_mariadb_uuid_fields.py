@@ -12,13 +12,13 @@ class Command(BaseCommand):
     help = "Converts UUID columns from char type to the native UUID type used in MariaDB 10.7+ and Django 5.0+."
 
     def convert_field(self, model, field_name, null=False):
-        if model._meta.get_field(field_name).model != model:
+        if model._meta.get_field(field_name).model != model:  # pragma: no cover
             # Field is inherited from a parent model
-            return  # pragma: no cover
+            return
 
-        if not model._meta.managed:
+        if not model._meta.managed:  # pragma: no cover
             # The migration framework skips unmanaged models, so we should too
-            return  # pragma: no cover
+            return
 
         old_field = models.CharField(null=null, max_length=36)
         old_field.set_attributes_from_name(field_name)
