@@ -14,11 +14,11 @@ class Command(BaseCommand):
     def convert_field(self, model, field_name, null=False):
         if model._meta.get_field(field_name).model != model:
             # Field is inherited from a parent model
-            return
+            return  # pragma: no cover
 
         if not model._meta.managed:
             # The migration framework skips unmanaged models, so we should too
-            return
+            return  # pragma: no cover
 
         old_field = models.CharField(null=null, max_length=36)
         old_field.set_attributes_from_name(field_name)
