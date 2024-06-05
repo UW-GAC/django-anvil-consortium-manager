@@ -213,17 +213,21 @@ INTERNAL_IPS = ["127.0.0.1"]
 # ------------------------------------------------------------------------------
 # Specify the path to the service account to use for managing access on AnVIL.
 ANVIL_API_SERVICE_ACCOUNT_FILE = env("ANVIL_API_SERVICE_ACCOUNT_FILE")
-# Specify the URL for AccountLinkVerify view redirect
-ANVIL_ACCOUNT_LINK_REDIRECT = "home"
-# Specify the subject for AnVIL account verification emails.
-ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
-# If desired, specify the email address to send an email to after a user verifies an account.
-# ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
 
-# Workspace adapters.
+# Specify the workspace adapters to use.
 ANVIL_WORKSPACE_ADAPTERS = [
     "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
     "example_site.app.adapters.CustomWorkspaceAdapter",
 ]
+
+# Specify the URL for AccountLinkVerify view redirect
+# ANVIL_ACCOUNT_LINK_REDIRECT = LOGIN_REDIRECT_URL  # Default
+
+# Specify the subject for AnVIL account verification emails.
+#  ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"    # Default.
+
+# If desired, specify the email address to send an email to after a user verifies an account.
+# ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
+
 # Account adapter.
-ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
+# ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"  # Default.
