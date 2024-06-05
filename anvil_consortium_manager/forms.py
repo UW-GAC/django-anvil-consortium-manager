@@ -5,6 +5,7 @@ from crispy_forms import layout
 from crispy_forms.helper import FormHelper
 from dal import autocomplete, forward
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from . import models
@@ -177,18 +178,22 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
         return billing_project
 
     def clean(self):
-        billing_project = self.cleaned_data.get("billing_project", None)
-        name = self.cleaned_data.get("name", None)
-        if (
-            billing_project
-            and name
-            and models.Workspace.objects.filter(
-                billing_project=billing_project,
-                name__iexact=name,
-            ).exists()
-        ):
-            # The workspace already exists - raise a Validation error.
-            raise ValidationError("Workspace with this Billing Project and Name already exists.")
+        # Check for the same case insensitive name in the same billing project.
+        is_mysql = settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql"
+        if not is_mysql:
+            print("here")
+            billing_project = self.cleaned_data.get("billing_project", None)
+            name = self.cleaned_data.get("name", None)
+            if (
+                billing_project
+                and name
+                and models.Workspace.objects.filter(
+                    billing_project=billing_project,
+                    name__iexact=name,
+                ).exists()
+            ):
+                # The workspace already exists - raise a Validation error.
+                raise ValidationError("Workspace with this Billing Project and Name already exists.")
         return self.cleaned_data
 
 
