@@ -2,12 +2,11 @@
 
 from abc import ABC, abstractproperty
 
-from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import ModelForm
 from django.utils.module_loading import import_string
 
-from .. import models
+from .. import app_settings, models
 
 
 class BaseWorkspaceAdapter(ABC):
@@ -212,11 +211,13 @@ class WorkspaceAdapterRegistry:
 
     def populate_from_settings(self):
         """Populate the workspace adapter registry from settings. Called by AppConfig ready() method."""
-        adapter_modules = settings.ANVIL_WORKSPACE_ADAPTERS
+        adapter_modules = app_settings.WORKSPACE_ADAPTERS
+        print("adapter modules")
+        print(adapter_modules)
         if len(self._registry):
             msg = "Registry has already been populated."
             raise RuntimeError(msg)
-        if not len(adapter_modules):
+        if not adapter_modules:
             msg = (
                 "ANVIL_WORKSPACE_ADAPTERS must specify at least one adapter. Did you mean to use "
                 "the default `anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter`?"

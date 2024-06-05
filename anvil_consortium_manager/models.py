@@ -11,7 +11,7 @@ from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
-from . import exceptions
+from . import app_settings, exceptions
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
@@ -142,7 +142,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         Args:
             domain (str): The domain of the current site, used to create the link.
         """
-        mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
+        mail_subject = app_settings.ACCOUNT_LINK_EMAIL_SUBJECT
         url_subdirectory = "http://{domain}{url}".format(
             domain=domain,
             url=reverse(
@@ -161,11 +161,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
 
     def send_notification_email(self):
         """Send notification email after account is verified if the email setting is set"""
-        if (
-            hasattr(settings, "ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL")
-            and settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL
-            and not settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL.isspace()
-        ):
+        if app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL:
             mail_subject = "User verified AnVIL account"
             message = render_to_string(
                 "anvil_consortium_manager/account_notification_email.html",
@@ -178,7 +174,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
                 mail_subject,
                 message,
                 None,
-                [settings.ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL],
+                [app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL],
                 fail_silently=False,
             )
 

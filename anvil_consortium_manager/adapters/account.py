@@ -2,12 +2,11 @@
 
 from abc import ABC, abstractproperty
 
-from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 from django_filters import FilterSet
 
-from .. import models
+from .. import app_settings, models
 
 
 class BaseAccountAdapter(ABC):
@@ -53,5 +52,5 @@ class BaseAccountAdapter(ABC):
 
 
 def get_account_adapter():
-    adapter = import_string(settings.ANVIL_ACCOUNT_ADAPTER)
+    adapter = import_string(app_settings.ACCOUNT_ADAPTER)
     return adapter

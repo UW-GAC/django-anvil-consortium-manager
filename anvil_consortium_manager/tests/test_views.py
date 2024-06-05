@@ -2122,7 +2122,19 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email})
-        self.assertRedirects(response, "/test_home/")
+        self.assertRedirects(response, reverse(settings.LOGIN_REDIRECT_URL))
+
+    @override_settings(ANVIL_ACCOUNT_LINK_REDIRECT="test_login")
+    def test_redirect_custom(self):
+        """View redirects to the correct URL."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email})
+        # import ipdb; ipdb.set_trace()
+        self.assertRedirects(response, reverse("test_login"))
 
     # This test occasionally fails if the time flips one second between sending the email and
     # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
@@ -2140,13 +2152,28 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
-        self.assertEqual(mail.outbox[0].subject, "account activation")
+        self.assertEqual(mail.outbox[0].subject, "Verify your AnVIL account email")
         url = "http://example.com" + reverse(
             "anvil_consortium_manager:accounts:verify",
             args=[email_entry.uuid, account_verification_token.make_token(email_entry)],
         )
         # The body contains the correct url.
         self.assertIn(url, mail.outbox[0].body)
+
+    @freeze_time("2022-11-22 03:12:34")
+    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="custom subject")
+    def test_email_is_sent_custom_subject(self):
+        """An email is sent when the form is submitted correctly."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        self.client.post(self.get_url(), {"email": email})
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "custom subject")
 
     @freeze_time("2022-11-22 03:12:34")
     def test_email_is_sent_site_domain(self):
@@ -2163,8 +2190,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             email_entry = models.UserEmailEntry.objects.get(email=email)
             # One message has been sent.
             self.assertEqual(len(mail.outbox), 1)
-            # The subject is correct.
-            self.assertEqual(mail.outbox[0].subject, "account activation")
             url = "http://foobar.com" + reverse(
                 "anvil_consortium_manager:accounts:verify",
                 args=[email_entry.uuid, account_verification_token.make_token(email_entry)],
@@ -2251,7 +2276,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No new UserEmailEntry is created.
         self.assertEqual(models.UserEmailEntry.objects.count(), 1)
         self.assertEqual(models.UserEmailEntry.objects.latest("pk"), other_email_entry)
@@ -2315,7 +2340,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"email": email}, follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No new UserEmailEntry is created.
         self.assertEqual(models.UserEmailEntry.objects.count(), 0)
         # No email is sent.
@@ -2585,7 +2610,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # A new account is created.
         self.assertEqual(models.Account.objects.count(), 1)
         new_object = models.Account.objects.latest("pk")
@@ -2607,13 +2632,26 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
 
+    @override_settings(ANVIL_ACCOUNT_LINK_REDIRECT="test_login")
+    def test_custom_redirect(self):
+        """A user can successfully verify their email."""
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+        self.assertRedirects(response, "/test_login/")
+
     def test_user_email_entry_does_not_exist(self):
         """ "There is no UserEmailEntry with the uuid."""
         token = "foo"
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(uuid4(), token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
         # No UserEmailEntry objects exist.
@@ -2633,7 +2671,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertEqual(account, models.Account.objects.latest("pk"))
@@ -2655,7 +2693,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertEqual(existing_account, models.Account.objects.latest("pk"))
@@ -2676,7 +2714,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
         # The email entry objects are not changed -- no history is added.
@@ -2700,7 +2738,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No new accounts are created.
         self.assertEqual(models.Account.objects.count(), 1)
         self.assertEqual(other_account, models.Account.objects.latest("pk"))
@@ -2726,7 +2764,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
         # The email_entry object was not updated.
@@ -2749,7 +2787,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
         # The email_entry object was not updated.
@@ -2772,7 +2810,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # Need a client because messages are added.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-        self.assertRedirects(response, reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+        self.assertRedirects(response, "/test_home/")
         # No accounts are created.
         self.assertEqual(models.Account.objects.count(), 0)
         # The email_entry object was not updated.

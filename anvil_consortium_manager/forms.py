@@ -4,7 +4,6 @@ from crispy_bootstrap5.bootstrap5 import FloatingField
 from crispy_forms import layout
 from crispy_forms.helper import FormHelper
 from dal import autocomplete, forward
-from django import VERSION as DJANGO_VERSION
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -179,13 +178,10 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
         return billing_project
 
     def clean(self):
-        # DJANGO <4.1 on mysql:
         # Check for the same case insensitive name in the same billing project.
         is_mysql = settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql"
-        if is_mysql and DJANGO_VERSION >= (4, 1):
-            # This is handled by the model full_clean method with case-insensitive collation.
-            pass
-        else:
+        if not is_mysql:
+            print("here")
             billing_project = self.cleaned_data.get("billing_project", None)
             name = self.cleaned_data.get("name", None)
             if (

@@ -126,6 +126,7 @@ ADMIN_URL = "admin/"
 
 # Since there are no templates for redirects in this app, specify the open URL.
 LOGIN_URL = "test_login"
+LOGIN_REDIRECT_URL = "test_home"
 
 # Django is switching how forms are handled (divs). Set the FORM_RENDERER temporary setting until
 # it is removed in Django 6.0.
@@ -147,10 +148,6 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap5.html"
 # Path to the service account to use for managing access.
 # Because the calls are mocked, we don't need to set this.
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
-ANVIL_ACCOUNT_LINK_REDIRECT = "test_home"
-ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "account activation"
-
 ANVIL_WORKSPACE_ADAPTERS = [
     "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
-ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"

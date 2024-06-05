@@ -44,25 +44,13 @@ Required Settings
 
   Alternatively, if you would like to browse the app without making any API, just set this to a random string (e.g., ``"foo"``).
 
-3. Set the default account and workspace adapters in your settings file.
+3. Set the ``ANVIL_WORKSPACE_ADAPTERS`` setting in your settings file.
 
   .. code-block:: python
 
       ANVIL_WORKSPACE_ADAPTERS = ["anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter"]
-      ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
 
-  See the :ref:`Advanced Usage` section for information about customizing Accounts and Workspaces.
-  Note that you can have multiple Workspace adapters, but only one Account adapter.
-
-
-4. Add account linking settings to your settings file.
-
-  .. code-block:: python
-
-      # Specify the URL name that AccountLink and AccountLinkVerify redirect to.
-      ANVIL_ACCOUNT_LINK_REDIRECT = "home"
-      # Specify the subject for AnVIL account verification emails.
-      ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT = "Verify your AnVIL account email"
+  For more information about customizing the workspace-related behavior of the app, see the :ref:`workspace_adapter` section.
 
 5. Set up a Site in the sites framework. In your settings file:
 
@@ -72,11 +60,13 @@ Required Settings
 
 Optional settings
 ~~~~~~~~~~~~~~~~~
-If you would like to receive emails when a user links their account, set the ``ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL`` setting in your settings file.
 
-  .. code-block:: python
+These settings are set to default values automatically, but can be changed by the user in the ``settings.py`` file for further customization.
 
-      ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL = "to@example.com"
+* ``ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL``: Receive an email when a user links their account (default: None)
+* ``ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT``: Subject of the email when a user links their account (default: "AnVIL Account Verification")
+* ``ANVIL_ACCOUNT_LINK_REDIRECT_URL``: URL to redirect to after linking an account (default: ``settings.LOGIN_REDIRECT_URL``)
+* ``ANVIL_ACCOUNT_ADAPTER``: Adapter to use for Accounts (default: ``"anvil_consortium_manager.adapters.default.DefaultAccountAdapter"``). See the :ref:`account_adapter` section for more information about customizing behavior for accounts.
 
 
 Post-installation
