@@ -2152,13 +2152,28 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
-        self.assertEqual(mail.outbox[0].subject, "account activation")
+        self.assertEqual(mail.outbox[0].subject, "Verify your AnVIL account email")
         url = "http://example.com" + reverse(
             "anvil_consortium_manager:accounts:verify",
             args=[email_entry.uuid, account_verification_token.make_token(email_entry)],
         )
         # The body contains the correct url.
         self.assertIn(url, mail.outbox[0].body)
+
+    @freeze_time("2022-11-22 03:12:34")
+    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="custom subject")
+    def test_email_is_sent_custom_subject(self):
+        """An email is sent when the form is submitted correctly."""
+        email = "test@example.com"
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        self.client.post(self.get_url(), {"email": email})
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "custom subject")
 
     @freeze_time("2022-11-22 03:12:34")
     def test_email_is_sent_site_domain(self):
@@ -2175,8 +2190,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
             email_entry = models.UserEmailEntry.objects.get(email=email)
             # One message has been sent.
             self.assertEqual(len(mail.outbox), 1)
-            # The subject is correct.
-            self.assertEqual(mail.outbox[0].subject, "account activation")
             url = "http://foobar.com" + reverse(
                 "anvil_consortium_manager:accounts:verify",
                 args=[email_entry.uuid, account_verification_token.make_token(email_entry)],

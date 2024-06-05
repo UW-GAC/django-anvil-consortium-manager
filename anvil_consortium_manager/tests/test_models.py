@@ -173,7 +173,27 @@ class UserEmailEntryTest(TestCase):
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
-        self.assertEqual(mail.outbox[0].subject, "account activation")
+        self.assertEqual(mail.outbox[0].subject, "Verify your AnVIL account email")
+        # The contents are correct.
+        email_body = mail.outbox[0].body
+        self.assertIn("http://www.test.com", email_body)
+        self.assertIn(email_entry.user.username, email_body)
+        self.assertIn(account_verification_token.make_token(email_entry), email_body)
+        self.assertIn(str(email_entry.uuid), email_body)
+
+    # This test occasionally fails if the time flips one second between sending the email and
+    # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
+    # this spurious failure.
+    @freeze_time("2022-11-22 03:12:34")
+    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="custom subject")
+    def test_send_verification_email_custom_subject(self):
+        """Verification email is correct."""
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_verification_email("www.test.com")
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "custom subject")
         # The contents are correct.
         email_body = mail.outbox[0].body
         self.assertIn("http://www.test.com", email_body)

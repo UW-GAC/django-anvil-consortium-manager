@@ -11,7 +11,7 @@ from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
-from . import exceptions
+from . import app_settings, exceptions
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
@@ -142,7 +142,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         Args:
             domain (str): The domain of the current site, used to create the link.
         """
-        mail_subject = settings.ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT
+        mail_subject = app_settings.ACCOUNT_LINK_EMAIL_SUBJECT
         url_subdirectory = "http://{domain}{url}".format(
             domain=domain,
             url=reverse(
