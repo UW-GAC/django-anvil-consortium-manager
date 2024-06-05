@@ -13,9 +13,10 @@ See API documentation for more information about each method: https://api.firecl
 import json
 import logging
 
-from django.conf import settings
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
+
+from . import app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class AnVILAPIClient:
         This way, all instances should share the same authorized session.
         """
         if AnVILAPIClient.auth_session is None:
-            credentials = service_account.Credentials.from_service_account_file(settings.ANVIL_API_SERVICE_ACCOUNT_FILE)
+            credentials = service_account.Credentials.from_service_account_file(app_settings.API_SERVICE_ACCOUNT_FILE)
             scoped_credentials = credentials.with_scopes(
                 [
                     "https://www.googleapis.com/auth/userinfo.profile",
