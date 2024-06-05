@@ -15,7 +15,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin, SingleTableView
 
-from . import __version__, anvil_api, auth, exceptions, filters, forms, models, tables, viewmixins
+from . import __version__, anvil_api, app_settings, auth, exceptions, filters, forms, models, tables, viewmixins
 from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
@@ -244,6 +244,9 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
     form_class = forms.UserEmailEntryForm
     success_message = "To complete linking the account, check your email for a verification link."
 
+    def get_redirect_url(self):
+        return reverse(app_settings.ACCOUNT_LINK_REDIRECT)
+
     def get(self, request, *args, **kwargs):
         """Check if the user already has an account linked and redirect."""
         try:
@@ -253,7 +256,7 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
         else:
             # The user already has a linked account, so redirect with a message.
             messages.add_message(self.request, messages.ERROR, self.message_user_already_linked)
-            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+            return HttpResponseRedirect(self.get_redirect_url())
 
     def post(self, request, *args, **kwargs):
         """Check if the user already has an account linked and redirect."""
@@ -264,10 +267,10 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
         else:
             # The user already has a linked account, so redirect with a message.
             messages.add_message(self.request, messages.ERROR, self.message_user_already_linked)
-            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+            return HttpResponseRedirect(self.get_redirect_url())
 
     def get_success_url(self):
-        return reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        return self.get_redirect_url()
 
     def form_valid(self, form):
         """If the form is valid, check that the email exists on AnVIL and send verification email."""
@@ -283,7 +286,7 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
         if models.Account.objects.filter(email=email).count():
             # The user already has a linked account, so redirect with a message.
             messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
-            return HttpResponseRedirect(reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT))
+            return HttpResponseRedirect(self.get_redirect_url())
 
         # Check if it exists on AnVIL.
         try:
@@ -314,7 +317,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     message_success = "Thank you for verifying your email."
 
     def get_redirect_url(self, *args, **kwargs):
-        return reverse(settings.ANVIL_ACCOUNT_LINK_REDIRECT)
+        return reverse(app_settings.ACCOUNT_LINK_REDIRECT)
 
     def get(self, request, *args, **kwargs):
         # Check if this user already has an account linked.
