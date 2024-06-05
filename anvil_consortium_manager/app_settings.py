@@ -23,13 +23,19 @@ class AppSettings(object):
         x = self._setting("API_SERVICE_ACCOUNT_FILE")
         if not x:
             raise ImproperlyConfigured("ANVIL_API_SERVICE_ACCOUNT_FILE is required in settings.py")
+        return x
 
     @property
     def WORKSPACE_ADAPTERS(self):
         """Workspace adapters. Required."""
         x = self._setting("WORKSPACE_ADAPTERS")
         if not x:
-            raise ImproperlyConfigured("ANVIL_WORKSPACE_ADAPTERS is required in settings.py")
+            msg = (
+                "ANVIL_WORKSPACE_ADAPTERS must specify at least one adapter. Did you mean to use "
+                "the default `anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter`?"
+            )
+            raise ImproperlyConfigured(msg)
+        return x
 
     @property
     def ACCOUNT_LINK_EMAIL_SUBJECT(self):
