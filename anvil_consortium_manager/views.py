@@ -1065,6 +1065,8 @@ class WorkspaceCreate(
                 workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL.
                 self.workspace.anvil_create()
+                # Run the custom adapter method after a workspace is created.
+                self.adapter.after_workspace_create(self.workspace)
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))

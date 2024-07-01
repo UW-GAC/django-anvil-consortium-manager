@@ -149,6 +149,10 @@ class BaseWorkspaceAdapter(ABC):
 
         return {}
 
+    def after_workspace_create(self, workspace):
+        """Custom actions to take after a workspace is created."""
+        pass
+
 
 class AdapterAlreadyRegisteredError(Exception):
     """Exception raised when an adapter or its type is already registered."""
