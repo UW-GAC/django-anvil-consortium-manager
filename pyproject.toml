@@ -169,7 +169,7 @@ template = "testing"
 DBBACKEND = "sqlite3"
 DBNAME = ":memory:"
 [[tool.hatch.envs.test-sqlite.matrix]]
-python = ["3.8", "3.12"]
+python = ["3.8", "3.10", "3.12"]
 django = ["4.2", "5.0"]
 [tool.hatch.envs.test-sqlite.overrides]
 matrix.django.extra-dependencies = [
@@ -185,7 +185,7 @@ extra-dependencies = [
 [tool.hatch.envs.test-mysql.env-vars]
 DBBACKEND = "mysql"
 [[tool.hatch.envs.test-mysql.matrix]]
-python = ["3.8", "3.12"]
+python = ["3.8", "3.10", "3.12"]
 django = ["4.2", "5.0"]
 [tool.hatch.envs.test-mysql.overrides]
 matrix.django.extra-dependencies = [
