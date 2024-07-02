@@ -224,8 +224,6 @@ class WorkspaceAdapterRegistry:
     def populate_from_settings(self):
         """Populate the workspace adapter registry from settings. Called by AppConfig ready() method."""
         adapter_modules = app_settings.WORKSPACE_ADAPTERS
-        print("adapter modules")
-        print(adapter_modules)
         if len(self._registry):
             msg = "Registry has already been populated."
             raise RuntimeError(msg)
