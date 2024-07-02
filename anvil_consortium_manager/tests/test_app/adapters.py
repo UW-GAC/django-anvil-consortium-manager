@@ -93,3 +93,12 @@ class TestAfterWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
         # Set the extra field to "FOO"
         workspace.testworkspacemethodsdata.test_field = "FOO"
         workspace.testworkspacemethodsdata.save()
+
+
+class TestAfterWorkspaceImportAdapter(TestWorkspaceMethodsAdapter):
+    """Test adapter for workspaces with custom methods defined."""
+
+    def after_workspace_import(self, workspace):
+        # Set the extra field.
+        workspace.testworkspacemethodsdata.test_field = "imported!"
+        workspace.testworkspacemethodsdata.save()

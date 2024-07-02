@@ -1204,6 +1204,7 @@ class WorkspaceImport(
                 transaction.set_rollback(True)
                 return self.forms_invalid(form, workspace_data_formset)
             workspace_data_formset.forms[0].save()
+            self.adapter.after_workspace_import(self.workspace)
         except anvil_api.AnVILAPIError as e:
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))

@@ -157,6 +157,10 @@ class BaseWorkspaceAdapter(ABC):
         """Custom actions to take after a workspace is created on AnVIL."""
         pass
 
+    def after_workspace_import(self, workspace):
+        """Custom actions to take after a workspace is imported from AnVIL."""
+        pass
+
 
 class AdapterAlreadyRegisteredError(Exception):
     """Exception raised when an adapter or its type is already registered."""
