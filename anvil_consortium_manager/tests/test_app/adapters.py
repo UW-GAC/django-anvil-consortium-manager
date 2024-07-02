@@ -64,17 +64,30 @@ class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
 
 
 class TestWorkspaceMethodsAdapter(BaseWorkspaceAdapter):
-    """Test adapter for workspaces with custom methods defined."""
+    """Adapter superclass for testing adapter methods."""
 
-    name = "Test methods workspace"
-    type = "test_methods"
-    description = "Workspace type for testing additional methods"
+    name = "workspace adapter methods testing"
+    type = "methods_tester"
+    description = "Workspace type for testing custom adapter methods method"
     list_table_class_staff_view = WorkspaceStaffTable
     list_table_class_view = WorkspaceUserTable
     workspace_form_class = WorkspaceForm
     workspace_data_model = models.TestWorkspaceMethodsData
     workspace_data_form_class = forms.TestWorkspaceMethodsForm
     workspace_detail_template_name = "workspace_detail.html"
+
+
+class TestBeforeWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
+    """Test adapter for workspaces with custom methods defined."""
+
+    def before_workspace_create(self, workspace):
+        # Append a -2 to the name of the workspace.
+        workspace.name = workspace.name + "-2"
+        workspace.save()
+
+
+class TestAfterWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
+    """Test adapter for workspaces with custom methods defined."""
 
     def after_workspace_create(self, workspace):
         # Set the extra field to "FOO"
