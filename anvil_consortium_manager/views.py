@@ -1064,9 +1064,9 @@ class WorkspaceCreate(
                     models.WorkspaceAuthorizationDomain.objects.create(workspace=self.workspace, group=auth_domain)
                 workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL, running custom adapter methods as appropriate.
-                self.adapter.before_workspace_create(self.workspace)
+                self.adapter.before_anvil_create(self.workspace)
                 self.workspace.anvil_create()
-                self.adapter.after_workspace_create(self.workspace)
+                self.adapter.after_anvil_create(self.workspace)
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
@@ -1204,7 +1204,7 @@ class WorkspaceImport(
                 transaction.set_rollback(True)
                 return self.forms_invalid(form, workspace_data_formset)
             workspace_data_formset.forms[0].save()
-            self.adapter.after_workspace_import(self.workspace)
+            self.adapter.after_anvil_import(self.workspace)
         except anvil_api.AnVILAPIError as e:
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
             return self.render_to_response(self.get_context_data(form=form))
@@ -1332,14 +1332,14 @@ class WorkspaceClone(
                     models.WorkspaceAuthorizationDomain.objects.create(workspace=self.new_workspace, group=auth_domain)
                 workspace_data_formset.forms[0].save()
                 # Then create the workspace on AnVIL.
-                self.adapter.before_workspace_create(self.new_workspace)
+                self.adapter.before_anvil_create(self.new_workspace)
                 authorization_domains = self.new_workspace.authorization_domains.all()
                 self.object.anvil_clone(
                     self.new_workspace.billing_project,
                     self.new_workspace.name,
                     authorization_domains=authorization_domains,
                 )
-                self.adapter.after_workspace_create(self.new_workspace)
+                self.adapter.after_anvil_create(self.new_workspace)
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))

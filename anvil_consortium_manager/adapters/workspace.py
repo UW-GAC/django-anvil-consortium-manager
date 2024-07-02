@@ -149,15 +149,15 @@ class BaseWorkspaceAdapter(ABC):
 
         return {}
 
-    def before_workspace_create(self, workspace):
+    def before_anvil_create(self, workspace):
         """Custom actions to take after a workspace is created on AnVIL."""
         pass
 
-    def after_workspace_create(self, workspace):
+    def after_anvil_create(self, workspace):
         """Custom actions to take after a workspace is created on AnVIL."""
         pass
 
-    def after_workspace_import(self, workspace):
+    def after_anvil_import(self, workspace):
         """Custom actions to take after a workspace is imported from AnVIL."""
         pass
 

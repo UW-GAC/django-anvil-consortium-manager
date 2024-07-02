@@ -17,7 +17,7 @@ class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_form_class = forms.CustomWorkspaceDataForm
     workspace_detail_template_name = "app/custom_workspace_detail.html"
 
-    def before_workspace_create(self, workspace):
+    def before_anvil_create(self, workspace):
         """Add authorization domain to workspace."""
         auth_domain_name = "AUTH_" + workspace.name
         auth_domain = ManagedGroup.objects.create(

@@ -80,7 +80,7 @@ class TestWorkspaceMethodsAdapter(BaseWorkspaceAdapter):
 class TestBeforeWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
     """Test adapter for workspaces with custom methods defined."""
 
-    def before_workspace_create(self, workspace):
+    def before_anvil_create(self, workspace):
         # Append a -2 to the name of the workspace.
         workspace.name = workspace.name + "-2"
         workspace.save()
@@ -89,7 +89,7 @@ class TestBeforeWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
 class TestAfterWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
     """Test adapter for workspaces with custom methods defined."""
 
-    def after_workspace_create(self, workspace):
+    def after_anvil_create(self, workspace):
         # Set the extra field to "FOO"
         workspace.testworkspacemethodsdata.test_field = "FOO"
         workspace.testworkspacemethodsdata.save()
@@ -98,7 +98,7 @@ class TestAfterWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
 class TestAfterWorkspaceImportAdapter(TestWorkspaceMethodsAdapter):
     """Test adapter for workspaces with custom methods defined."""
 
-    def after_workspace_import(self, workspace):
+    def after_anvil_import(self, workspace):
         # Set the extra field.
         workspace.testworkspacemethodsdata.test_field = "imported!"
         workspace.testworkspacemethodsdata.save()

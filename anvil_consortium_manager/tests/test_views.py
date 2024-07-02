@@ -8279,8 +8279,8 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace_data.workspace, new_workspace)
         self.assertEqual(new_workspace_data.other_workspace, other_workspace)
 
-    def test_post_custom_adapter_before_workspace_create(self):
-        """The before_workspace_create method is run before a workspace is created."""
+    def test_post_custom_adapter_before_anvil_create(self):
+        """The before_anvil_create method is run before a workspace is created."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
@@ -8317,8 +8317,8 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, "test-workspace-2")
 
-    def test_post_custom_adapter_after_workspace_create(self):
-        """The after_workspace_create method is run after a workspace is created."""
+    def test_post_custom_adapter_after_anvil_create(self):
+        """The after_anvil_create method is run after a workspace is created."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
@@ -9796,8 +9796,8 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace_data.workspace, new_workspace)
         self.assertEqual(new_workspace_data.other_workspace, other_workspace)
 
-    def test_post_custom_adapter_after_workspace_import(self):
-        """The after_workspace_create method is run after a workspace is imported."""
+    def test_post_custom_adapter_after_anvil_import(self):
+        """The after_anvil_create method is run after a workspace is imported."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
@@ -10975,8 +10975,8 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace_data.workspace, new_workspace)
         self.assertEqual(new_workspace_data.other_workspace, other_workspace)
 
-    def test_post_custom_adapter_before_workspace_create(self):
-        """The before_workspace_create method is run before a workspace is created."""
+    def test_post_custom_adapter_before_anvil_create(self):
+        """The before_anvil_create method is run before a workspace is created."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
@@ -11018,8 +11018,8 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(new_workspace.name, "test-workspace-2")
 
-    def test_post_custom_adapter_after_workspace_create(self):
-        """The after_workspace_create method is run after a workspace is created."""
+    def test_post_custom_adapter_after_anvil_create(self):
+        """The after_anvil_create method is run after a workspace is created."""
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
