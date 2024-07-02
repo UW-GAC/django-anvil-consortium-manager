@@ -10921,6 +10921,93 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(new_workspace_data.workspace, new_workspace)
         self.assertEqual(new_workspace_data.other_workspace, other_workspace)
 
+    def test_post_custom_adapter_before_workspace_create(self):
+        """The before_workspace_create method is run before a workspace is created."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestBeforeWorkspaceCreateAdapter)
+        self.workspace_type = TestBeforeWorkspaceCreateAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace-2",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-test_field": "my field value",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # The workspace is created.
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, "test-workspace-2")
+
+    def test_post_custom_adapter_after_workspace_create(self):
+        """The after_workspace_create method is run after a workspace is created."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestAfterWorkspaceCreateAdapter)
+        self.workspace_type = TestAfterWorkspaceCreateAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-test_field": "my field value",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # The workspace is created.
+        new_workspace = models.Workspace.objects.latest("pk")
+        # The test_field field was modified by the adapter.
+        self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "FOO")
+
 
 class WorkspaceUpdateTest(TestCase):
     def setUp(self):
