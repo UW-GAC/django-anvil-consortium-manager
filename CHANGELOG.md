@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.24.0 (2024-07-03)
 
 * Add AccountUserArchive model to the admin interface.
 * Drop support for Django 3.2.
