@@ -9,11 +9,21 @@ from . import models
 
 
 class CustomWorkspaceForm(WorkspaceForm):
-    """Example custom form for creating a Workspace."""
+    """Example custom form for creating a Workspace.
+
+    This form has a custom clean method that does not allow a "y" in the workspace name.
+    It also disables the authorization_domains field."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["authorization_domains"].disabled = True
 
     class Meta(WorkspaceForm.Meta):
         help_texts = {
             "name": "Enter the name of the workspace to create. (Hint: Example workspace names cannot include a 'y'.)",
+            "authorization_domains": (
+                "An authorization domain will be automatically created " "using the name of the workspace."
+            ),
         }
 
     def clean_name(self):

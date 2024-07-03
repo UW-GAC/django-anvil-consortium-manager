@@ -149,6 +149,18 @@ class BaseWorkspaceAdapter(ABC):
 
         return {}
 
+    def before_anvil_create(self, workspace):
+        """Custom actions to take after a workspace is created on AnVIL."""
+        pass
+
+    def after_anvil_create(self, workspace):
+        """Custom actions to take after a workspace is created on AnVIL."""
+        pass
+
+    def after_anvil_import(self, workspace):
+        """Custom actions to take after a workspace is imported from AnVIL."""
+        pass
+
 
 class AdapterAlreadyRegisteredError(Exception):
     """Exception raised when an adapter or its type is already registered."""
@@ -212,8 +224,6 @@ class WorkspaceAdapterRegistry:
     def populate_from_settings(self):
         """Populate the workspace adapter registry from settings. Called by AppConfig ready() method."""
         adapter_modules = app_settings.WORKSPACE_ADAPTERS
-        print("adapter modules")
-        print(adapter_modules)
         if len(self._registry):
             msg = "Registry has already been populated."
             raise RuntimeError(msg)

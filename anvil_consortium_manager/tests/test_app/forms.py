@@ -36,3 +36,11 @@ class TestForeignKeyWorkspaceDataForm(forms.ModelForm):
     class Meta:
         model = models.TestForeignKeyWorkspaceData
         fields = ("other_workspace", "workspace")
+
+
+class TestWorkspaceMethodsForm(forms.ModelForm):
+    """Form for a TestWorkspaceMethods object."""
+
+    class Meta:
+        model = models.TestWorkspaceMethodsData
+        fields = ("test_field", "workspace")

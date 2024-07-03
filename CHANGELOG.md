@@ -7,6 +7,7 @@
 * Add support for Django 5.0.
 * Add `convert_mariadb_uuid_fields` command to convert UUID fields for MariaDB 10.7+ and Django 5.0+. See the documentation of this command for more information.
 * Move app settings to their own file, and set defaults for some settings.
+* Add additional customization for WorkspaceAdapters. Users can override the `before_anvil_create`, `after_anvil_create`, and `after_anvil_import` methods to run custom code before or after creating or after importing a workspace.
 
 ## 0.23.0 (2024-05-31)
 

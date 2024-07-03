@@ -181,7 +181,6 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
         # Check for the same case insensitive name in the same billing project.
         is_mysql = settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql"
         if not is_mysql:
-            print("here")
             billing_project = self.cleaned_data.get("billing_project", None)
             name = self.cleaned_data.get("name", None)
             if (
