@@ -9,7 +9,12 @@ The account adapter
 -------------------
 
 The app provides an adapter that you can use to customize behavior for Accounts.
-By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultAccountAdapter`.
+You can override this setting by specifying the ``ANVIL_ACCOUNT_ADAPTER`` setting in your ``settings.py`` file.
+By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultAccountAdapter`, e.g.,:
+
+.. code-block:: python
+
+        ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
 
 To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseAccountAdapter`
 and set the following attributes:
@@ -28,7 +33,13 @@ The Managed Group adapter
 -------------------
 
 The app provides an adapter that you can use to customize behavior for Managed Groups.
-By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter`.
+You can override this setting by specifying the ``ANVIL_MANAGED_GROUP_ADAPTER`` setting in your ``settings.py`` file.
+By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter`, e.g.,:
+
+.. code-block:: python
+
+        ANVIL_MANAGED_GROUP_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter"
+
 
 To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseManagedGroupAdapter`
 and set the following attributes:
@@ -46,6 +57,8 @@ The workspace adapter
 ---------------------
 
 The app provides an adapter that you can use to provide extra, customized data about a workspace.
+Unlike the other adapter classes above, you can specify any number of custom adapters in your settings file.
+
 The default workspace adapter provided by the app is :class:`~anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter`.
 The default ``workspace_data_model`` specified in this adapter has no fields other than those provided by :class:`~anvil_consortium_manager.models.BaseWorkspaceData`.
 This section describes how to store additional information about a workspace by setting up a custom adapter.
@@ -133,7 +146,9 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
         workspace_data_form_class = forms.CustomWorkspaceDataForm
         workspace_detail_template_name = "my_app/custom_workspace_detail.html"
 
-Finally, to tell the app to use this adapter, set ``ANVIL_WORKSPACE_ADAPTERS`` in your settings file, e.g.: ``ANVIL_WORKSPACE_ADAPTERS = ["my_app.adapters.CustomWorkspaceAdapter"]``. You can even define multiple adapters for different types of workspaces, e.g.:
+Finally, to tell the app to use this adapter, set ``ANVIL_WORKSPACE_ADAPTERS`` in your settings file, e.g.: ``ANVIL_WORKSPACE_ADAPTERS = ["my_app.adapters.CustomWorkspaceAdapter"]``.
+
+To define multiple adapters for different types of workspaces, e.g.:
 
 .. code-block:: python
 
