@@ -39,7 +39,7 @@ class BaseManagedGroupAdapter(ABC):
             raise ImproperlyConfigured("The Meta model for `list_table_class_view` must be ManagedGroup.")
         return self.list_table_class_view
 
-    def after_anvil_create(self):
+    def after_anvil_create(self, managed_group):
         """Custom actions to run after a ManagedGroup is created by the app."""
         pass
 
