@@ -730,13 +730,23 @@ class ManagedGroupUpdate(
     success_message = "Successfully updated ManagedGroup."
 
 
-class ManagedGroupList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
+class ManagedGroupList(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.ManagedGroupAdapterMixin, SingleTableMixin, FilterView
+):
     model = models.ManagedGroup
-    table_class = tables.ManagedGroupStaffTable
     ordering = ("name",)
     template_name = "anvil_consortium_manager/managedgroup_list.html"
 
     filterset_class = filters.ManagedGroupListFilter
+
+    def get_table_class(self):
+        """Use the adapter to get the table class."""
+        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
+        print(self.adapter)
+        if self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename):
+            return self.adapter.get_list_table_class_staff_view()
+        else:
+            return self.adapter.get_list_table_class_view()
 
 
 class ManagedGroupVisualization(

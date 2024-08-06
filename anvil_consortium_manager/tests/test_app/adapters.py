@@ -1,4 +1,5 @@
 from anvil_consortium_manager.adapters.account import BaseAccountAdapter
+from anvil_consortium_manager.adapters.managed_group import BaseManagedGroupAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
 from anvil_consortium_manager.tables import WorkspaceStaffTable, WorkspaceUserTable
@@ -32,6 +33,13 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
         extra_context = {}
         extra_context["extra_text"] = "Extra text"
         return extra_context
+
+
+class TestManagedGroupAdapter(BaseManagedGroupAdapter):
+    """Test adapter for ManagedGroups."""
+
+    list_table_class_staff_view = tables.TestManagedGroupStaffTable
+    list_table_class_view = tables.TestManagedGroupUserTable
 
 
 class TestAccountAdapter(BaseAccountAdapter):

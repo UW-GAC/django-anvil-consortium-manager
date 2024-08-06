@@ -5407,6 +5407,16 @@ class ManagedGroupListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    @override_settings(
+        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupAdapter"
+    )
+    def test_adapter(self):
+        """Displays the correct table if specified in the adapter."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestManagedGroupStaffTable)
+
 
 class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 204
