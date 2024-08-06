@@ -5429,7 +5429,7 @@ class ManagedGroupListTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
-        self.assertIsInstance(response.context_data["table"], app_tables.TestManagedGroupStaffTable)
+        self.assertIsInstance(response.context_data["table"], app_tables.TestManagedGroupTable)
 
 
 class ManagedGroupDeleteTest(AnVILAPIMockTestMixin, TestCase):

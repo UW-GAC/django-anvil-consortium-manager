@@ -16,8 +16,7 @@ class DefaultAccountAdapter(BaseAccountAdapter):
 class DefaultManagedGroupAdapter(BaseManagedGroupAdapter):
     """Default adapter to use for ManagedGroups in the app."""
 
-    list_table_class_staff_view = tables.ManagedGroupStaffTable
-    list_table_class_view = tables.ManagedGroupUserTable
+    list_table_class = tables.ManagedGroupStaffTable
 
 
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):

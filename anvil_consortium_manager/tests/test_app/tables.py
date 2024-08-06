@@ -33,7 +33,7 @@ class TestAccountStaffTable(tables.Table):
         fields = ("email",)
 
 
-class TestManagedGroupStaffTable(tables.Table):
+class TestManagedGroupTable(tables.Table):
     """Table for testing the ManagedGroup adapter."""
 
     name = tables.columns.Column(linkify=True)
@@ -44,13 +44,3 @@ class TestManagedGroupStaffTable(tables.Table):
             "name",
             "email",
         )
-
-
-class TestManagedGroupUserTable(tables.Table):
-    """Table for testing the ManagedGroup adapter."""
-
-    name = tables.columns.Column(linkify=True)
-
-    class Meta:
-        model = acm_models.ManagedGroup
-        fields = ("name",)

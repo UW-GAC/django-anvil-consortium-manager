@@ -44,8 +44,7 @@ By default, the app uses :class:`~anvil_consortium_manager.adapters.default.Defa
 To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseManagedGroupAdapter`
 and set the following attributes:
 
-- ``list_table_class_staff_view``: an attribute set to the class of the table used to display managed groups in the :class:`~anvil_consortium_manager.views.ManagedGroupList` view to users with StaffView permission. The default adapter uses :class:`anvil_consortium_manager.tables.ManagedGroupStaffTable`.
-- ``list_table_class_staff_view``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.ManagedGroupList` view to users with View permission. The default adapter uses :class:`anvil_consortium_manager.tables.ManagedGroupUserTable`.
+- ``list_table_class``: an attribute set to the class of the table used to display managed groups in the :class:`~anvil_consortium_manager.views.ManagedGroupList` view to users with StaffView permission. The default adapter uses :class:`anvil_consortium_manager.tables.ManagedGroupStaffTable`.
 
 Optionally, you can override the following methods:
 

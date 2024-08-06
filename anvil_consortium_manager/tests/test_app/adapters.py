@@ -38,8 +38,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
 class TestManagedGroupAdapter(BaseManagedGroupAdapter):
     """Test adapter for ManagedGroups."""
 
-    list_table_class_staff_view = tables.TestManagedGroupStaffTable
-    list_table_class_view = tables.TestManagedGroupUserTable
+    list_table_class = tables.TestManagedGroupTable
 
 
 class TestAccountAdapter(BaseAccountAdapter):

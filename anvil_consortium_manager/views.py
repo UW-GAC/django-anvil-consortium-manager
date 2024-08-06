@@ -747,7 +747,7 @@ class ManagedGroupList(
 
     def get_table_class(self):
         """Use the adapter to get the table class."""
-        return self.adapter.get_list_table_class_staff_view()
+        return self.adapter.get_list_table_class()
 
 
 class ManagedGroupVisualization(
