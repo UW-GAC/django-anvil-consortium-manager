@@ -2,6 +2,7 @@
 
 from .. import filters, forms, models, tables
 from .account import BaseAccountAdapter
+from .managed_group import BaseManagedGroupAdapter
 from .workspace import BaseWorkspaceAdapter
 
 
@@ -10,6 +11,13 @@ class DefaultAccountAdapter(BaseAccountAdapter):
 
     list_table_class = tables.AccountStaffTable
     list_filterset_class = filters.AccountListFilter
+
+
+class DefaultManagedGroupAdapter(BaseManagedGroupAdapter):
+    """Default adapter to use for ManagedGroups in the app."""
+
+    list_table_class_staff_view = tables.ManagedGroupStaffTable
+    list_table_class_view = tables.ManagedGroupUserTable
 
 
 class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):

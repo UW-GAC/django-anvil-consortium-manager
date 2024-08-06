@@ -1,9 +1,11 @@
+import django_tables2
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import Form, ModelForm
 from django.test import TestCase, override_settings
 
 from ..adapters.account import BaseAccountAdapter
-from ..adapters.default import DefaultAccountAdapter, DefaultWorkspaceAdapter
+from ..adapters.default import DefaultAccountAdapter, DefaultManagedGroupAdapter, DefaultWorkspaceAdapter
+from ..adapters.managed_group import BaseManagedGroupAdapter
 from ..adapters.workspace import (
     AdapterAlreadyRegisteredError,
     AdapterNotRegisteredError,
@@ -13,7 +15,13 @@ from ..adapters.workspace import (
 from ..filters import AccountListFilter, BillingProjectListFilter
 from ..forms import DefaultWorkspaceDataForm, WorkspaceForm
 from ..models import Account, DefaultWorkspaceData
-from ..tables import AccountStaffTable, WorkspaceStaffTable, WorkspaceUserTable
+from ..tables import (
+    AccountStaffTable,
+    ManagedGroupStaffTable,
+    ManagedGroupUserTable,
+    WorkspaceStaffTable,
+    WorkspaceUserTable,
+)
 from . import factories
 from .test_app import filters, forms, models, tables
 from .test_app.adapters import TestWorkspaceAdapter
@@ -123,6 +131,83 @@ class AccountAdapterTestCase(TestCase):
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "get_autocomplete_label", foo)
         self.assertEqual(TestAdapter().get_autocomplete_label(account), "testuser")
+
+
+class ManagedGroupAdapterTest(TestCase):
+    """Tests for ManagedGroup adapters."""
+
+    def get_test_adapter(self):
+        """Return a test adapter class for use in tests."""
+
+        class TestAdapter(BaseManagedGroupAdapter):
+            list_table_class_staff_view = tables.TestManagedGroupStaffTable
+            list_table_class_view = tables.TestManagedGroupUserTable
+
+        return TestAdapter
+
+    def test_list_table_class_staff_view_default(self):
+        """get_list_table_class_staff_view returns the correct table when using the default adapter."""
+        self.assertEqual(DefaultManagedGroupAdapter().get_list_table_class_staff_view(), ManagedGroupStaffTable)
+
+    def test_list_table_class_staff_view_custom(self):
+        """get_list_table_class_staff_view returns the correct table when using a custom adapter."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_staff_view", tables.TestManagedGroupStaffTable)
+        self.assertEqual(TestAdapter().get_list_table_class_staff_view(), tables.TestManagedGroupStaffTable)
+
+    def test_list_table_class_staff_view_none(self):
+        """get_list_table_class_staff_view raises ImproperlyConfigured when list_table_class is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_staff_view", None)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_table_class_staff_view()
+        self.assertIn("Set `list_table_class_staff_view`", str(e.exception))
+
+    def test_list_table_class_staff_view_wrong_model(self):
+        """get_list_table_class_staff_view raises ImproperlyConfigured when incorrect model is used for the table."""
+
+        class TestTable(django_tables2.Table):
+            class Meta:
+                model = Account
+                fields = ("email",)
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_staff_view", TestTable)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_table_class_staff_view()
+        self.assertIn("ManagedGroup", str(e.exception))
+
+    def test_list_table_class_view_default(self):
+        """get_list_table_class_view returns the correct table when using the default adapter."""
+        self.assertEqual(DefaultManagedGroupAdapter().get_list_table_class_view(), ManagedGroupUserTable)
+
+    def test_list_table_class_view_custom(self):
+        """get_list_table_class_view returns the correct table when using a custom adapter."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_view", tables.TestManagedGroupUserTable)
+        self.assertEqual(TestAdapter().get_list_table_class_view(), tables.TestManagedGroupUserTable)
+
+    def test_list_table_class_view_none(self):
+        """get_list_table_class_view raises ImproperlyConfigured when list_table_class is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_view", None)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_table_class_view()
+        self.assertIn("Set `list_table_class_view`", str(e.exception))
+
+    def test_list_table_class_view_wrong_model(self):
+        """get_list_table_class_view raises ImproperlyConfigured when incorrect model is used for the table."""
+
+        class TestTable(django_tables2.Table):
+            class Meta:
+                model = Account
+                fields = ("email",)
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_view", TestTable)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_table_class_view()
+        self.assertIn("ManagedGroup", str(e.exception))
 
 
 class WorkspaceAdapterTest(TestCase):
