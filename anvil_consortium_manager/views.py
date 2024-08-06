@@ -747,12 +747,7 @@ class ManagedGroupList(
 
     def get_table_class(self):
         """Use the adapter to get the table class."""
-        staff_view_permission_codename = models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME
-        print(self.adapter)
-        if self.request.user.has_perm("anvil_consortium_manager." + staff_view_permission_codename):
-            return self.adapter.get_list_table_class_staff_view()
-        else:
-            return self.adapter.get_list_table_class_view()
+        return self.adapter.get_list_table_class_staff_view()
 
 
 class ManagedGroupVisualization(
