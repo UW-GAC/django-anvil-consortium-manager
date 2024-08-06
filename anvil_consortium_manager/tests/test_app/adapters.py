@@ -110,3 +110,12 @@ class TestAfterWorkspaceImportAdapter(TestWorkspaceMethodsAdapter):
         # Set the extra field.
         workspace.testworkspacemethodsdata.test_field = "imported!"
         workspace.testworkspacemethodsdata.save()
+
+
+class TestManagedGroupAfterAnVILCreateAdapter(TestManagedGroupAdapter):
+    """Test adapter for workspaces with custom methods defined."""
+
+    def after_anvil_create(self, managed_group):
+        # Change the name of the group to something else.
+        managed_group.name = "changed-name"
+        managed_group.save()

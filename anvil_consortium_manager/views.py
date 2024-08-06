@@ -693,7 +693,12 @@ class ManagedGroupDetail(
         return context
 
 
-class ManagedGroupCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
+class ManagedGroupCreate(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.ManagedGroupAdapterMixin,
+    SuccessMessageMixin,
+    CreateView,
+):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     template_name = "anvil_consortium_manager/managedgroup_create.html"
@@ -708,6 +713,7 @@ class ManagedGroupCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMe
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create()
+            self.adapter.after_anvil_create(self.object)
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))

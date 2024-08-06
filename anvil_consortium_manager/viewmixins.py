@@ -73,6 +73,10 @@ class ManagedGroupAdapterMixin:
         self.adapter = get_managed_group_adapter()()
         return super().get(request, *args, **kwargs)
 
+    def post(self, request, *args, **kwargs):
+        self.adapter = get_managed_group_adapter()()
+        return super().post(request, *args, **kwargs)
+
 
 class ManagedGroupGraphMixin:
     """Mixin to add a plotly graph of group structure to context data."""

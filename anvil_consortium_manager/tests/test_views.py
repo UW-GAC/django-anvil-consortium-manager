@@ -5171,6 +5171,20 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that no object is created.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
+    @override_settings(
+        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupAfterAnVILCreateAdapter"
+    )
+    def test_post_custom_adapter_after_anvil_create(self):
+        """The after_anvil_create method is run after a managed group is created."""
+        api_url = self.get_api_url("test-group")
+        self.anvil_response_mock.add(responses.POST, api_url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 302)
+        # Check that the name was changed by the adaapter.
+        new_object = models.ManagedGroup.objects.latest("pk")
+        self.assertEqual(new_object.name, "changed-name")
+
 
 class ManagedGroupUpdateTest(TestCase):
     def setUp(self):
