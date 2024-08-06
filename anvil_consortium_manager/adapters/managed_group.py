@@ -27,7 +27,9 @@ class BaseManagedGroupAdapter(ABC):
         if not self.list_table_class_staff_view:
             raise ImproperlyConfigured("Set `list_table_class_staff_view` in `{}`.".format(type(self)))
         if self.list_table_class_staff_view.Meta.model != models.ManagedGroup:
-            raise ImproperlyConfigured("The Meta model for `list_table_class_staff_view` must be ManagedGroup.")
+            raise ImproperlyConfigured(
+                "list_table_class_staff_view Meta model field must be anvil_consortium_manager.models.ManagedGroup."
+            )
         return self.list_table_class_staff_view
 
     def get_list_table_class_view(self):
@@ -36,7 +38,9 @@ class BaseManagedGroupAdapter(ABC):
         if not self.list_table_class_view:
             raise ImproperlyConfigured("Set `list_table_class_view` in `{}`.".format(type(self)))
         if self.list_table_class_view.Meta.model != models.ManagedGroup:
-            raise ImproperlyConfigured("The Meta model for `list_table_class_view` must be ManagedGroup.")
+            raise ImproperlyConfigured(
+                "list_table_class_view Meta model field must be anvil_consortium_manager.models.ManagedGroup."
+            )
         return self.list_table_class_view
 
     def after_anvil_create(self, managed_group):

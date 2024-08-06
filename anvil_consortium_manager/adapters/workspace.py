@@ -78,12 +78,20 @@ class BaseWorkspaceAdapter(ABC):
         """Return the table class to use for the WorkspaceListByType view for staff."""
         if not self.list_table_class_staff_view:
             raise ImproperlyConfigured("Set `list_table_class_staff_view` in `{}`.".format(type(self)))
+        if self.list_table_class_staff_view.Meta.model != models.Workspace:
+            raise ImproperlyConfigured(
+                "list_table_class_staff_view Meta model field must be anvil_consortium_manager.models.Workspace."
+            )
         return self.list_table_class_staff_view
 
     def get_list_table_class_view(self):
         """Return the table class to use for the WorkspaceListByType view for non-staff users."""
         if not self.list_table_class_view:
             raise ImproperlyConfigured("Set `list_table_class_view` in `{}`.".format(type(self)))
+        if self.list_table_class_view.Meta.model != models.Workspace:
+            raise ImproperlyConfigured(
+                "list_table_class_view Meta model field must be anvil_consortium_manager.models.Workspace."
+            )
         return self.list_table_class_view
 
     def get_workspace_form_class(self):

@@ -2,6 +2,7 @@ import django_tables2
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import Form, ModelForm
 from django.test import TestCase, override_settings
+from django_filters import FilterSet
 
 from ..adapters.account import BaseAccountAdapter
 from ..adapters.default import DefaultAccountAdapter, DefaultManagedGroupAdapter, DefaultWorkspaceAdapter
@@ -56,6 +57,20 @@ class AccountAdapterTestCase(TestCase):
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class()
 
+    def test_list_table_class_wrong_model(self):
+        """get_list_table_class raises ImproperlyConfigured when incorrect model is used for the table."""
+
+        class TestTable(django_tables2.Table):
+            class Meta:
+                model = DefaultWorkspaceData
+                fields = ("name",)
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class", TestTable)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_table_class()
+        self.assertIn("anvil_consortium_manager.models.Account", str(e.exception))
+
     def test_list_filterset_class_default(self):
         """get_list_filterset_class returns the correct filter when using the default adapter."""
         self.assertEqual(DefaultAccountAdapter().get_list_filterset_class(), AccountListFilter)
@@ -90,6 +105,20 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "list_filterset_class", Foo)
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_filterset_class()
+
+    def test_list_filterset_class_wrong_model(self):
+        """Raises ImproperlyConfigured when incorrect model is used for the filterset."""
+
+        class TestFilterSet(FilterSet):
+            class Meta:
+                model = models.ManagedGroup
+                fields = {"email": ["icontains"]}
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_filterset_class", TestFilterSet)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_filterset_class()
+        self.assertIn("anvil_consortium_manager.models.Account", str(e.exception))
 
     def test_get_autocomplete_queryset_default(self):
         """get_autocomplete_queryset returns the correct queryset when using the default adapter."""
@@ -175,7 +204,7 @@ class ManagedGroupAdapterTest(TestCase):
         setattr(TestAdapter, "list_table_class_staff_view", TestTable)
         with self.assertRaises(ImproperlyConfigured) as e:
             TestAdapter().get_list_table_class_staff_view()
-        self.assertIn("ManagedGroup", str(e.exception))
+        self.assertIn("anvil_consortium_manager.models.ManagedGroup", str(e.exception))
 
     def test_list_table_class_view_default(self):
         """get_list_table_class_view returns the correct table when using the default adapter."""
@@ -207,7 +236,7 @@ class ManagedGroupAdapterTest(TestCase):
         setattr(TestAdapter, "list_table_class_view", TestTable)
         with self.assertRaises(ImproperlyConfigured) as e:
             TestAdapter().get_list_table_class_view()
-        self.assertIn("ManagedGroup", str(e.exception))
+        self.assertIn("anvil_consortium_manager.models.ManagedGroup", str(e.exception))
 
 
 class WorkspaceAdapterTest(TestCase):
@@ -246,6 +275,20 @@ class WorkspaceAdapterTest(TestCase):
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class_staff_view()
 
+    def test_list_table_class_staff_view_wrong_model(self):
+        """get_list_table_class_staff_view raises ImproperlyConfigured when incorrect model is used for the table."""
+
+        class TestTable(django_tables2.Table):
+            class Meta:
+                model = Account
+                fields = ("email",)
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_staff_view", TestTable)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_table_class_staff_view()
+        self.assertIn("anvil_consortium_manager.models.Workspace", str(e.exception))
+
     def test_list_table_class_view_default(self):
         """get_list_table_class returns the correct table when using the default adapter."""
         self.assertEqual(DefaultWorkspaceAdapter().get_list_table_class_view(), WorkspaceUserTable)
@@ -262,6 +305,20 @@ class WorkspaceAdapterTest(TestCase):
         setattr(TestAdapter, "list_table_class_view", None)
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class_view()
+
+    def test_list_table_class_view_wrong_model(self):
+        """get_list_table_class_view raises ImproperlyConfigured when incorrect model is used for the table."""
+
+        class TestTable(django_tables2.Table):
+            class Meta:
+                model = Account
+                fields = ("email",)
+
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "list_table_class_view", TestTable)
+        with self.assertRaises(ImproperlyConfigured) as e:
+            TestAdapter().get_list_table_class_view()
+        self.assertIn("anvil_consortium_manager.models.Workspace", str(e.exception))
 
     def test_get_workspace_form_class_default(self):
         """get_workspace_form_class returns the correct form when using the default adapter."""
