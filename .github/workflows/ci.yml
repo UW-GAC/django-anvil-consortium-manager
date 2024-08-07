@@ -25,12 +25,8 @@ jobs:
         python-version: ["3.10", "3.12"]
         django-version: ["4.2", "5.0"]
         backend: ["sqlite", "mysql"]
-        mariadb-version: ["10.4"]  # What we're currently running with.
+        mariadb-version: ["10.6"]  # What we're currently running with.
         include:
-          - python-version: "3.10"  # Ubuntu 22.04 upgrade.
-            django-version: "4.2"
-            backend: "mysql"
-            mariadb-version: "10.6"
           - python-version: "3.12"  # Unbuntu 24.04.01 upgrade.
             django-version: "4.2"
             backend: "mysql"
