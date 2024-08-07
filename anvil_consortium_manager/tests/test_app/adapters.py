@@ -2,6 +2,7 @@ from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.managed_group import BaseManagedGroupAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
+from anvil_consortium_manager.models import GroupGroupMembership, ManagedGroup
 from anvil_consortium_manager.tables import WorkspaceStaffTable, WorkspaceUserTable
 
 from . import filters, forms, models, tables
@@ -118,3 +119,15 @@ class TestManagedGroupAfterAnVILCreateAdapter(TestManagedGroupAdapter):
         # Change the name of the group to something else.
         managed_group.name = "changed-name"
         managed_group.save()
+
+
+class TestManagedGroupAfterAnVILCreateForeignKeyAdapter(TestManagedGroupAdapter):
+    """Test adapter for workspaces with custom methods defined."""
+
+    def after_anvil_create(self, managed_group):
+        parent_group = ManagedGroup.objects.get(name="parent-group")
+        GroupGroupMembership.objects.create(
+            parent_group=parent_group,
+            child_group=managed_group,
+            role=GroupGroupMembership.MEMBER,
+        )

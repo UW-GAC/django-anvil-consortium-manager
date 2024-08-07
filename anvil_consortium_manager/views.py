@@ -697,23 +697,27 @@ class ManagedGroupCreate(
     auth.AnVILConsortiumManagerStaffEditRequired,
     viewmixins.ManagedGroupAdapterMixin,
     SuccessMessageMixin,
-    CreateView,
+    FormView,
 ):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     template_name = "anvil_consortium_manager/managedgroup_create.html"
     success_message = "Successfully created Managed Group on AnVIL."
 
+    def get_success_url(self):
+        return self.object.get_absolute_url()
+
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
         # Set the email for the new group based on the default.
         form.instance.email = form.instance.name.lower() + "@firecloud.org"
         # Create but don't save the new group.
-        self.object = form.save(commit=False)
         # Make an API call to AnVIL to create the group.
         try:
-            self.object.anvil_create()
-            self.adapter.after_anvil_create(self.object)
+            with transaction.atomic():
+                self.object = form.save()
+                self.object.anvil_create()
+                self.adapter.after_anvil_create(self.object)
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
