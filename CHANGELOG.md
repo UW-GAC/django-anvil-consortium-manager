@@ -6,6 +6,7 @@
 * Add model class checks to adapter methods where appropriate.
 * Drop support for MariaDB 10.4.
 * Drop support for Python 3.8.
+* Add a new `extra_pills` block to the workspace detail template, which allows users to add additional pills/badges to the workspace detail page for a given workspace type.
 
 
 ## 0.24.0 (2024-07-03)
