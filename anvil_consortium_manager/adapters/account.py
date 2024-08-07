@@ -26,6 +26,10 @@ class BaseAccountAdapter(ABC):
         """Return the table class to use for the AccountList view."""
         if not self.list_table_class:
             raise ImproperlyConfigured("Set `list_table_class` in `{}`.".format(type(self)))
+        if self.list_table_class.Meta.model != models.Account:
+            raise ImproperlyConfigured(
+                "list_table_class Meta model field must be anvil_consortium_manager.models.Account."
+            )
         return self.list_table_class
 
     def get_list_filterset_class(self):

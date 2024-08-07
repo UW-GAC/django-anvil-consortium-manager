@@ -1,4 +1,5 @@
 from anvil_consortium_manager.adapters.account import BaseAccountAdapter
+from anvil_consortium_manager.adapters.managed_group import BaseManagedGroupAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
 from anvil_consortium_manager.tables import WorkspaceStaffTable, WorkspaceUserTable
@@ -32,6 +33,12 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
         extra_context = {}
         extra_context["extra_text"] = "Extra text"
         return extra_context
+
+
+class TestManagedGroupAdapter(BaseManagedGroupAdapter):
+    """Test adapter for ManagedGroups."""
+
+    list_table_class = tables.TestManagedGroupTable
 
 
 class TestAccountAdapter(BaseAccountAdapter):
@@ -102,3 +109,12 @@ class TestAfterWorkspaceImportAdapter(TestWorkspaceMethodsAdapter):
         # Set the extra field.
         workspace.testworkspacemethodsdata.test_field = "imported!"
         workspace.testworkspacemethodsdata.save()
+
+
+class TestManagedGroupAfterAnVILCreateAdapter(TestManagedGroupAdapter):
+    """Test adapter for workspaces with custom methods defined."""
+
+    def after_anvil_create(self, managed_group):
+        # Change the name of the group to something else.
+        managed_group.name = "changed-name"
+        managed_group.save()

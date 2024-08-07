@@ -60,6 +60,13 @@ class AppSettings(object):
         """Account adapter. Default: anvil_consortium_manager.adapters.default.DefaultAccountAdapter."""
         return self._setting("ACCOUNT_ADAPTER", "anvil_consortium_manager.adapters.default.DefaultAccountAdapter")
 
+    @property
+    def MANAGED_GROUP_ADAPTER(self):
+        """ManagedGroup adapter. Default: anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter."""
+        return self._setting(
+            "MANAGED_GROUP_ADAPTER", "anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter"
+        )
+
 
 _app_settings = AppSettings("ANVIL_")
 

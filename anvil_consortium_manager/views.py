@@ -693,7 +693,12 @@ class ManagedGroupDetail(
         return context
 
 
-class ManagedGroupCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
+class ManagedGroupCreate(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.ManagedGroupAdapterMixin,
+    SuccessMessageMixin,
+    CreateView,
+):
     model = models.ManagedGroup
     form_class = forms.ManagedGroupCreateForm
     template_name = "anvil_consortium_manager/managedgroup_create.html"
@@ -708,6 +713,7 @@ class ManagedGroupCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMe
         # Make an API call to AnVIL to create the group.
         try:
             self.object.anvil_create()
+            self.adapter.after_anvil_create(self.object)
         except AnVILAPIError as e:
             # If the API call failed, rerender the page with the responses and show a message.
             messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
@@ -730,13 +736,18 @@ class ManagedGroupUpdate(
     success_message = "Successfully updated ManagedGroup."
 
 
-class ManagedGroupList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
+class ManagedGroupList(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.ManagedGroupAdapterMixin, SingleTableMixin, FilterView
+):
     model = models.ManagedGroup
-    table_class = tables.ManagedGroupStaffTable
     ordering = ("name",)
     template_name = "anvil_consortium_manager/managedgroup_list.html"
 
     filterset_class = filters.ManagedGroupListFilter
+
+    def get_table_class(self):
+        """Use the adapter to get the table class."""
+        return self.adapter.get_list_table_class()
 
 
 class ManagedGroupVisualization(

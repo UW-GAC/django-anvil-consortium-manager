@@ -1,5 +1,11 @@
 # Change log
 
+## Devel
+
+* Add an adapter for ManagedGroups that lets the user set the table class to display as well as an `after_anvil_create` method.
+* Add model class checks to adapter methods where appropriate.
+
+
 ## 0.24.0 (2024-07-03)
 
 * Add AccountUserArchive model to the admin interface.

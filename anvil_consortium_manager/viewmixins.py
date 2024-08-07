@@ -13,6 +13,7 @@ from django.views.generic.detail import SingleObjectMixin
 
 from . import models
 from .adapters.account import get_account_adapter
+from .adapters.managed_group import get_managed_group_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .audit import audit
 
@@ -63,6 +64,18 @@ class AccountAdapterMixin:
 
     def get_table_class(self):
         return self.adapter().get_list_table_class()
+
+
+class ManagedGroupAdapterMixin:
+    """Mixin to handle managed group adapters."""
+
+    def get(self, request, *args, **kwargs):
+        self.adapter = get_managed_group_adapter()()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.adapter = get_managed_group_adapter()()
+        return super().post(request, *args, **kwargs)
 
 
 class ManagedGroupGraphMixin:

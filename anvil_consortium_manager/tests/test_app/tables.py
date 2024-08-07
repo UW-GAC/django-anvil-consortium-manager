@@ -31,3 +31,16 @@ class TestAccountStaffTable(tables.Table):
     class Meta:
         model = acm_models.Account
         fields = ("email",)
+
+
+class TestManagedGroupTable(tables.Table):
+    """Table for testing the ManagedGroup adapter."""
+
+    name = tables.columns.Column(linkify=True)
+
+    class Meta:
+        model = acm_models.ManagedGroup
+        fields = (
+            "name",
+            "email",
+        )
