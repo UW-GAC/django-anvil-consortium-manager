@@ -4,6 +4,8 @@
 
 * Add an adapter for ManagedGroups that lets the user set the table class to display as well as an `after_anvil_create` method.
 * Add model class checks to adapter methods where appropriate.
+* Drop support for MariaDB 10.4.
+* Drop support for Python 3.8.
 
 
 ## 0.24.0 (2024-07-03)
