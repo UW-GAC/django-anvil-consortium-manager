@@ -5176,6 +5176,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
     )
     def test_post_custom_adapter_after_anvil_create(self):
         """The after_anvil_create method is run after a managed group is created."""
+        # Create a group to add this group to
         api_url = self.get_api_url("test-group")
         self.anvil_response_mock.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
@@ -5184,6 +5185,26 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Check that the name was changed by the adaapter.
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertEqual(new_object.name, "changed-name")
+
+    @override_settings(
+        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupAfterAnVILCreateForeignKeyAdapter"
+    )
+    def test_post_custom_adapter_after_anvil_create_fk(self):
+        """The view handles using the new group in a foreign key relationship correctly."""
+        # Create a group to add this group to.
+        parent_group = factories.ManagedGroupFactory.create(name="parent-group")
+        api_url = self.get_api_url("test-group")
+        self.anvil_response_mock.add(responses.POST, api_url, status=self.api_success_code)
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 302)
+        new_object = models.ManagedGroup.objects.latest("pk")
+        # Check that the membership was created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.latest("pk")
+        self.assertEqual(membership.parent_group, parent_group)
+        self.assertEqual(membership.child_group, new_object)
+        self.assertEqual(membership.role, models.GroupGroupMembership.MEMBER)
 
 
 class ManagedGroupUpdateTest(TestCase):
