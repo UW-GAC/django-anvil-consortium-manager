@@ -7385,6 +7385,18 @@ class WorkspaceDetailTest(TestCase):
         self.assertNotContains(response, "Date added")
         self.assertNotContains(response, "Date modified")
 
+    def test_template_block_extra_pills(self):
+        """The extra_pills template block is shown on the detail page."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        workspace = TestWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertContains(response, """<span class="badge">Extra workspace pill</span>""")
+
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 201
