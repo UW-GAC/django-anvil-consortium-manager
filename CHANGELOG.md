@@ -2,7 +2,7 @@
 
 ## Devel
 
-* Add an adapter for ManagedGroups that lets the user set table classes to display as well as an `after_anvil_create` method.
+* Add an adapter for ManagedGroups that lets the user set the table class to display as well as an `after_anvil_create` method.
 * Add model class checks to adapter methods where appropriate.
 
 
