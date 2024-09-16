@@ -203,10 +203,9 @@ dependencies = [
     "coverage[toml]>=6.5"
 ]
 [tool.hatch.envs.cov.scripts]
+clean = ["rm -f .coverage"]
 combine = [
-    # Clean up old files first.
-    "rm -f .coverage",
-    "coverage combine",
+    "python -m coverage combine {args}",
 ]
 report = ["coverage report"]
 html = ["coverage html"]
