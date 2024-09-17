@@ -314,7 +314,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     message_link_invalid = "AnVIL account verification link is invalid."
     message_account_already_exists = "An AnVIL Account with this email already exists in this app."
     message_account_does_not_exist = "This account does not exist on AnVIL."
-    message_success = "Thank you for verifying your email."
+    message_success = get_account_adapter().ACCOUNT_LINK_VERIFY_MESSAGE
 
     def get_redirect_url(self, *args, **kwargs):
         return reverse(app_settings.ACCOUNT_LINK_REDIRECT)

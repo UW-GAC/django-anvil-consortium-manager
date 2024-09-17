@@ -36,6 +36,7 @@ class AccountAdapterTestCase(TestCase):
         class TestAdapter(BaseAccountAdapter):
             list_table_class = tables.TestAccountStaffTable
             list_filterset_class = filters.TestAccountListFilter
+            ACCOUNT_LINK_VERIFY_MESSAGE = "Test Thank you for linking your AnVIL account."
 
         return TestAdapter
 
@@ -159,6 +160,26 @@ class AccountAdapterTestCase(TestCase):
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "get_autocomplete_label", foo)
         self.assertEqual(TestAdapter().get_autocomplete_label(account), "testuser")
+
+    def test_ACCOUNT_LINK_VERIFY_MESSAGE_default(self):
+        """ACCOUNT_LINK_VERIFY_MESSAGE returns the correct message when using the default adapter."""
+        self.assertEqual(
+            DefaultAccountAdapter().ACCOUNT_LINK_VERIFY_MESSAGE, "Thank you for linking your AnVIL account."
+        )
+
+    def test_ACCOUNT_LINK_VERIFY_MESSAGE_custom(self):
+        """ACCOUNT_LINK_VERIFY_MESSAGE returns the correct message when using a custom adapter."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "ACCOUNT_LINK_VERIFY_MESSAGE", "Test Thank you.")
+        self.assertEqual(TestAdapter().ACCOUNT_LINK_VERIFY_MESSAGE, "Test Thank you.")
+
+    def test_ACCOUNT_LINK_VERIFY_MESSAGE_none(self):
+        """ACCOUNT_LINK_VERIFY_MESSAGE returns the default message when it is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "ACCOUNT_LINK_VERIFY_MESSAGE", None)
+        self.assertEqual(
+            DefaultAccountAdapter().ACCOUNT_LINK_VERIFY_MESSAGE, "Thank you for linking your AnVIL account."
+        )
 
 
 class ManagedGroupAdapterTest(TestCase):
