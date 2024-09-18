@@ -11,7 +11,6 @@ class DefaultAccountAdapter(BaseAccountAdapter):
 
     list_table_class = tables.AccountStaffTable
     list_filterset_class = filters.AccountListFilter
-    ACCOUNT_LINK_VERIFY_MESSAGE = "Thank you for linking your AnVIL account."
 
 
 class DefaultManagedGroupAdapter(BaseManagedGroupAdapter):

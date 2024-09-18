@@ -12,6 +12,9 @@ from .. import app_settings, models
 class BaseAccountAdapter(ABC):
     """Base class to inherit when customizing the account adapter."""
 
+    """Message to display after a user has successfully linked their AnVIL account."""
+    account_link_verify_message = "Thank you for linking your AnVIL account."
+
     @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of Accounts."""
