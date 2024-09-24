@@ -15,7 +15,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django_filters.views import FilterView
 from django_tables2 import SingleTableMixin, SingleTableView
 
-from . import __version__, anvil_api, app_settings, auth, exceptions, filters, forms, models, tables, viewmixins
+from . import __version__, anvil_api, auth, exceptions, filters, forms, models, tables, viewmixins
 from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
@@ -245,7 +245,7 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
     success_message = "To complete linking the account, check your email for a verification link."
 
     def get_redirect_url(self):
-        return reverse(app_settings.ACCOUNT_LINK_REDIRECT)
+        return reverse(get_account_adapter().account_link_redirect)
 
     def get(self, request, *args, **kwargs):
         """Check if the user already has an account linked and redirect."""
@@ -317,7 +317,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     message_success = get_account_adapter().account_link_verify_message
 
     def get_redirect_url(self, *args, **kwargs):
-        return reverse(app_settings.ACCOUNT_LINK_REDIRECT)
+        return reverse(get_account_adapter().account_link_redirect)
 
     def get(self, request, *args, **kwargs):
         # Check if this user already has an account linked.

@@ -1,4 +1,5 @@
 import django_tables2
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import Form, ModelForm
 from django.test import TestCase, override_settings
@@ -36,7 +37,6 @@ class AccountAdapterTestCase(TestCase):
         class TestAdapter(BaseAccountAdapter):
             list_table_class = tables.TestAccountStaffTable
             list_filterset_class = filters.TestAccountListFilter
-            account_link_verify_message = "Test Thank you for linking your AnVIL account."
 
         return TestAdapter
 
@@ -180,6 +180,23 @@ class AccountAdapterTestCase(TestCase):
         self.assertEqual(
             DefaultAccountAdapter().account_link_verify_message, "Thank you for linking your AnVIL account."
         )
+
+    def test_account_link_redirect_default(self):
+        """account_link_redirect returns the correct URL when suing the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().account_link_redirect, settings.LOGIN_REDIRECT_URL)
+
+    def test_account_link_redirect_custom(self):
+        """account_link_redirect returns the correct URL when using a custom adapter."""
+        custom_redirect_url = "/test_login"
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_link_redirect", custom_redirect_url)
+        self.assertEqual(TestAdapter().account_link_redirect, custom_redirect_url)
+
+    def test_account_link_redirect_none(self):
+        """account_link_redirect returns the default URL when it is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_link_redirect", None)
+        self.assertEqual(DefaultAccountAdapter().account_link_redirect, settings.LOGIN_REDIRECT_URL)
 
 
 class ManagedGroupAdapterTest(TestCase):

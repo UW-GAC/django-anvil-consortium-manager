@@ -2130,7 +2130,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(), {"email": email})
         self.assertRedirects(response, reverse(settings.LOGIN_REDIRECT_URL))
 
-    @override_settings(ANVIL_ACCOUNT_LINK_REDIRECT="test_login")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_redirect_custom(self):
         """View redirects to the correct URL."""
         email = "test@example.com"
@@ -2638,7 +2638,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
 
-    @override_settings(ANVIL_ACCOUNT_LINK_REDIRECT="test_login")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_custom_redirect(self):
         """A user can successfully verify their email."""
         email = "test@example.com"

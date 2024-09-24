@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractproperty
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 from django_filters import FilterSet
@@ -14,6 +15,9 @@ class BaseAccountAdapter(ABC):
 
     """Message to display after a user has successfully linked their AnVIL account."""
     account_link_verify_message = "Thank you for linking your AnVIL account."
+
+    """The URL for AccountLinkVerify view redirect"""
+    account_link_redirect = settings.LOGIN_REDIRECT_URL
 
     @abstractproperty
     def list_table_class(self):
