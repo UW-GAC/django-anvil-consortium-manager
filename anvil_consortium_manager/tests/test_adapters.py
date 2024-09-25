@@ -198,6 +198,23 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_link_redirect", None)
         self.assertEqual(DefaultAccountAdapter().account_link_redirect, settings.LOGIN_REDIRECT_URL)
 
+    def test_account_link_email_subject_default(self):
+        """account_link_email_subject returns the correct subject when using the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().account_link_email_subject, "Verify your AnVIL account email")
+
+    def test_account_link_email_subject_custom(self):
+        """account_link_email_subject returns the correct subject when using a custom adapter."""
+        custom_subject = "Test custom subject"
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_link_email_subject", custom_subject)
+        self.assertEqual(TestAdapter().account_link_email_subject, custom_subject)
+
+    def test_account_link_email_subject_none(self):
+        """account_link_email_subject returns the default subject when it is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_link_email_subject", None)
+        self.assertEqual(DefaultAccountAdapter().account_link_email_subject, "Verify your AnVIL account email")
+
 
 class ManagedGroupAdapterTest(TestCase):
     """Tests for ManagedGroup adapters."""

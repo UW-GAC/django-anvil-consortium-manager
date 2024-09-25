@@ -185,7 +185,7 @@ class UserEmailEntryTest(TestCase):
     # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
     # this spurious failure.
     @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="custom subject")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_send_verification_email_custom_subject(self):
         """Verification email is correct."""
         email_entry = factories.UserEmailEntryFactory.create()

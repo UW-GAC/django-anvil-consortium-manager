@@ -2167,7 +2167,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(url, mail.outbox[0].body)
 
     @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="custom subject")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_email_is_sent_custom_subject(self):
         """An email is sent when the form is submitted correctly."""
         email = "test@example.com"

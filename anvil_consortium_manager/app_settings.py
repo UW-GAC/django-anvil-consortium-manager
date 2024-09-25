@@ -36,11 +36,6 @@ class AppSettings(object):
         return x
 
     @property
-    def ACCOUNT_LINK_EMAIL_SUBJECT(self):
-        """Subject line for AnVIL account verification emails. Default: 'Verify your AnVIL account email'"""
-        return self._setting("ACCOUNT_LINK_EMAIL_SUBJECT", "Verify your AnVIL account email")
-
-    @property
     def ACCOUNT_VERIFY_NOTIFICATION_EMAIL(self):
         """If desired, specify the email address to send an email to after a user verifies an account. Default: None.
 

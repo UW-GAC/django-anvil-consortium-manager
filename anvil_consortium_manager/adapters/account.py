@@ -19,6 +19,9 @@ class BaseAccountAdapter(ABC):
     """The URL for AccountLinkVerify view redirect"""
     account_link_redirect = settings.LOGIN_REDIRECT_URL
 
+    """Subject line for AnVIL account verification emails."""
+    account_link_email_subject = "Verify your AnVIL account email"
+
     @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of Accounts."""
