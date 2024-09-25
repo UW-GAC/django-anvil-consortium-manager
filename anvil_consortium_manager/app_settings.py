@@ -36,14 +36,6 @@ class AppSettings(object):
         return x
 
     @property
-    def ACCOUNT_VERIFY_NOTIFICATION_EMAIL(self):
-        """If desired, specify the email address to send an email to after a user verifies an account. Default: None.
-
-        Set to None to disable (default).
-        """
-        return self._setting("ACCOUNT_VERIFY_NOTIFICATION_EMAIL", None)
-
-    @property
     def ACCOUNT_ADAPTER(self):
         """Account adapter. Default: anvil_consortium_manager.adapters.default.DefaultAccountAdapter."""
         return self._setting("ACCOUNT_ADAPTER", "anvil_consortium_manager.adapters.default.DefaultAccountAdapter")

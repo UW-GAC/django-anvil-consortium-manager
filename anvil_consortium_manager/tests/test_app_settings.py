@@ -45,13 +45,6 @@ class TestAppSettings(TestCase):
         self.assertIn("anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter", adapters)
         self.assertIn("anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter", adapters)
 
-    def test_account_verify_notification_email(self):
-        self.assertEqual(app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL, None)
-
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="foo@example.com")
-    def test_account_verify_notification_email_custom(self):
-        self.assertEqual(app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL, "foo@example.com")
-
     def test_account_adapter(self):
         self.assertEqual(
             app_settings.ACCOUNT_ADAPTER, "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"

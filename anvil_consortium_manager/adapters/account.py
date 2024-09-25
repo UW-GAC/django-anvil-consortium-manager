@@ -22,6 +22,9 @@ class BaseAccountAdapter(ABC):
     """Subject line for AnVIL account verification emails."""
     account_link_email_subject = "Verify your AnVIL account email"
 
+    """If desired, specify the email address to send an email to after a user verifies an account."""
+    account_verify_notification_email = None
+
     @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of Accounts."""

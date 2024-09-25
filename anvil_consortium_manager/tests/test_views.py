@@ -2830,7 +2830,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: other error", str(messages[0]))
 
     def test_no_notification_email(self):
-        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set"""
+        """Notification email is not sent if account_verify_notification_email is not set"""
         email = "test@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
         token = account_verification_token.make_token(email_entry)
@@ -2842,9 +2842,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="test@example.com")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_notification_email(self):
-        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
+        """Notification email is sent if account_verify_notification_email set."""
         email = "test1@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
         token = account_verification_token.make_token(email_entry)
@@ -2858,10 +2858,10 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox[0].to), 1)
         self.assertIn("test@example.com", mail.outbox[0].to)
 
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL=None)
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_no_notification_email_when_none(self):
-        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
-        email = "test@example.com"
+        """Notification email is sent if account_verify_notification_email set."""
+        email = "test1@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
         token = account_verification_token.make_token(email_entry)
         api_url = self.get_api_url(email)

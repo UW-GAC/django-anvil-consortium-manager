@@ -215,6 +215,23 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_link_email_subject", None)
         self.assertEqual(DefaultAccountAdapter().account_link_email_subject, "Verify your AnVIL account email")
 
+    def test_account_verify_notification_email_default(self):
+        """account_verify_notification_email returns the correct email when using the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().account_verify_notification_email, None)
+
+    def test_account_verify_notification_email_custom(self):
+        """account_verify_notification_email returns the correct email when using a custom adapter."""
+        custom_email = "test@example.com"
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_verify_notification_email", custom_email)
+        self.assertEqual(TestAdapter().account_verify_notification_email, custom_email)
+
+    def test_account_verify_notification_email_none(self):
+        """account_verify_notification_email returns the default email when it is not set."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_verify_notification_email", None)
+        self.assertEqual(DefaultAccountAdapter().account_verify_notification_email, None)
+
 
 class ManagedGroupAdapterTest(TestCase):
     """Tests for ManagedGroup adapters."""
