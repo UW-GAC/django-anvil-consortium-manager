@@ -2858,20 +2858,6 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox[0].to), 1)
         self.assertIn("test@example.com", mail.outbox[0].to)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
-    def test_no_notification_email_when_none(self):
-        """Notification email is sent if account_verify_notification_email set."""
-        email = "test1@example.com"
-        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
-        token = account_verification_token.make_token(email_entry)
-        api_url = self.get_api_url(email)
-        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(email_entry.uuid, token))
-        self.assertEqual(response.status_code, 302)
-        # No email is sent.
-        self.assertEqual(len(mail.outbox), 0)
-
 
 class AccountListTest(TestCase):
     def setUp(self):

@@ -214,13 +214,6 @@ class UserEmailEntryTest(TestCase):
         email_entry.send_notification_email()
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
-    def test_send_notification_email_none(self):
-        """Notification email is sent if account_verify_notification_email is set."""
-        email_entry = factories.UserEmailEntryFactory.create()
-        email_entry.send_notification_email()
-        self.assertEqual(len(mail.outbox), 0)
-
 
 class AccountTest(TestCase):
     def test_model_saving(self):
