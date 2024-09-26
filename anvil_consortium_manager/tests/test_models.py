@@ -185,7 +185,7 @@ class UserEmailEntryTest(TestCase):
     # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
     # this spurious failure.
     @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="custom subject")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_send_verification_email_custom_subject(self):
         """Verification email is correct."""
         email_entry = factories.UserEmailEntryFactory.create()
@@ -201,22 +201,15 @@ class UserEmailEntryTest(TestCase):
         self.assertIn(account_verification_token.make_token(email_entry), email_body)
         self.assertIn(str(email_entry.uuid), email_body)
 
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="notify@example.com")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_send_notification_email(self):
-        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set"""
+        """Notification email is sent if account_verify_notification_email is set"""
         email_entry = factories.UserEmailEntryFactory.create()
         email_entry.send_notification_email()
         self.assertEqual(len(mail.outbox), 1)
 
     def test_not_send_notification_email(self):
-        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set."""
-        email_entry = factories.UserEmailEntryFactory.create()
-        email_entry.send_notification_email()
-        self.assertEqual(len(mail.outbox), 0)
-
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL=None)
-    def test_send_notification_email_none(self):
-        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is set."""
+        """Notification email is not sent if account_verify_notification_email is not set."""
         email_entry = factories.UserEmailEntryFactory.create()
         email_entry.send_notification_email()
         self.assertEqual(len(mail.outbox), 0)

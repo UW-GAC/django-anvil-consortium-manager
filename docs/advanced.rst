@@ -22,6 +22,13 @@ and set the following attributes:
 - ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountStaffTable`.
 - ``list_filterset_class``: an attribute set to the class of the table used to filter accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.filters.AccountListFilter`. This must subclass ``FilterSet`` from `django-filter <https://django-filter.readthedocs.io/en/stable/>`_.
 
+The following attributes have defaults, but can be overridden:
+
+- ``account_link_verify_message``: Message to display after a user has successfully linked their AnVIL account. (Default: ``"Thank you for linking your AnVIL account."``)
+- ``account_link_verify_redirect``: The URL to redirect to after a user has successfully linked their AnVIL account. (Default: ``settings.LOGIN_REDIRECT_URL``)
+- ``account_link_email_subject``: Subject line for AnVIL account verification emails. (Default: ``"Verify your AnVIL account email"``)
+- ``account_verify_notification_email``: Email address to send an email to after a user verifies an account. If ``None``, no email will be sent. (Default: ``None``)
+
 Optionally, you can override the following methods:
 
 - ``get_autocomplete_queryset(self, queryset, q)``: a method that allows the user to provide custom filtering for the autocomplete view. By default, this filters to Accounts whose email contains the case-insensitive search string in ``q``.

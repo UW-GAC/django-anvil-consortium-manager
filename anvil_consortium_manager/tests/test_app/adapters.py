@@ -47,6 +47,10 @@ class TestAccountAdapter(BaseAccountAdapter):
 
     list_table_class = tables.TestAccountStaffTable
     list_filterset_class = filters.TestAccountListFilter
+    account_link_verify_message = "Test Thank you for linking your AnVIL account."
+    account_link_redirect = "test_login"
+    account_link_email_subject = "custom subject"
+    account_verify_notification_email = "test@example.com"
 
     def get_autocomplete_queryset(self, queryset, q):
         if q:

@@ -11,7 +11,8 @@ from django.utils import timezone
 from django_extensions.db.models import ActivatorModel, TimeStampedModel
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 
-from . import app_settings, exceptions
+from . import exceptions
+from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError, AnVILAPIError404
 from .tokens import account_verification_token
@@ -142,7 +143,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         Args:
             domain (str): The domain of the current site, used to create the link.
         """
-        mail_subject = app_settings.ACCOUNT_LINK_EMAIL_SUBJECT
+        mail_subject = get_account_adapter().account_link_email_subject
         url_subdirectory = "http://{domain}{url}".format(
             domain=domain,
             url=reverse(
@@ -161,7 +162,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
 
     def send_notification_email(self):
         """Send notification email after account is verified if the email setting is set"""
-        if app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL:
+        if get_account_adapter().account_verify_notification_email:
             mail_subject = "User verified AnVIL account"
             message = render_to_string(
                 "anvil_consortium_manager/account_notification_email.html",
@@ -174,7 +175,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
                 mail_subject,
                 message,
                 None,
-                [app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL],
+                [get_account_adapter().account_verify_notification_email],
                 fail_silently=False,
             )
 

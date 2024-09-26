@@ -1,4 +1,5 @@
 import django_tables2
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import Form, ModelForm
 from django.test import TestCase, override_settings
@@ -159,6 +160,51 @@ class AccountAdapterTestCase(TestCase):
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "get_autocomplete_label", foo)
         self.assertEqual(TestAdapter().get_autocomplete_label(account), "testuser")
+
+    def test_account_link_verify_message_default(self):
+        """account_link_verify_message returns the correct message when using the default adapter."""
+        self.assertEqual(
+            DefaultAccountAdapter().account_link_verify_message, "Thank you for linking your AnVIL account."
+        )
+
+    def test_account_link_verify_message_custom(self):
+        """account_link_verify_message returns the correct message when using a custom adapter."""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_link_verify_message", "Test Thank you.")
+        self.assertEqual(TestAdapter().account_link_verify_message, "Test Thank you.")
+
+    def test_account_link_redirect_default(self):
+        """account_link_redirect returns the correct URL when suing the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().account_link_redirect, settings.LOGIN_REDIRECT_URL)
+
+    def test_account_link_redirect_custom(self):
+        """account_link_redirect returns the correct URL when using a custom adapter."""
+        custom_redirect_url = "/test_login"
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_link_redirect", custom_redirect_url)
+        self.assertEqual(TestAdapter().account_link_redirect, custom_redirect_url)
+
+    def test_account_link_email_subject_default(self):
+        """account_link_email_subject returns the correct subject when using the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().account_link_email_subject, "Verify your AnVIL account email")
+
+    def test_account_link_email_subject_custom(self):
+        """account_link_email_subject returns the correct subject when using a custom adapter."""
+        custom_subject = "Test custom subject"
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_link_email_subject", custom_subject)
+        self.assertEqual(TestAdapter().account_link_email_subject, custom_subject)
+
+    def test_account_verify_notification_email_default(self):
+        """account_verify_notification_email returns the correct email when using the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().account_verify_notification_email, None)
+
+    def test_account_verify_notification_email_custom(self):
+        """account_verify_notification_email returns the correct email when using a custom adapter."""
+        custom_email = "test@example.com"
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_verify_notification_email", custom_email)
+        self.assertEqual(TestAdapter().account_verify_notification_email, custom_email)
 
 
 class ManagedGroupAdapterTest(TestCase):

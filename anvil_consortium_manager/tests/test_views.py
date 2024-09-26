@@ -2130,7 +2130,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(), {"email": email})
         self.assertRedirects(response, reverse(settings.LOGIN_REDIRECT_URL))
 
-    @override_settings(ANVIL_ACCOUNT_LINK_REDIRECT="test_login")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_redirect_custom(self):
         """View redirects to the correct URL."""
         email = "test@example.com"
@@ -2167,7 +2167,7 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(url, mail.outbox[0].body)
 
     @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="custom subject")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_email_is_sent_custom_subject(self):
         """An email is sent when the form is submitted correctly."""
         email = "test@example.com"
@@ -2638,7 +2638,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
 
-    @override_settings(ANVIL_ACCOUNT_LINK_REDIRECT="test_login")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_custom_redirect(self):
         """A user can successfully verify their email."""
         email = "test@example.com"
@@ -2830,7 +2830,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: other error", str(messages[0]))
 
     def test_no_notification_email(self):
-        """Notification email is not sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL is not set"""
+        """Notification email is not sent if account_verify_notification_email is not set"""
         email = "test@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
         token = account_verification_token.make_token(email_entry)
@@ -2842,9 +2842,9 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="test@example.com")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_notification_email(self):
-        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
+        """Notification email is sent if account_verify_notification_email set."""
         email = "test1@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
         token = account_verification_token.make_token(email_entry)
@@ -2857,20 +2857,6 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(len(mail.outbox[0].to), 1)
         self.assertIn("test@example.com", mail.outbox[0].to)
-
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL=None)
-    def test_no_notification_email_when_none(self):
-        """Notification email is sent if ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL set."""
-        email = "test@example.com"
-        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
-        token = account_verification_token.make_token(email_entry)
-        api_url = self.get_api_url(email)
-        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(email_entry.uuid, token))
-        self.assertEqual(response.status_code, 302)
-        # No email is sent.
-        self.assertEqual(len(mail.outbox), 0)
 
 
 class AccountListTest(TestCase):

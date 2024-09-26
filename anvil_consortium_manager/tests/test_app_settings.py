@@ -45,27 +45,6 @@ class TestAppSettings(TestCase):
         self.assertIn("anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter", adapters)
         self.assertIn("anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter", adapters)
 
-    def test_account_link_email_subject(self):
-        self.assertEqual(app_settings.ACCOUNT_LINK_EMAIL_SUBJECT, "Verify your AnVIL account email")
-
-    @override_settings(ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT="account activation")
-    def test_account_link_email_subject_custom(self):
-        self.assertEqual(app_settings.ACCOUNT_LINK_EMAIL_SUBJECT, "account activation")
-
-    def test_account_link_redirect(self):
-        self.assertEqual(app_settings.ACCOUNT_LINK_REDIRECT, "test_home")
-
-    @override_settings(ANVIL_ACCOUNT_LINK_REDIRECT="test_login")
-    def test_account_link_redirect_custom(self):
-        self.assertEqual(app_settings.ACCOUNT_LINK_REDIRECT, "test_login")
-
-    def test_account_verify_notification_email(self):
-        self.assertEqual(app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL, None)
-
-    @override_settings(ANVIL_ACCOUNT_VERIFY_NOTIFICATION_EMAIL="foo@example.com")
-    def test_account_verify_notification_email_custom(self):
-        self.assertEqual(app_settings.ACCOUNT_VERIFY_NOTIFICATION_EMAIL, "foo@example.com")
-
     def test_account_adapter(self):
         self.assertEqual(
             app_settings.ACCOUNT_ADAPTER, "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"

@@ -13,8 +13,6 @@ class AppSettings(object):
         self.prefix = prefix
 
     def _setting(self, name, default=None):
-        from django.conf import settings
-
         return getattr(settings, self.prefix + name, default)
 
     @property
@@ -36,24 +34,6 @@ class AppSettings(object):
             )
             raise ImproperlyConfigured(msg)
         return x
-
-    @property
-    def ACCOUNT_LINK_EMAIL_SUBJECT(self):
-        """Subject line for AnVIL account verification emails. Default: 'Verify your AnVIL account email'"""
-        return self._setting("ACCOUNT_LINK_EMAIL_SUBJECT", "Verify your AnVIL account email")
-
-    @property
-    def ACCOUNT_LINK_REDIRECT(self):
-        """The URL for AccountLinkVerify view redirect. Default: settings.LOGIN_REDIRECT_URL."""
-        return self._setting("ACCOUNT_LINK_REDIRECT", settings.LOGIN_REDIRECT_URL)
-
-    @property
-    def ACCOUNT_VERIFY_NOTIFICATION_EMAIL(self):
-        """If desired, specify the email address to send an email to after a user verifies an account. Default: None.
-
-        Set to None to disable (default).
-        """
-        return self._setting("ACCOUNT_VERIFY_NOTIFICATION_EMAIL", None)
 
     @property
     def ACCOUNT_ADAPTER(self):

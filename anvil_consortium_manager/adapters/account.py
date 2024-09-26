@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractproperty
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 from django_filters import FilterSet
@@ -11,6 +12,18 @@ from .. import app_settings, models
 
 class BaseAccountAdapter(ABC):
     """Base class to inherit when customizing the account adapter."""
+
+    """Message to display after a user has successfully linked their AnVIL account."""
+    account_link_verify_message = "Thank you for linking your AnVIL account."
+
+    """The URL for AccountLinkVerify view redirect"""
+    account_link_redirect = settings.LOGIN_REDIRECT_URL
+
+    """Subject line for AnVIL account verification emails."""
+    account_link_email_subject = "Verify your AnVIL account email"
+
+    """If desired, specify the email address to send an email to after a user verifies an account."""
+    account_verify_notification_email = None
 
     @abstractproperty
     def list_table_class(self):
