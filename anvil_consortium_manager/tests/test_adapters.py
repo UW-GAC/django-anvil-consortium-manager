@@ -173,14 +173,6 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_link_verify_message", "Test Thank you.")
         self.assertEqual(TestAdapter().account_link_verify_message, "Test Thank you.")
 
-    def test_account_link_verify_message_none(self):
-        """account_link_verify_message returns the default message when it is not set."""
-        TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_link_verify_message", None)
-        self.assertEqual(
-            DefaultAccountAdapter().account_link_verify_message, "Thank you for linking your AnVIL account."
-        )
-
     def test_account_link_redirect_default(self):
         """account_link_redirect returns the correct URL when suing the default adapter."""
         self.assertEqual(DefaultAccountAdapter().account_link_redirect, settings.LOGIN_REDIRECT_URL)
@@ -191,12 +183,6 @@ class AccountAdapterTestCase(TestCase):
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "account_link_redirect", custom_redirect_url)
         self.assertEqual(TestAdapter().account_link_redirect, custom_redirect_url)
-
-    def test_account_link_redirect_none(self):
-        """account_link_redirect returns the default URL when it is not set."""
-        TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_link_redirect", None)
-        self.assertEqual(DefaultAccountAdapter().account_link_redirect, settings.LOGIN_REDIRECT_URL)
 
     def test_account_link_email_subject_default(self):
         """account_link_email_subject returns the correct subject when using the default adapter."""
@@ -209,12 +195,6 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_link_email_subject", custom_subject)
         self.assertEqual(TestAdapter().account_link_email_subject, custom_subject)
 
-    def test_account_link_email_subject_none(self):
-        """account_link_email_subject returns the default subject when it is not set."""
-        TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_link_email_subject", None)
-        self.assertEqual(DefaultAccountAdapter().account_link_email_subject, "Verify your AnVIL account email")
-
     def test_account_verify_notification_email_default(self):
         """account_verify_notification_email returns the correct email when using the default adapter."""
         self.assertEqual(DefaultAccountAdapter().account_verify_notification_email, None)
@@ -225,12 +205,6 @@ class AccountAdapterTestCase(TestCase):
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "account_verify_notification_email", custom_email)
         self.assertEqual(TestAdapter().account_verify_notification_email, custom_email)
-
-    def test_account_verify_notification_email_none(self):
-        """account_verify_notification_email returns the default email when it is not set."""
-        TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_verify_notification_email", None)
-        self.assertEqual(DefaultAccountAdapter().account_verify_notification_email, None)
 
 
 class ManagedGroupAdapterTest(TestCase):
