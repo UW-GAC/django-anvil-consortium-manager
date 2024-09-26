@@ -1,5 +1,10 @@
 # Change log
 
+## Devel
+
+* Move most account settings into the Account adapter
+* Allow the user to set a custom success message to be displayed after they verify an AnVIL account
+
 ## 0.25.0 (2024-08-07)
 
 * Add an adapter for ManagedGroups that lets the user set the table class to display as well as an `after_anvil_create` method.
