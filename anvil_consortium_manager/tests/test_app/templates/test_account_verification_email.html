@@ -1,0 +1,14 @@
+{% autoescape off %}
+Hi {{ user.username }},
+
+{% block before_link %}
+Please click on the link to verify your AnVIL account email:
+{% endblock before_link %}
+
+{{ verification_link }}
+
+{% block after_link %}
+This is a custom template.
+{% endblock after_link %}
+
+{% endautoescape %}

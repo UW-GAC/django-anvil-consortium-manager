@@ -144,6 +144,8 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             domain (str): The domain of the current site, used to create the link.
         """
         mail_subject = get_account_adapter().account_link_email_subject
+        account_verification_template = get_account_adapter().account_verification_email_template
+
         url_subdirectory = "http://{domain}{url}".format(
             domain=domain,
             url=reverse(
@@ -152,7 +154,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             ),
         )
         message = render_to_string(
-            "anvil_consortium_manager/account_verification_email.html",
+            account_verification_template,
             {
                 "user": self.user,
                 "verification_link": url_subdirectory,

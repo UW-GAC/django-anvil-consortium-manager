@@ -214,6 +214,17 @@ class UserEmailEntryTest(TestCase):
         email_entry.send_notification_email()
         self.assertEqual(len(mail.outbox), 0)
 
+    @freeze_time("2022-11-22 03:12:34")
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
+    def test_send_verification_email_custom_template(self):
+        email_entry = factories.UserEmailEntryFactory.create()
+        email_entry.send_verification_email("www.test.com")
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # Correct custom template is used.
+        email_body = mail.outbox[0].body
+        self.assertIn("This is a custom template", email_body)
+
 
 class AccountTest(TestCase):
     def test_model_saving(self):
