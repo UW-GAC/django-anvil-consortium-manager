@@ -28,6 +28,7 @@ The following attributes have defaults, but can be overridden:
 - ``account_link_verify_redirect``: The URL to redirect to after a user has successfully linked their AnVIL account. (Default: ``settings.LOGIN_REDIRECT_URL``)
 - ``account_link_email_subject``: Subject line for AnVIL account verification emails. (Default: ``"Verify your AnVIL account email"``)
 - ``account_verify_notification_email``: Email address to send an email to after a user verifies an account. If ``None``, no email will be sent. (Default: ``None``)
+- ``account_verification_email_template``: The path to account verification email template. (Default: ``anvil_consortium_manager/account_verification_email.html``)
 
 Optionally, you can override the following methods:
 
