@@ -51,6 +51,7 @@ class TestAccountAdapter(BaseAccountAdapter):
     account_link_redirect = "test_login"
     account_link_email_subject = "custom subject"
     account_verify_notification_email = "test@example.com"
+    account_verification_email_template = "test_account_verification_email.html"
 
     def get_autocomplete_queryset(self, queryset, q):
         if q:

@@ -25,6 +25,9 @@ class BaseAccountAdapter(ABC):
     """If desired, specify the email address to send an email to after a user verifies an account."""
     account_verify_notification_email = None
 
+    """path to account verification email template"""
+    account_verification_email_template = "anvil_consortium_manager/account_verification_email.html"
+
     @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of Accounts."""

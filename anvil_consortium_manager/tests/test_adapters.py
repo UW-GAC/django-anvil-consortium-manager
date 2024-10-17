@@ -206,6 +206,20 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_verify_notification_email", custom_email)
         self.assertEqual(TestAdapter().account_verify_notification_email, custom_email)
 
+    def test_account_verification_email_template_default(self):
+        """account_verification_email_template returns the correct template when using the default adapter."""
+        self.assertEqual(
+            DefaultAccountAdapter().account_verification_email_template,
+            "anvil_consortium_manager/account_verification_email.html",
+        )
+
+    def test_account_verification_email_template_custom(self):
+        """account_verification_email_template returns the correct template when using a custom adapter."""
+        custom_template = "custom_template.html"
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "account_verification_email_template", custom_template)
+        self.assertEqual(TestAdapter().account_verification_email_template, custom_template)
+
 
 class ManagedGroupAdapterTest(TestCase):
     """Tests for ManagedGroup adapters."""
