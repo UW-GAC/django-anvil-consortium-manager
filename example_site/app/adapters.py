@@ -16,6 +16,7 @@ class CustomWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_model = models.CustomWorkspaceData
     workspace_data_form_class = forms.CustomWorkspaceDataForm
     workspace_detail_template_name = "app/custom_workspace_detail.html"
+    workspace_list_template_name = "app/custom_workspace_list.html"
 
     def before_anvil_create(self, workspace):
         """Add authorization domain to workspace."""

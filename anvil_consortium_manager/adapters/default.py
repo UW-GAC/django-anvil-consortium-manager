@@ -31,3 +31,4 @@ class DefaultWorkspaceAdapter(BaseWorkspaceAdapter):
     list_table_class_staff_view = tables.WorkspaceStaffTable
     list_table_class_view = tables.WorkspaceUserTable
     workspace_detail_template_name = "anvil_consortium_manager/workspace_detail.html"
+    workspace_list_template_name = "anvil_consortium_manager/workspace_list.html"

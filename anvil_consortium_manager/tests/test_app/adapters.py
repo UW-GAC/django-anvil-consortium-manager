@@ -20,6 +20,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_model = models.TestWorkspaceData
     workspace_data_form_class = forms.TestWorkspaceDataForm
     workspace_detail_template_name = "test_workspace_detail.html"
+    workspace_list_template_name = "test_workspace_list.html"
 
     def get_autocomplete_queryset(self, queryset, q, forwarded={}):
         billing_project = forwarded.get("billing_project", None)
@@ -74,6 +75,7 @@ class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_data_model = models.TestForeignKeyWorkspaceData
     workspace_data_form_class = forms.TestForeignKeyWorkspaceDataForm
     workspace_detail_template_name = "workspace_detail.html"
+    workspace_list_template_name = "workspace_list.html"
 
 
 class TestWorkspaceMethodsAdapter(BaseWorkspaceAdapter):
@@ -88,6 +90,7 @@ class TestWorkspaceMethodsAdapter(BaseWorkspaceAdapter):
     workspace_data_model = models.TestWorkspaceMethodsData
     workspace_data_form_class = forms.TestWorkspaceMethodsForm
     workspace_detail_template_name = "workspace_detail.html"
+    workspace_list_template_name = "workspace_list.html"
 
 
 class TestBeforeWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
