@@ -11781,6 +11781,20 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_default_adapter_use_default_workspace_list_template(self):
+        default_type = DefaultWorkspaceAdapter().get_type()
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url(default_type))
+        self.assertTemplateUsed(response, "anvil_consortium_manager/workspace_list.html")
+
+    def test_view_with_custom_adapter_use_custom_workspace_list_template(self):
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        self.workspace_type = TestWorkspaceAdapter().get_type()
+        self.client.force_login(self.view_user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertTemplateUsed(response, "test_workspace_list.html")
+
 
 class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 202
