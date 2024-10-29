@@ -5,6 +5,7 @@
 * Move most account settings into the Account adapter
 * Allow the user to set a custom success message to be displayed after they verify an AnVIL account
 * Move the setting to specify the template for account link verification emails into the AccountAdapter
+* Allow users to specify the template for the WorkspaceListByType view in the WorkspaceAdapter
 
 ## 0.25.0 (2024-08-07)
 

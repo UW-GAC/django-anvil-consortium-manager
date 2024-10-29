@@ -12,6 +12,9 @@ from .. import app_settings, models
 class BaseWorkspaceAdapter(ABC):
     """Base class to inherit when customizing the workspace adapter."""
 
+    workspace_list_template_name = "anvil_consortium_manager/workspace_list.html"
+    """ path to workspace list template"""
+
     @abstractproperty
     def name(self):
         """String specifying the namee of this type of workspace."""

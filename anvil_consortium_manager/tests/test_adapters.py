@@ -281,6 +281,7 @@ class WorkspaceAdapterTest(TestCase):
             workspace_data_model = models.TestWorkspaceData
             workspace_data_form_class = forms.TestWorkspaceDataForm
             workspace_detail_template_name = "custom/workspace_detail.html"
+            workspace_list_template_name = "custom/workspace_list.html"
 
         return TestAdapter
 
@@ -531,6 +532,22 @@ class WorkspaceAdapterTest(TestCase):
         setattr(TestAdapter, "workspace_detail_template_name", None)
         with self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_detail_template_name()
+
+    def test_get_workspace_list_template_name_default(self):
+        """get_workspace_list_template_name returns the correct template using the default adapter."""
+        self.assertEqual(
+            DefaultWorkspaceAdapter().workspace_list_template_name,
+            "anvil_consortium_manager/workspace_list.html",
+        )
+
+    def test_get_workspace_list_template_name_custom(self):
+        """get_workspace_list_template_name returns the corret template when using a custom adapter"""
+        TestAdapter = self.get_test_adapter()
+        setattr(TestAdapter, "workspace_list_template_name", "foo")
+        self.assertEqual(
+            TestAdapter().workspace_list_template_name,
+            "foo",
+        )
 
 
 class WorkspaceAdapterRegistryTest(TestCase):

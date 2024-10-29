@@ -1526,7 +1526,6 @@ class WorkspaceListByType(
         "billing_project__name",
         "name",
     )
-    template_name = "anvil_consortium_manager/workspace_list.html"
     filterset_class = filters.WorkspaceListFilter
 
     def get_queryset(self):
@@ -1539,6 +1538,10 @@ class WorkspaceListByType(
             return self.adapter.get_list_table_class_staff_view()
         else:
             return self.adapter.get_list_table_class_view()
+
+    def get_template_names(self):
+        """Return the workspace list template name specified in the adapter."""
+        return [self.adapter.workspace_list_template_name]
 
 
 class WorkspaceDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
