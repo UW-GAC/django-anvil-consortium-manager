@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.26.0 (2024-11-08)
 
 * Move most account settings into the Account adapter
 * Allow the user to set a custom success message to be displayed after they verify an AnVIL account
