@@ -3,7 +3,7 @@ import pprint
 import django_tables2 as tables
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 
 from ...anvil_api import AnVILAPIError
@@ -58,7 +58,7 @@ class Command(BaseCommand):
             # Assume the method is called anvil_audit.
             audit_results.run_audit()
         except AnVILAPIError:
-            self.stdout.write(self.style.ERROR("API error."))
+            raise CommandError("API error.")
         else:
             if not audit_results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))

@@ -254,8 +254,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         api_url = self.get_api_url_billing_project(billing_project.name)
         self.anvil_response_mock.add(responses.GET, api_url, status=500, json={"message": "error"})
         out = StringIO()
-        call_command("run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out)
-        self.assertIn("BillingProjectAudit... API error.", out.getvalue())
+        with self.assertRaises(CommandError):
+            call_command("run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out)
 
     # This test is complicated so skipping for now.
     # When trying to change the settings, the test attempts to repopulate the
