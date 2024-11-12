@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Bugfix: `run_anvil_audit` now raises a `CommandException` if an API call fails.
+
 ## 0.26.0 (2024-11-08)
 
 * Move most account settings into the Account adapter
