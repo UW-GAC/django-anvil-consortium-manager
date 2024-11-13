@@ -691,6 +691,82 @@ class WorkspaceCloneFormMixinTest(TestCase):
         form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_custom_workspace_form_with_clean_auth_domain_error_in_custom_form(self):
+        # Create a test workspace form with a custom clean_authorization_domains method.
+        class TestWorkspaceForm(forms.WorkspaceForm):
+            class Meta:
+                model = models.Workspace
+                fields = ("billing_project", "name", "authorization_domains")
+
+            def clean_authorization_domains(self):
+                authorization_domains = self.cleaned_data.get("authorization_domains")
+                if authorization_domains:
+                    for auth_domain in authorization_domains:
+                        print(auth_domain.name)
+                        if auth_domain.name == "invalid-name":
+                            raise forms.ValidationError("Test error")
+                return authorization_domains
+
+        class TestWorkspaceCloneForm(forms.WorkspaceCloneFormMixin, TestWorkspaceForm):
+            class Meta(TestWorkspaceForm.Meta):
+                pass
+
+        auth_domain = factories.ManagedGroupFactory.create(name="invalid-name")
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [auth_domain],
+        }
+        form = TestWorkspaceCloneForm(self.workspace_to_clone, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("authorization_domains", form.errors)
+        self.assertEqual(len(form.errors["authorization_domains"]), 1)
+        self.assertIn(
+            "Test error",
+            form.errors["authorization_domains"][0],
+        )
+
+    def test_custom_workspace_form_with_clean_auth_domain_error_in_mixin(self):
+        # Create a test workspace form with a custom clean_authorization_domains method.
+        class TestWorkspaceForm(forms.WorkspaceForm):
+            class Meta:
+                model = models.Workspace
+                fields = ("billing_project", "name", "authorization_domains")
+
+            def clean_authorization_domains(self):
+                authorization_domains = self.cleaned_data.get("authorization_domains")
+                if authorization_domains:
+                    for auth_domain in authorization_domains:
+                        print(auth_domain.name)
+                        if auth_domain.name == "invalid-name":
+                            raise forms.ValidationError("Test error")
+                return authorization_domains
+
+        class TestWorkspaceCloneForm(forms.WorkspaceCloneFormMixin, TestWorkspaceForm):
+            class Meta(TestWorkspaceForm.Meta):
+                pass
+
+        auth_domain = factories.ManagedGroupFactory.create(name="other-name")
+        self.workspace_to_clone.authorization_domains.add(auth_domain)
+        billing_project = factories.BillingProjectFactory.create()
+        form_data = {
+            "billing_project": billing_project,
+            "name": "test-workspace",
+            "authorization_domains": [],
+        }
+        form = TestWorkspaceCloneForm(self.workspace_to_clone, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("authorization_domains", form.errors)
+        self.assertEqual(len(form.errors["authorization_domains"]), 1)
+        self.assertIn(
+            "contain all original workspace authorization domains",
+            form.errors["authorization_domains"][0],
+        )
+        self.assertIn(auth_domain.name, form.errors["authorization_domains"][0])
+
 
 class GroupGroupMembershipFormTest(TestCase):
     form_class = forms.GroupGroupMembershipForm

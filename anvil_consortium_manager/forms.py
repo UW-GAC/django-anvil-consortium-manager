@@ -229,9 +229,11 @@ class WorkspaceCloneFormMixin:
             )
             self.fields["authorization_domains"].help_text = self.fields["authorization_domains"].help_text + extra_text
 
-    def clean_authorization_domains(self):
-        """Verify that all authorization domains from the original workspace are selected."""
-        authorization_domains = self.cleaned_data["authorization_domains"]
+    def clean(self):
+        # Do the auth domain checks in clean because it is easier to handle inheritance.
+        # We'll still assign the error to the authorization_domains field.
+        cleaned_data = super().clean()
+        authorization_domains = self.cleaned_data.get("authorization_domains", [])
         required_authorization_domains = self.workspace_to_clone.authorization_domains.all()
         missing = [g for g in required_authorization_domains if g not in authorization_domains]
         if missing:
@@ -239,8 +241,8 @@ class WorkspaceCloneFormMixin:
                 # ", ".join([g.name for g in self.workspace_to_clone.authorization_domains.all()])
                 ", ".join(required_authorization_domains.values_list("name", flat=True))
             )
-            raise ValidationError(msg)
-        return authorization_domains
+            self.add_error("authorization_domains", ValidationError(msg))
+        return cleaned_data
 
 
 class DefaultWorkspaceDataForm(forms.ModelForm):
