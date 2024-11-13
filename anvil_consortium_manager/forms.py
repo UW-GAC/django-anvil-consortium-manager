@@ -214,49 +214,15 @@ class WorkspaceImportForm(forms.Form):
         )
 
 
-class WorkspaceCloneForm(Bootstrap5MediaFormMixin, forms.ModelForm):
-    """Form to create a new workspace on AnVIL by cloning an existing workspace."""
-
-    # Only allow billing groups where we can create a workspace.
-    billing_project = forms.ModelChoiceField(
-        queryset=models.BillingProject.objects.filter(has_app_as_user=True),
-        widget=autocomplete.ModelSelect2(
-            url="anvil_consortium_manager:billing_projects:autocomplete",
-            attrs={"data-theme": "bootstrap-5"},
-        ),
-        help_text="""Select the billing project in which the workspace should be created.
-                  Only billing projects where this app is a user are shown.""",
-    )
-
-    class Meta:
-        model = models.Workspace
-        fields = (
-            "billing_project",
-            "name",
-            "authorization_domains",
-            "note",
-        )
-        widgets = {
-            "billing_project": autocomplete.ModelSelect2(
-                url="anvil_consortium_manager:billing_projects:autocomplete",
-                attrs={"data-theme": "bootstrap-5"},
-            ),
-            "authorization_domains": autocomplete.ModelSelect2Multiple(
-                url="anvil_consortium_manager:managed_groups:autocomplete",
-                attrs={"data-theme": "bootstrap-5"},
-            ),
-        }
-        help_texts = {
-            "authorization_domains": """Select the authorization domain(s) to use for this workspace.
-                                     This cannot be changed after creation.""",
-        }
+class WorkspaceCloneFormMixin:
+    """Form mixing to perform cleaning when cloning a workspace."""
 
     def __init__(self, workspace_to_clone, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Save this so we can modify the authorization domains to include this workspace's auth domain(s).
         self.workspace_to_clone = workspace_to_clone
         # Add the list of required auth domains to the help text.
-        if self.workspace_to_clone.authorization_domains.exists():
+        if "authorization_domains" in self.fields and self.workspace_to_clone.authorization_domains.exists():
             auth_domain_names = self.workspace_to_clone.authorization_domains.values_list("name", flat=True)
             extra_text = " You must also include the authorization domain(s) from the original workspace ({}).".format(
                 ", ".join(auth_domain_names)
@@ -275,22 +241,6 @@ class WorkspaceCloneForm(Bootstrap5MediaFormMixin, forms.ModelForm):
             )
             raise ValidationError(msg)
         return authorization_domains
-
-    def clean(self):
-        # Check for the same case insensitive name in the same billing project.
-        billing_project = self.cleaned_data.get("billing_project", None)
-        name = self.cleaned_data.get("name", None)
-        if (
-            billing_project
-            and name
-            and models.Workspace.objects.filter(
-                billing_project=billing_project,
-                name__iexact=name,
-            ).exists()
-        ):
-            # The workspace already exists - raise a Validation error.
-            raise ValidationError("Workspace with this Billing Project and Name already exists.")
-        return self.cleaned_data
 
 
 class DefaultWorkspaceDataForm(forms.ModelForm):

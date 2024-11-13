@@ -469,14 +469,21 @@ class WorkspaceImportFormTest(TestCase):
         self.assertEqual(len(form.errors), 1)
 
 
-class WorkspaceCloneFormTest(TestCase):
-    """Tests for the WorkspaceCloneForm."""
-
-    form_class = forms.WorkspaceCloneForm
+class WorkspaceCloneFormMixinTest(TestCase):
+    """Tests for the WorkspaceCloneFormMixin."""
 
     def setUp(self):
         """Create a workspace to clone for use in tests."""
         self.workspace_to_clone = factories.WorkspaceFactory.create()
+
+    def get_form_class(self):
+        """Create a subclass using the mixin."""
+
+        class TestForm(forms.WorkspaceCloneFormMixin, forms.WorkspaceForm):
+            class Meta(forms.WorkspaceForm.Meta):
+                pass
+
+        return TestForm
 
     def test_valid_no_required_auth_domains(self):
         """Form is valid with a workspace to clone with no auth domains, and no auth domains selected."""
@@ -486,7 +493,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_valid_no_required_auth_domains_with_one_selected_auth_domain(self):
@@ -498,7 +505,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [new_auth_domain],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_valid_no_required_auth_domains_with_two_selected_auth_domains(self):
@@ -511,7 +518,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [new_auth_domain_1, new_auth_domain_2],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_valid_one_required_auth_domains(self):
@@ -524,7 +531,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [auth_domain],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_invalid_one_required_auth_domains_no_auth_domains_selected(self):
@@ -537,7 +544,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertFalse(form.is_valid())
         self.assertEqual(len(form.errors), 1)
         self.assertIn("authorization_domains", form.errors)
@@ -559,7 +566,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [other_auth_domain],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertFalse(form.is_valid())
         self.assertEqual(len(form.errors), 1)
         self.assertIn("authorization_domains", form.errors)
@@ -581,7 +588,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [auth_domain, new_auth_domain],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_valid_two_required_auth_domains(self):
@@ -595,7 +602,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [auth_domain_1, auth_domain_2],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_invalid_two_required_auth_domains_no_auth_domains_selected(self):
@@ -609,7 +616,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertFalse(form.is_valid())
         self.assertEqual(len(form.errors), 1)
         self.assertIn("authorization_domains", form.errors)
@@ -632,7 +639,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [auth_domain_1],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertFalse(form.is_valid())
         self.assertEqual(len(form.errors), 1)
         self.assertIn("authorization_domains", form.errors)
@@ -657,7 +664,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [other_auth_domain_1, other_auth_domain_2],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertFalse(form.is_valid())
         self.assertEqual(len(form.errors), 1)
         self.assertIn("authorization_domains", form.errors)
@@ -681,7 +688,7 @@ class WorkspaceCloneFormTest(TestCase):
             "name": "test-workspace",
             "authorization_domains": [auth_domain_1, auth_domain_2, new_auth_domain],
         }
-        form = self.form_class(self.workspace_to_clone, data=form_data)
+        form = self.get_form_class()(self.workspace_to_clone, data=form_data)
         self.assertTrue(form.is_valid())
 
 

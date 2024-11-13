@@ -1238,7 +1238,6 @@ class WorkspaceClone(
     FormView,
 ):
     model = models.Workspace
-    form_class = forms.WorkspaceCloneForm
     success_message = "Successfully created Workspace on AnVIL."
     template_name = "anvil_consortium_manager/workspace_clone.html"
 
@@ -1269,10 +1268,22 @@ class WorkspaceClone(
         initial["authorization_domains"] = self.object.authorization_domains.all()
         return initial
 
+    def get_form_class(self):
+        # Create a custom class from the custom workspace form, and add cleaning
+        # methods with the WorkspaceCloneFormMixin
+        workspace_form_class = self.adapter.get_workspace_form_class()
+
+        class WorkspaceCloneForm(forms.WorkspaceCloneFormMixin, workspace_form_class):
+            # class WorkspaceCloneForm(forms.WorkspaceCloneFormMixin, forms.WorkspaceForm):
+
+            class Meta(workspace_form_class.Meta):
+                pass
+
+        return WorkspaceCloneForm
+
     def get_form(self, form_class=None):
         """Return an instance of the form to be used in this view."""
-        if form_class is None:
-            form_class = self.get_form_class()
+        form_class = self.get_form_class()
         return form_class(self.object, **self.get_form_kwargs())
 
     def get_workspace_data_formset(self):
