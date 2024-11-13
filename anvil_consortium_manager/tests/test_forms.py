@@ -699,13 +699,13 @@ class WorkspaceCloneFormMixinTest(TestCase):
                 fields = ("billing_project", "name", "authorization_domains")
 
             def clean_authorization_domains(self):
+                # No return statement because the test never gets there, and it breaks coverage.
                 authorization_domains = self.cleaned_data.get("authorization_domains")
                 if authorization_domains:
                     for auth_domain in authorization_domains:
                         print(auth_domain.name)
                         if auth_domain.name == "invalid-name":
                             raise forms.ValidationError("Test error")
-                return authorization_domains  # pragma: no cover
 
         class TestWorkspaceCloneForm(forms.WorkspaceCloneFormMixin, TestWorkspaceForm):
             class Meta(TestWorkspaceForm.Meta):
@@ -737,9 +737,6 @@ class WorkspaceCloneFormMixinTest(TestCase):
 
             def clean_authorization_domains(self):
                 authorization_domains = self.cleaned_data.get("authorization_domains")
-                if authorization_domains:
-                    for auth_domain in authorization_domains:
-                        print(auth_domain.name)
                 return authorization_domains
 
         class TestWorkspaceCloneForm(forms.WorkspaceCloneFormMixin, TestWorkspaceForm):
