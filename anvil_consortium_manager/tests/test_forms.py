@@ -705,7 +705,7 @@ class WorkspaceCloneFormMixinTest(TestCase):
                         print(auth_domain.name)
                         if auth_domain.name == "invalid-name":
                             raise forms.ValidationError("Test error")
-                return authorization_domains
+                return authorization_domains  # pragma: no cover
 
         class TestWorkspaceCloneForm(forms.WorkspaceCloneFormMixin, TestWorkspaceForm):
             class Meta(TestWorkspaceForm.Meta):
@@ -740,8 +740,6 @@ class WorkspaceCloneFormMixinTest(TestCase):
                 if authorization_domains:
                     for auth_domain in authorization_domains:
                         print(auth_domain.name)
-                        if auth_domain.name == "invalid-name":
-                            raise forms.ValidationError("Test error")
                 return authorization_domains
 
         class TestWorkspaceCloneForm(forms.WorkspaceCloneFormMixin, TestWorkspaceForm):
