@@ -10908,7 +10908,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
         self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
 
-    def test_adapter_custom_workspace_form(self):
+    def test_adapter_custom_workspace_form_class(self):
         """Form uses the custom workspace form as a superclass."""
         workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
         workspace_adapter_registry.register(TestWorkspaceAdapter)
@@ -10924,6 +10924,39 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], app_forms.TestWorkspaceForm)
         self.assertIsInstance(response.context_data["form"], forms.WorkspaceCloneFormMixin)
+
+    def test_adapter_custom_workspace_form_with_error_in_workspace_form(self):
+        """Form uses the custom workspace form as a superclass."""
+        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
+        billing_project = factories.BillingProjectFactory.create()
+        self.workspace_type = "test"
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-fail",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-study_name": "test study",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("name", form.errors.keys())
+        self.assertIn("Workspace name cannot be", form.errors["name"][0])
+        self.assertEqual(models.Workspace.objects.count(), 1)  # the workspace to clone
+        self.assertEqual(app_models.TestWorkspaceData.objects.count(), 0)
+        self.assertEqual(len(responses.calls), 0)
 
     def test_workspace_to_clone_does_not_exist_on_anvil(self):
         """Shows a method if an AnVIL API 404 error occurs."""
