@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.26.1 (2024-12-02)
 
 * Bugfix: `run_anvil_audit` now raises a `CommandException` if an API call fails.
 * Bugfix: use the workspace form specified in the workspace adapter when cloning a workspace.
