@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Allow a user to link an Account that is not or has never been linked to another user.
+
 ## 0.26.1 (2024-12-02)
 
 * Bugfix: `run_anvil_audit` now raises a `CommandException` if an API call fails.
