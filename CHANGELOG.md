@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.27.0 (2024-12-06)
 
 * Allow a user to link an Account that is not or has never been linked to another user.
 
