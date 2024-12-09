@@ -319,6 +319,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     message_link_invalid = "AnVIL account verification link is invalid."
     message_account_already_exists = "An AnVIL Account with this email already exists in this app."
     message_account_does_not_exist = "This account does not exist on AnVIL."
+    message_service_account = "Account is already marked as a service account."
     message_success = get_account_adapter().account_link_verify_message
 
     def get_redirect_url(self, *args, **kwargs):
@@ -351,7 +352,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
 
         # Check if the account is a service account.
         if models.Account.objects.filter(email=email_entry.email, is_service_account=True).count():
-            messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
+            messages.add_message(self.request, messages.ERROR, self.message_service_account)
             return super().get(request, *args, **kwargs)
 
         # Check that the token matches.
