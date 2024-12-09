@@ -2372,7 +2372,27 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(mail.outbox[0].subject, "Verify your AnVIL account email")
 
     def test_account_exists_previously_linked_to_user(self):
-        self.fail()
+        """An Account with this email exists but is not linked to a user."""
+        email = "test@example.com"
+        # Create an account with this email, and unlink it.
+        account = factories.AccountFactory.create(email=email, verified=True)
+        account.unlink_user()
+        # No API call should be made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"email": email}, follow=True)
+        self.assertRedirects(response, "/test_home/")
+        # No new UserEmailEntry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 1)
+        self.assertEqual(
+            models.UserEmailEntry.objects.latest("pk"), account.accountuserarchive_set.first().verified_email_entry
+        )
+        # No email is sent.
+        self.assertEqual(len(mail.outbox), 0)
+        # A message is added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), views.AccountLink.message_account_already_exists)
 
     # This test occasionally fails if the time flips one second between sending the email and
     # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid

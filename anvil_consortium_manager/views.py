@@ -288,6 +288,11 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
             messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
             return HttpResponseRedirect(self.get_redirect_url())
 
+        if models.AccountUserArchive.objects.filter(account__email=email).exists():
+            # The Account was already linked to a previous user, so redirect with a message.
+            messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
+            return HttpResponseRedirect(self.get_redirect_url())
+
         # Check if it exists on AnVIL.
         try:
             anvil_account_exists = email_entry.anvil_account_exists()
