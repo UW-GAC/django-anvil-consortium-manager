@@ -2341,20 +2341,38 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
     def test_account_exists_with_email_but_not_linked_to_user(self):
         """An Account with this email exists but is not linked to a user."""
         email = "test@example.com"
+        # Create an account with this email.
         factories.AccountFactory.create(email=email)
-        # No API call should be made, so do not add a mocked response.
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        timestamp_lower_limit = timezone.now()
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"email": email}, follow=True)
-        self.assertRedirects(response, "/test_home/")
-        # No new UserEmailEntry is created.
-        self.assertEqual(models.UserEmailEntry.objects.count(), 0)
-        # No email is sent.
-        self.assertEqual(len(mail.outbox), 0)
-        # A message is added.
-        messages = [m.message for m in get_messages(response.wsgi_request)]
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(str(messages[0]), views.AccountLink.message_account_already_exists)
+        response = self.client.post(self.get_url(), {"email": email})
+        self.assertEqual(response.status_code, 302)
+        # A new UserEmailEntry is created.
+        self.assertEqual(models.UserEmailEntry.objects.count(), 1)
+        # The new UserEmailentry is linked to the logged-in user.
+        new_object = models.UserEmailEntry.objects.latest("pk")
+        self.assertEqual(new_object.email, email)
+        self.assertEqual(new_object.user, self.user)
+        self.assertIsNotNone(new_object.date_verification_email_sent)
+        self.assertGreaterEqual(new_object.date_verification_email_sent, timestamp_lower_limit)
+        self.assertLessEqual(new_object.date_verification_email_sent, timezone.now())
+        self.assertIsNone(new_object.date_verified)
+        # No account is linked.
+        with self.assertRaises(ObjectDoesNotExist):
+            new_object.verified_account
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+        # One message has been sent.
+        self.assertEqual(len(mail.outbox), 1)
+        # The subject is correct.
+        self.assertEqual(mail.outbox[0].subject, "Verify your AnVIL account email")
+
+    def test_account_exists_previously_linked_to_user(self):
+        self.fail()
 
     # This test occasionally fails if the time flips one second between sending the email and
     # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid

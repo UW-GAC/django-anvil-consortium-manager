@@ -283,7 +283,7 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
 
         # Check if this email has an account already linked to a different user.
         # Don't need to check the user, because a user who has already linked their account shouldn't get here.
-        if models.Account.objects.filter(email=email).count():
+        if models.Account.objects.filter(email=email, user__isnull=False).count():
             # The user already has a linked account, so redirect with a message.
             messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
             return HttpResponseRedirect(self.get_redirect_url())
@@ -345,6 +345,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             return super().get(request, *args, **kwargs)
 
         # Create an account for this user from this email.
+        # TODO: Update in case the Account already exists.
         account = models.Account(
             user=self.request.user,
             email=email_entry.email,
