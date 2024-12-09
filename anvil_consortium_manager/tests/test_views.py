@@ -2830,6 +2830,30 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_account_already_exists)
 
+    def test_account_exists_in_app_is_service_account(self):
+        email = "test@example.com"
+        # Create an account that had previously been verified and then unlinked from the original user.
+        account = factories.AccountFactory.create(email=email, is_service_account=True)
+        # Create an email entry and a token for this user.
+        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+        token = account_verification_token.make_token(email_entry)
+        # No API calls are made, so do not add a mocked response.
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+        self.assertRedirects(response, "/test_home/")
+        # No new accounts are created.
+        self.assertEqual(models.Account.objects.count(), 1)
+        self.assertIn(account, models.Account.objects.all())
+        account.refresh_from_db()
+        # The existing account has not been changed.
+        self.assertIsNone(account.user)
+        self.assertIsNone(account.verified_email_entry)
+        # A message is added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_account_already_exists)
+
     def test_account_exists_in_app_deactivated_never_linked_to_user(self):
         """The email already has a deactivated Account in the app, but it was never verified by a user."""
         email = "test@example.com"

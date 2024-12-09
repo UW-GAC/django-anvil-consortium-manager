@@ -349,6 +349,11 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
             return super().get(request, *args, **kwargs)
 
+        # Check if the account is a service account.
+        if models.Account.objects.filter(email=email_entry.email, is_service_account=True).count():
+            messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
+            return super().get(request, *args, **kwargs)
+
         # Check that the token matches.
         if not account_verification_token.check_token(email_entry, token):
             messages.add_message(self.request, messages.ERROR, self.message_link_invalid)
