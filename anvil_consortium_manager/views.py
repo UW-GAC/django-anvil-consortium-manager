@@ -283,8 +283,13 @@ class AccountLink(auth.AnVILConsortiumManagerAccountLinkRequired, SuccessMessage
 
         # Check if this email has an account already linked to a different user.
         # Don't need to check the user, because a user who has already linked their account shouldn't get here.
-        if models.Account.objects.filter(email=email).count():
+        if models.Account.objects.filter(email=email, user__isnull=False).count():
             # The user already has a linked account, so redirect with a message.
+            messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
+            return HttpResponseRedirect(self.get_redirect_url())
+
+        if models.AccountUserArchive.objects.filter(account__email=email).exists():
+            # The Account was already linked to a previous user, so redirect with a message.
             messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
             return HttpResponseRedirect(self.get_redirect_url())
 
@@ -314,6 +319,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     message_link_invalid = "AnVIL account verification link is invalid."
     message_account_already_exists = "An AnVIL Account with this email already exists in this app."
     message_account_does_not_exist = "This account does not exist on AnVIL."
+    message_service_account = "Account is already marked as a service account."
     message_success = get_account_adapter().account_link_verify_message
 
     def get_redirect_url(self, *args, **kwargs):
@@ -335,23 +341,39 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             return super().get(request, *args, **kwargs)
 
         # Check if the email is already linked to an account.
-        if models.Account.objects.filter(email=email_entry.email).count():
+        if models.Account.objects.filter(email=email_entry.email, user__isnull=False).count():
             messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
             return super().get(request, *args, **kwargs)
 
-        # Check that the token maches.
+        # Check if any user was previously linked to this account.
+        if models.AccountUserArchive.objects.filter(account__email=email_entry.email).exists():
+            messages.add_message(self.request, messages.ERROR, self.message_account_already_exists)
+            return super().get(request, *args, **kwargs)
+
+        # Check if the account is a service account.
+        if models.Account.objects.filter(email=email_entry.email, is_service_account=True).count():
+            messages.add_message(self.request, messages.ERROR, self.message_service_account)
+            return super().get(request, *args, **kwargs)
+
+        # Check that the token matches.
         if not account_verification_token.check_token(email_entry, token):
             messages.add_message(self.request, messages.ERROR, self.message_link_invalid)
             return super().get(request, *args, **kwargs)
 
         # Create an account for this user from this email.
-        account = models.Account(
-            user=self.request.user,
-            email=email_entry.email,
-            status=models.Account.ACTIVE_STATUS,
-            is_service_account=False,
-            verified_email_entry=email_entry,
-        )
+        try:
+            account = models.Account.objects.get(email=email_entry.email)
+            account.verified_email_entry = email_entry
+            account.user = request.user
+        except models.Account.DoesNotExist:
+            account = models.Account(
+                user=self.request.user,
+                email=email_entry.email,
+                status=models.Account.ACTIVE_STATUS,
+                is_service_account=False,
+                verified_email_entry=email_entry,
+            )
+
         # Make sure an AnVIL account still exists.
         try:
             anvil_account_exists = account.anvil_exists()
