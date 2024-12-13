@@ -20,6 +20,7 @@ from ..models import (
     DefaultWorkspaceData,
     GroupAccountMembership,
     GroupGroupMembership,
+    IgnoredAuditManagedGroupMembership,
     ManagedGroup,
     UserEmailEntry,
     Workspace,
@@ -2530,5 +2531,80 @@ class WorkspaceGroupSharingTest(TestCase):
         instance_1 = WorkspaceGroupSharing(group=group, workspace=workspace, access=WorkspaceGroupSharing.READER)
         instance_1.save()
         instance_2 = WorkspaceGroupSharing(group=group, workspace=workspace, access=WorkspaceGroupSharing.WRITER)
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
+
+
+class IgnoredAuditManagedGroupMembershipTest(TestCase):
+    """Tests for the IgnoredAuditManagedGroupMembership model."""
+
+    def test_model_saving(self):
+        """Creation using the model constructor and .save() works."""
+        group = factories.ManagedGroupFactory.create()
+        user = factories.UserFactory.create()
+        instance = IgnoredAuditManagedGroupMembership(
+            group=group,
+            ignored_email="email@example.com",
+            added_by=user,
+            note="foo",
+        )
+        instance.save()
+        self.assertIsInstance(instance, IgnoredAuditManagedGroupMembership)
+
+    def test_str_method(self):
+        """The custom __str__ method returns the correct string."""
+        instance = factories.IgnoredAuditManagedGroupMembershipFactory.create(
+            group__name="foo", ignored_email="email@example.com"
+        )
+        instance.save()
+        self.assertIsInstance(instance.__str__(), str)
+        self.assertEqual(instance.__str__(), "foo membership: ignoring email@example.com")
+
+    def test_history(self):
+        """A simple history record is created when model is updated."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        # History was created.
+        self.assertEqual(obj.history.count(), 1)
+        # A new entry is created on update.
+        obj.note = "foo bar"
+        obj.save()
+        self.assertEqual(obj.history.count(), 2)
+        # An entry is created upon deletion.
+        obj.delete()
+        self.assertEqual(IgnoredAuditManagedGroupMembership.history.count(), 3)
+
+    def test_unique(self):
+        # Cannot save the same record for the same group and email.
+        group = factories.ManagedGroupFactory.create()
+        email = "email@example.com"
+        instance_1 = factories.IgnoredAuditManagedGroupMembershipFactory.build(
+            group=group,
+            ignored_email=email,
+            added_by=factories.UserFactory.create(),
+        )
+        instance_1.save()
+        instance_2 = factories.IgnoredAuditManagedGroupMembershipFactory.build(
+            group=group,
+            ignored_email=email,
+            added_by=factories.UserFactory.create(),
+        )
+        with self.assertRaises(IntegrityError):
+            instance_2.save()
+
+    def test_unique_case_insensitive(self):
+        # Cannot save the same record for the same group and email.
+        group = factories.ManagedGroupFactory.create()
+        email = "email@example.com"
+        instance_1 = factories.IgnoredAuditManagedGroupMembershipFactory.build(
+            group=group,
+            ignored_email=email,
+            added_by=factories.UserFactory.create(),
+        )
+        instance_1.save()
+        instance_2 = factories.IgnoredAuditManagedGroupMembershipFactory.build(
+            group=group,
+            ignored_email=email.upper(),
+            added_by=factories.UserFactory.create(),
+        )
         with self.assertRaises(IntegrityError):
             instance_2.save()
