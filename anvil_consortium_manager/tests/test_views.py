@@ -23,7 +23,7 @@ from freezegun import freeze_time
 from .. import __version__, anvil_api, filters, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
-from ..audit import audit
+from ..audit import base as audit
 from ..tokens import account_verification_token
 from . import factories
 from .test_app import forms as app_forms

@@ -7,10 +7,14 @@ from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 
 from ...anvil_api import AnVILAPIError
-from ...audit import audit
+from ...audit import accounts as account_audit
+from ...audit import base as base_audit
+from ...audit import billing_projects as billing_project_audit
+from ...audit import managed_groups as managed_group_audit
+from ...audit import workspaces as workspace_audit
 
 
-class ErrorTableWithLink(audit.ErrorTable):
+class ErrorTableWithLink(base_audit.ErrorTable):
     model_instance = tables.Column(
         orderable=False,
         linkify=lambda value, table: "https://{domain}{url}".format(
@@ -76,7 +80,7 @@ class Command(BaseCommand):
                         "model_name": audit_name,
                         "verified_results": audit_results.get_verified_results(),
                         "errors_table": ErrorTableWithLink(audit_results.get_error_results()),
-                        "not_in_app_table": audit.NotInAppTable(audit_results.get_not_in_app_results()),
+                        "not_in_app_table": base_audit.NotInAppTable(audit_results.get_not_in_app_results()),
                     },
                 )
                 send_mail(
@@ -95,13 +99,13 @@ class Command(BaseCommand):
             models_to_audit = ["BillingProject", "Account", "ManagedGroup", "Workspace"]
 
         if "BillingProject" in models_to_audit:
-            self._run_audit(audit.BillingProjectAudit(), **options)
+            self._run_audit(billing_project_audit.BillingProjectAudit(), **options)
 
         if "Account" in models_to_audit:
-            self._run_audit(audit.AccountAudit(), **options)
+            self._run_audit(account_audit.AccountAudit(), **options)
 
         if "ManagedGroup" in models_to_audit:
-            self._run_audit(audit.ManagedGroupAudit(), **options)
+            self._run_audit(managed_group_audit.ManagedGroupAudit(), **options)
 
         if "Workspace" in models_to_audit:
-            self._run_audit(audit.WorkspaceAudit(), **options)
+            self._run_audit(workspace_audit.WorkspaceAudit(), **options)

@@ -11,7 +11,8 @@ from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase, TransactionTestCase
 
-from ..audit import audit
+from ..audit import base as base_audit
+from ..audit import billing_projects as billing_project_audit
 from ..management.commands.run_anvil_audit import ErrorTableWithLink
 from . import factories
 from .utils import AnVILAPIMockTestMixin
@@ -135,7 +136,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(email.to, ["test@example.com"])
         self.assertIn("ok", email.subject)
         # Text body.
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertEqual(pprint.pformat(audit_results.export()), email.body)
         # HTML body.
@@ -172,7 +173,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command("run_anvil_audit", "--no-color", models=["BillingProject"], stdout=out)
         self.assertIn("BillingProjectAudit... problems found.", out.getvalue())
         self.assertIn("""'errors':""", out.getvalue())
-        self.assertIn(audit.BillingProjectAudit.ERROR_NOT_IN_ANVIL, out.getvalue())
+        self.assertIn(billing_project_audit.BillingProjectAudit.ERROR_NOT_IN_ANVIL, out.getvalue())
 
     def test_command_run_audit_not_ok_email(self):
         """Test command output when BillingProject audit is not ok with email specified."""
@@ -197,7 +198,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(email.to, ["test@example.com"])
         self.assertIn("errors", email.subject)
         # Text body.
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         # HTML body.
         self.assertEqual(len(email.alternatives), 1)
@@ -280,7 +281,7 @@ class RunAnVILAuditTablesTest(TestCase):
     def setUp(self):
         super().setUp()
 
-        class GenericAuditResults(audit.AnVILAudit):
+        class GenericAuditResults(base_audit.AnVILAudit):
             TEST_ERROR_1 = "Test error 1"
             TEST_ERROR_2 = "Test error 2"
 
@@ -291,13 +292,13 @@ class RunAnVILAuditTablesTest(TestCase):
     def test_errors_table(self):
         """Errors table is correct."""
         obj_verified = self.model_factory.create()
-        self.audit_results.add_result(audit.ModelInstanceResult(obj_verified))
+        self.audit_results.add_result(base_audit.ModelInstanceResult(obj_verified))
         obj_error = self.model_factory.create()
-        error_result = audit.ModelInstanceResult(obj_error)
+        error_result = base_audit.ModelInstanceResult(obj_error)
         error_result.add_error(self.audit_results.TEST_ERROR_1)
         error_result.add_error(self.audit_results.TEST_ERROR_2)
         self.audit_results.add_result(error_result)
-        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         table = ErrorTableWithLink(self.audit_results.get_error_results())
         self.assertEqual(table.rows[0].get_cell("errors"), "Test error 1, Test error 2")
 

@@ -3,7 +3,11 @@ from django.test import TestCase
 from faker import Faker
 
 from .. import exceptions, models
-from ..audit import audit
+from ..audit import accounts as account_audit
+from ..audit import base as base_audit
+from ..audit import billing_projects as billing_project_audit
+from ..audit import managed_groups as managed_group_audit
+from ..audit import workspaces as workspace_audit
 from . import api_factories, factories
 from .utils import AnVILAPIMockTestMixin
 
@@ -14,29 +18,29 @@ class ModelInstanceResultTest(TestCase):
     def test_init(self):
         """Constructor works as expected."""
         obj = factories.AccountFactory.create()
-        result = audit.ModelInstanceResult(obj)
+        result = base_audit.ModelInstanceResult(obj)
         self.assertEqual(result.model_instance, obj)
         self.assertEqual(result.errors, set())
 
     def test_str(self):
         """__str__ method works as expected."""
         obj = factories.AccountFactory.create()
-        result = audit.ModelInstanceResult(obj)
+        result = base_audit.ModelInstanceResult(obj)
         self.assertEqual(str(result), (str(obj)))
 
     def test_eq_no_errors(self):
         """__eq__ method works as expected when there are no errors."""
         obj = factories.AccountFactory.create()
-        result_1 = audit.ModelInstanceResult(obj)
-        result_2 = audit.ModelInstanceResult(obj)
+        result_1 = base_audit.ModelInstanceResult(obj)
+        result_2 = base_audit.ModelInstanceResult(obj)
         self.assertEqual(result_1, result_2)
 
     def test_eq_errors(self):
         """__eq__ method works as expected when there are errors."""
         obj = factories.AccountFactory.create()
-        result_1 = audit.ModelInstanceResult(obj)
+        result_1 = base_audit.ModelInstanceResult(obj)
         result_1.add_error("foo")
-        result_2 = audit.ModelInstanceResult(obj)
+        result_2 = base_audit.ModelInstanceResult(obj)
         self.assertNotEqual(result_1, result_2)
         result_2.add_error("foo")
         self.assertEqual(result_1, result_2)
@@ -44,7 +48,7 @@ class ModelInstanceResultTest(TestCase):
     def test_add_error(self):
         """add_error method works as expected."""
         obj = factories.AccountFactory.create()
-        result = audit.ModelInstanceResult(obj)
+        result = base_audit.ModelInstanceResult(obj)
         result.add_error("foo")
         self.assertEqual(result.errors, set(["foo"]))
         result.add_error("bar")
@@ -53,7 +57,7 @@ class ModelInstanceResultTest(TestCase):
     def test_add_error_duplicate(self):
         """can add a second, duplicate error without error."""
         obj = factories.AccountFactory.create()
-        result = audit.ModelInstanceResult(obj)
+        result = base_audit.ModelInstanceResult(obj)
         result.add_error("foo")
         self.assertEqual(result.errors, set(["foo"]))
         result.add_error("foo")
@@ -62,13 +66,13 @@ class ModelInstanceResultTest(TestCase):
     def test_ok_no_errors(self):
         """ok method returns True when there are no errors."""
         obj = factories.AccountFactory.create()
-        result = audit.ModelInstanceResult(obj)
+        result = base_audit.ModelInstanceResult(obj)
         self.assertTrue(result.ok())
 
     def test_ok_errors(self):
         """ok method returns False when there are errors."""
         obj = factories.AccountFactory.create()
-        result = audit.ModelInstanceResult(obj)
+        result = base_audit.ModelInstanceResult(obj)
         result.add_error("foo")
         self.assertFalse(result.ok())
 
@@ -76,59 +80,59 @@ class ModelInstanceResultTest(TestCase):
 class NotInAppResultTest(TestCase):
     def test_init(self):
         """Constructor works as expected."""
-        result = audit.NotInAppResult("foo bar")
+        result = base_audit.NotInAppResult("foo bar")
         self.assertEqual(result.record, "foo bar")
 
     def test_str(self):
         """__str__ method works as expected."""
-        result = audit.NotInAppResult("foo bar")
+        result = base_audit.NotInAppResult("foo bar")
         self.assertEqual(str(result), "foo bar")
 
     def test_eq(self):
         """__eq__ method works as expected."""
-        result = audit.NotInAppResult("foo")
-        self.assertEqual(audit.NotInAppResult("foo"), result)
-        self.assertNotEqual(audit.NotInAppResult("bar"), result)
+        result = base_audit.NotInAppResult("foo")
+        self.assertEqual(base_audit.NotInAppResult("foo"), result)
+        self.assertNotEqual(base_audit.NotInAppResult("bar"), result)
 
 
 class VerifiedTableTest(TestCase):
     def test_zero_rows(self):
         results = []
-        table = audit.VerifiedTable(results)
+        table = base_audit.VerifiedTable(results)
         self.assertEqual(len(table.rows), 0)
 
     def test_one_row(self):
-        results = [audit.ModelInstanceResult(factories.AccountFactory())]
-        table = audit.VerifiedTable(results)
+        results = [base_audit.ModelInstanceResult(factories.AccountFactory())]
+        table = base_audit.VerifiedTable(results)
         self.assertEqual(len(table.rows), 1)
 
     def test_two_rows(self):
         results = [
-            audit.ModelInstanceResult(factories.AccountFactory()),
-            audit.ModelInstanceResult(factories.AccountFactory()),
+            base_audit.ModelInstanceResult(factories.AccountFactory()),
+            base_audit.ModelInstanceResult(factories.AccountFactory()),
         ]
-        table = audit.VerifiedTable(results)
+        table = base_audit.VerifiedTable(results)
         self.assertEqual(len(table.rows), 2)
 
 
 class ErrorTableTest(TestCase):
     def test_zero_rows(self):
         results = []
-        table = audit.ErrorTable(results)
+        table = base_audit.ErrorTable(results)
         self.assertEqual(len(table.rows), 0)
 
     def test_one_row(self):
-        results = [audit.ModelInstanceResult(factories.AccountFactory())]
-        table = audit.ErrorTable(results)
+        results = [base_audit.ModelInstanceResult(factories.AccountFactory())]
+        table = base_audit.ErrorTable(results)
         self.assertEqual(len(table.rows), 1)
 
     def test_two_rows(self):
-        result_1 = audit.ModelInstanceResult(factories.AccountFactory())
+        result_1 = base_audit.ModelInstanceResult(factories.AccountFactory())
         result_1.add_error("foo")
-        result_2 = audit.ModelInstanceResult(factories.AccountFactory())
+        result_2 = base_audit.ModelInstanceResult(factories.AccountFactory())
         result_2.add_error("bar")
         results = [result_1, result_2]
-        table = audit.ErrorTable(results)
+        table = base_audit.ErrorTable(results)
         self.assertEqual(len(table.rows), 2)
 
 
@@ -138,7 +142,7 @@ class AnVILAuditTest(TestCase):
     def setUp(self):
         super().setUp()
 
-        class GenericAudit(audit.AnVILAudit):
+        class GenericAudit(base_audit.AnVILAudit):
             TEST_ERROR_1 = "Test error 1"
             TEST_ERROR_2 = "Test error 2"
 
@@ -157,28 +161,28 @@ class AnVILAuditTest(TestCase):
 
     def test_ok_one_result_ok(self):
         """ok() returns True when there is one ok result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result)
         self.assertTrue(self.audit_results.ok())
 
     def test_ok_two_results_ok(self):
         """ok() returns True when there is one ok result."""
-        model_instance_result_1 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_1 = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result_1)
-        model_instance_result_2 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_2 = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result_2)
         self.assertTrue(self.audit_results.ok())
 
     def test_ok_one_result_with_errors(self):
         """ok() returns True when there is one ok result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         model_instance_result.add_error("foo")
         self.audit_results.add_result(model_instance_result)
         self.assertFalse(self.audit_results.ok())
 
     def test_ok_one_not_in_app(self):
         """ok() returns True when there are no results."""
-        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertFalse(self.audit_results.ok())
 
     def test_run_audit_not_implemented(self):
@@ -187,7 +191,7 @@ class AnVILAuditTest(TestCase):
 
     def test_add_result_not_in_app(self):
         """Can add a NotInAppResult."""
-        not_in_app_result = audit.NotInAppResult("foo")
+        not_in_app_result = base_audit.NotInAppResult("foo")
         self.audit_results.add_result(not_in_app_result)
         self.assertEqual(len(self.audit_results._not_in_app_results), 1)
 
@@ -198,7 +202,7 @@ class AnVILAuditTest(TestCase):
 
     def test_add_result_duplicate_not_in_app(self):
         """Cannot add a duplicate NotInAppResult."""
-        not_in_app_result = audit.NotInAppResult("foo")
+        not_in_app_result = base_audit.NotInAppResult("foo")
         self.audit_results.add_result(not_in_app_result)
         # import ipdb; ipdb.set_trace()
         with self.assertRaises(ValueError):
@@ -207,22 +211,22 @@ class AnVILAuditTest(TestCase):
 
     def test_add_result_not_in_app_same_record(self):
         """Cannot add a duplicate NotInAppResult."""
-        not_in_app_result = audit.NotInAppResult("foo")
+        not_in_app_result = base_audit.NotInAppResult("foo")
         self.audit_results.add_result(not_in_app_result)
         # import ipdb; ipdb.set_trace()
         with self.assertRaises(ValueError):
-            self.audit_results.add_result(audit.NotInAppResult("foo"))
+            self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertEqual(len(self.audit_results._not_in_app_results), 1)
 
     def test_add_result_model_instance(self):
         """Can add a model instance result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result)
         self.assertEqual(len(self.audit_results._model_instance_results), 1)
 
     def test_add_result_duplicate_model_instance_result(self):
         """Cannot add a duplicate model instance result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result)
         # import ipdb; ipdb.set_trace()
         with self.assertRaises(ValueError):
@@ -231,9 +235,9 @@ class AnVILAuditTest(TestCase):
 
     def test_add_result_second_result_for_same_model_instance(self):
         obj = self.model_factory()
-        model_instance_result_1 = audit.ModelInstanceResult(obj)
+        model_instance_result_1 = base_audit.ModelInstanceResult(obj)
         self.audit_results.add_result(model_instance_result_1)
-        model_instance_result_2 = audit.ModelInstanceResult(obj)
+        model_instance_result_2 = base_audit.ModelInstanceResult(obj)
         # import ipdb; ipdb.set_trace()
         with self.assertRaises(ValueError):
             self.audit_results.add_result(model_instance_result_2)
@@ -242,9 +246,9 @@ class AnVILAuditTest(TestCase):
 
     def test_add_result_second_result_for_same_model_instance_with_error(self):
         obj = self.model_factory()
-        model_instance_result_1 = audit.ModelInstanceResult(obj)
+        model_instance_result_1 = base_audit.ModelInstanceResult(obj)
         self.audit_results.add_result(model_instance_result_1)
-        model_instance_result_2 = audit.ModelInstanceResult(obj)
+        model_instance_result_2 = base_audit.ModelInstanceResult(obj)
         model_instance_result_2.add_error("Foo")
         with self.assertRaises(ValueError):
             self.audit_results.add_result(model_instance_result_2)
@@ -253,13 +257,13 @@ class AnVILAuditTest(TestCase):
 
     def test_get_result_for_model_instance_no_matches(self):
         obj = self.model_factory()
-        audit.ModelInstanceResult(obj)
+        base_audit.ModelInstanceResult(obj)
         with self.assertRaises(ValueError):
             self.audit_results.get_result_for_model_instance(obj)
 
     def test_get_result_for_model_instance_one_match(self):
         obj = self.model_factory()
-        model_instance_result = audit.ModelInstanceResult(obj)
+        model_instance_result = base_audit.ModelInstanceResult(obj)
         self.audit_results.add_result(model_instance_result)
         result = self.audit_results.get_result_for_model_instance(obj)
         self.assertIs(result, model_instance_result)
@@ -270,16 +274,16 @@ class AnVILAuditTest(TestCase):
 
     def test_get_verified_results_one_verified_result(self):
         """get_verified_results returns a list when there is one result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result)
         self.assertEqual(len(self.audit_results.get_verified_results()), 1)
         self.assertIn(model_instance_result, self.audit_results.get_verified_results())
 
     def test_get_error_results_two_verified_result(self):
         """get_verified_results returns a list of lenght two when there are two verified results."""
-        model_instance_result_1 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_1 = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result_1)
-        model_instance_result_2 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_2 = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result_2)
         self.assertEqual(len(self.audit_results.get_verified_results()), 2)
         self.assertIn(model_instance_result_1, self.audit_results.get_verified_results())
@@ -287,14 +291,14 @@ class AnVILAuditTest(TestCase):
 
     def test_get_verified_results_one_error_result(self):
         """get_verified_results returns a list of lenght zero when there is one error result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         model_instance_result.add_error("foo")
         self.audit_results.add_result(model_instance_result)
         self.assertEqual(len(self.audit_results.get_verified_results()), 0)
 
     def test_get_verified_results_one_not_in_app_result(self):
         """get_verified_results returns a list of lenght zero when there is one not_in_app result."""
-        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertEqual(len(self.audit_results.get_verified_results()), 0)
 
     def test_get_error_results_no_results(self):
@@ -303,13 +307,13 @@ class AnVILAuditTest(TestCase):
 
     def test_get_error_results_one_verified_result(self):
         """get_error_results returns a list of length zero when there is one verified result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result)
         self.assertEqual(len(self.audit_results.get_error_results()), 0)
 
     def test_get_error_results_one_error_result(self):
         """get_error_results returns a list of lenght one when there is one error result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         model_instance_result.add_error("foo")
         self.audit_results.add_result(model_instance_result)
         self.assertEqual(len(self.audit_results.get_error_results()), 1)
@@ -317,10 +321,10 @@ class AnVILAuditTest(TestCase):
 
     def test_get_error_results_two_error_result(self):
         """get_error_results returns a list of lenght two when there is one result."""
-        model_instance_result_1 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_1 = base_audit.ModelInstanceResult(self.model_factory())
         model_instance_result_1.add_error("foo")
         self.audit_results.add_result(model_instance_result_1)
-        model_instance_result_2 = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_2 = base_audit.ModelInstanceResult(self.model_factory())
         model_instance_result_2.add_error("foo")
         self.audit_results.add_result(model_instance_result_2)
         self.assertEqual(len(self.audit_results.get_error_results()), 2)
@@ -329,7 +333,7 @@ class AnVILAuditTest(TestCase):
 
     def test_get_error_results_one_not_in_app_result(self):
         """get_error_results returns a list of length zero when there is one not_in_app result."""
-        self.audit_results.add_result(audit.NotInAppResult("foo"))
+        self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertEqual(len(self.audit_results.get_error_results()), 0)
 
     def test_get_not_in_app_results_no_results(self):
@@ -338,29 +342,29 @@ class AnVILAuditTest(TestCase):
 
     def test_get_not_in_app_results_one_verified_result(self):
         """get_not_in_app_results returns a list of length zero when there is one verified result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(model_instance_result)
         self.assertEqual(len(self.audit_results.get_not_in_app_results()), 0)
 
     def test_get_not_in_app_results_one_error_result(self):
         """get_not_in_app_results returns a list of lenght one when there is one error result."""
-        model_instance_result = audit.ModelInstanceResult(self.model_factory())
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
         model_instance_result.add_error("foo")
         self.audit_results.add_result(model_instance_result)
         self.assertEqual(len(self.audit_results.get_not_in_app_results()), 0)
 
     def test_get_not_in_app_results_one_not_in_app_result(self):
         """get_not_in_app_results returns a list of length zero when there is one not_in_app result."""
-        result = audit.NotInAppResult("foo")
+        result = base_audit.NotInAppResult("foo")
         self.audit_results.add_result(result)
         self.assertEqual(len(self.audit_results.get_not_in_app_results()), 1)
         self.assertIn(result, self.audit_results.get_not_in_app_results())
 
     def test_get_not_in_app_results_two_not_in_app_results(self):
         """get_not_in_app_results returns a list of lenght two when there is one result."""
-        result_1 = audit.NotInAppResult("foo")
+        result_1 = base_audit.NotInAppResult("foo")
         self.audit_results.add_result(result_1)
-        result_2 = audit.NotInAppResult("bar")
+        result_2 = base_audit.NotInAppResult("bar")
         self.audit_results.add_result(result_2)
         self.assertEqual(len(self.audit_results.get_not_in_app_results()), 2)
         self.assertIn(result_1, self.audit_results.get_not_in_app_results())
@@ -368,14 +372,14 @@ class AnVILAuditTest(TestCase):
 
     def test_export(self):
         # One Verified result.
-        verified_result = audit.ModelInstanceResult(self.model_factory())
+        verified_result = base_audit.ModelInstanceResult(self.model_factory())
         self.audit_results.add_result(verified_result)
         # One error result.
-        error_result = audit.ModelInstanceResult(self.model_factory())
+        error_result = base_audit.ModelInstanceResult(self.model_factory())
         error_result.add_error("foo")
         self.audit_results.add_result(error_result)
         # Not in app result.
-        not_in_app_result = audit.NotInAppResult("bar")
+        not_in_app_result = base_audit.NotInAppResult("bar")
         self.audit_results.add_result(not_in_app_result)
         # Check export.
         exported_data = self.audit_results.export()
@@ -423,8 +427,8 @@ class AnVILAuditTest(TestCase):
 
     def test_export_not_in_app_sorted(self):
         """export sorts the not_in_app results."""
-        self.audit_results.add_result(audit.NotInAppResult("foo"))
-        self.audit_results.add_result(audit.NotInAppResult("bar"))
+        self.audit_results.add_result(base_audit.NotInAppResult("foo"))
+        self.audit_results.add_result(base_audit.NotInAppResult("bar"))
         exported_data = self.audit_results.export()
         self.assertEqual(exported_data["not_in_app"], ["bar", "foo"])
 
@@ -442,7 +446,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_audit_no_billing_projects(self):
         """anvil_audit works correct if there are no billing projects in the app."""
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -459,7 +463,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(),
         )
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -478,7 +482,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -506,7 +510,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(),
         )
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -535,7 +539,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(),
         )
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -565,7 +569,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -582,7 +586,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         """anvil_audit does not check AnVIL about billing projects that do not have the app as a user."""
         factories.BillingProjectFactory.create(has_app_as_user=False)
         # No API calls made.
-        audit_results = audit.BillingProjectAudit()
+        audit_results = billing_project_audit.BillingProjectAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -606,7 +610,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_audit_no_accounts(self):
         """anvil_audit works correct if there are no Accounts in the app."""
-        audit_results = audit.AccountAudit()
+        audit_results = account_audit.AccountAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -623,7 +627,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(account.email),
         )
-        audit_results = audit.AccountAudit()
+        audit_results = account_audit.AccountAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -642,7 +646,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit_results = audit.AccountAudit()
+        audit_results = account_audit.AccountAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -670,7 +674,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(account_2.email),
         )
-        audit_results = audit.AccountAudit()
+        audit_results = account_audit.AccountAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -699,7 +703,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_json_response(account_2.email),
         )
-        audit_results = audit.AccountAudit()
+        audit_results = account_audit.AccountAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -729,7 +733,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json={"message": "other error"},
         )
-        audit_results = audit.AccountAudit()
+        audit_results = account_audit.AccountAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -747,7 +751,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         account = factories.AccountFactory.create()
         account.deactivate()
         # No API calls made.
-        audit_results = audit.AccountAudit()
+        audit_results = account_audit.AccountAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -779,7 +783,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupsResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -812,7 +816,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -847,7 +851,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -868,7 +872,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=[api_factories.GroupDetailsMemberFactory(groupName=group.name)]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -889,7 +893,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=[api_factories.GroupDetailsFactory(groupName=group.name, role="Member")]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -914,7 +918,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json=api_factories.ErrorResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -943,7 +947,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json="FOO@BAR.COM",
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -969,7 +973,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json="FOO@BAR.COM",
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -991,7 +995,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=[api_factories.GroupDetailsMemberFactory(groupName=group.name)]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1013,7 +1017,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=[api_factories.GroupDetailsAdminFactory(groupName=group.name)]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1053,7 +1057,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -1094,7 +1098,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -1142,7 +1146,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -1179,7 +1183,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=404,
             json=api_factories.ErrorResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1203,7 +1207,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=[api_factories.GroupDetailsMemberFactory(groupName="test-group")]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1221,7 +1225,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=[api_factories.GroupDetailsAdminFactory(groupName="test-group")]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1244,7 +1248,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1282,7 +1286,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1321,7 +1325,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -1359,7 +1363,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -1383,7 +1387,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1408,7 +1412,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
-        audit_results = audit.ManagedGroupAudit()
+        audit_results = managed_group_audit.ManagedGroupAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1433,7 +1437,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_group_not_managed_by_app(self):
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         with self.assertRaises(exceptions.AnVILNotGroupAdminError):
-            audit.ManagedGroupMembershipAudit(group)
+            managed_group_audit.ManagedGroupMembershipAudit(group)
 
     def test_no_members(self):
         """audit works correctly if this group has no members."""
@@ -1452,7 +1456,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1477,12 +1481,12 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
         model_result = audit_results.get_result_for_model_instance(membership)
-        self.assertIsInstance(model_result, audit.ModelInstanceResult)
+        self.assertIsInstance(model_result, base_audit.ModelInstanceResult)
         self.assertTrue(model_result.ok())
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
@@ -1508,15 +1512,15 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
         model_result = audit_results.get_result_for_model_instance(membership_1)
-        self.assertIsInstance(model_result, audit.ModelInstanceResult)
+        self.assertIsInstance(model_result, base_audit.ModelInstanceResult)
         self.assertTrue(model_result.ok())
         model_result = audit_results.get_result_for_model_instance(membership_2)
-        self.assertIsInstance(model_result, audit.ModelInstanceResult)
+        self.assertIsInstance(model_result, base_audit.ModelInstanceResult)
         self.assertTrue(model_result.ok())
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
@@ -1539,7 +1543,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1568,17 +1572,17 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 2)
         model_result = audit_results.get_result_for_model_instance(membership_1)
-        self.assertIsInstance(model_result, audit.ModelInstanceResult)
+        self.assertIsInstance(model_result, base_audit.ModelInstanceResult)
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]))
         model_result = audit_results.get_result_for_model_instance(membership_2)
-        self.assertIsInstance(model_result, audit.ModelInstanceResult)
+        self.assertIsInstance(model_result, base_audit.ModelInstanceResult)
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_ACCOUNT_MEMBER_NOT_IN_ANVIL]))
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
@@ -1600,7 +1604,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1608,7 +1612,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         # Check individual records.
         record_result = audit_results.get_not_in_app_results()[0]
-        self.assertIsInstance(record_result, audit.NotInAppResult)
+        self.assertIsInstance(record_result, base_audit.NotInAppResult)
         self.assertEqual(record_result.record, "MEMBER: test-member@example.com")
 
     def test_two_account_members_not_in_app(self):
@@ -1630,7 +1634,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1638,10 +1642,10 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 2)
         # Check individual records.
         record_result = audit_results.get_not_in_app_results()[0]
-        self.assertIsInstance(record_result, audit.NotInAppResult)
+        self.assertIsInstance(record_result, base_audit.NotInAppResult)
         self.assertEqual(record_result.record, "MEMBER: test-member-1@example.com")
         record_result = audit_results.get_not_in_app_results()[1]
-        self.assertIsInstance(record_result, audit.NotInAppResult)
+        self.assertIsInstance(record_result, base_audit.NotInAppResult)
         self.assertEqual(record_result.record, "MEMBER: test-member-2@example.com")
 
     def test_one_account_members_case_insensitive(self):
@@ -1664,7 +1668,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -1693,7 +1697,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.account.email]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -1727,7 +1731,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=[membership_1.account.email, membership_2.account.email]
             ).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -1758,7 +1762,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1791,7 +1795,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1821,7 +1825,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=["test-admin@example.com"]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1849,7 +1853,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=["test-admin-1@example.com", "test-admin-2@example.com"]
             ).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1882,7 +1886,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=["Test-Admin@example.com"]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -1911,7 +1915,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.account.email]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -1941,7 +1945,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -1974,7 +1978,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -2003,7 +2007,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2032,7 +2036,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2062,7 +2066,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2090,7 +2094,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2119,7 +2123,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2148,7 +2152,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.child_group.email]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2185,7 +2189,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
                 ]
             ).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -2216,7 +2220,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2249,7 +2253,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2279,7 +2283,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=["test-admin@firecloud.org"]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2307,7 +2311,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
                 response=["test-admin-1@firecloud.org", "test-admin-2@firecloud.org"]
             ).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2340,7 +2344,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=["Test-Admin@firecloud.org"]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2369,7 +2373,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.child_group.email]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2398,7 +2402,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2423,7 +2427,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2450,7 +2454,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2482,7 +2486,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             # Use the Membership factory because it doesn't add the service account as a direct admin.
             json=api_factories.GetGroupMembershipResponseFactory(response=["foo@bar.com"]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2510,7 +2514,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.child_group.email]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2541,7 +2545,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2576,7 +2580,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2612,7 +2616,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory().response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2649,7 +2653,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=api_factories.GetGroupMembershipAdminResponseFactory(response=[membership.account.email]).response,
         )
-        audit_results = audit.ManagedGroupMembershipAudit(group)
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2726,7 +2730,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2759,7 +2763,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -2778,7 +2782,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2806,7 +2810,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2834,7 +2838,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2877,7 +2881,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2920,7 +2924,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -2963,7 +2967,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3003,7 +3007,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.get_api_bucket_options_response()
         response["bucketOptions"]["requesterPays"] = True
         self.anvil_response_mock.add(responses.GET, workspace_acl_url, status=200, json=response)
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3059,7 +3063,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -3116,7 +3120,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -3156,7 +3160,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -3206,7 +3210,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -3229,7 +3233,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3251,7 +3255,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp", "test-ws", "OWNER")],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3271,7 +3275,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
                 self.get_api_workspace_json("test-bp-2", "test-ws-2", "OWNER"),
             ],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3292,7 +3296,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp-anvil", "test-ws", "OWNER")],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3313,7 +3317,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp", "test-ws", "READER")],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3329,7 +3333,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json("test-bp", "test-ws", "WRITER")],
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3373,7 +3377,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -3417,7 +3421,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -3461,7 +3465,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -3503,7 +3507,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3550,7 +3554,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3593,7 +3597,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3638,7 +3642,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3683,7 +3687,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3730,7 +3734,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3796,7 +3800,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -3864,7 +3868,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3896,7 +3900,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3948,7 +3952,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_bucket_options_response(),
         )
-        audit_results = audit.WorkspaceAudit()
+        audit_results = workspace_audit.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -3999,7 +4003,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4016,7 +4020,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -4037,7 +4041,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -4057,7 +4061,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4077,7 +4081,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4099,7 +4103,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4118,7 +4122,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4139,7 +4143,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -4160,7 +4164,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -4185,7 +4189,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -4207,7 +4211,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4231,7 +4235,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4253,7 +4257,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4272,7 +4276,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4297,7 +4301,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -4318,7 +4322,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -4343,7 +4347,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 2)
@@ -4365,7 +4369,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4389,7 +4393,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4411,7 +4415,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4430,7 +4434,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4455,7 +4459,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -4476,7 +4480,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4498,7 +4502,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4531,7 +4535,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4553,7 +4557,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4572,7 +4576,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4593,7 +4597,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 1)
@@ -4614,7 +4618,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)
@@ -4638,7 +4642,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.api_response,
         )
-        audit_results = audit.WorkspaceSharingAudit(self.workspace)
+        audit_results = workspace_audit.WorkspaceSharingAudit(self.workspace)
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
         self.assertEqual(len(audit_results.get_verified_results()), 0)

@@ -15,7 +15,7 @@ from . import models
 from .adapters.account import get_account_adapter
 from .adapters.managed_group import get_managed_group_adapter
 from .adapters.workspace import workspace_adapter_registry
-from .audit import audit
+from .audit import base as base_audit
 
 
 class AnVILAuditMixin:
@@ -45,9 +45,9 @@ class AnVILAuditMixin:
         context = super().get_context_data(*args, **kwargs)
         context["audit_timestamp"] = timezone.now()
         context["audit_ok"] = self.audit_results.ok()
-        context["verified_table"] = audit.VerifiedTable(self.audit_results.get_verified_results())
-        context["error_table"] = audit.ErrorTable(self.audit_results.get_error_results())
-        context["not_in_app_table"] = audit.NotInAppTable(self.audit_results.get_not_in_app_results())
+        context["verified_table"] = base_audit.VerifiedTable(self.audit_results.get_verified_results())
+        context["error_table"] = base_audit.ErrorTable(self.audit_results.get_error_results())
+        context["not_in_app_table"] = base_audit.NotInAppTable(self.audit_results.get_not_in_app_results())
         return context
 
 

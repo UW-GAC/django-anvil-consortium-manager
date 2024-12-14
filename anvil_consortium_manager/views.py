@@ -19,7 +19,10 @@ from . import __version__, anvil_api, auth, exceptions, filters, forms, models, 
 from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
-from .audit import audit
+from .audit import accounts as account_audit
+from .audit import billing_projects as billing_project_audit
+from .audit import managed_groups as managed_group_audit
+from .audit import workspaces as workspace_audit
 from .tokens import account_verification_token
 
 
@@ -144,7 +147,7 @@ class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixi
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/billing_project_audit.html"
-    audit_class = audit.BillingProjectAudit
+    audit_class = billing_project_audit.BillingProjectAudit
 
 
 class AccountDetail(
@@ -623,7 +626,7 @@ class AccountAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVI
     """View to run an audit on Accounts and display the results."""
 
     template_name = "anvil_consortium_manager/account_audit.html"
-    audit_class = audit.AccountAudit
+    audit_class = account_audit.AccountAudit
 
 
 class AccountUnlinkUser(
@@ -898,7 +901,7 @@ class ManagedGroupAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins
     """View to run an audit on ManagedGroups and display the results."""
 
     template_name = "anvil_consortium_manager/managedgroup_audit.html"
-    audit_class = audit.ManagedGroupAudit
+    audit_class = managed_group_audit.ManagedGroupAudit
 
 
 class ManagedGroupMembershipAudit(
@@ -929,7 +932,7 @@ class ManagedGroupMembershipAudit(
         return super().get(request, *args, **kwargs)
 
     def get_audit_instance(self):
-        return audit.ManagedGroupMembershipAudit(self.object)
+        return managed_group_audit.ManagedGroupMembershipAudit(self.object)
 
 
 class WorkspaceLandingPage(
@@ -1660,7 +1663,7 @@ class WorkspaceAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.An
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/workspace_audit.html"
-    audit_class = audit.WorkspaceAudit
+    audit_class = workspace_audit.WorkspaceAudit
 
 
 class WorkspaceSharingAudit(
@@ -1700,7 +1703,7 @@ class WorkspaceSharingAudit(
         return super().get(request, *args, **kwargs)
 
     def get_audit_instance(self):
-        return audit.WorkspaceSharingAudit(self.object)
+        return workspace_audit.WorkspaceSharingAudit(self.object)
 
 
 class WorkspaceAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autocomplete.Select2QuerySetView):
