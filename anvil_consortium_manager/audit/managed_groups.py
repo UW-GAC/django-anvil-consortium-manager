@@ -1,6 +1,6 @@
 from .. import exceptions, models
 from ..anvil_api import AnVILAPIClient, AnVILAPIError404
-from .base import AnVILAudit, ModelInstanceResult, NotInAppResult
+from .base import AnVILAudit, IgnoredResult, ModelInstanceResult, NotInAppResult
 
 
 class ManagedGroupAudit(AnVILAudit):
@@ -165,7 +165,21 @@ class ManagedGroupMembershipAudit(AnVILAudit):
 
         # Add any admin that the app doesn't know about.
         for member in admins_in_anvil:
-            self.add_result(NotInAppResult("{}: {}".format(models.GroupAccountMembership.ADMIN, member)))
+            record = "{}: {}".format(models.GroupAccountMembership.ADMIN, member)
+            try:
+                obj = models.IgnoredAuditManagedGroupMembership.objects.get(
+                    group=self.managed_group, ignored_email=member
+                )
+                self.add_result(IgnoredResult(record, obj))
+            except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
+                self.add_result(NotInAppResult(record))
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
-            self.add_result(NotInAppResult("{}: {}".format(models.GroupAccountMembership.MEMBER, member)))
+            record = "{}: {}".format(models.GroupAccountMembership.MEMBER, member)
+            try:
+                obj = models.IgnoredAuditManagedGroupMembership.objects.get(
+                    group=self.managed_group, ignored_email=member
+                )
+                self.add_result(IgnoredResult(record, obj))
+            except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
+                self.add_result(NotInAppResult(record))
