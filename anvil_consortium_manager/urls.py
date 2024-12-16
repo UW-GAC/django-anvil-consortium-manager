@@ -55,7 +55,6 @@ account_patterns = (
             views.GroupAccountMembershipCreateByAccount.as_view(),
             name="add_to_group",
         ),
-        path("audit/", views.AccountAudit.as_view(), name="audit"),
     ],
     "accounts",
 )
@@ -298,9 +297,16 @@ audit_billing_project_patterns = (
     ],
     "billing_projects",
 )
+audit_account_patterns = (
+    [
+        path("audit/", views.AccountAudit.as_view(), name="all"),
+    ],
+    "accounts",
+)
 audit_patterns = (
     [
         path("billing_projects/", include(audit_billing_project_patterns)),
+        path("accounts/", include(audit_account_patterns)),
     ],
     "audit",
 )
