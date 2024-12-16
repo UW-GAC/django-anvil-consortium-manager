@@ -13,7 +13,6 @@ billing_project_patterns = (
             views.BillingProjectAutocomplete.as_view(),
             name="autocomplete",
         ),
-        path("audit/", views.BillingProjectAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.BillingProjectDetail.as_view(), name="detail"),
         path("<slug:slug>/update/", views.BillingProjectUpdate.as_view(), name="update"),
     ],
@@ -293,6 +292,18 @@ workspace_group_sharing_patterns = (
     "workspace_group_sharing",
 )
 
+audit_billing_project_patterns = (
+    [
+        path("", views.BillingProjectAudit.as_view(), name="all"),
+    ],
+    "billing_projects",
+)
+audit_patterns = (
+    [
+        path("billing_projects/", include(audit_billing_project_patterns)),
+    ],
+    "audit",
+)
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
     path("status/", views.AnVILStatus.as_view(), name="status"),
@@ -303,4 +314,5 @@ urlpatterns = [
     path("group_group_membership/", include(group_group_membership_patterns)),
     path("group_account_membership/", include(group_account_membership_patterns)),
     path("workspace_group_sharing/", include(workspace_group_sharing_patterns)),
+    path("audit/", include(audit_patterns)),
 ]

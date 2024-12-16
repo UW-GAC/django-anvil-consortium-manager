@@ -112,7 +112,7 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:accounts:list"),
         reverse("anvil_consortium_manager:accounts:audit"),
         reverse("anvil_consortium_manager:billing_projects:list"),
-        reverse("anvil_consortium_manager:billing_projects:audit"),
+        reverse("anvil_consortium_manager:audit:billing_projects:all"),
         reverse("anvil_consortium_manager:managed_groups:list"),
         reverse("anvil_consortium_manager:managed_groups:visualization"),
         reverse("anvil_consortium_manager:managed_groups:audit"),
@@ -1058,7 +1058,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:billing_projects:audit", args=args)
+        return reverse("anvil_consortium_manager:audit:billing_projects:all", args=args)
 
     def get_api_url(self, billing_project_name):
         return self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name
