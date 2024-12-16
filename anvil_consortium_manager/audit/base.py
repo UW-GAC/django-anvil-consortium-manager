@@ -81,11 +81,6 @@ class NotInAppTable(tables.Table):
 
 class IgnoredTable(tables.Table):
     model_instance = tables.columns.Column(orderable=False, verbose_name="Details")
-    # Note: these fields only work for the IgnoredManagedGroupMembership model.
-    # Either use inheritance or another solution to make this more general.
-    model_instance__group = tables.columns.Column(linkify=True, verbose_name="Managed group", orderable=False)
-    model_instance__ignored_email = tables.columns.Column(orderable=False, verbose_name="Ignored email")
-    model_instance__added_by = tables.columns.Column(orderable=False, verbose_name="Ignored by")
     record = tables.columns.Column(orderable=False)
 
     def render_model_instance(self, record):
@@ -95,6 +90,11 @@ class IgnoredTable(tables.Table):
 # Audit classes for object classes:
 class AnVILAudit(ABC):
     """Abstract base class for AnVIL audit results."""
+
+    verified_table_class = VerifiedTable
+    error_table_class = ErrorTable
+    not_in_app_table_class = NotInAppTable
+    ignored_table_class = IgnoredTable
 
     def __init__(self):
         self._model_instance_results = []
@@ -155,6 +155,18 @@ class AnVILAudit(ABC):
 
     def get_not_in_app_results(self):
         return self._not_in_app_results
+
+    def get_verified_table(self):
+        return self.verified_table_class(self.get_verified_results())
+
+    def get_error_table(self):
+        return self.error_table_class(self.get_error_results())
+
+    def get_not_in_app_table(self):
+        return self.not_in_app_table_class(self.get_not_in_app_results())
+
+    def get_ignored_table(self):
+        return self.ignored_table_class(self.get_ignored_results())
 
     def export(
         self,

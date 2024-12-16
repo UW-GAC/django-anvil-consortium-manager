@@ -1,5 +1,6 @@
 import responses
 from django.test import TestCase
+from django_tables2 import Table
 from faker import Faker
 
 from .. import exceptions, models
@@ -498,6 +499,158 @@ class AnVILAuditTest(TestCase):
         """get_ignored_results returns a list of length zero when there is one not_in_app result."""
         self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertEqual(len(self.audit_results.get_ignored_results()), 0)
+
+    def test_get_verified_table_no_results(self):
+        table = self.audit_results.get_verified_table()
+        self.assertIsInstance(table, base_audit.VerifiedTable)
+        self.assertEqual(len(table.rows), 0)
+
+    def test_get_verified_table_one_result(self):
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result)
+        table = self.audit_results.get_verified_table()
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(model_instance_result, table.data)
+
+    def test_get_verified_table_two_results(self):
+        model_instance_result_1 = base_audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result_1)
+        model_instance_result_2 = base_audit.ModelInstanceResult(self.model_factory())
+        self.audit_results.add_result(model_instance_result_2)
+        table = self.audit_results.get_verified_table()
+        self.assertEqual(len(table.rows), 2)
+        self.assertIn(model_instance_result_1, table.data)
+        self.assertIn(model_instance_result_2, table.data)
+
+    def test_get_verified_table_custom_class(self):
+        class CustomTable(Table):
+            pass
+
+        class CustomAudit(base_audit.AnVILAudit):
+            verified_table_class = CustomTable
+
+        audit_results = CustomAudit()
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
+        audit_results.add_result(model_instance_result)
+        table = audit_results.get_verified_table()
+        self.assertIsInstance(table, CustomTable)
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(model_instance_result, table.data)
+
+    def test_get_error_table_no_results(self):
+        table = self.audit_results.get_error_table()
+        self.assertIsInstance(table, base_audit.ErrorTable)
+        self.assertEqual(len(table.rows), 0)
+
+    def test_get_error_table_one_result(self):
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
+        model_instance_result.add_error("foo")
+        self.audit_results.add_result(model_instance_result)
+        table = self.audit_results.get_error_table()
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(model_instance_result, table.data)
+
+    def test_get_error_table_two_results(self):
+        model_instance_result_1 = base_audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_1.add_error("foo")
+        self.audit_results.add_result(model_instance_result_1)
+        model_instance_result_2 = base_audit.ModelInstanceResult(self.model_factory())
+        model_instance_result_2.add_error("bar")
+        self.audit_results.add_result(model_instance_result_2)
+        table = self.audit_results.get_error_table()
+        self.assertEqual(len(table.rows), 2)
+        self.assertIn(model_instance_result_1, table.data)
+        self.assertIn(model_instance_result_2, table.data)
+
+    def test_get_error_table_custom_class(self):
+        class CustomTable(Table):
+            pass
+
+        class CustomAudit(base_audit.AnVILAudit):
+            error_table_class = CustomTable
+
+        audit_results = CustomAudit()
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
+        model_instance_result.add_error("foo")
+        audit_results.add_result(model_instance_result)
+        table = audit_results.get_error_table()
+        self.assertIsInstance(table, CustomTable)
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(model_instance_result, table.data)
+
+    def test_get_not_in_app_table_no_results(self):
+        table = self.audit_results.get_not_in_app_table()
+        self.assertIsInstance(table, base_audit.NotInAppTable)
+        self.assertEqual(len(table.rows), 0)
+
+    def test_get_not_in_app_table_one_result(self):
+        result = base_audit.NotInAppResult("foo")
+        self.audit_results.add_result(result)
+        table = self.audit_results.get_not_in_app_table()
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(result, table.data)
+
+    def test_get_not_in_app_table_two_results(self):
+        result_1 = base_audit.NotInAppResult("foo")
+        self.audit_results.add_result(result_1)
+        result_2 = base_audit.NotInAppResult("bar")
+        self.audit_results.add_result(result_2)
+        table = self.audit_results.get_not_in_app_table()
+        self.assertEqual(len(table.rows), 2)
+        self.assertIn(result_1, table.data)
+        self.assertIn(result_2, table.data)
+
+    def test_get_not_in_app_table_custom_class(self):
+        class CustomTable(Table):
+            pass
+
+        class CustomAudit(base_audit.AnVILAudit):
+            not_in_app_table_class = CustomTable
+
+        audit_results = CustomAudit()
+        result = base_audit.NotInAppResult("foo")
+        audit_results.add_result(result)
+        table = audit_results.get_not_in_app_table()
+        self.assertIsInstance(table, CustomTable)
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(result, table.data)
+
+    def test_get_ignored_table_no_results(self):
+        table = self.audit_results.get_ignored_table()
+        self.assertIsInstance(table, base_audit.IgnoredTable)
+        self.assertEqual(len(table.rows), 0)
+
+    def test_get_ignored_table_one_result(self):
+        result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(result)
+        table = self.audit_results.get_ignored_table()
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(result, table.data)
+
+    def test_get_ignored_table_two_results(self):
+        result_1 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(result_1)
+        result_2 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(result_2)
+        table = self.audit_results.get_ignored_table()
+        self.assertEqual(len(table.rows), 2)
+        self.assertIn(result_1, table.data)
+        self.assertIn(result_2, table.data)
+
+    def test_get_ignored_table_custom_class(self):
+        class CustomTable(Table):
+            pass
+
+        class CustomAudit(base_audit.AnVILAudit):
+            ignored_table_class = CustomTable
+
+        audit_results = CustomAudit()
+        result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        audit_results.add_result(result)
+        table = audit_results.get_ignored_table()
+        self.assertIsInstance(table, CustomTable)
+        self.assertEqual(len(table.rows), 1)
+        self.assertIn(result, table.data)
 
     def test_export(self):
         # One Verified result.
