@@ -79,6 +79,19 @@ class NotInAppTable(tables.Table):
     record = tables.columns.Column(orderable=False, empty_values=())
 
 
+class IgnoredTable(tables.Table):
+    model_instance = tables.columns.Column(orderable=False, verbose_name="Details")
+    # Note: these fields only work for the IgnoredManagedGroupMembership model.
+    # Either use inheritance or another solution to make this more general.
+    model_instance__group = tables.columns.Column(linkify=True, verbose_name="Managed group", orderable=False)
+    model_instance__ignored_email = tables.columns.Column(orderable=False, verbose_name="Ignored email")
+    model_instance__added_by = tables.columns.Column(orderable=False, verbose_name="Ignored by")
+    record = tables.columns.Column(orderable=False)
+
+    def render_model_instance(self, record):
+        return "See details"
+
+
 # Audit classes for object classes:
 class AnVILAudit(ABC):
     """Abstract base class for AnVIL audit results."""

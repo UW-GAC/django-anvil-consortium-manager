@@ -103,5 +103,30 @@
 </div>
 {% endblock not_in_app %}
 
+{% block ignored %}
+<div class="my-3">
+  <div class="accordion" id="accordionIgnored">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingIgnored">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseIgnoredOne" aria-expanded="false" aria-controls="collapseIgnoredOne">
+          <span class="fa-solid fa-eye-slash mx-2"></span>
+          Ignored
+          <span class="badge mx-2 {% if ignored_table.rows|length %}bg-info{% else %}bg-secondary{% endif %} pill"> {{ ignored_table.rows|length }}</span>
+        </button>
+      </h2>
+      <div id="collapseIgnoredOne" class="accordion-collapse collapse" aria-labelledby="headingIgnoredOne" data-bs-parent="#accordionIgnored">
+        <div class="accordion-body">
+
+          <p>This table shows any "not in app" records that have been marked as ignored.</p>
+
+          {% render_table ignored_table %}
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock ignored %}
+
 
 {% endblock content %}

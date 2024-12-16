@@ -48,6 +48,7 @@ class AnVILAuditMixin:
         context["verified_table"] = base_audit.VerifiedTable(self.audit_results.get_verified_results())
         context["error_table"] = base_audit.ErrorTable(self.audit_results.get_error_results())
         context["not_in_app_table"] = base_audit.NotInAppTable(self.audit_results.get_not_in_app_results())
+        context["ignored_table"] = base_audit.IgnoredTable(self.audit_results.get_ignored_results())
         return context
 
 
