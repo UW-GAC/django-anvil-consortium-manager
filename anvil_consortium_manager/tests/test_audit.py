@@ -95,6 +95,36 @@ class NotInAppResultTest(TestCase):
         self.assertNotEqual(base_audit.NotInAppResult("bar"), result)
 
 
+class IgnoredResultTest(TestCase):
+    def test_init(self):
+        """Constructor works as expected."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        result = base_audit.ModelInstanceResult(obj)
+        self.assertEqual(result.model_instance, obj)
+        self.assertEqual(result.errors, set())
+
+    def test_str(self):
+        """__str__ method works as expected."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        result = base_audit.ModelInstanceResult(obj)
+        self.assertEqual(str(result), (str(obj)))
+
+    def test_eq(self):
+        """__eq__ method works as expected when there are no errors."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        result_1 = base_audit.ModelInstanceResult(obj)
+        result_2 = base_audit.ModelInstanceResult(obj)
+        self.assertEqual(result_1, result_2)
+
+    def test_eq_not_equal(self):
+        """__eq__ method works as expected when there are no errors."""
+        obj_1 = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        result_1 = base_audit.ModelInstanceResult(obj_1)
+        obj_2 = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        result_2 = base_audit.ModelInstanceResult(obj_2)
+        self.assertNotEqual(result_1, result_2)
+
+
 class VerifiedTableTest(TestCase):
     def test_zero_rows(self):
         results = []
@@ -185,6 +215,13 @@ class AnVILAuditTest(TestCase):
         self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertFalse(self.audit_results.ok())
 
+    def test_ok_one_ignored(self):
+        """ok() returns True when there is one ignored result."""
+        self.audit_results.add_result(
+            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        )
+        self.assertTrue(self.audit_results.ok())
+
     def test_run_audit_not_implemented(self):
         with self.assertRaises(NotImplementedError):
             self.audit_results.run_audit()
@@ -194,6 +231,12 @@ class AnVILAuditTest(TestCase):
         not_in_app_result = base_audit.NotInAppResult("foo")
         self.audit_results.add_result(not_in_app_result)
         self.assertEqual(len(self.audit_results._not_in_app_results), 1)
+
+    def test_add_result_ignored(self):
+        """Can add an IgnoredResult."""
+        ignored_result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(ignored_result)
+        self.assertEqual(len(self.audit_results._ignored_results), 1)
 
     def test_add_result_wrong_class(self):
         """Can add a NotInAppResult."""
@@ -217,6 +260,22 @@ class AnVILAuditTest(TestCase):
         with self.assertRaises(ValueError):
             self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertEqual(len(self.audit_results._not_in_app_results), 1)
+
+    def test_add_result_ignored_duplicate(self):
+        """Can add an IgnoredResult."""
+        ignored_result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(ignored_result)
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result(ignored_result)
+
+    def test_add_result_ignored_equal(self):
+        """Can add an IgnoredResult."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        ignored_result_1 = base_audit.IgnoredResult(obj)
+        ignored_result_2 = base_audit.IgnoredResult(obj)
+        self.audit_results.add_result(ignored_result_1)
+        with self.assertRaises(ValueError):
+            self.audit_results.add_result(ignored_result_2)
 
     def test_add_result_model_instance(self):
         """Can add a model instance result."""
@@ -301,6 +360,13 @@ class AnVILAuditTest(TestCase):
         self.audit_results.add_result(base_audit.NotInAppResult("foo"))
         self.assertEqual(len(self.audit_results.get_verified_results()), 0)
 
+    def test_get_verified_results_one_ignored_result(self):
+        """get_verified_results returns a list of lenght zero when there is one ignored result."""
+        self.audit_results.add_result(
+            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        )
+        self.assertEqual(len(self.audit_results.get_verified_results()), 0)
+
     def test_get_error_results_no_results(self):
         """get_error_results returns an empty list when there are no results."""
         self.assertEqual(len(self.audit_results.get_error_results()), 0)
@@ -334,6 +400,13 @@ class AnVILAuditTest(TestCase):
     def test_get_error_results_one_not_in_app_result(self):
         """get_error_results returns a list of length zero when there is one not_in_app result."""
         self.audit_results.add_result(base_audit.NotInAppResult("foo"))
+        self.assertEqual(len(self.audit_results.get_error_results()), 0)
+
+    def test_get_error_results_one_ignored_result(self):
+        """get_verified_results returns a list of lenght zero when there is one ignored result."""
+        self.audit_results.add_result(
+            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        )
         self.assertEqual(len(self.audit_results.get_error_results()), 0)
 
     def test_get_not_in_app_results_no_results(self):
@@ -370,6 +443,51 @@ class AnVILAuditTest(TestCase):
         self.assertIn(result_1, self.audit_results.get_not_in_app_results())
         self.assertIn(result_2, self.audit_results.get_not_in_app_results())
 
+    def test_get_not_in_app_results_one_ignored_result(self):
+        """get_verified_results returns a list of lenght zero when there is one ignored result."""
+        self.audit_results.add_result(
+            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        )
+        self.assertEqual(len(self.audit_results.get_not_in_app_results()), 0)
+
+    def test_get_ignored_results_no_results(self):
+        """get_ignored_results returns an empty list when there are no results."""
+        self.assertEqual(len(self.audit_results.get_ignored_results()), 0)
+
+    def test_get_ignored_results_one_result(self):
+        """get_ignored_results returns a list when there is one result."""
+        result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(result)
+        self.assertEqual(len(self.audit_results.get_ignored_results()), 1)
+        self.assertIn(result, self.audit_results.get_ignored_results())
+
+    def test_get_ignored_results_two_results(self):
+        """get_ignored_results returns a list of lenght two when there are two verified results."""
+        result_1 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(result_1)
+        result_2 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(result_2)
+        self.assertEqual(len(self.audit_results.get_ignored_results()), 2)
+        self.assertIn(result_1, self.audit_results.get_ignored_results())
+        self.assertIn(result_2, self.audit_results.get_ignored_results())
+
+    def test_get_ignored_results_one_verified_result(self):
+        """get_ignored_results returns a list of lenght zero when there is one verified result."""
+        self.audit_results.add_result(base_audit.ModelInstanceResult(self.model_factory()))
+        self.assertEqual(len(self.audit_results.get_ignored_results()), 0)
+
+    def test_get_ignored_results_one_error_result(self):
+        """get_ignored_results returns a list of lenght zero when there is one error result."""
+        model_instance_result = base_audit.ModelInstanceResult(self.model_factory())
+        model_instance_result.add_error("foo")
+        self.audit_results.add_result(model_instance_result)
+        self.assertEqual(len(self.audit_results.get_ignored_results()), 0)
+
+    def test_get_ignored_results_one_not_in_app_result(self):
+        """get_ignored_results returns a list of length zero when there is one not_in_app result."""
+        self.audit_results.add_result(base_audit.NotInAppResult("foo"))
+        self.assertEqual(len(self.audit_results.get_ignored_results()), 0)
+
     def test_export(self):
         # One Verified result.
         verified_result = base_audit.ModelInstanceResult(self.model_factory())
@@ -381,6 +499,9 @@ class AnVILAuditTest(TestCase):
         # Not in app result.
         not_in_app_result = base_audit.NotInAppResult("bar")
         self.audit_results.add_result(not_in_app_result)
+        # Ignored result
+        ignored_result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        self.audit_results.add_result(ignored_result)
         # Check export.
         exported_data = self.audit_results.export()
         self.assertIn("verified", exported_data)
@@ -406,24 +527,44 @@ class AnVILAuditTest(TestCase):
         )
         self.assertIn("not_in_app", exported_data)
         self.assertEqual(exported_data["not_in_app"], ["bar"])
+        self.assertIn("ignored", exported_data)
+        self.assertEqual(
+            exported_data["ignored"],
+            [
+                {
+                    "id": ignored_result.model_instance.pk,
+                    "instance": ignored_result.model_instance,
+                }
+            ],
+        )
 
     def test_export_include_verified_false(self):
         exported_data = self.audit_results.export(include_verified=False)
         self.assertNotIn("verified", exported_data)
         self.assertIn("errors", exported_data)
         self.assertIn("not_in_app", exported_data)
+        self.assertIn("ignored", exported_data)
 
     def test_export_include_errors_false(self):
         exported_data = self.audit_results.export(include_errors=False)
         self.assertIn("verified", exported_data)
         self.assertNotIn("errors", exported_data)
         self.assertIn("not_in_app", exported_data)
+        self.assertIn("ignored", exported_data)
 
     def test_export_include_not_in_app_false(self):
         exported_data = self.audit_results.export(include_not_in_app=False)
         self.assertIn("verified", exported_data)
         self.assertIn("errors", exported_data)
         self.assertNotIn("not_in_app", exported_data)
+        self.assertIn("ignored", exported_data)
+
+    def test_export_include_ignored_false(self):
+        exported_data = self.audit_results.export(include_ignored=False)
+        self.assertIn("verified", exported_data)
+        self.assertIn("errors", exported_data)
+        self.assertIn("not_in_app", exported_data)
+        self.assertNotIn("ignored", exported_data)
 
     def test_export_not_in_app_sorted(self):
         """export sorts the not_in_app results."""

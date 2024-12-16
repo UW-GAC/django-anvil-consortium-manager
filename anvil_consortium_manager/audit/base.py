@@ -43,6 +43,19 @@ class NotInAppResult:
         return self.record == other.record
 
 
+class IgnoredResult:
+    """Class to hold an audit result for a specific record in an Ignore table."""
+
+    def __init__(self, model_instance):
+        self.model_instance = model_instance
+
+    def __eq__(self, other):
+        return self.model_instance == other.model_instance
+
+    def __str__(self):
+        return str(self.model_instance)
+
+
 # Tables for reporting audit results:
 class VerifiedTable(tables.Table):
     """Table for verified results."""
@@ -72,6 +85,7 @@ class AnVILAudit(ABC):
     def __init__(self):
         self._model_instance_results = []
         self._not_in_app_results = []
+        self._ignored_results = []
 
     def ok(self):
         model_instances_ok = all([x.ok() for x in self._model_instance_results])
@@ -84,10 +98,12 @@ class AnVILAudit(ABC):
     def add_result(self, result):
         if isinstance(result, NotInAppResult):
             self._add_not_in_app_result(result)
+        elif isinstance(result, IgnoredResult):
+            self._add_ignored_result(result)
         elif isinstance(result, ModelInstanceResult):
             self._add_model_instance_result(result)
         else:
-            raise ValueError("result must be a ModelInstanceResult or a NotInAppResult.")
+            raise ValueError("result must be ModelInstanceResult, NotInAppResult or IgnoredResult.")
 
     def _add_not_in_app_result(self, result):
         # Check that it hasn't been added yet.
@@ -102,6 +118,12 @@ class AnVILAudit(ABC):
             raise ValueError("Already added a result for {}.".format(result.model_instance))
         self._model_instance_results.append(result)
 
+    def _add_ignored_result(self, result):
+        check = [x for x in self._ignored_results if x.model_instance == result.model_instance]
+        if len(check) > 0:
+            raise ValueError("Already added a result for {}.".format(result.model_instance))
+        self._ignored_results.append(result)
+
     def get_result_for_model_instance(self, model_instance):
         results = [x for x in self._model_instance_results if x.model_instance == model_instance]
         if len(results) != 1:
@@ -114,10 +136,19 @@ class AnVILAudit(ABC):
     def get_error_results(self):
         return [x for x in self._model_instance_results if not x.ok()]
 
+    def get_ignored_results(self):
+        return self._ignored_results
+
     def get_not_in_app_results(self):
         return self._not_in_app_results
 
-    def export(self, include_verified=True, include_errors=True, include_not_in_app=True):
+    def export(
+        self,
+        include_verified=True,
+        include_errors=True,
+        include_not_in_app=True,
+        include_ignored=True,
+    ):
         """Return a dictionary representation of the audit results."""
         exported_results = {}
         if include_verified:
@@ -136,4 +167,9 @@ class AnVILAudit(ABC):
             ]
         if include_not_in_app:
             exported_results["not_in_app"] = list(sorted([x.record for x in self.get_not_in_app_results()]))
+        if include_ignored:
+            exported_results["ignored"] = [
+                {"id": result.model_instance.pk, "instance": result.model_instance}
+                for result in self.get_ignored_results()
+            ]
         return exported_results
