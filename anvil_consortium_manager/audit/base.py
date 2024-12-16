@@ -46,14 +46,15 @@ class NotInAppResult:
 class IgnoredResult:
     """Class to hold an audit result for a specific record in an Ignore table."""
 
-    def __init__(self, model_instance):
+    def __init__(self, record, model_instance):
+        self.record = record
         self.model_instance = model_instance
 
     def __eq__(self, other):
-        return self.model_instance == other.model_instance
+        return self.model_instance == other.model_instance and self.record == other.record
 
     def __str__(self):
-        return str(self.model_instance)
+        return str(self.record)
 
 
 # Tables for reporting audit results:
@@ -169,7 +170,7 @@ class AnVILAudit(ABC):
             exported_results["not_in_app"] = list(sorted([x.record for x in self.get_not_in_app_results()]))
         if include_ignored:
             exported_results["ignored"] = [
-                {"id": result.model_instance.pk, "instance": result.model_instance}
+                {"id": result.model_instance.pk, "instance": result.model_instance, "record": result.record}
                 for result in self.get_ignored_results()
             ]
         return exported_results
