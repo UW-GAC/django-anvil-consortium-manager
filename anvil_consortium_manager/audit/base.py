@@ -46,7 +46,7 @@ class NotInAppResult:
 class IgnoredResult:
     """Class to hold an audit result for a specific record in an Ignore table."""
 
-    def __init__(self, record, model_instance):
+    def __init__(self, model_instance, record=None):
         self.record = record
         self.model_instance = model_instance
 

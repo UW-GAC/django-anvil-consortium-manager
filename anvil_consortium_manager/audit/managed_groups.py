@@ -170,7 +170,7 @@ class ManagedGroupMembershipAudit(AnVILAudit):
                 obj = models.IgnoredAuditManagedGroupMembership.objects.get(
                     group=self.managed_group, ignored_email=member
                 )
-                self.add_result(IgnoredResult(record, obj))
+                self.add_result(IgnoredResult(obj, record=record))
             except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
                 self.add_result(NotInAppResult(record))
         # Add any members that the app doesn't know about.
@@ -180,6 +180,6 @@ class ManagedGroupMembershipAudit(AnVILAudit):
                 obj = models.IgnoredAuditManagedGroupMembership.objects.get(
                     group=self.managed_group, ignored_email=member
                 )
-                self.add_result(IgnoredResult(record, obj))
+                self.add_result(IgnoredResult(obj, record=record))
             except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
                 self.add_result(NotInAppResult(record))
