@@ -130,18 +130,12 @@ managed_group_patterns = (
             views.ManagedGroupAutocomplete.as_view(),
             name="autocomplete",
         ),
-        path("audit/", views.ManagedGroupAudit.as_view(), name="audit"),
         path(
             "visualization/",
             views.ManagedGroupVisualization.as_view(),
             name="visualization",
         ),
         path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
-        path(
-            "<slug:slug>/audit/",
-            views.ManagedGroupMembershipAudit.as_view(),
-            name="audit_membership",
-        ),
         path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
@@ -303,10 +297,35 @@ audit_account_patterns = (
     ],
     "accounts",
 )
+audit_managed_group_membership_ignore_patterns = (
+    [
+        # path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+    ],
+    "ignored",
+)
+audit_managed_group_membership_patterns = (
+    [
+        path("ignored/", include(audit_managed_group_membership_ignore_patterns)),
+        path(
+            "membership",
+            views.ManagedGroupMembershipAudit.as_view(),
+            name="all",
+        ),
+    ],
+    "membership",
+)
+audit_managed_group_patterns = (
+    [
+        path("audit/", views.ManagedGroupAudit.as_view(), name="all"),
+        path("<slug:slug>/membership/", include(audit_managed_group_membership_patterns)),
+    ],
+    "managed_groups",
+)
 audit_patterns = (
     [
         path("billing_projects/", include(audit_billing_project_patterns)),
         path("accounts/", include(audit_account_patterns)),
+        path("managed_groups/", include(audit_managed_group_patterns)),
     ],
     "audit",
 )

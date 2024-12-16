@@ -115,7 +115,7 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:audit:billing_projects:all"),
         reverse("anvil_consortium_manager:managed_groups:list"),
         reverse("anvil_consortium_manager:managed_groups:visualization"),
-        reverse("anvil_consortium_manager:managed_groups:audit"),
+        reverse("anvil_consortium_manager:audit:managed_groups:all"),
         reverse("anvil_consortium_manager:workspaces:landing_page"),
         reverse("anvil_consortium_manager:workspaces:list_all"),
         reverse("anvil_consortium_manager:workspaces:audit"),
@@ -133,7 +133,7 @@ class ViewEditUrlTest(TestCase):
     #     reverse("anvil_consortium_manager:managed_groups:member_groups:delete"),
     #     reverse("anvil_consortium_manager:workspaces:sharing:update"),
     #     reverse("anvil_consortium_manager:workspaces:delete"),
-    #     reverse("anvil_consortium_manager:managed_groups:audit_membership"),
+    #     reverse("anvil_consortium_manager:audit:managed_groups:membership:all"),
     #     reverse("anvil_consortium_manager:workspaces:audit_access"),
     # )
 
@@ -6133,7 +6133,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:managed_groups:audit", args=args)
+        return reverse("anvil_consortium_manager:audit:managed_groups:all", args=args)
 
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
@@ -6387,7 +6387,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:managed_groups:audit_membership", args=args)
+        return reverse("anvil_consortium_manager:audit:managed_groups:membership:all", args=args)
 
     def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
