@@ -2345,6 +2345,34 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         record_result = [record_result for record_result in record_results if record_result.model_instance == obj_2][0]
         self.assertEqual(record_result.record, "MEMBER: " + obj_2.ignored_email)
 
+    def test_ignored_still_reports_records_when_email_not_member_of_group(self):
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        group = obj.group
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=api_factories.GetGroupMembershipResponseFactory().response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=api_factories.GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = managed_group_audit.ManagedGroupMembershipAudit(group)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertIsNone(record_result.record)
+
     def test_one_group_member_ignored_case_insensitive(self):
         obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(ignored_email="foo@bar.com")
         group = obj.group
@@ -3090,7 +3118,12 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
-        self.assertEqual(len(audit_results.get_ignored_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_not_in_app_results()[0]
+        self.assertEqual(record_result.record, "ADMIN: foo@bar.com")
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertIsNone(record_result.record)
 
 
 class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):

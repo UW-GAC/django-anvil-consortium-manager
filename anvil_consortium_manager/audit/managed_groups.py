@@ -164,22 +164,24 @@ class ManagedGroupMembershipAudit(AnVILAudit):
             self.add_result(model_instance_result)
 
         # Add any admin that the app doesn't know about.
+        for obj in models.IgnoredAuditManagedGroupMembership.objects.filter(group=self.managed_group):
+            try:
+                admins_in_anvil.remove(obj.ignored_email)
+                record = "{}: {}".format(models.GroupAccountMembership.ADMIN, obj.ignored_email)
+                self.add_result(IgnoredResult(obj, record=record))
+            except ValueError:
+                try:
+                    members_in_anvil.remove(obj.ignored_email)
+                    record = "{}: {}".format(models.GroupAccountMembership.MEMBER, obj.ignored_email)
+                    self.add_result(IgnoredResult(obj, record=record))
+                except ValueError:
+                    # This email is not in the list of members or admins.
+                    self.add_result(IgnoredResult(obj, record=None))
+
         for member in admins_in_anvil:
             record = "{}: {}".format(models.GroupAccountMembership.ADMIN, member)
-            try:
-                obj = models.IgnoredAuditManagedGroupMembership.objects.get(
-                    group=self.managed_group, ignored_email=member
-                )
-                self.add_result(IgnoredResult(obj, record=record))
-            except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
-                self.add_result(NotInAppResult(record))
+            self.add_result(NotInAppResult(record))
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
             record = "{}: {}".format(models.GroupAccountMembership.MEMBER, member)
-            try:
-                obj = models.IgnoredAuditManagedGroupMembership.objects.get(
-                    group=self.managed_group, ignored_email=member
-                )
-                self.add_result(IgnoredResult(obj, record=record))
-            except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
-                self.add_result(NotInAppResult(record))
+            self.add_result(NotInAppResult(record))
