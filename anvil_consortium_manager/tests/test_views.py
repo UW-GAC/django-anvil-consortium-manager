@@ -24,6 +24,7 @@ from .. import __version__, anvil_api, filters, forms, models, tables, views
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..audit import base as audit
+from ..audit.managed_groups import ManagedGroupMembershipIgnoredTable
 from ..tokens import account_verification_token
 from . import factories
 from .test_app import forms as app_forms
@@ -6472,6 +6473,32 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
         self.assertEqual(response.status_code, 200)
+
+    def test_table_classes(self):
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], audit.VerifiedTable)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], audit.ErrorTable)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], audit.NotInAppTable)
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], ManagedGroupMembershipIgnoredTable)
 
     def test_audit_verified(self):
         """audit_verified is in the context data."""
