@@ -69,6 +69,35 @@ class ManagedGroupAudit(base.AnVILAudit):
                 self.add_result(base.NotInAppResult(group_name))
 
 
+class ManagedGroupMembershipNotInAppResult(base.NotInAppResult):
+    """Class to store a not in app audit result for a specific ManagedGroupMembership record."""
+
+    def __init__(self, *args, group=None, email=None, role=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.group = group
+        self.email = email
+        self.role = role
+
+
+class ManagedGroupMembershipNotInAppTable(base.NotInAppTable):
+    group = tables.Column()
+    email = tables.Column()
+    role = tables.Column()
+    ignore = tables.TemplateColumn(
+        template_name="anvil_consortium_manager/snippets/audit_managedgroupmembership_notinapp_ignore_button.html",
+        orderable=False,
+        verbose_name="Ignore?",
+    )
+
+    class Meta:
+        fields = (
+            "group",
+            "email",
+            "role",
+        )
+        exclude = ("record",)
+
+
 class ManagedGroupMembershipIgnoredTable(base.IgnoredTable):
     """A table specific to the IgnoredManagedGroupMembership model."""
 
@@ -106,6 +135,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
     ERROR_GROUP_MEMBER_NOT_IN_ANVIL = "Group not a member in AnVIL"
     """Error when an ManagedGroup is a member of another ManagedGroup on the app, but not in AnVIL."""
 
+    not_in_app_table_class = ManagedGroupMembershipNotInAppTable
     ignored_table_class = ManagedGroupMembershipIgnoredTable
 
     def __init__(self, managed_group, *args, **kwargs):
@@ -202,8 +232,16 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
 
         for member in admins_in_anvil:
             record = "{}: {}".format(models.GroupAccountMembership.ADMIN, member)
-            self.add_result(base.NotInAppResult(record))
+            self.add_result(
+                ManagedGroupMembershipNotInAppResult(
+                    record, group=self.managed_group, email=member, role=models.GroupAccountMembership.ADMIN
+                )
+            )
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
             record = "{}: {}".format(models.GroupAccountMembership.MEMBER, member)
-            self.add_result(base.NotInAppResult(record))
+            self.add_result(
+                ManagedGroupMembershipNotInAppResult(
+                    record, group=self.managed_group, email=member, role=models.GroupAccountMembership.MEMBER
+                )
+            )

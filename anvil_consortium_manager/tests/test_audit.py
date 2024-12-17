@@ -1926,8 +1926,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_ignored_results()), 0)
         # Check individual records.
         record_result = audit_results.get_not_in_app_results()[0]
-        self.assertIsInstance(record_result, base_audit.NotInAppResult)
+        self.assertIsInstance(record_result, managed_group_audit.ManagedGroupMembershipNotInAppResult)
         self.assertEqual(record_result.record, "MEMBER: test-member@example.com")
+        self.assertEqual(record_result.group, group)
+        self.assertEqual(record_result.email, "test-member@example.com")
+        self.assertEqual(record_result.role, "MEMBER")
 
     def test_two_account_members_not_in_app(self):
         """anvil_audit works correctly if this group has two account member not in the app."""
@@ -1957,11 +1960,17 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_ignored_results()), 0)
         # Check individual records.
         record_result = audit_results.get_not_in_app_results()[0]
-        self.assertIsInstance(record_result, base_audit.NotInAppResult)
+        self.assertIsInstance(record_result, managed_group_audit.ManagedGroupMembershipNotInAppResult)
         self.assertEqual(record_result.record, "MEMBER: test-member-1@example.com")
+        self.assertEqual(record_result.group, group)
+        self.assertEqual(record_result.email, "test-member-1@example.com")
+        self.assertEqual(record_result.role, "MEMBER")
         record_result = audit_results.get_not_in_app_results()[1]
-        self.assertIsInstance(record_result, base_audit.NotInAppResult)
+        self.assertIsInstance(record_result, managed_group_audit.ManagedGroupMembershipNotInAppResult)
         self.assertEqual(record_result.record, "MEMBER: test-member-2@example.com")
+        self.assertEqual(record_result.group, group)
+        self.assertEqual(record_result.email, "test-member-2@example.com")
+        self.assertEqual(record_result.role, "MEMBER")
 
     def test_one_account_members_case_insensitive(self):
         """anvil_audit works correctly if this group has one account member not in the app."""
@@ -2153,7 +2162,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         self.assertEqual(len(audit_results.get_ignored_results()), 0)
         record_result = audit_results.get_not_in_app_results()[0]
+        self.assertIsInstance(record_result, managed_group_audit.ManagedGroupMembershipNotInAppResult)
         self.assertEqual(record_result.record, "ADMIN: test-admin@example.com")
+        self.assertEqual(record_result.group, group)
+        self.assertEqual(record_result.email, "test-admin@example.com")
+        self.assertEqual(record_result.role, "ADMIN")
 
     def test_two_account_admin_not_in_app(self):
         """anvil_audit works correctly if this group has two account admin not in the app."""
@@ -2402,7 +2415,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         self.assertEqual(len(audit_results.get_ignored_results()), 0)
         record_result = audit_results.get_not_in_app_results()[0]
+        self.assertIsInstance(record_result, managed_group_audit.ManagedGroupMembershipNotInAppResult)
         self.assertEqual(record_result.record, "MEMBER: test-member@firecloud.org")
+        self.assertEqual(record_result.group, group)
+        self.assertEqual(record_result.email, "test-member@firecloud.org")
+        self.assertEqual(record_result.role, "MEMBER")
 
     def test_two_group_members_not_in_app(self):
         """anvil_audit works correctly if this group has two group member not in the app."""
@@ -2745,7 +2762,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         self.assertEqual(len(audit_results.get_ignored_results()), 0)
         record_result = audit_results.get_not_in_app_results()[0]
+        self.assertIsInstance(record_result, managed_group_audit.ManagedGroupMembershipNotInAppResult)
         self.assertEqual(record_result.record, "ADMIN: test-admin@firecloud.org")
+        self.assertEqual(record_result.group, group)
+        self.assertEqual(record_result.email, "test-admin@firecloud.org")
+        self.assertEqual(record_result.role, "ADMIN")
 
     def test_two_group_admin_not_in_app(self):
         """anvil_audit works correctly if this group has two group admin not in the app."""
