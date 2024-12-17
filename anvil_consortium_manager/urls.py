@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from . import views
+from .auditor import views as auditor_views
 
 app_name = "anvil_consortium_manager"
 
@@ -299,10 +300,10 @@ audit_account_patterns = (
 )
 audit_managed_group_membership_ignore_patterns = (
     [
-        path("<str:email>/", views.IgnoredManagedGroupMembershipDetail.as_view(), name="detail"),
-        path("<str:email>/new/", views.IgnoredManagedGroupMembershipCreate.as_view(), name="new"),
-        path("<str:email>/update/", views.IgnoredManagedGroupMembershipUpdate.as_view(), name="update"),
-        path("<str:email>/delete/", views.IgnoredManagedGroupMembershipDelete.as_view(), name="delete"),
+        path("<str:email>/", auditor_views.IgnoredManagedGroupMembershipDetail.as_view(), name="detail"),
+        path("<str:email>/new/", auditor_views.IgnoredManagedGroupMembershipCreate.as_view(), name="new"),
+        path("<str:email>/update/", auditor_views.IgnoredManagedGroupMembershipUpdate.as_view(), name="update"),
+        path("<str:email>/delete/", auditor_views.IgnoredManagedGroupMembershipDelete.as_view(), name="delete"),
     ],
     "ignored",
 )
