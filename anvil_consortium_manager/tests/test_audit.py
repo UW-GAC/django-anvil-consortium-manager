@@ -99,35 +99,35 @@ class NotInAppResultTest(TestCase):
 class IgnoredResultTest(TestCase):
     def test_init(self):
         """Constructor works as expected."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         result = base_audit.IgnoredResult(obj, record="foo")
         self.assertEqual(result.model_instance, obj)
         self.assertEqual(result.record, "foo")
 
     def test_str(self):
         """__str__ method works as expected."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         result = base_audit.IgnoredResult(obj, record="foo")
         self.assertEqual(str(result), "foo")
 
     def test_eq(self):
         """__eq__ method works as expected when there are no errors."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         result_1 = base_audit.IgnoredResult(obj, record="foo")
         result_2 = base_audit.IgnoredResult(obj, record="foo")
         self.assertEqual(result_1, result_2)
 
     def test_eq_not_equal_obj(self):
         """__eq__ method works as expected when there are no errors."""
-        obj_1 = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj_1 = factories.IgnoredManagedGroupMembershipFactory.create()
         result_1 = base_audit.IgnoredResult(obj_1, record="foo")
-        obj_2 = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj_2 = factories.IgnoredManagedGroupMembershipFactory.create()
         result_2 = base_audit.IgnoredResult(obj_2, record="foo")
         self.assertNotEqual(result_1, result_2)
 
     def test_eq_not_equal_record(self):
         """__eq__ method works as expected when there are no errors."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         result_1 = base_audit.IgnoredResult(obj, record="foo")
         result_2 = base_audit.IgnoredResult(obj, record="bar")
         self.assertNotEqual(result_1, result_2)
@@ -226,7 +226,7 @@ class AnVILAuditTest(TestCase):
     def test_ok_one_ignored(self):
         """ok() returns True when there is one ignored result."""
         self.audit_results.add_result(
-            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create(), "foo"),
+            base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), "foo"),
         )
         self.assertTrue(self.audit_results.ok())
 
@@ -242,9 +242,7 @@ class AnVILAuditTest(TestCase):
 
     def test_add_result_ignored(self):
         """Can add an IgnoredResult."""
-        ignored_result = base_audit.IgnoredResult(
-            factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foo"
-        )
+        ignored_result = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="foo")
         self.audit_results.add_result(ignored_result)
         self.assertEqual(len(self.audit_results._ignored_results), 1)
 
@@ -273,16 +271,14 @@ class AnVILAuditTest(TestCase):
 
     def test_add_result_ignored_duplicate(self):
         """Can add an IgnoredResult."""
-        ignored_result = base_audit.IgnoredResult(
-            factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foo"
-        )
+        ignored_result = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="foo")
         self.audit_results.add_result(ignored_result)
         with self.assertRaises(ValueError):
             self.audit_results.add_result(ignored_result)
 
     def test_add_result_ignored_equal(self):
         """Can add an IgnoredResult."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         ignored_result_1 = base_audit.IgnoredResult(obj, record="foo")
         ignored_result_2 = base_audit.IgnoredResult(obj, record="foo")
         self.audit_results.add_result(ignored_result_1)
@@ -375,7 +371,7 @@ class AnVILAuditTest(TestCase):
     def test_get_verified_results_one_ignored_result(self):
         """get_verified_results returns a list of lenght zero when there is one ignored result."""
         self.audit_results.add_result(
-            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foo")
+            base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="foo")
         )
         self.assertEqual(len(self.audit_results.get_verified_results()), 0)
 
@@ -417,7 +413,7 @@ class AnVILAuditTest(TestCase):
     def test_get_error_results_one_ignored_result(self):
         """get_verified_results returns a list of lenght zero when there is one ignored result."""
         self.audit_results.add_result(
-            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foo")
+            base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="foo")
         )
         self.assertEqual(len(self.audit_results.get_error_results()), 0)
 
@@ -458,7 +454,7 @@ class AnVILAuditTest(TestCase):
     def test_get_not_in_app_results_one_ignored_result(self):
         """get_verified_results returns a list of lenght zero when there is one ignored result."""
         self.audit_results.add_result(
-            base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foo")
+            base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="foo")
         )
         self.assertEqual(len(self.audit_results.get_not_in_app_results()), 0)
 
@@ -468,16 +464,16 @@ class AnVILAuditTest(TestCase):
 
     def test_get_ignored_results_one_result(self):
         """get_ignored_results returns a list when there is one result."""
-        result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foo")
+        result = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="foo")
         self.audit_results.add_result(result)
         self.assertEqual(len(self.audit_results.get_ignored_results()), 1)
         self.assertIn(result, self.audit_results.get_ignored_results())
 
     def test_get_ignored_results_two_results(self):
         """get_ignored_results returns a list of lenght two when there are two verified results."""
-        result_1 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foo")
+        result_1 = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="foo")
         self.audit_results.add_result(result_1)
-        result_2 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="bar")
+        result_2 = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create(), record="bar")
         self.audit_results.add_result(result_2)
         self.assertEqual(len(self.audit_results.get_ignored_results()), 2)
         self.assertIn(result_1, self.audit_results.get_ignored_results())
@@ -621,16 +617,16 @@ class AnVILAuditTest(TestCase):
         self.assertEqual(len(table.rows), 0)
 
     def test_get_ignored_table_one_result(self):
-        result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        result = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create())
         self.audit_results.add_result(result)
         table = self.audit_results.get_ignored_table()
         self.assertEqual(len(table.rows), 1)
         self.assertIn(result, table.data)
 
     def test_get_ignored_table_two_results(self):
-        result_1 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        result_1 = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create())
         self.audit_results.add_result(result_1)
-        result_2 = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        result_2 = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create())
         self.audit_results.add_result(result_2)
         table = self.audit_results.get_ignored_table()
         self.assertEqual(len(table.rows), 2)
@@ -645,7 +641,7 @@ class AnVILAuditTest(TestCase):
             ignored_table_class = CustomTable
 
         audit_results = CustomAudit()
-        result = base_audit.IgnoredResult(factories.IgnoredAuditManagedGroupMembershipFactory.create())
+        result = base_audit.IgnoredResult(factories.IgnoredManagedGroupMembershipFactory.create())
         audit_results.add_result(result)
         table = audit_results.get_ignored_table()
         self.assertIsInstance(table, CustomTable)
@@ -665,7 +661,7 @@ class AnVILAuditTest(TestCase):
         self.audit_results.add_result(not_in_app_result)
         # Ignored result
         ignored_result = base_audit.IgnoredResult(
-            factories.IgnoredAuditManagedGroupMembershipFactory.create(), record="foobar"
+            factories.IgnoredManagedGroupMembershipFactory.create(), record="foobar"
         )
         self.audit_results.add_result(ignored_result)
         # Check export.
@@ -2454,7 +2450,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_one_group_members_ignored(self):
         """anvil_audit works correctly if this group has one ignored group member."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         group = obj.group
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -2484,8 +2480,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_two_group_members_ignored(self):
         """anvil_audit works correctly if this group has two ignored group members."""
         group = factories.ManagedGroupFactory.create()
-        obj_1 = factories.IgnoredAuditManagedGroupMembershipFactory.create(group=group)
-        obj_2 = factories.IgnoredAuditManagedGroupMembershipFactory.create(group=group)
+        obj_1 = factories.IgnoredManagedGroupMembershipFactory.create(group=group)
+        obj_2 = factories.IgnoredManagedGroupMembershipFactory.create(group=group)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -2516,7 +2512,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(record_result.record, "MEMBER: " + obj_2.ignored_email)
 
     def test_ignored_still_reports_records_when_email_not_member_of_group(self):
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         group = obj.group
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -2544,7 +2540,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsNone(record_result.record)
 
     def test_one_group_member_ignored_case_insensitive(self):
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(ignored_email="foo@bar.com")
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo@bar.com")
         group = obj.group
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -2801,7 +2797,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_one_group_admin_ignored(self):
         """anvil_audit works correctly if this group has one ignored group member."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         group = obj.group
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -2829,8 +2825,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_two_group_admins_ignored(self):
         group = factories.ManagedGroupFactory.create()
-        obj_1 = factories.IgnoredAuditManagedGroupMembershipFactory.create(group=group)
-        obj_2 = factories.IgnoredAuditManagedGroupMembershipFactory.create(group=group)
+        obj_1 = factories.IgnoredManagedGroupMembershipFactory.create(group=group)
+        obj_2 = factories.IgnoredManagedGroupMembershipFactory.create(group=group)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -2859,7 +2855,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(obj_2, [record_result.model_instance for record_result in record_results])
 
     def test_one_group_admin_ignored_case_insensitive(self):
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(ignored_email="foo@bar.com")
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo@bar.com")
         group = obj.group
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -3244,7 +3240,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         """This email is ignored for a different group."""
         group = factories.ManagedGroupFactory.create()
         # Create an ignored record for this email, but a different group.
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -3270,7 +3266,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
     def test_ignored_different_email_same_group(self):
         """A different email is ignored for a this group."""
         # Create an ignored record for this email, but a different group.
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         group = obj.group
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(

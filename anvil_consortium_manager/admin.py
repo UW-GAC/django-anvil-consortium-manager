@@ -154,9 +154,9 @@ class WorkspaceGroupSharingAdmin(SimpleHistoryAdmin):
     )
 
 
-@admin.register(models.IgnoredAuditManagedGroupMembership)
-class IgnoredAuditManagedGroupMembershipAdmin(SimpleHistoryAdmin):
-    """Admin class for the IgnoredAuditManagedGroupMembership model."""
+@admin.register(models.IgnoredManagedGroupMembership)
+class IgnoredManagedGroupMembershipAdmin(SimpleHistoryAdmin):
+    """Admin class for the IgnoredManagedGroupMembership model."""
 
     list_display = (
         "pk",

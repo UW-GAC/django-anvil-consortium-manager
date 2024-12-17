@@ -1177,7 +1177,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
         AnVILAPIClient().update_workspace_acl(self.workspace.billing_project.name, self.workspace.name, acl_updates)
 
 
-class IgnoredAuditManagedGroupMembership(TimeStampedModel):
+class IgnoredManagedGroupMembership(TimeStampedModel):
     """A model to store audit records that can be ignored during a ManagedGroupMembership audit.
 
     Right now this model is intended to track "not in app" records that can be ignored."""

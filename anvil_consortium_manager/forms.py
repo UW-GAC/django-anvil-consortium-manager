@@ -335,8 +335,8 @@ class WorkspaceGroupSharingForm(Bootstrap5MediaFormMixin, forms.ModelForm):
         }
 
 
-class IgnoredAuditManagedGroupMembershipForm(Bootstrap5MediaFormMixin, forms.ModelForm):
-    """Form for the IgnoredAuditManagedGroupMembership model."""
+class IgnoredManagedGroupMembershipForm(Bootstrap5MediaFormMixin, forms.ModelForm):
+    """Form for the IgnoredManagedGroupMembership model."""
 
     group = forms.ModelChoiceField(
         queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
@@ -351,7 +351,7 @@ class IgnoredAuditManagedGroupMembershipForm(Bootstrap5MediaFormMixin, forms.Mod
     )
 
     class Meta:
-        model = models.IgnoredAuditManagedGroupMembership
+        model = models.IgnoredManagedGroupMembership
         fields = (
             "group",
             "ignored_email",

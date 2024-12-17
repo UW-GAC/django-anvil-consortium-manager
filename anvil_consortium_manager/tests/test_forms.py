@@ -1016,10 +1016,10 @@ class WorkspaceGroupSharingFormTest(TestCase):
         self.assertIn("compute privileges", form.errors["__all__"][0])
 
 
-class IgnoredAuditManagedGroupMembershipForm(TestCase):
-    """Tests for the IgnoredAuditManagedGroupMembershipForm class."""
+class IgnoredManagedGroupMembershipForm(TestCase):
+    """Tests for the IgnoredManagedGroupMembershipForm class."""
 
-    form_class = forms.IgnoredAuditManagedGroupMembershipForm
+    form_class = forms.IgnoredManagedGroupMembershipForm
 
     def setUp(self):
         """Create a group and account for use in tests."""
@@ -1079,7 +1079,7 @@ class IgnoredAuditManagedGroupMembershipForm(TestCase):
 
     def test_invalid_duplicate(self):
         """Form is invalid with a duplicated instance."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(group=self.group)
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
         form_data = {
             "group": obj.group,
             "ignored_email": obj.ignored_email,

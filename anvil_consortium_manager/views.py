@@ -935,10 +935,10 @@ class ManagedGroupMembershipAudit(
         return managed_group_audit.ManagedGroupMembershipAudit(self.object)
 
 
-class IgnoredAuditManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
-    """View to display the details of an IgnoredAuditManagedGroupMembership."""
+class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
+    """View to display the details of an IgnoredManagedGroupMembership."""
 
-    model = models.IgnoredAuditManagedGroupMembership
+    model = models.IgnoredManagedGroupMembership
     template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_detail.html"
 
     def get_object(self, queryset=None):
@@ -959,13 +959,13 @@ class IgnoredAuditManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffV
         return obj
 
 
-class IgnoredAuditManagedGroupMembershipCreate(
+class IgnoredManagedGroupMembershipCreate(
     auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView
 ):
-    """View to create a new IgnoredAuditManagedGroupMembership."""
+    """View to create a new IgnoredManagedGroupMembership."""
 
-    model = models.IgnoredAuditManagedGroupMembership
-    form_class = forms.IgnoredAuditManagedGroupMembershipForm
+    model = models.IgnoredManagedGroupMembership
+    form_class = forms.IgnoredManagedGroupMembershipForm
     template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_form.html"
     message_already_exists = "Record already exists for this group and email."
     success_message = "Successfully ignored managed group membership."
@@ -985,20 +985,20 @@ class IgnoredAuditManagedGroupMembershipCreate(
         self.group = self.get_group()
         self.email = self.get_email()
         try:
-            obj = models.IgnoredAuditManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
+            obj = models.IgnoredManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
-        except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
+        except models.IgnoredManagedGroupMembership.DoesNotExist:
             return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.group = self.get_group()
         self.email = self.get_email()
         try:
-            obj = models.IgnoredAuditManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
+            obj = models.IgnoredManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
-        except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
+        except models.IgnoredManagedGroupMembership.DoesNotExist:
             return super().post(request, *args, **kwargs)
 
     def get_initial(self):
@@ -1026,12 +1026,12 @@ class IgnoredAuditManagedGroupMembershipCreate(
         return super().form_valid(form)
 
 
-class IgnoredAuditManagedGroupMembershipUpdate(
+class IgnoredManagedGroupMembershipUpdate(
     auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView
 ):
-    """View to update an existing IgnoredAuditManagedGroupMembership."""
+    """View to update an existing IgnoredManagedGroupMembership."""
 
-    model = models.IgnoredAuditManagedGroupMembership
+    model = models.IgnoredManagedGroupMembership
     fields = ("note",)
     template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_form.html"
     success_message = "Successfully updated ignored record."
@@ -1059,10 +1059,10 @@ class IgnoredAuditManagedGroupMembershipUpdate(
         return context
 
 
-class IgnoredAuditManagedGroupMembershipDelete(
+class IgnoredManagedGroupMembershipDelete(
     auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView
 ):
-    model = models.IgnoredAuditManagedGroupMembership
+    model = models.IgnoredManagedGroupMembership
     success_message = "Successfully stopped ignoring managed group membership record."
 
     def get_object(self, queryset=None):

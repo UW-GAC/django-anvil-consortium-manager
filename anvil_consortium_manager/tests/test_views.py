@@ -6680,7 +6680,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_one_ignored_record(self):
         """ignored_table with one ignored record."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(group=self.group)
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -6703,7 +6703,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_audit_one_ignored_record_not_in_anvil(self):
         """The ignored record is not a group member in AnVIL."""
-        factories.IgnoredAuditManagedGroupMembershipFactory.create(group=self.group)
+        factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -6789,8 +6789,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             self.get_view()(request, slug="foo")
 
 
-class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
-    """Tests for the IgnoredAuditManagedGroupMembershipDetail view."""
+class IgnoredManagedGroupMembershipDetailTest(TestCase):
+    """Tests for the IgnoredManagedGroupMembershipDetail view."""
 
     def setUp(self):
         """Set up test class."""
@@ -6807,7 +6807,7 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.IgnoredAuditManagedGroupMembershipDetail.as_view()
+        return views.IgnoredManagedGroupMembershipDetail.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -6820,7 +6820,7 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
@@ -6853,7 +6853,7 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
 
     def test_invalid_obj_different_group(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         request = self.factory.get(self.get_url("foo", obj.ignored_email))
         request.user = self.user
         with self.assertRaises(Http404):
@@ -6861,7 +6861,7 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
 
     def test_invalid_obj_different_email(self):
         """Raises a 404 error with an invalid object pk."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         email = fake.email()
         request = self.factory.get(self.get_url(obj.group.name, email))
         request.user = self.user
@@ -6870,7 +6870,7 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
 
     def test_detail_page_links_staff_view(self):
         """Links to other object detail pages appear correctly when user has staff view permission."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
@@ -6897,7 +6897,7 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
         user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(user)
         response = self.client.get(obj.get_absolute_url())
         html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
@@ -6925,14 +6925,14 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
         UserModel = get_user_model()
         setattr(UserModel, "get_absolute_url", foo)
         user = UserModel.objects.create(username="testuser2", password="testpassword")
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(added_by=user)
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(added_by=user)
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, user.get_absolute_url())
 
 
-class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
-    """Tests for the IgnoredAuditManagedGroupMembershipCreate view."""
+class IgnoredManagedGroupMembershipCreateTest(TestCase):
+    """Tests for the IgnoredManagedGroupMembershipCreate view."""
 
     def setUp(self):
         """Set up test class."""
@@ -6955,7 +6955,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.IgnoredAuditManagedGroupMembershipCreate.as_view()
+        return views.IgnoredManagedGroupMembershipCreate.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -7007,7 +7007,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name, fake.email()))
         self.assertTrue("form" in response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.IgnoredAuditManagedGroupMembershipForm)
+        self.assertIsInstance(response.context_data["form"], forms.IgnoredManagedGroupMembershipForm)
 
     def test_context_group(self):
         """Context contains the group."""
@@ -7051,8 +7051,8 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
             {"group": self.group.pk, "ignored_email": "my@email.com", "note": "foo bar"},
         )
         self.assertEqual(response.status_code, 302)
-        new_object = models.IgnoredAuditManagedGroupMembership.objects.latest("pk")
-        self.assertIsInstance(new_object, models.IgnoredAuditManagedGroupMembership)
+        new_object = models.IgnoredManagedGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.IgnoredManagedGroupMembership)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.ignored_email, "my@email.com")
         self.assertEqual(new_object.note, "foo bar")
@@ -7073,7 +7073,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         )
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.IgnoredAuditManagedGroupMembershipCreate.success_message, str(messages[0]))
+        self.assertEqual(views.IgnoredManagedGroupMembershipCreate.success_message, str(messages[0]))
 
     def test_success_redirect(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -7088,12 +7088,12 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
                 "note": fake.sentence(),
             },
         )
-        obj = models.IgnoredAuditManagedGroupMembership.objects.latest("pk")
+        obj = models.IgnoredManagedGroupMembership.objects.latest("pk")
         self.assertRedirects(response, obj.get_absolute_url())
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create a second object for the same group and email."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(note="original note")
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, obj.ignored_email),
@@ -7105,8 +7105,8 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         # import ipdb; ipdb.set_trace()
         self.assertIn("already exists", form.non_field_errors()[0])
         self.assertQuerySetEqual(
-            models.IgnoredAuditManagedGroupMembership.objects.all(),
-            models.IgnoredAuditManagedGroupMembership.objects.filter(pk=obj.pk),
+            models.IgnoredManagedGroupMembership.objects.all(),
+            models.IgnoredManagedGroupMembership.objects.filter(pk=obj.pk),
         )
         obj.refresh_from_db()
         self.assertEqual(obj.note, "original note")
@@ -7116,7 +7116,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url("foo", "test@eaxmple.com"))
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
     def test_post_group_not_found(self):
         """Raises 404 if group in URL does not exist when posting data."""
@@ -7130,7 +7130,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
             },
         )
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
     def test_group_not_managed_by_app(self):
         """Form is not valid if the group is not managed by the app."""
@@ -7151,7 +7151,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.assertIn("group", form.errors)
         self.assertEqual(len(form.errors["group"]), 1)
         self.assertIn("valid choice", form.errors["group"][0])
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
     def test_invalid_input_email(self):
         """Posting invalid data to role field does not create an object."""
@@ -7170,7 +7170,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.assertIn("ignored_email", form.errors.keys())
         self.assertEqual(len(form.errors["ignored_email"]), 1)
         self.assertIn("valid email", form.errors["ignored_email"][0])
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
@@ -7185,7 +7185,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.assertIn("required", form.errors["ignored_email"][0])
         self.assertIn("note", form.errors.keys())
         self.assertIn("required", form.errors["note"][0])
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
     def test_post_blank_data_group(self):
         """Posting blank data to the group field does not create an object."""
@@ -7203,7 +7203,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("group", form.errors.keys())
         self.assertIn("required", form.errors["group"][0])
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
     def test_post_blank_data_email(self):
         """Posting blank data to the account field does not create an object."""
@@ -7222,7 +7222,7 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("ignored_email", form.errors.keys())
         self.assertIn("required", form.errors["ignored_email"][0])
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
     def test_post_blank_data_note(self):
         """Posting blank data to the note field does not create an object."""
@@ -7241,10 +7241,10 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("note", form.errors.keys())
         self.assertIn("required", form.errors["note"][0])
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
 
-class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
+class IgnoredManagedGroupMembershipDeleteTest(TestCase):
     def setUp(self):
         """Set up test class."""
         super().setUp()
@@ -7264,7 +7264,7 @@ class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.IgnoredAuditManagedGroupMembershipDelete.as_view()
+        return views.IgnoredManagedGroupMembershipDelete.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -7274,7 +7274,7 @@ class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.group, obj.ignored_email))
         self.assertEqual(response.status_code, 200)
@@ -7318,7 +7318,7 @@ class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
         self.assertEqual(response.status_code, 302)
@@ -7329,21 +7329,21 @@ class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""}, follow=True)
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.IgnoredAuditManagedGroupMembershipDelete.success_message, str(messages[0]))
+        self.assertEqual(views.IgnoredManagedGroupMembershipDelete.success_message, str(messages[0]))
 
     def test_only_deletes_specified_pk(self):
         """View only deletes the specified pk."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
-        other_obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
+        other_obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 1)
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 1)
         self.assertQuerySetEqual(
             models.Account.objects.all(),
             models.Account.objects.filter(pk=other_obj.pk),
@@ -7351,7 +7351,7 @@ class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
 
     def test_success_url(self):
         """Redirects to the expected page."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         # Need to use the client instead of RequestFactory to check redirection url.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
@@ -7359,7 +7359,7 @@ class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
         self.assertRedirects(response, obj.group.get_absolute_url())
 
 
-class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
+class IgnoredManagedGroupMembershipUpdateTest(TestCase):
     def setUp(self):
         """Set up test class."""
         super().setUp()
@@ -7379,7 +7379,7 @@ class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.IgnoredAuditManagedGroupMembershipUpdate.as_view()
+        return views.IgnoredManagedGroupMembershipUpdate.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -7389,7 +7389,7 @@ class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.group.name, obj.ignored_email))
         self.assertEqual(response.status_code, 200)
@@ -7433,7 +7433,7 @@ class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
 
     def test_has_form_in_context(self):
         """Response includes a form."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.group.name, obj.ignored_email))
         self.assertTrue("form" in response.context_data)
@@ -7441,7 +7441,7 @@ class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
 
     def test_can_modify_note(self):
         """Can set the note when creating a billing project."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(note="original note")
         # Need a client for messages.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": "new note"})
@@ -7451,23 +7451,23 @@ class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": "new note"}, follow=True)
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.IgnoredAuditManagedGroupMembershipUpdate.success_message, str(messages[0]))
+        self.assertEqual(views.IgnoredManagedGroupMembershipUpdate.success_message, str(messages[0]))
 
     def test_redirects_to_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
         # This needs to use the client because the RequestFactory doesn't handle redirects.
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": "new note"})
         self.assertRedirects(response, obj.get_absolute_url())
 
     def test_missing_note(self):
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(note="original note")
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {})
         self.assertEqual(response.status_code, 200)
@@ -7481,7 +7481,7 @@ class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
         self.assertEqual(obj.note, "original note")
 
     def test_blank_note(self):
-        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(note="original note")
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": ""})
         self.assertEqual(response.status_code, 200)

@@ -157,7 +157,7 @@ class WorkspaceGroupSharingFactory(DjangoModelFactory):
         django_get_or_create = ["workspace", "group"]
 
 
-class IgnoredAuditManagedGroupMembershipFactory(DjangoModelFactory):
+class IgnoredManagedGroupMembershipFactory(DjangoModelFactory):
     """A factory for the Account model."""
 
     group = SubFactory(ManagedGroupFactory)
@@ -166,4 +166,4 @@ class IgnoredAuditManagedGroupMembershipFactory(DjangoModelFactory):
     note = Faker("sentence")
 
     class Meta:
-        model = models.IgnoredAuditManagedGroupMembership
+        model = models.IgnoredManagedGroupMembership
