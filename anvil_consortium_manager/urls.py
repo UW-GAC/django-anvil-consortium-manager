@@ -299,7 +299,7 @@ audit_account_patterns = (
 )
 audit_managed_group_membership_ignore_patterns = (
     [
-        # path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+        path("<str:email>/", views.IgnoredAuditManagedGroupMembershipDetail.as_view(), name="detail"),
     ],
     "ignored",
 )
@@ -307,7 +307,7 @@ audit_managed_group_membership_patterns = (
     [
         path("ignored/", include(audit_managed_group_membership_ignore_patterns)),
         path(
-            "membership",
+            "",
             views.ManagedGroupMembershipAudit.as_view(),
             name="all",
         ),

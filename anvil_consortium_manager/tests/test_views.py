@@ -6765,6 +6765,121 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             self.get_view()(request, slug="foo")
 
 
+class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
+    """Tests for the IgnoredAuditManagedGroupMembershipDetail view."""
+
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:detail", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredAuditManagedGroupMembershipDetail.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar@example.com"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar@example.com"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar@example.com"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo1", "bar@example.com"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_invalid_obj(self):
+        """Raises a 404 error with an invalid object pk."""
+        request = self.factory.get(self.get_url("foo1", "bar@example.com"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_invalid_obj_different_group(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        request = self.factory.get(self.get_url("foo", obj.ignored_email))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_invalid_obj_different_email(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        email = fake.email()
+        request = self.factory.get(self.get_url(obj.group.name, email))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_detail_page_links_staff_view(self):
+        """Links to other object detail pages appear correctly when user has staff view permission."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
+        self.assertContains(response, html)
+        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        self.fail("need to create other pages and add links")
+
+    def test_detail_page_links_staff_edit(self):
+        """Links to other object detail pages appear correctly when user has staff edit permission."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
+        self.assertContains(response, html)
+        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        self.fail("need to create other pages and add links")
+
+    def test_detail_page_links_user_get_absolute_url(self):
+        """HTML includes a link to the user profile when the added_by user has a get_absolute_url method."""
+
+        # Dynamically set the get_absolute_url method. This is hacky...
+        def foo(self):
+            return "test_profile_{}".format(self.username)
+
+        UserModel = get_user_model()
+        setattr(UserModel, "get_absolute_url", foo)
+        user = UserModel.objects.create(username="testuser2", password="testpassword")
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(added_by=user)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, user.get_absolute_url())
+
+
 class ManagedGroupVisualizationTest(TestCase):
     def setUp(self):
         """Set up test class."""

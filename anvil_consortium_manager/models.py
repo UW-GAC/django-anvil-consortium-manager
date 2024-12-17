@@ -1200,3 +1200,16 @@ class IgnoredAuditManagedGroupMembership(TimeStampedModel):
         """Save method to set the email address to lowercase before saving."""
         self.ignored_email = self.ignored_email.lower()
         return super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        """Get the absolute url for this object.
+
+        Returns:
+            str: The absolute url for the object."""
+        return reverse(
+            "anvil_consortium_manager:audit:managed_groups:membership:ignored:detail",
+            kwargs={
+                "slug": self.group.name,
+                "email": self.ignored_email,
+            },
+        )

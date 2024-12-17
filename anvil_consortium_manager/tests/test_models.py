@@ -2560,6 +2560,11 @@ class IgnoredAuditManagedGroupMembershipTest(TestCase):
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "foo membership: ignoring email@example.com")
 
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.IgnoredAuditManagedGroupMembershipFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
+
     def test_history(self):
         """A simple history record is created when model is updated."""
         obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
