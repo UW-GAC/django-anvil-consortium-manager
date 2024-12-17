@@ -23,6 +23,7 @@ from .audit import accounts as account_audit
 from .audit import billing_projects as billing_project_audit
 from .audit import managed_groups as managed_group_audit
 from .audit import workspaces as workspace_audit
+from .auditor.forms import IgnoredManagedGroupMembershipForm
 from .auditor.models import IgnoredManagedGroupMembership
 from .tokens import account_verification_token
 
@@ -966,7 +967,7 @@ class IgnoredManagedGroupMembershipCreate(
     """View to create a new IgnoredManagedGroupMembership."""
 
     model = IgnoredManagedGroupMembership
-    form_class = forms.IgnoredManagedGroupMembershipForm
+    form_class = IgnoredManagedGroupMembershipForm
     template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_form.html"
     message_already_exists = "Record already exists for this group and email."
     success_message = "Successfully ignored managed group membership."
