@@ -962,6 +962,73 @@ class IgnoredAuditManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffV
         return obj
 
 
+class IgnoredAuditManagedGroupMembershipCreate(
+    auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView
+):
+    """View to create a new IgnoredAuditManagedGroupMembership."""
+
+    model = models.IgnoredAuditManagedGroupMembership
+    form_class = forms.IgnoredAuditManagedGroupMembershipForm
+    template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_form.html"
+    message_already_exists = "Record already exists for this group and email."
+    success_message = "Successfully ignored managed group membership."
+
+    def get_group(self):
+        try:
+            name = self.kwargs["slug"]
+            group = models.ManagedGroup.objects.get(name=name)
+        except models.ManagedGroup.DoesNotExist:
+            raise Http404("ManagedGroup not found.")
+        return group
+
+    def get_email(self):
+        return self.kwargs["email"]
+
+    def get(self, request, *args, **kwargs):
+        self.group = self.get_group()
+        self.email = self.get_email()
+        try:
+            obj = models.IgnoredAuditManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
+            return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.group = self.get_group()
+        self.email = self.get_email()
+        try:
+            obj = models.IgnoredAuditManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.IgnoredAuditManagedGroupMembership.DoesNotExist:
+            return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["group"] = self.group
+        initial["ignored_email"] = self.email
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["group"].widget = HiddenInput()
+        form.fields["ignored_email"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["group"] = self.group
+        context["email"] = self.email
+        return context
+
+    def form_valid(self, form):
+        """If the form is valid, save the associated model."""
+        form.instance.added_by = self.request.user
+        return super().form_valid(form)
+
+
 class WorkspaceLandingPage(
     auth.AnVILConsortiumManagerViewRequired,
     viewmixins.RegisteredWorkspaceAdaptersMixin,

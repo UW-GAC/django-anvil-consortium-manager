@@ -6880,6 +6880,319 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
         self.assertContains(response, user.get_absolute_url())
 
 
+class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
+    """Tests for the IgnoredAuditManagedGroupMembershipCreate view."""
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
+        self.group = factories.ManagedGroupFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:new", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredAuditManagedGroupMembershipCreate.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar@example.com"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar@example.com"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, "foo@bar.com"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar@example.com"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar@example.com"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo", "bar@example.com"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, fake.email()))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.IgnoredAuditManagedGroupMembershipForm)
+
+    def test_context_group(self):
+        """Context contains the group."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, fake.email()))
+        self.assertTrue("group" in response.context_data)
+        self.assertEqual(response.context_data["group"], self.group)
+
+    def test_context_email(self):
+        """Context contains the email."""
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, email))
+        self.assertTrue("email" in response.context_data)
+        self.assertEqual(response.context_data["email"], email)
+
+    def test_form_hidden_input(self):
+        """The proper inputs are hidden in the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, fake.email()))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"].fields["group"].widget, HiddenInput)
+        self.assertIsInstance(response.context_data["form"].fields["ignored_email"].widget, HiddenInput)
+
+    def test_get_initial(self):
+        """Initial data is set correctly."""
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name, email))
+        initial = response.context_data["form"].initial
+        self.assertIn("group", initial)
+        self.assertEqual(self.group, initial["group"])
+        self.assertIn("ignored_email", initial)
+        self.assertEqual(email, initial["ignored_email"])
+
+    def test_can_create_an_object(self):
+        """Posting valid data to the form creates an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, "my@email.com"),
+            {"group": self.group.pk, "ignored_email": "my@email.com", "note": "foo bar"},
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.IgnoredAuditManagedGroupMembership.objects.latest("pk")
+        self.assertIsInstance(new_object, models.IgnoredAuditManagedGroupMembership)
+        self.assertEqual(new_object.group, self.group)
+        self.assertEqual(new_object.ignored_email, "my@email.com")
+        self.assertEqual(new_object.note, "foo bar")
+        self.assertEqual(new_object.added_by, self.user)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, email),
+            {
+                "group": self.group.pk,
+                "ignored_email": email,
+                "note": fake.sentence(),
+            },
+            follow=True,
+        )
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.IgnoredAuditManagedGroupMembershipCreate.success_message, str(messages[0]))
+
+    def test_success_redirect(self):
+        """After successfully creating an object, view redirects to the model's list view."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, email),
+            {
+                "group": self.group.pk,
+                "ignored_email": email,
+                "note": fake.sentence(),
+            },
+        )
+        obj = models.IgnoredAuditManagedGroupMembership.objects.latest("pk")
+        self.assertRedirects(response, obj.get_absolute_url())
+
+    def test_cannot_create_duplicate_object(self):
+        """Cannot create a second object for the same group and email."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, obj.ignored_email),
+            {"group": obj.group.pk, "ignored_email": obj.ignored_email, "note": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        # import ipdb; ipdb.set_trace()
+        self.assertIn("already exists", form.non_field_errors()[0])
+        self.assertQuerySetEqual(
+            models.IgnoredAuditManagedGroupMembership.objects.all(),
+            models.IgnoredAuditManagedGroupMembership.objects.filter(pk=obj.pk),
+        )
+        obj.refresh_from_db()
+        self.assertEqual(obj.note, "original note")
+
+    def test_get_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url("foo", "test@eaxmple.com"))
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+    def test_post_group_not_found(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url("foo", "test@eaxmple.com"),
+            {
+                "group": "foo",
+                "ignored_email": "test@example.com",
+                "note": "a note",
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+    def test_group_not_managed_by_app(self):
+        """Form is not valid if the group is not managed by the app."""
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name, "test@example.com"),
+            {
+                "group": group.pk,
+                "ignored_email": "test@example.com",
+                "note": " a note",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("group", form.errors)
+        self.assertEqual(len(form.errors["group"]), 1)
+        self.assertIn("valid choice", form.errors["group"][0])
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+    def test_invalid_input_email(self):
+        """Posting invalid data to role field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, "foo"),
+            {
+                "group": self.group.pk,
+                "ignored_email": "foo",
+                "note": "bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("ignored_email", form.errors.keys())
+        self.assertEqual(len(form.errors["ignored_email"]), 1)
+        self.assertIn("valid email", form.errors["ignored_email"][0])
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(self.group.name, "foo@bar.com"), {})
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors.keys())
+        self.assertIn("required", form.errors["group"][0])
+        self.assertIn("ignored_email", form.errors.keys())
+        self.assertIn("required", form.errors["ignored_email"][0])
+        self.assertIn("note", form.errors.keys())
+        self.assertIn("required", form.errors["note"][0])
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_group(self):
+        """Posting blank data to the group field does not create an object."""
+        email = fake.email(0)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, email),
+            {
+                "ignored_email": email,
+                "note": "foo bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("group", form.errors.keys())
+        self.assertIn("required", form.errors["group"][0])
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_email(self):
+        """Posting blank data to the account field does not create an object."""
+        email = fake.email(0)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, email),
+            {
+                "group": self.group.pk,
+                # "ignored_email": email,
+                "note": "foo bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("ignored_email", form.errors.keys())
+        self.assertIn("required", form.errors["ignored_email"][0])
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+    def test_post_blank_data_note(self):
+        """Posting blank data to the note field does not create an object."""
+        email = fake.email(0)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.group.name, email),
+            {
+                "group": self.group.pk,
+                "ignored_email": email,
+                # "note": "foo bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("note", form.errors.keys())
+        self.assertIn("required", form.errors["note"][0])
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
+
+
 class ManagedGroupVisualizationTest(TestCase):
     def setUp(self):
         """Set up test class."""

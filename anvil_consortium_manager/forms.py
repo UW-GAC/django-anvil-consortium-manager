@@ -333,3 +333,27 @@ class WorkspaceGroupSharingForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                 attrs={"data-theme": "bootstrap-5"},
             ),
         }
+
+
+class IgnoredAuditManagedGroupMembershipForm(Bootstrap5MediaFormMixin, forms.ModelForm):
+    """Form for the IgnoredAuditManagedGroupMembership model."""
+
+    group = forms.ModelChoiceField(
+        queryset=models.ManagedGroup.objects.filter(is_managed_by_app=True),
+        help_text="Only groups managed by this app can be selected.",
+        widget=autocomplete.ModelSelect2(
+            url="anvil_consortium_manager:managed_groups:autocomplete",
+            attrs={
+                "data-theme": "bootstrap-5",
+            },
+            forward=(forward.Const(True, "only_managed_by_app"),),
+        ),
+    )
+
+    class Meta:
+        model = models.IgnoredAuditManagedGroupMembership
+        fields = (
+            "group",
+            "ignored_email",
+            "note",
+        )
