@@ -301,6 +301,7 @@ audit_managed_group_membership_ignore_patterns = (
     [
         path("<str:email>/", views.IgnoredAuditManagedGroupMembershipDetail.as_view(), name="detail"),
         path("<str:email>/new/", views.IgnoredAuditManagedGroupMembershipCreate.as_view(), name="new"),
+        path("<str:email>/delete/", views.IgnoredAuditManagedGroupMembershipDelete.as_view(), name="delete"),
     ],
     "ignored",
 )

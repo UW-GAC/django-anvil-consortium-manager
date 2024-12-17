@@ -7217,6 +7217,121 @@ class IgnoredAuditManagedGroupMembershipCreateTest(TestCase):
         self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 0)
 
 
+class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredAuditManagedGroupMembershipDelete.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar"))
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"))
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.group, obj.ignored_email))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.Account.objects.count(), 0)
+        # History is added.
+        self.assertEqual(obj.history.count(), 2)
+        self.assertEqual(obj.history.latest().history_type, "-")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""}, follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.IgnoredAuditManagedGroupMembershipDelete.success_message, str(messages[0]))
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        other_obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.IgnoredAuditManagedGroupMembership.objects.count(), 1)
+        self.assertQuerySetEqual(
+            models.Account.objects.all(),
+            models.Account.objects.filter(pk=other_obj.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, obj.group.get_absolute_url())
+
+
 class ManagedGroupVisualizationTest(TestCase):
     def setUp(self):
         """Set up test class."""

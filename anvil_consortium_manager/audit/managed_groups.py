@@ -101,7 +101,7 @@ class ManagedGroupMembershipNotInAppTable(base.NotInAppTable):
 class ManagedGroupMembershipIgnoredTable(base.IgnoredTable):
     """A table specific to the IgnoredManagedGroupMembership model."""
 
-    # model_instance = tables.columns.Column(linkify=True, verbose_name="Details")
+    model_instance = tables.columns.Column(linkify=True, verbose_name="Details")
     model_instance__group = tables.columns.Column(linkify=True, verbose_name="Managed group", orderable=False)
     model_instance__ignored_email = tables.columns.Column(orderable=False, verbose_name="Ignored email")
     model_instance__added_by = tables.columns.Column(orderable=False, verbose_name="Ignored by")
