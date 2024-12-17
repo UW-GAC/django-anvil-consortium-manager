@@ -6876,7 +6876,17 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
         html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
-        self.fail("need to create other pages and add links")
+        expected_url = reverse(
+            "anvil_consortium_manager:audit:managed_groups:membership:ignored:delete",
+            args=[obj.group.name, obj.ignored_email],
+        )
+        self.assertNotContains(response, expected_url)
+        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        expected_url = reverse(
+            "anvil_consortium_manager:audit:managed_groups:membership:ignored:update",
+            args=[obj.group.name, obj.ignored_email],
+        )
+        self.assertContains(response, expected_url)
 
     def test_detail_page_links_staff_edit(self):
         """Links to other object detail pages appear correctly when user has staff edit permission."""
@@ -6886,7 +6896,17 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
         html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
-        self.fail("need to create other pages and add links")
+        expected_url = reverse(
+            "anvil_consortium_manager:audit:managed_groups:membership:ignored:delete",
+            args=[obj.group.name, obj.ignored_email],
+        )
+        self.assertNotContains(response, expected_url)
+        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        expected_url = reverse(
+            "anvil_consortium_manager:audit:managed_groups:membership:ignored:update",
+            args=[obj.group.name, obj.ignored_email],
+        )
+        self.assertContains(response, expected_url)
 
     def test_detail_page_links_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the added_by user has a get_absolute_url method."""

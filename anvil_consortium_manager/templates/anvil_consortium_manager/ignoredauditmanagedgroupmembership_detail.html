@@ -26,6 +26,9 @@
 
 {% block action_buttons %}
 
-Action buttons!
-
+{% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
+<p>
+  <a href="{% url 'anvil_consortium_manager:audit:managed_groups:membership:ignored:delete' slug=object.group.name email=object.ignored_email %}" class="btn btn-danger" role="button">Stop ignoring</a>
+</p>
+{% endif %}
 {% endblock action_buttons %}
