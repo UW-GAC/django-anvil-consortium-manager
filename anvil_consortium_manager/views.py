@@ -943,9 +943,6 @@ class IgnoredAuditManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffV
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
-
-        # Use a custom queryset if provided; this is required for subclasses
-        # like DateDetailView
         if queryset is None:
             queryset = self.get_queryset()
         # Filter the queryset based on kwargs.
@@ -1027,6 +1024,39 @@ class IgnoredAuditManagedGroupMembershipCreate(
         """If the form is valid, save the associated model."""
         form.instance.added_by = self.request.user
         return super().form_valid(form)
+
+
+class IgnoredAuditManagedGroupMembershipUpdate(
+    auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView
+):
+    """View to update an existing IgnoredAuditManagedGroupMembership."""
+
+    model = models.IgnoredAuditManagedGroupMembership
+    fields = ("note",)
+    template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_form.html"
+    success_message = "Successfully updated ignored record."
+
+    def get_object(self, queryset=None):
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        group_slug = self.kwargs.get("slug", None)
+        email = self.kwargs.get("email", None)
+        queryset = queryset.filter(group__name=group_slug, ignored_email=email)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["group"] = self.object.group
+        context["email"] = self.object.ignored_email
+        return context
 
 
 class IgnoredAuditManagedGroupMembershipDelete(

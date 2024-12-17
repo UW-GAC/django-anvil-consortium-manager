@@ -6876,32 +6876,39 @@ class IgnoredAuditManagedGroupMembershipDetailTest(TestCase):
         html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        # Action buttons.
         expected_url = reverse(
             "anvil_consortium_manager:audit:managed_groups:membership:ignored:delete",
             args=[obj.group.name, obj.ignored_email],
         )
         self.assertNotContains(response, expected_url)
-        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
         expected_url = reverse(
             "anvil_consortium_manager:audit:managed_groups:membership:ignored:update",
             args=[obj.group.name, obj.ignored_email],
         )
-        self.assertContains(response, expected_url)
+        self.assertNotContains(response, expected_url)
 
     def test_detail_page_links_staff_edit(self):
         """Links to other object detail pages appear correctly when user has staff edit permission."""
+        user = User.objects.create_user(username="staff-edit", password="testpassword")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
         obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
-        self.client.force_login(self.user)
+        self.client.force_login(user)
         response = self.client.get(obj.get_absolute_url())
         html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        # Action buttons.
         expected_url = reverse(
             "anvil_consortium_manager:audit:managed_groups:membership:ignored:delete",
             args=[obj.group.name, obj.ignored_email],
         )
-        self.assertNotContains(response, expected_url)
-        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        self.assertContains(response, expected_url)
         expected_url = reverse(
             "anvil_consortium_manager:audit:managed_groups:membership:ignored:update",
             args=[obj.group.name, obj.ignored_email],
@@ -7350,6 +7357,142 @@ class IgnoredAuditManagedGroupMembershipDeleteTest(TestCase):
         response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, obj.group.get_absolute_url())
+
+
+class IgnoredAuditManagedGroupMembershipUpdateTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:update", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredAuditManagedGroupMembershipUpdate.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar"))
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"))
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.group.name, obj.ignored_email))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_object_does_not_exist(self):
+        """Raises Http404 if object does not exist."""
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, slug="foo", email="bar")
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.group.name, obj.ignored_email))
+        self.assertTrue("form" in response.context_data)
+        # Form is auto-generated by the view, so don't check the class.
+
+    def test_can_modify_note(self):
+        """Can set the note when creating a billing project."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": "new note"})
+        self.assertEqual(response.status_code, 302)
+        obj.refresh_from_db()
+        self.assertEqual(obj.note, "new note")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": "new note"}, follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.IgnoredAuditManagedGroupMembershipUpdate.success_message, str(messages[0]))
+
+    def test_redirects_to_object_detail(self):
+        """After successfully creating an object, view redirects to the object's detail page."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": "new note"})
+        self.assertRedirects(response, obj.get_absolute_url())
+
+    def test_missing_note(self):
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {})
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("note", form.errors)
+        self.assertEqual(len(form.errors["note"]), 1)
+        self.assertIn("required", form.errors["note"][0])
+        obj.refresh_from_db()
+        self.assertEqual(obj.note, "original note")
+
+    def test_blank_note(self):
+        obj = factories.IgnoredAuditManagedGroupMembershipFactory.create(note="original note")
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(obj.group.name, obj.ignored_email), {"note": ""})
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("note", form.errors)
+        self.assertEqual(len(form.errors["note"]), 1)
+        self.assertIn("required", form.errors["note"][0])
+        obj.refresh_from_db()
+        self.assertEqual(obj.note, "original note")
 
 
 class ManagedGroupVisualizationTest(TestCase):
