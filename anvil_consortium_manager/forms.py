@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from . import models
+from .auditor.models import IgnoredManagedGroupMembership
 
 
 class Bootstrap5MediaFormMixin:
@@ -351,7 +352,7 @@ class IgnoredManagedGroupMembershipForm(Bootstrap5MediaFormMixin, forms.ModelFor
     )
 
     class Meta:
-        model = models.IgnoredManagedGroupMembership
+        model = IgnoredManagedGroupMembership
         fields = (
             "group",
             "ignored_email",

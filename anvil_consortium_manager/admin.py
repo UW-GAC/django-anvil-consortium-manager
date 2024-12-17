@@ -152,19 +152,3 @@ class WorkspaceGroupSharingAdmin(SimpleHistoryAdmin):
         "account",
         "group",
     )
-
-
-@admin.register(models.IgnoredManagedGroupMembership)
-class IgnoredManagedGroupMembershipAdmin(SimpleHistoryAdmin):
-    """Admin class for the IgnoredManagedGroupMembership model."""
-
-    list_display = (
-        "pk",
-        "group",
-        "ignored_email",
-        "added_by",
-    )
-    search_fields = (
-        "group",
-        "ignored_email",
-    )

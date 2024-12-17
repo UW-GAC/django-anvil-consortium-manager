@@ -23,6 +23,7 @@ from .audit import accounts as account_audit
 from .audit import billing_projects as billing_project_audit
 from .audit import managed_groups as managed_group_audit
 from .audit import workspaces as workspace_audit
+from .auditor.models import IgnoredManagedGroupMembership
 from .tokens import account_verification_token
 
 
@@ -938,7 +939,7 @@ class ManagedGroupMembershipAudit(
 class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
     """View to display the details of an IgnoredManagedGroupMembership."""
 
-    model = models.IgnoredManagedGroupMembership
+    model = IgnoredManagedGroupMembership
     template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_detail.html"
 
     def get_object(self, queryset=None):
@@ -964,7 +965,7 @@ class IgnoredManagedGroupMembershipCreate(
 ):
     """View to create a new IgnoredManagedGroupMembership."""
 
-    model = models.IgnoredManagedGroupMembership
+    model = IgnoredManagedGroupMembership
     form_class = forms.IgnoredManagedGroupMembershipForm
     template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_form.html"
     message_already_exists = "Record already exists for this group and email."
@@ -985,20 +986,20 @@ class IgnoredManagedGroupMembershipCreate(
         self.group = self.get_group()
         self.email = self.get_email()
         try:
-            obj = models.IgnoredManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
+            obj = IgnoredManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
-        except models.IgnoredManagedGroupMembership.DoesNotExist:
+        except IgnoredManagedGroupMembership.DoesNotExist:
             return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.group = self.get_group()
         self.email = self.get_email()
         try:
-            obj = models.IgnoredManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
+            obj = IgnoredManagedGroupMembership.objects.get(group=self.group, ignored_email=self.email)
             messages.error(self.request, self.message_already_exists)
             return HttpResponseRedirect(obj.get_absolute_url())
-        except models.IgnoredManagedGroupMembership.DoesNotExist:
+        except IgnoredManagedGroupMembership.DoesNotExist:
             return super().post(request, *args, **kwargs)
 
     def get_initial(self):
@@ -1031,7 +1032,7 @@ class IgnoredManagedGroupMembershipUpdate(
 ):
     """View to update an existing IgnoredManagedGroupMembership."""
 
-    model = models.IgnoredManagedGroupMembership
+    model = IgnoredManagedGroupMembership
     fields = ("note",)
     template_name = "anvil_consortium_manager/ignoredauditmanagedgroupmembership_form.html"
     success_message = "Successfully updated ignored record."
@@ -1062,7 +1063,7 @@ class IgnoredManagedGroupMembershipUpdate(
 class IgnoredManagedGroupMembershipDelete(
     auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView
 ):
-    model = models.IgnoredManagedGroupMembership
+    model = IgnoredManagedGroupMembership
     success_message = "Successfully stopped ignoring managed group membership record."
 
     def get_object(self, queryset=None):
