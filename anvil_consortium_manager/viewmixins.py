@@ -4,9 +4,7 @@ import networkx as nx
 import numpy as np
 import plotly
 import plotly.graph_objects as go
-from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.generic.base import ContextMixin
 from django.views.generic.detail import SingleObjectMixin
@@ -15,40 +13,6 @@ from . import models
 from .adapters.account import get_account_adapter
 from .adapters.managed_group import get_managed_group_adapter
 from .adapters.workspace import workspace_adapter_registry
-
-
-class AnVILAuditMixin:
-    """Mixin to display AnVIL audit results."""
-
-    audit_class = None
-
-    def get_audit_instance(self):
-        if not self.audit_class:
-            raise ImproperlyConfigured(
-                "%(cls)s is missing an audit class. Define %(cls)s.audit_class or override "
-                "%(cls)s.get_audit_instance()." % {"cls": self.__class__.__name__}
-            )
-        else:
-            return self.audit_class()
-
-    def run_audit(self):
-        self.audit_results = self.get_audit_instance()
-        self.audit_results.run_audit()
-
-    def get(self, request, *args, **kwargs):
-        self.run_audit()
-        return super().get(request, *args, **kwargs)
-
-    def get_context_data(self, *args, **kwargs):
-        """Add audit results to the context data."""
-        context = super().get_context_data(*args, **kwargs)
-        context["audit_timestamp"] = timezone.now()
-        context["audit_ok"] = self.audit_results.ok()
-        context["verified_table"] = self.audit_results.get_verified_table()
-        context["error_table"] = self.audit_results.get_error_table()
-        context["not_in_app_table"] = self.audit_results.get_not_in_app_table()
-        context["ignored_table"] = self.audit_results.get_ignored_table()
-        return context
 
 
 class AccountAdapterMixin:

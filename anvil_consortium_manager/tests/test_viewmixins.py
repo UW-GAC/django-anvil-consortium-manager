@@ -1,18 +1,9 @@
-from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory, TestCase
 
 from .. import viewmixins
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from .test_app.adapters import TestWorkspaceAdapter
-
-
-class AnVILAuditMixinTest(TestCase):
-    """ManagedGroupGraphMixin tests that aren't covered elsewhere."""
-
-    def test_run_audit_not_implemented(self):
-        with self.assertRaises(ImproperlyConfigured):
-            viewmixins.AnVILAuditMixin().run_audit()
 
 
 class ManagedGroupGraphMixinTest(TestCase):

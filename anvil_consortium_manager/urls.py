@@ -216,7 +216,7 @@ workspace_patterns = (
         #     views.WorkspaceClone.as_view(),
         #     name="clone",
         # ),
-        path("audit/", views.WorkspaceAudit.as_view(), name="audit"),
+        path("audit/", auditor_views.WorkspaceAudit.as_view(), name="audit"),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
             views.WorkspaceDelete.as_view(),
@@ -229,7 +229,7 @@ workspace_patterns = (
         ),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/audit/",
-            views.WorkspaceSharingAudit.as_view(),
+            auditor_views.WorkspaceSharingAudit.as_view(),
             name="audit_sharing",
         ),
         path(
@@ -294,7 +294,7 @@ audit_billing_project_patterns = (
 )
 audit_account_patterns = (
     [
-        path("audit/", views.AccountAudit.as_view(), name="all"),
+        path("audit/", auditor_views.AccountAudit.as_view(), name="all"),
     ],
     "accounts",
 )
@@ -310,13 +310,13 @@ audit_managed_group_membership_ignore_patterns = (
 audit_managed_group_membership_patterns = (
     [
         path("ignored/", include(audit_managed_group_membership_ignore_patterns)),
-        path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+        path("", auditor_views.ManagedGroupMembershipAudit.as_view(), name="all"),
     ],
     "membership",
 )
 audit_managed_group_patterns = (
     [
-        path("audit/", views.ManagedGroupAudit.as_view(), name="all"),
+        path("audit/", auditor_views.ManagedGroupAudit.as_view(), name="all"),
         path("<slug:slug>/membership/", include(audit_managed_group_membership_patterns)),
     ],
     "managed_groups",

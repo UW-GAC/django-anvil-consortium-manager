@@ -11,14 +11,20 @@ from django.test import RequestFactory
 from django.urls import reverse
 from faker import Faker
 
+from anvil_consortium_manager import anvil_api
 from anvil_consortium_manager.audit import base as base_audit
+from anvil_consortium_manager.audit.managed_groups import ManagedGroupMembershipIgnoredTable
 from anvil_consortium_manager.models import (
     Account,
     AnVILProjectManagerAccess,
 )
 from anvil_consortium_manager.tests.factories import (
+    AccountFactory,
     BillingProjectFactory,
+    GroupAccountMembershipFactory,
     ManagedGroupFactory,
+    WorkspaceFactory,
+    WorkspaceGroupSharingFactory,
 )
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin, TestCase
 
@@ -174,6 +180,824 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url())
         self.assertIn("audit_ok", response.context_data)
         self.assertEqual(response.context_data["audit_ok"], False)
+
+
+class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the AccountAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:audit:accounts:all", args=args)
+
+    def get_api_url(self, email):
+        return self.api_client.sam_entry_point + "/api/users/v1/" + email
+
+    def get_api_json_response(self, email):
+        id = fake.bothify(text="#" * 21)
+        return {
+            "googleSubjectId": id,
+            "userEmail": email,
+            "userSubjectId": id,
+        }
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AccountAudit.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_template(self):
+        """Template loads successfully."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_verified(self):
+        """audit_verified with one verified record."""
+        account = AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(account.email),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_verified(self):
+        """audit_errors with one verified record."""
+        account = AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        account = AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=self.get_api_json_response(account.email),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        account = AccountFactory.create()
+        api_url = self.get_api_url(account.email)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=404,
+            json={"message": "other error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+
+class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the ManagedGroupAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:audit:managed_groups:all", args=args)
+
+    def get_api_groups_url(self):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1"
+
+    def get_api_group_json(self, group_name, role):
+        """Return json data about groups in the API format."""
+        json_data = {
+            "groupEmail": group_name + "@firecloud.org",
+            "groupName": group_name,
+            "role": role,
+        }
+        return json_data
+
+    def get_api_url_members(self, group_name):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+
+    def get_api_json_response_admins(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return [anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email] + emails
+
+    def get_api_json_response_members(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return emails
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ManagedGroupAudit.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_template(self):
+        """Template loads successfully."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        group = ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_group_json(group.name, "Admin")],
+        )
+        # Group membership API call.
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one error record."""
+        group = ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            # Error - we are not the admin
+            json=[self.get_api_group_json(group.name, "Member")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_not_in_app is in the context data."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_not_in_app with one record not in app."""
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_group_json("foo", "Admin")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        group = ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_group_json(group.name, "Admin")],
+        )
+        # Group membership API call.
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is False."""
+        group = ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            # Error - we are not admin.
+            json=[self.get_api_group_json(group.name, "Member")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+
+class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the ManagedGroupAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.group = ManagedGroupFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:audit:managed_groups:membership:all", args=args)
+
+    def get_api_url_members(self, group_name):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/member"
+
+    def get_api_url_admins(self, group_name):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1/" + group_name + "/admin"
+
+    def get_api_json_response_admins(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return [anvil_api.AnVILAPIClient().auth_session.credentials.service_account_email] + emails
+
+    def get_api_json_response_members(self, emails=[]):
+        """Return json data about groups in the API format."""
+        return emails
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ManagedGroupMembershipAudit.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo"))
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo"))
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug="foo")
+
+    def test_template(self):
+        """Template loads successfully."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_table_classes(self):
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], ManagedGroupMembershipIgnoredTable)
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[membership.account.email]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one error record."""
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[membership.account.email]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_not_in_app is in the context data."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_not_in_app with one record not in app."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_not_in_app_link_to_ignore(self):
+        """Link to ignore create view appears when a not_in_app result is found."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        expected_url = reverse(
+            "anvil_consortium_manager:audit:managed_groups:membership:ignored:new",
+            args=[self.group.name, "foo@bar.com"],
+        )
+        self.assertIn(expected_url, response.content.decode("utf-8"))
+
+    def test_audit_ignored(self):
+        """ignored_table is in the context data."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+
+    def test_audit_one_ignored_record(self):
+        """ignored_table with one ignored record."""
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[obj.ignored_email]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_one_ignored_record_not_in_anvil(self):
+        """The ignored record is not a group member in AnVIL."""
+        factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is False."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+    def test_group_not_managed_by_app(self):
+        """Redirects with a message when group is not managed by app."""
+        group = ManagedGroupFactory.create(is_managed_by_app=False)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]),
+            views.ManagedGroupMembershipAudit.message_not_managed_by_app,
+        )
+
+    def test_group_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid object pk."""
+        ManagedGroupFactory.create()
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, slug="foo")
 
 
 class IgnoredManagedGroupMembershipDetailTest(TestCase):
@@ -872,3 +1696,514 @@ class IgnoredManagedGroupMembershipUpdateTest(TestCase):
         self.assertIn("required", form.errors["note"][0])
         obj.refresh_from_db()
         self.assertEqual(obj.note, "original note")
+
+
+class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:audit", args=args)
+
+    def get_api_url(self):
+        return self.api_client.rawls_entry_point + "/api/workspaces"
+
+    def get_api_workspace_json(self, billing_project_name, workspace_name, access, auth_domains=[]):
+        """Return the json dictionary for a single workspace on AnVIL."""
+        return {
+            "accessLevel": access,
+            "workspace": {
+                "name": workspace_name,
+                "namespace": billing_project_name,
+                "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
+                "isLocked": False,
+            },
+        }
+
+    def get_api_workspace_acl_url(self, billing_project_name, workspace_name):
+        return (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + billing_project_name
+            + "/"
+            + workspace_name
+            + "/acl"
+        )
+
+    def get_api_workspace_acl_response(self):
+        """Return a json for the workspace/acl method where no one else can access."""
+        return {
+            "acl": {
+                self.service_account_email: {
+                    "accessLevel": "OWNER",
+                    "canCompute": True,
+                    "canShare": True,
+                    "pending": False,
+                }
+            }
+        }
+
+    def get_api_bucket_options_url(self, billing_project_name, workspace_name):
+        return self.api_client.rawls_entry_point + "/api/workspaces/" + billing_project_name + "/" + workspace_name
+
+    def get_api_bucket_options_response(self):
+        """Return a json for the workspace/acl method that is not requester pays."""
+        return {"bucketOptions": {"requesterPays": False}}
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceAudit.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_template(self):
+        """Template loads successfully."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        workspace = WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one error record."""
+        workspace = WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            # Error - we are not an owner.
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_not_in_app is in the context data."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_not_in_app with one record not in app."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("foo", "bar", "OWNER")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is False."""
+        workspace = WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            # Error - we are not admin.
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+
+class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceSharingAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        # Set this variable here because it will include the service account.
+        # Tests can update it with the update_api_response method.
+        self.api_response = {"acl": {}}
+        self.update_api_response(self.service_account_email, "OWNER", can_compute=True, can_share=True)
+        # Create a workspace for use in tests.
+        self.workspace = WorkspaceFactory.create()
+        self.api_url = (
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/"
+            + self.workspace.billing_project.name
+            + "/"
+            + self.workspace.name
+            + "/acl"
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:audit_sharing", args=args)
+
+    def update_api_response(self, email, access, can_compute=False, can_share=False):
+        """Return a paired down json for a single ACL, including the service account."""
+        self.api_response["acl"].update(
+            {
+                email: {
+                    "accessLevel": access,
+                    "canCompute": can_compute,
+                    "canShare": can_share,
+                    "pending": False,
+                }
+            }
+        )
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceSharingAudit.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Group membership API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
+
+    def test_template(self):
+        """Template loads successfully."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        # Group membership API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(access.group.email, "READER")
+        # Group membership API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        # Group membership API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one error record."""
+        access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        # Different access recorded.
+        self.update_api_response(access.group.email, "WRITER")
+        # Group membership API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_not_in_app is in the context data."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+            # Admin insetad of member.
+            # json=self.get_api_group_members_json_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_not_in_app with one record not in app."""
+        self.update_api_response("foo@bar.com", "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+            # Admin insetad of member.
+            # json=self.get_api_group_members_json_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is False."""
+        self.update_api_response("foo@bar.com", "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+            # Not in app
+            # json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+    def test_workspace_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid workspace slug."""
+        billing_project = BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(billing_project.name, self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=billing_project.name,
+                workspace_slug=self.workspace.name,
+            )
+
+    def test_billing_project_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid billing project slug."""
+        request = self.factory.get(self.get_url("foo", self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug=self.workspace.name)

@@ -4,20 +4,68 @@ from django.forms import HiddenInput
 from django.http import Http404, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
+from django.views.generic.detail import SingleObjectMixin
 
 from anvil_consortium_manager import auth
+from anvil_consortium_manager.audit import accounts as account_audit
 from anvil_consortium_manager.audit import billing_projects as billing_project_audit
-from anvil_consortium_manager.models import ManagedGroup
-from anvil_consortium_manager.viewmixins import AnVILAuditMixin
+from anvil_consortium_manager.audit import managed_groups as managed_group_audit
+from anvil_consortium_manager.audit import workspaces as workspace_audit
+from anvil_consortium_manager.models import ManagedGroup, Workspace
 
-from . import forms, models
+from . import forms, models, viewmixins
 
 
-class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, AnVILAuditMixin, TemplateView):
+class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Workspaces and display the results."""
 
     template_name = "anvil_consortium_manager/billing_project_audit.html"
     audit_class = billing_project_audit.BillingProjectAudit
+
+
+class AccountAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+    """View to run an audit on Accounts and display the results."""
+
+    template_name = "anvil_consortium_manager/account_audit.html"
+    audit_class = account_audit.AccountAudit
+
+
+class ManagedGroupAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+    """View to run an audit on ManagedGroups and display the results."""
+
+    template_name = "anvil_consortium_manager/managedgroup_audit.html"
+    audit_class = managed_group_audit.ManagedGroupAudit
+
+
+class ManagedGroupMembershipAudit(
+    auth.AnVILConsortiumManagerStaffViewRequired,
+    SingleObjectMixin,
+    viewmixins.AnVILAuditMixin,
+    TemplateView,
+):
+    """View to run an audit on ManagedGroups and display the results."""
+
+    model = ManagedGroup
+    slug_field = "name"
+    template_name = "anvil_consortium_manager/managedgroup_membership_audit.html"
+    message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
+
+    def get_audit_instance(self):
+        return managed_group_audit.ManagedGroupMembershipAudit(self.object)
 
 
 class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
@@ -172,3 +220,50 @@ class IgnoredManagedGroupMembershipDelete(
 
     def get_success_url(self):
         return self.object.group.get_absolute_url()
+
+
+class WorkspaceAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+    """View to run an audit on Workspaces and display the results."""
+
+    template_name = "anvil_consortium_manager/workspace_audit.html"
+    audit_class = workspace_audit.WorkspaceAudit
+
+
+class WorkspaceSharingAudit(
+    auth.AnVILConsortiumManagerStaffViewRequired,
+    SingleObjectMixin,
+    viewmixins.AnVILAuditMixin,
+    TemplateView,
+):
+    """View to run an audit on access to a specific Workspace and display the results."""
+
+    model = Workspace
+    template_name = "anvil_consortium_manager/workspace_sharing_audit.html"
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
+
+    def get_audit_instance(self):
+        return workspace_audit.WorkspaceSharingAudit(self.object)

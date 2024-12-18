@@ -2,6 +2,7 @@ import django_tables2 as tables
 
 from .. import exceptions, models
 from ..anvil_api import AnVILAPIClient, AnVILAPIError404
+from ..auditor.models import IgnoredManagedGroupMembership
 from . import base
 
 
@@ -216,7 +217,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
             self.add_result(model_instance_result)
 
         # Add any admin that the app doesn't know about.
-        for obj in models.IgnoredManagedGroupMembership.objects.filter(group=self.managed_group):
+        for obj in IgnoredManagedGroupMembership.objects.filter(group=self.managed_group):
             try:
                 admins_in_anvil.remove(obj.ignored_email)
                 record = "{}: {}".format(models.GroupAccountMembership.ADMIN, obj.ignored_email)
