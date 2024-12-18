@@ -1,7 +1,6 @@
 from django.urls import include, path
 
 from . import views
-from .auditor import views as auditor_views
 
 app_name = "anvil_consortium_manager"
 
@@ -225,11 +224,6 @@ workspace_patterns = (
             "<slug:billing_project_slug>/<slug:workspace_slug>/",
             views.WorkspaceDetail.as_view(),
             name="detail",
-        ),
-        path(
-            "<slug:billing_project_slug>/<slug:workspace_slug>/audit/",
-            auditor_views.WorkspaceSharingAudit.as_view(),
-            name="audit_sharing",
         ),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/sharing/",

@@ -40,9 +40,20 @@ audit_managed_group_patterns = (
     ],
     "managed_groups",
 )
+audit_workspace_sharing_patterns = (
+    [
+        path(
+            "",
+            views.WorkspaceSharingAudit.as_view(),
+            name="all",
+        ),
+    ],
+    "sharing",
+)
 audit_workspace_patterns = (
     [
         path("", views.WorkspaceAudit.as_view(), name="all"),
+        path("<slug:billing_project_slug>/<slug:workspace_slug>/sharing/", include(audit_workspace_sharing_patterns)),
     ],
     "workspaces",
 )

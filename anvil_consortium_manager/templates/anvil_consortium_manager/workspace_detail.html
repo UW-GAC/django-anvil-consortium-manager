@@ -112,7 +112,7 @@
 {% block action_buttons %}
 <p>
   {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
-    <a href="{% url 'anvil_consortium_manager:auditor:workspaces:all_sharing' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
+    <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:all' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
   {% endif %}
 
   {% if show_edit_links %}

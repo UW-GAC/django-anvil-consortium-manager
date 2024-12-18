@@ -1997,7 +1997,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:workspaces:all_sharing", args=args)
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:all", args=args)
 
     def update_api_response(self, email, access, can_compute=False, can_share=False):
         """Return a paired down json for a single ACL, including the service account."""

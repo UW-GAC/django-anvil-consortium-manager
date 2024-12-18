@@ -6324,7 +6324,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:auditor:workspaces:all_sharing",
+                "anvil_consortium_manager:auditor:workspaces:sharing:all",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -6398,7 +6398,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:auditor:workspaces:all_sharing",
+                "anvil_consortium_manager:auditor:workspaces:sharing:all",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -6472,7 +6472,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertNotContains(
             response,
             reverse(
-                "anvil_consortium_manager:auditor:workspaces:all_sharing",
+                "anvil_consortium_manager:auditor:workspaces:sharing:all",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
