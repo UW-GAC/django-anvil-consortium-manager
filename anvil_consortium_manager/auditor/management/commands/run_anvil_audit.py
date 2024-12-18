@@ -6,7 +6,8 @@ from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 
-from ...anvil_api import AnVILAPIError
+from anvil_consortium_manager.anvil_api import AnVILAPIError
+
 from ...audit import accounts as account_audit
 from ...audit import base as base_audit
 from ...audit import billing_projects as billing_project_audit
