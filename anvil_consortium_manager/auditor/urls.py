@@ -5,19 +5,21 @@ from . import views
 app_name = "auditor"
 
 
-audit_billing_project_patterns = (
+billing_project_patterns = (
     [
         path("", views.BillingProjectAudit.as_view(), name="all"),
     ],
     "billing_projects",
 )
-audit_account_patterns = (
+
+account_patterns = (
     [
         path("audit/", views.AccountAudit.as_view(), name="all"),
     ],
     "accounts",
 )
-audit_managed_group_membership_ignore_patterns = (
+
+managed_group_membership_ignore_patterns = (
     [
         path("<str:email>/", views.IgnoredManagedGroupMembershipDetail.as_view(), name="detail"),
         path("<str:email>/new/", views.IgnoredManagedGroupMembershipCreate.as_view(), name="new"),
@@ -26,21 +28,24 @@ audit_managed_group_membership_ignore_patterns = (
     ],
     "ignored",
 )
-audit_managed_group_membership_patterns = (
+
+managed_group_membership_patterns = (
     [
-        path("ignored/", include(audit_managed_group_membership_ignore_patterns)),
+        path("ignored/", include(managed_group_membership_ignore_patterns)),
         path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
     ],
     "membership",
 )
-audit_managed_group_patterns = (
+
+managed_group_patterns = (
     [
         path("audit/", views.ManagedGroupAudit.as_view(), name="all"),
-        path("<slug:slug>/membership/", include(audit_managed_group_membership_patterns)),
+        path("<slug:slug>/membership/", include(managed_group_membership_patterns)),
     ],
     "managed_groups",
 )
-audit_workspace_sharing_patterns = (
+
+workspace_sharing_patterns = (
     [
         path(
             "",
@@ -50,16 +55,18 @@ audit_workspace_sharing_patterns = (
     ],
     "sharing",
 )
-audit_workspace_patterns = (
+
+workspace_patterns = (
     [
         path("", views.WorkspaceAudit.as_view(), name="all"),
-        path("<slug:billing_project_slug>/<slug:workspace_slug>/sharing/", include(audit_workspace_sharing_patterns)),
+        path("<slug:billing_project_slug>/<slug:workspace_slug>/sharing/", include(workspace_sharing_patterns)),
     ],
     "workspaces",
 )
+
 urlpatterns = [
-    path("billing_projects/", include(audit_billing_project_patterns)),
-    path("accounts/", include(audit_account_patterns)),
-    path("managed_groups/", include(audit_managed_group_patterns)),
-    path("workspaces/", include(audit_workspace_patterns)),
+    path("billing_projects/", include(billing_project_patterns)),
+    path("accounts/", include(account_patterns)),
+    path("managed_groups/", include(managed_group_patterns)),
+    path("workspaces/", include(workspace_patterns)),
 ]
