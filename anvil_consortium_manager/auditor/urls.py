@@ -19,7 +19,7 @@ account_patterns = (
     "accounts",
 )
 
-managed_group_membership_ignore_patterns = (
+managed_group_membership_by_group_ignore_patterns = (
     [
         path("<str:email>/", views.IgnoredManagedGroupMembershipDetail.as_view(), name="detail"),
         path("<str:email>/new/", views.IgnoredManagedGroupMembershipCreate.as_view(), name="new"),
@@ -29,10 +29,16 @@ managed_group_membership_ignore_patterns = (
     "ignored",
 )
 
+managed_group_membership_by_group_patterns = (
+    [
+        path("/", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+        path("ignored/", include(managed_group_membership_by_group_ignore_patterns)),
+    ],
+    "by_group",
+)
 managed_group_membership_patterns = (
     [
-        path("ignored/", include(managed_group_membership_ignore_patterns)),
-        path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+        path("<slug:slug>/", include(managed_group_membership_by_group_patterns)),
     ],
     "membership",
 )
@@ -40,7 +46,7 @@ managed_group_membership_patterns = (
 managed_group_patterns = (
     [
         path("audit/", views.ManagedGroupAudit.as_view(), name="all"),
-        path("<slug:slug>/membership/", include(managed_group_membership_patterns)),
+        path("membership/", include(managed_group_membership_patterns)),
     ],
     "managed_groups",
 )

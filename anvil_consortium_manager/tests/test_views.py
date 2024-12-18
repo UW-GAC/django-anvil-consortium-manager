@@ -131,7 +131,7 @@ class ViewEditUrlTest(TestCase):
     #     reverse("anvil_consortium_manager:managed_groups:member_groups:delete"),
     #     reverse("anvil_consortium_manager:workspaces:sharing:update"),
     #     reverse("anvil_consortium_manager:workspaces:delete"),
-    #     reverse("anvil_consortium_manager:auditor:managed_groups:membership:all"),
+    #     reverse("anvil_consortium_manager:auditor:managed_groups:membership:by_group:all"),
     #     reverse("anvil_consortium_manager:auditor:workspaces:all_access"),
     # )
 

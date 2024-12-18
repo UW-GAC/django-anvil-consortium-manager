@@ -28,8 +28,8 @@
 
 {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
   <p>
-    <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:ignored:update' slug=object.group.name email=object.ignored_email %}" class="btn btn-secondary" role="button">Update</a>
-    <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:ignored:delete' slug=object.group.name email=object.ignored_email %}" class="btn btn-danger" role="button">Stop ignoring</a>
+    <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:ignored:update' slug=object.group.name email=object.ignored_email %}" class="btn btn-secondary" role="button">Update</a>
+    <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:ignored:delete' slug=object.group.name email=object.ignored_email %}" class="btn btn-danger" role="button">Stop ignoring</a>
   </p>
 {% endif %}
 {% endblock action_buttons %}
