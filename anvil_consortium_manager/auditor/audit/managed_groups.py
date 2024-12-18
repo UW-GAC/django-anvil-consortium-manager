@@ -1,8 +1,10 @@
 import django_tables2 as tables
 
-from .. import exceptions, models
-from ..anvil_api import AnVILAPIClient, AnVILAPIError404
-from ..auditor.models import IgnoredManagedGroupMembership
+from anvil_consortium_manager.anvil_api import AnVILAPIClient, AnVILAPIError404
+from anvil_consortium_manager.exceptions import AnVILNotGroupAdminError
+from anvil_consortium_manager.models import Account, GroupAccountMembership, GroupGroupMembership, ManagedGroup
+
+from .. import models
 from . import base
 
 
@@ -33,7 +35,7 @@ class ManagedGroupAudit(base.AnVILAudit):
             except KeyError:
                 groups_on_anvil[group_name] = [role]
         # Audit groups that exist in the app.
-        for group in models.ManagedGroup.objects.all():
+        for group in ManagedGroup.objects.all():
             model_instance_result = base.ModelInstanceResult(group)
             try:
                 group_roles = groups_on_anvil.pop(group.name)
@@ -142,7 +144,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
     def __init__(self, managed_group, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not managed_group.is_managed_by_app:
-            raise exceptions.AnVILNotGroupAdminError("group {} is not managed by app".format(managed_group.name))
+            raise AnVILNotGroupAdminError("group {} is not managed by app".format(managed_group.name))
         self.managed_group = managed_group
 
     def run_audit(self):
@@ -175,16 +177,16 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
             # Create an audit result instance for this model.
             model_instance_result = base.ModelInstanceResult(membership)
             # Check for deactivated account memberships.
-            if membership.account.status == models.Account.INACTIVE_STATUS:
+            if membership.account.status == Account.INACTIVE_STATUS:
                 model_instance_result.add_error(self.ERROR_DEACTIVATED_ACCOUNT)
             # Check membership status on AnVIL.
-            if membership.role == models.GroupAccountMembership.ADMIN:
+            if membership.role == GroupAccountMembership.ADMIN:
                 try:
                     admins_in_anvil.remove(membership.account.email.lower())
                 except ValueError:
                     # This is an error - the email is not in the list of admins.
                     model_instance_result.add_error(self.ERROR_ACCOUNT_ADMIN_NOT_IN_ANVIL)
-            elif membership.role == models.GroupAccountMembership.MEMBER:
+            elif membership.role == GroupAccountMembership.MEMBER:
                 try:
                     members_in_anvil.remove(membership.account.email.lower())
                 except ValueError:
@@ -195,7 +197,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
         # Check group-group membership.
         for membership in self.managed_group.child_memberships.all():
             model_instance_result = base.ModelInstanceResult(membership)
-            if membership.role == models.GroupGroupMembership.ADMIN:
+            if membership.role == GroupGroupMembership.ADMIN:
                 try:
                     admins_in_anvil.remove(membership.child_group.email.lower())
                 except ValueError:
@@ -208,7 +210,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
                     # The group is not directly listed as a member, so this is ok.
                     # It is already an admin.
                     pass
-            elif membership.role == models.GroupGroupMembership.MEMBER:
+            elif membership.role == GroupGroupMembership.MEMBER:
                 try:
                     members_in_anvil.remove(membership.child_group.email.lower())
                 except ValueError:
@@ -217,32 +219,32 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
             self.add_result(model_instance_result)
 
         # Add any admin that the app doesn't know about.
-        for obj in IgnoredManagedGroupMembership.objects.filter(group=self.managed_group):
+        for obj in models.IgnoredManagedGroupMembership.objects.filter(group=self.managed_group):
             try:
                 admins_in_anvil.remove(obj.ignored_email)
-                record = "{}: {}".format(models.GroupAccountMembership.ADMIN, obj.ignored_email)
+                record = "{}: {}".format(GroupAccountMembership.ADMIN, obj.ignored_email)
                 self.add_result(base.IgnoredResult(obj, record=record))
             except ValueError:
                 try:
                     members_in_anvil.remove(obj.ignored_email)
-                    record = "{}: {}".format(models.GroupAccountMembership.MEMBER, obj.ignored_email)
+                    record = "{}: {}".format(GroupAccountMembership.MEMBER, obj.ignored_email)
                     self.add_result(base.IgnoredResult(obj, record=record))
                 except ValueError:
                     # This email is not in the list of members or admins.
                     self.add_result(base.IgnoredResult(obj, record=None))
 
         for member in admins_in_anvil:
-            record = "{}: {}".format(models.GroupAccountMembership.ADMIN, member)
+            record = "{}: {}".format(GroupAccountMembership.ADMIN, member)
             self.add_result(
                 ManagedGroupMembershipNotInAppResult(
-                    record, group=self.managed_group, email=member, role=models.GroupAccountMembership.ADMIN
+                    record, group=self.managed_group, email=member, role=GroupAccountMembership.ADMIN
                 )
             )
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
-            record = "{}: {}".format(models.GroupAccountMembership.MEMBER, member)
+            record = "{}: {}".format(GroupAccountMembership.MEMBER, member)
             self.add_result(
                 ManagedGroupMembershipNotInAppResult(
-                    record, group=self.managed_group, email=member, role=models.GroupAccountMembership.MEMBER
+                    record, group=self.managed_group, email=member, role=GroupAccountMembership.MEMBER
                 )
             )

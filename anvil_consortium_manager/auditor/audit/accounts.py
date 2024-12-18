@@ -1,4 +1,5 @@
-from .. import models
+from anvil_consortium_manager.models import Account
+
 from .base import AnVILAudit, ModelInstanceResult
 
 
@@ -10,7 +11,7 @@ class AccountAudit(AnVILAudit):
 
     def run_audit(self):
         # Only checks active accounts.
-        for account in models.Account.objects.active():
+        for account in Account.objects.active():
             model_instance_result = ModelInstanceResult(account)
             if not account.anvil_exists():
                 model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)

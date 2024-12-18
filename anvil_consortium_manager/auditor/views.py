@@ -7,13 +7,13 @@ from django.views.generic import CreateView, DeleteView, DetailView, TemplateVie
 from django.views.generic.detail import SingleObjectMixin
 
 from anvil_consortium_manager import auth
-from anvil_consortium_manager.audit import accounts as account_audit
-from anvil_consortium_manager.audit import billing_projects as billing_project_audit
-from anvil_consortium_manager.audit import managed_groups as managed_group_audit
-from anvil_consortium_manager.audit import workspaces as workspace_audit
 from anvil_consortium_manager.models import ManagedGroup, Workspace
 
 from . import forms, models, viewmixins
+from .audit import accounts as account_audit
+from .audit import billing_projects as billing_project_audit
+from .audit import managed_groups as managed_group_audit
+from .audit import workspaces as workspace_audit
 
 
 class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):

@@ -12,8 +12,6 @@ from django.urls import reverse
 from faker import Faker
 
 from anvil_consortium_manager import anvil_api
-from anvil_consortium_manager.audit import base as base_audit
-from anvil_consortium_manager.audit.managed_groups import ManagedGroupMembershipIgnoredTable
 from anvil_consortium_manager.models import (
     Account,
     AnVILProjectManagerAccess,
@@ -29,6 +27,8 @@ from anvil_consortium_manager.tests.factories import (
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin, TestCase
 
 from .. import forms, models, views
+from ..audit import base as base_audit
+from ..audit import managed_groups as managed_group_audit
 from . import factories
 
 fake = Faker()
@@ -709,7 +709,9 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("not_in_app_table", response.context_data)
         self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
         self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], ManagedGroupMembershipIgnoredTable)
+        self.assertIsInstance(
+            response.context_data["ignored_table"], managed_group_audit.ManagedGroupMembershipIgnoredTable
+        )
 
     def test_audit_verified(self):
         """audit_verified is in the context data."""

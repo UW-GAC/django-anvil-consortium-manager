@@ -1,5 +1,6 @@
-from .. import models
-from ..anvil_api import AnVILAPIClient
+from anvil_consortium_manager.anvil_api import AnVILAPIClient
+from anvil_consortium_manager.models import Workspace
+
 from .base import AnVILAudit, ModelInstanceResult, NotInAppResult
 
 
@@ -36,7 +37,7 @@ class WorkspaceAudit(AnVILAudit):
         ]
         response = AnVILAPIClient().list_workspaces(fields=",".join(fields))
         workspaces_on_anvil = response.json()
-        for workspace in models.Workspace.objects.all():
+        for workspace in Workspace.objects.all():
             model_instance_result = ModelInstanceResult(workspace)
             try:
                 i = next(

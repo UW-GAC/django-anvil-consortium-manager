@@ -1,4 +1,5 @@
-from .. import models
+from anvil_consortium_manager.models import BillingProject
+
 from .base import AnVILAudit, ModelInstanceResult
 
 
@@ -10,7 +11,7 @@ class BillingProjectAudit(AnVILAudit):
 
     def run_audit(self):
         # Check that all billing projects exist.
-        for billing_project in models.BillingProject.objects.filter(has_app_as_user=True).all():
+        for billing_project in BillingProject.objects.filter(has_app_as_user=True).all():
             model_instance_result = ModelInstanceResult(billing_project)
             if not billing_project.anvil_exists():
                 model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
