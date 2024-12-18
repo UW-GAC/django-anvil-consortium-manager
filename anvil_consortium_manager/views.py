@@ -20,7 +20,6 @@ from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 from .audit import accounts as account_audit
-from .audit import billing_projects as billing_project_audit
 from .audit import managed_groups as managed_group_audit
 from .audit import workspaces as workspace_audit
 from .tokens import account_verification_token
@@ -141,13 +140,6 @@ class BillingProjectAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, a
             qs = qs.filter(name__icontains=self.q)
 
         return qs
-
-
-class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
-    """View to run an audit on Workspaces and display the results."""
-
-    template_name = "anvil_consortium_manager/billing_project_audit.html"
-    audit_class = billing_project_audit.BillingProjectAudit
 
 
 class AccountDetail(

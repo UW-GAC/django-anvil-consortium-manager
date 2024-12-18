@@ -288,7 +288,7 @@ workspace_group_sharing_patterns = (
 
 audit_billing_project_patterns = (
     [
-        path("", views.BillingProjectAudit.as_view(), name="all"),
+        path("", auditor_views.BillingProjectAudit.as_view(), name="all"),
     ],
     "billing_projects",
 )

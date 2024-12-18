@@ -3,12 +3,21 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.forms import HiddenInput
 from django.http import Http404, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
 
 from anvil_consortium_manager import auth
+from anvil_consortium_manager.audit import billing_projects as billing_project_audit
 from anvil_consortium_manager.models import ManagedGroup
+from anvil_consortium_manager.viewmixins import AnVILAuditMixin
 
 from . import forms, models
+
+
+class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, AnVILAuditMixin, TemplateView):
+    """View to run an audit on Workspaces and display the results."""
+
+    template_name = "anvil_consortium_manager/billing_project_audit.html"
+    audit_class = billing_project_audit.BillingProjectAudit
 
 
 class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
