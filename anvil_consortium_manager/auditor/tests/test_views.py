@@ -26,7 +26,7 @@ from anvil_consortium_manager.tests.factories import (
 )
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin, TestCase
 
-from .. import forms, models, views
+from .. import forms, models, tables, views
 from ..audit import base as base_audit
 from ..audit import managed_groups as managed_group_audit
 from . import factories
@@ -1564,6 +1564,89 @@ class IgnoredManagedGroupMembershipDeleteTest(TestCase):
         response = self.client.post(self.get_url(obj.group, obj.ignored_email), {"submit": ""})
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, obj.group.get_absolute_url())
+
+
+class IgnoredManagedGroupMembershipListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:ignored", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredManagedGroupMembershipList.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_template_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_view_has_correct_table_class(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.IgnoredManagedGroupMembershipTable)
+
+    def test_view_with_no_objects(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.IgnoredManagedGroupMembershipFactory()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.IgnoredManagedGroupMembershipFactory.create_batch(2)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
 
 
 class IgnoredManagedGroupMembershipUpdateTest(TestCase):

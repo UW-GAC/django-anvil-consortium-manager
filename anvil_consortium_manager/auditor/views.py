@@ -5,11 +5,12 @@ from django.http import Http404, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
 from django.views.generic.detail import SingleObjectMixin
+from django_tables2.views import SingleTableView
 
 from anvil_consortium_manager import auth
 from anvil_consortium_manager.models import ManagedGroup, Workspace
 
-from . import forms, models, viewmixins
+from . import forms, models, tables, viewmixins
 from .audit import accounts as account_audit
 from .audit import billing_projects as billing_project_audit
 from .audit import managed_groups as managed_group_audit
@@ -155,6 +156,13 @@ class IgnoredManagedGroupMembershipCreate(
         """If the form is valid, save the associated model."""
         form.instance.added_by = self.request.user
         return super().form_valid(form)
+
+
+class IgnoredManagedGroupMembershipList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableView):
+    """View to display a list of models.IgnoredManagedGroupMembership."""
+
+    model = models.IgnoredManagedGroupMembership
+    table_class = tables.IgnoredManagedGroupMembershipTable
 
 
 class IgnoredManagedGroupMembershipUpdate(

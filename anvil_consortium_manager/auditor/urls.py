@@ -31,13 +31,14 @@ managed_group_membership_by_group_ignore_patterns = (
 
 managed_group_membership_by_group_patterns = (
     [
-        path("/", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+        path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
         path("ignored/", include(managed_group_membership_by_group_ignore_patterns)),
     ],
     "by_group",
 )
 managed_group_membership_patterns = (
     [
+        path("ignored/", views.IgnoredManagedGroupMembershipList.as_view(), name="ignored"),
         path("<slug:slug>/", include(managed_group_membership_by_group_patterns)),
     ],
     "membership",
