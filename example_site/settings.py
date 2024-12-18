@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     "django_filters",
     # This app.
     "anvil_consortium_manager",
+    "anvil_consortium_manager.auditor",
     # Autocomplete.
     # note these are supposed to come before django.contrib.admin.
     "dal",

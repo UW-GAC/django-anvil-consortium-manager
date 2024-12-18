@@ -17,7 +17,12 @@
 
       <h2>Verified</h2>
       <div class="container">
-        <p>{{ verified_results|length }} instance(s) verified.</p>
+        <p>{{ audit_results.get_verified_results|length }} instance(s) verified.</p>
+      </div>
+
+      <h2>Ignored</h2>
+      <div class="container">
+        <p>Ignoring {{ n_ignored }} record(s)</p>
       </div>
 
       <h2>Errors</h2>

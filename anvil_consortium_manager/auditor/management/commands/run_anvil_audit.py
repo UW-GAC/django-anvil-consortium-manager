@@ -6,11 +6,17 @@ from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 
-from ...anvil_api import AnVILAPIError
-from ...audit import audit
+from anvil_consortium_manager.anvil_api import AnVILAPIError
+
+from ... import models
+from ...audit import accounts as account_audit
+from ...audit import base as base_audit
+from ...audit import billing_projects as billing_project_audit
+from ...audit import managed_groups as managed_group_audit
+from ...audit import workspaces as workspace_audit
 
 
-class ErrorTableWithLink(audit.ErrorTable):
+class ErrorTableWithLink(base_audit.ErrorTable):
     model_instance = tables.Column(
         orderable=False,
         linkify=lambda value, table: "https://{domain}{url}".format(
@@ -47,10 +53,13 @@ class Command(BaseCommand):
             help="If specified, run audit on a subset of models. Otherwise, the audit will be run on all models.",
         )
 
-    def _run_audit(self, audit_results, **options):
+    def _run_audit(self, audit_results, ignore_model=None, **options):
         """Run the audit for a specific model class."""
         email = options["email"]
         errors_only = options["errors_only"]
+
+        # Track the number of ignored records.
+        n_ignored = 0
 
         audit_name = audit_results.__class__.__name__
         self.stdout.write("Running on {}... ".format(audit_name), ending="")
@@ -64,19 +73,25 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR("problems found."))
                 self.stdout.write(pprint.pformat(audit_results.export(include_verified=False)))
             else:
-                self.stdout.write(self.style.SUCCESS("ok!"))
+                msg = "ok!"
+                if ignore_model:
+                    n_ignored = ignore_model.objects.all().count()
+                    if n_ignored:
+                        msg += " (ignoring {n_ignored} records)".format(n_ignored=n_ignored)
+                self.stdout.write(self.style.SUCCESS(msg))
 
             if email and (not errors_only) or (errors_only and not audit_results.ok()):
                 # Set up the email message.
                 subject = "AnVIL audit {} -- {}".format(audit_name, "ok" if audit_results.ok() else "errors!")
                 exported_results = audit_results.export()
                 html_body = render_to_string(
-                    "anvil_consortium_manager/email_audit_report.html",
+                    "auditor/email_audit_report.html",
                     context={
                         "model_name": audit_name,
-                        "verified_results": audit_results.get_verified_results(),
+                        "audit_results": audit_results,
+                        "n_ignored": n_ignored,
                         "errors_table": ErrorTableWithLink(audit_results.get_error_results()),
-                        "not_in_app_table": audit.NotInAppTable(audit_results.get_not_in_app_results()),
+                        "not_in_app_table": base_audit.NotInAppTable(audit_results.get_not_in_app_results()),
                     },
                 )
                 send_mail(
@@ -95,13 +110,15 @@ class Command(BaseCommand):
             models_to_audit = ["BillingProject", "Account", "ManagedGroup", "Workspace"]
 
         if "BillingProject" in models_to_audit:
-            self._run_audit(audit.BillingProjectAudit(), **options)
+            self._run_audit(billing_project_audit.BillingProjectAudit(), **options)
 
         if "Account" in models_to_audit:
-            self._run_audit(audit.AccountAudit(), **options)
+            self._run_audit(account_audit.AccountAudit(), **options)
 
         if "ManagedGroup" in models_to_audit:
-            self._run_audit(audit.ManagedGroupAudit(), **options)
+            self._run_audit(
+                managed_group_audit.ManagedGroupAudit(), ignore_model=models.IgnoredManagedGroupMembership, **options
+            )
 
         if "Workspace" in models_to_audit:
-            self._run_audit(audit.WorkspaceAudit(), **options)
+            self._run_audit(workspace_audit.WorkspaceAudit(), **options)

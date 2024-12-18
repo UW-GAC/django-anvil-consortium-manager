@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "fontawesomefree",  # icons
     # Your stuff: custom apps go here
     "anvil_consortium_manager",
+    "anvil_consortium_manager.auditor",
     # Test app
     "anvil_consortium_manager.tests.test_app",
 ]
