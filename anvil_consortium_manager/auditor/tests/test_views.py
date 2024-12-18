@@ -49,7 +49,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:billing_projects:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:billing_projects:all", args=args)
 
     def get_api_url(self, billing_project_name):
         return self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name
@@ -197,7 +197,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:accounts:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:accounts:all", args=args)
 
     def get_api_url(self, email):
         return self.api_client.sam_entry_point + "/api/users/v1/" + email
@@ -348,7 +348,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:managed_groups:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:all", args=args)
 
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
@@ -600,7 +600,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:managed_groups:membership:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:all", args=args)
 
     def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
@@ -864,7 +864,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.group.name))
         expected_url = reverse(
-            "anvil_consortium_manager:audit:managed_groups:membership:ignored:new",
+            "anvil_consortium_manager:auditor:managed_groups:membership:ignored:new",
             args=[self.group.name, "foo@bar.com"],
         )
         self.assertIn(expected_url, response.content.decode("utf-8"))
@@ -1016,7 +1016,7 @@ class IgnoredManagedGroupMembershipDetailTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:detail", args=args)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:ignored:detail", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1089,12 +1089,12 @@ class IgnoredManagedGroupMembershipDetailTest(TestCase):
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
         # Action buttons.
         expected_url = reverse(
-            "anvil_consortium_manager:audit:managed_groups:membership:ignored:delete",
+            "anvil_consortium_manager:auditor:managed_groups:membership:ignored:delete",
             args=[obj.group.name, obj.ignored_email],
         )
         self.assertNotContains(response, expected_url)
         expected_url = reverse(
-            "anvil_consortium_manager:audit:managed_groups:membership:ignored:update",
+            "anvil_consortium_manager:auditor:managed_groups:membership:ignored:update",
             args=[obj.group.name, obj.ignored_email],
         )
         self.assertNotContains(response, expected_url)
@@ -1116,12 +1116,12 @@ class IgnoredManagedGroupMembershipDetailTest(TestCase):
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
         # Action buttons.
         expected_url = reverse(
-            "anvil_consortium_manager:audit:managed_groups:membership:ignored:delete",
+            "anvil_consortium_manager:auditor:managed_groups:membership:ignored:delete",
             args=[obj.group.name, obj.ignored_email],
         )
         self.assertContains(response, expected_url)
         expected_url = reverse(
-            "anvil_consortium_manager:audit:managed_groups:membership:ignored:update",
+            "anvil_consortium_manager:auditor:managed_groups:membership:ignored:update",
             args=[obj.group.name, obj.ignored_email],
         )
         self.assertContains(response, expected_url)
@@ -1162,7 +1162,7 @@ class IgnoredManagedGroupMembershipCreateTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:new", args=args)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:ignored:new", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1469,7 +1469,7 @@ class IgnoredManagedGroupMembershipDeleteTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:delete", args=args)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:ignored:delete", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1582,7 +1582,7 @@ class IgnoredManagedGroupMembershipUpdateTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:audit:managed_groups:membership:ignored:update", args=args)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:ignored:update", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -1715,7 +1715,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:audit", args=args)
+        return reverse("anvil_consortium_manager:auditor:workspaces:all", args=args)
 
     def get_api_url(self):
         return self.api_client.rawls_entry_point + "/api/workspaces"
@@ -1997,7 +1997,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:audit_sharing", args=args)
+        return reverse("anvil_consortium_manager:auditor:workspaces:all_sharing", args=args)
 
     def update_api_response(self, email, access, can_compute=False, can_share=False):
         """Return a paired down json for a single ACL, including the service account."""

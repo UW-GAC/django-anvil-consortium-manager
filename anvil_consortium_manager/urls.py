@@ -216,7 +216,6 @@ workspace_patterns = (
         #     views.WorkspaceClone.as_view(),
         #     name="clone",
         # ),
-        path("audit/", auditor_views.WorkspaceAudit.as_view(), name="audit"),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
             views.WorkspaceDelete.as_view(),
@@ -286,49 +285,6 @@ workspace_group_sharing_patterns = (
     "workspace_group_sharing",
 )
 
-audit_billing_project_patterns = (
-    [
-        path("", auditor_views.BillingProjectAudit.as_view(), name="all"),
-    ],
-    "billing_projects",
-)
-audit_account_patterns = (
-    [
-        path("audit/", auditor_views.AccountAudit.as_view(), name="all"),
-    ],
-    "accounts",
-)
-audit_managed_group_membership_ignore_patterns = (
-    [
-        path("<str:email>/", auditor_views.IgnoredManagedGroupMembershipDetail.as_view(), name="detail"),
-        path("<str:email>/new/", auditor_views.IgnoredManagedGroupMembershipCreate.as_view(), name="new"),
-        path("<str:email>/update/", auditor_views.IgnoredManagedGroupMembershipUpdate.as_view(), name="update"),
-        path("<str:email>/delete/", auditor_views.IgnoredManagedGroupMembershipDelete.as_view(), name="delete"),
-    ],
-    "ignored",
-)
-audit_managed_group_membership_patterns = (
-    [
-        path("ignored/", include(audit_managed_group_membership_ignore_patterns)),
-        path("", auditor_views.ManagedGroupMembershipAudit.as_view(), name="all"),
-    ],
-    "membership",
-)
-audit_managed_group_patterns = (
-    [
-        path("audit/", auditor_views.ManagedGroupAudit.as_view(), name="all"),
-        path("<slug:slug>/membership/", include(audit_managed_group_membership_patterns)),
-    ],
-    "managed_groups",
-)
-audit_patterns = (
-    [
-        path("billing_projects/", include(audit_billing_project_patterns)),
-        path("accounts/", include(audit_account_patterns)),
-        path("managed_groups/", include(audit_managed_group_patterns)),
-    ],
-    "audit",
-)
 urlpatterns = [
     path("", views.Index.as_view(), name="index"),
     path("status/", views.AnVILStatus.as_view(), name="status"),
@@ -339,5 +295,5 @@ urlpatterns = [
     path("group_group_membership/", include(group_group_membership_patterns)),
     path("group_account_membership/", include(group_account_membership_patterns)),
     path("workspace_group_sharing/", include(workspace_group_sharing_patterns)),
-    path("audit/", include(audit_patterns)),
+    path("audit/", include("anvil_consortium_manager.auditor.urls")),
 ]

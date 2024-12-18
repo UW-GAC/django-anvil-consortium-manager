@@ -39,7 +39,7 @@ class IgnoredManagedGroupMembership(TimeStampedModel):
         Returns:
             str: The absolute url for the object."""
         return reverse(
-            "anvil_consortium_manager:audit:managed_groups:membership:ignored:detail",
+            "anvil_consortium_manager:auditor:managed_groups:membership:ignored:detail",
             kwargs={
                 "slug": self.group.name,
                 "email": self.ignored_email,
