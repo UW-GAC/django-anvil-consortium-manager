@@ -276,6 +276,10 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
                 stdout=out,
             )
 
+    def test_command_ignored_records(self):
+        # This reports any records for the Ignore models.
+        self.fail()
+
 
 class RunAnVILAuditTablesTest(TestCase):
     def setUp(self):
