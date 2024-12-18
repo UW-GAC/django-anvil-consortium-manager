@@ -10,12 +10,18 @@ from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase
 
+from anvil_consortium_manager.tests.api_factories import (
+    GetGroupMembershipAdminResponseFactory,
+    GetGroupMembershipResponseFactory,
+    GetGroupsResponseFactory,
+    GroupDetailsAdminFactory,
+)
 from anvil_consortium_manager.tests.factories import AccountFactory, BillingProjectFactory
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin
 
-from ..audit import base
-from ..audit import billing_projects as billing_projects
+from ..audit import base, billing_projects, managed_groups
 from ..management.commands.run_anvil_audit import ErrorTableWithLink
+from . import factories
 
 
 class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
@@ -103,6 +109,56 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)
         self.assertIn("WorkspaceAudit... ok!", out.getvalue())
 
+    def test_command_output_ignored_one_record(self):
+        """Test command output."""
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="test-group")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=GetGroupsResponseFactory(response=[GroupDetailsAdminFactory(groupName="test-group")]).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/member",
+            status=200,
+            json=GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/admin",
+            status=200,
+            json=GetGroupMembershipAdminResponseFactory().response,
+        )
+        out = StringIO()
+        call_command("run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out)
+        self.assertIn("ManagedGroupAudit... ok! (ignoring 1 records)", out.getvalue())
+
+    def test_command_output_ignored_two_records(self):
+        """Test command output."""
+        factories.IgnoredManagedGroupMembershipFactory.create_batch(2, group__name="test-group")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=GetGroupsResponseFactory(response=[GroupDetailsAdminFactory(groupName="test-group")]).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/member",
+            status=200,
+            json=GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/admin",
+            status=200,
+            json=GetGroupMembershipAdminResponseFactory().response,
+        )
+        out = StringIO()
+        call_command("run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out)
+        self.assertIn("ManagedGroupAudit... ok! (ignoring 2 records)", out.getvalue())
+
     def test_command_run_audit_one_instance_ok(self):
         """Test command output."""
         billing_project = BillingProjectFactory.create()
@@ -143,6 +199,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(email.alternatives), 1)
         # Check that the number of "ok" instances is correct in email body.
         self.assertIn("1 instance(s) verified", email.alternatives[0][0])
+        # Check ignored instances.
+        self.assertIn("Ignoring 0 record(s)", email.alternatives[0][0])
 
     def test_command_run_audit_ok_email_errors_only(self):
         """Test command output when email and errors_only is set."""
@@ -160,6 +218,85 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             stdout=out,
         )
         self.assertIn("BillingProjectAudit... ok!", out.getvalue())
+        # No message has been sent by default.
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_command_run_audit_ok_ignored_records_email(self):
+        """Test command output."""
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="test-group")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=GetGroupsResponseFactory(response=[GroupDetailsAdminFactory(groupName="test-group")]).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/member",
+            status=200,
+            json=GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/admin",
+            status=200,
+            json=GetGroupMembershipAdminResponseFactory().response,
+        )
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "--no-color",
+            models=["ManagedGroup"],
+            email="test@example.com",
+            stdout=out,
+        )
+        # One message has been sent by default.
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ["test@example.com"])
+        self.assertIn("ok", email.subject)
+        # Text body.
+        audit_results = managed_groups.ManagedGroupAudit()
+        audit_results.run_audit()
+        self.assertEqual(pprint.pformat(audit_results.export()), email.body)
+        # HTML body.
+        self.assertEqual(len(email.alternatives), 1)
+        # Check that the number of "ok" instances is correct in email body.
+        self.assertIn("1 instance(s) verified", email.alternatives[0][0])
+        # Check ignored instances.
+        self.assertIn("Ignoring 1 record(s)", email.alternatives[0][0])
+
+    def test_command_run_audit_ok_ignored_records_email_errors_only(self):
+        """Test command output when email and errors_only is set, and there are ignored records."""
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="test-group")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=GetGroupsResponseFactory(response=[GroupDetailsAdminFactory(groupName="test-group")]).response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/member",
+            status=200,
+            json=GetGroupMembershipResponseFactory().response,
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/admin",
+            status=200,
+            json=GetGroupMembershipAdminResponseFactory().response,
+        )
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "--no-color",
+            models=["ManagedGroup"],
+            email="test@example.com",
+            errors_only=True,
+            stdout=out,
+        )
+        self.assertIn("ManagedGroupAudit... ok!", out.getvalue())
         # No message has been sent by default.
         self.assertEqual(len(mail.outbox), 0)
 
@@ -275,10 +412,6 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
                 email="test@example.com",
                 stdout=out,
             )
-
-    def test_command_ignored_records(self):
-        # This reports any records for the Ignore models.
-        self.fail()
 
 
 class RunAnVILAuditTablesTest(TestCase):
