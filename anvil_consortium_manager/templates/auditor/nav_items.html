@@ -1,0 +1,30 @@
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="navbarDarkDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+      AnVIL audits
+    </a>
+    <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
+
+      <li>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:billing_projects:all' %}">Audit Billing Projects</a>
+      </li>
+
+      <li>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:accounts:all' %}">Audit Accounts</a>
+      </li>
+
+      <li>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:managed_groups:all' %}">Audit Managed Groups</a>
+      </li>
+
+      <li>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:workspaces:all' %}">Audit Workspaces</a>
+      </li>
+
+      <li><hr class="dropdown-divider"></li>
+
+      <li>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:ignored' %}">List ignored group memberships</a>
+      </li>
+
+    </ul>
+  </li>

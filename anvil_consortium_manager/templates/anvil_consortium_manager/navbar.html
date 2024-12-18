@@ -34,10 +34,6 @@
                 </li>
               {% endif %}
 
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:billing_projects:all' %}">Audit billing projects</a>
-              </li>
-
             </ul>
           </li>
 
@@ -57,9 +53,6 @@
               </li>
               {% endif %}
 
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:accounts:all' %}">Audit accounts</a>
-              </li>
             </ul>
           </li>
 
@@ -85,12 +78,6 @@
                 <a class="dropdown-item" href="{% url 'anvil_consortium_manager:group_group_membership:new' %}">Add a group to a group</a>
               </li>
               {% endif %}
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:managed_groups:all' %}">Audit groups</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:ignored' %}">See ignored group memberships</a>
-              </li>
 
 
             </ul>
@@ -114,12 +101,10 @@
               </li>
               {% endif %}
 
-              <li>
-                <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:workspaces:all' %}">Audit workspaces</a>
-              </li>
-
             </ul>
           </li>
+
+          {% include 'auditor/nav_items.html' %}
 
           {% endblock anvil_consortium_manager_nav_items %}
 
