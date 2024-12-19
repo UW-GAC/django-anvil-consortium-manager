@@ -1452,6 +1452,27 @@ class IgnoredManagedGroupMembershipCreateTest(TestCase):
         self.assertIn("required", form.errors["note"][0])
         self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 0)
 
+    def test_get_object_exists(self):
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.group.name, obj.ignored_email))
+        self.assertRedirects(response, obj.get_absolute_url())
+
+    def test_post_object_exists(self):
+        obj = factories.IgnoredManagedGroupMembershipFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.group.name, obj.ignored_email),
+            {
+                "group": obj.group.pk,
+                "ignored_email": obj.ignored_email,
+                "note": fake.sentence(),
+            },
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        self.assertEqual(models.IgnoredManagedGroupMembership.objects.count(), 1)
+        self.assertIn(obj, models.IgnoredManagedGroupMembership.objects.all())
+
 
 class IgnoredManagedGroupMembershipDeleteTest(TestCase):
     def setUp(self):
