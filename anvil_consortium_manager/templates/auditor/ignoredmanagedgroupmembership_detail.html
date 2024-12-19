@@ -1,0 +1,35 @@
+{% extends "anvil_consortium_manager/__object_detail.html" %}
+{% load static %}
+
+
+{% block title %}{{ object }}{% endblock %}
+
+
+{% block panel %}
+<dl class="row">
+  <dt class="col-sm-2">Managed Group</dt> <dd class="col-sm-10">
+    <a href="{{ object.group.get_absolute_url }}">{{ object.group }}</a>
+  </dd>
+  <dt class="col-sm-2">Ignored email</dt> <dd class="col-sm-10">{{ object.ignored_email }}</dd>
+  <dt class="col-sm-2">Added by</dt> <dd class="col-sm-10">
+    {% if object.added_by.get_absolute_url %}
+        <a href="{{ object.added_by.get_absolute_url }}">{{ object.added_by }}</a>
+    {% else %}
+        {{ object.added_by }}
+    {% endif %}
+  </dd>
+  <dt class="col-sm-2">Date created</dt> <dd class="col-sm-10">{{ object.created }}</dd>
+  <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
+</dl>
+{% endblock panel %}
+
+
+{% block action_buttons %}
+
+{% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
+  <p>
+    <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:ignored:update' slug=object.group.name email=object.ignored_email %}" class="btn btn-secondary" role="button">Update</a>
+    <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:ignored:delete' slug=object.group.name email=object.ignored_email %}" class="btn btn-danger" role="button">Stop ignoring</a>
+  </p>
+{% endif %}
+{% endblock action_buttons %}

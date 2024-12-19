@@ -7,7 +7,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
-   anvil_consortium_manager.management.commands.run_anvil_audit
+   anvil_consortium_manager.management.commands.convert_mariadb_uuid_fields
 
 Module contents
 ---------------

@@ -45,10 +45,6 @@
               <span class="fa-solid fa-angle-right"></span>
             </li>
             {% endif %}
-            <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:billing_projects:audit' %}" class="icon-link">Audit billing projects</a>
-              <span class="fa-solid fa-angle-right"></span>
-            </li>
           </ul>
         </div>
       </div>
@@ -72,10 +68,6 @@
               <span class="fa-solid fa-angle-right"></span>
             </li>
             {% endif %}
-            <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:accounts:audit' %}" class="icon-link">Audit accounts</a>
-              <span class="fa-solid fa-angle-right"></span>
-            </li>
           </ul>
         </div>
       </div>
@@ -112,10 +104,6 @@
               <span class="fa-solid fa-angle-right"></span>
             </li>
             {% endif %}
-            <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:managed_groups:audit' %}" class="icon-link">Audit groups</a>
-              <span class="fa-solid fa-angle-right"></span>
-            </li>
           </ul>
         </div>
       </div>
@@ -146,12 +134,48 @@
               <span class="fa-solid fa-angle-right"></span>
             </li>
             {% endif %}
-            <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:workspaces:audit' %}" class="icon-link">Audit workspaces</a>
-              <span class="fa-solid fa-angle-right"></span>
-            </li>
           </ul>
 
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card shadow-sm">
+          <h5 class="card-header"><span class="fa-solid fa-kit-medical mx-2"></span>AnVIL Audits</h5>
+          <div class="card-body">
+            <p>
+              Audit information in this app against AnVIL.
+              These audits check that the information in this app is consistent with AnVIL.
+            </p>
+          </div>
+          <ul class="list-group list-group-flush">
+
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:auditor:billing_projects:all' %}" class="icon-link">Audit Billing Projects</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:auditor:accounts:all' %}" class="icon-link">Audit Accounts</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:all' %}" class="icon-link">Audit Managed Groups</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:auditor:workspaces:all' %}" class="icon-link">Audit Workspaces</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:ignored' %}" class="icon-link">List ignored group memberships</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+
+          </ul>
         </div>
       </div>
 
@@ -164,7 +188,7 @@
   <footer class="py-5">
 
     <div class="d-flex flex-column flex-sm-row justify-content-between py-4 my-4 border-top">
-      <p class="text-muted">© 2023 Adrienne Stilp</p>
+      <p class="text-muted">© 2024-5 Adrienne Stilp</p>
       <p class="text-muted">AnVIL Consortium Manager v{{ app_version }}</p>
     </div>
   </footer>

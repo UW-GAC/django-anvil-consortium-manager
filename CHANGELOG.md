@@ -1,5 +1,10 @@
 # Change log
 
+## Devel
+
+* Restructure audits by moving them to their own sub-app (`anvil_consortium_manager.auditor`)
+* Allow users to ignore a specific ManagedGroupMembershipAudit "not in app" record
+
 ## 0.27.0 (2024-12-06)
 
 * Allow a user to link an Account that is not or has never been linked to another user.

@@ -13,7 +13,6 @@ billing_project_patterns = (
             views.BillingProjectAutocomplete.as_view(),
             name="autocomplete",
         ),
-        path("audit/", views.BillingProjectAudit.as_view(), name="audit"),
         path("<slug:slug>/", views.BillingProjectDetail.as_view(), name="detail"),
         path("<slug:slug>/update/", views.BillingProjectUpdate.as_view(), name="update"),
     ],
@@ -56,7 +55,6 @@ account_patterns = (
             views.GroupAccountMembershipCreateByAccount.as_view(),
             name="add_to_group",
         ),
-        path("audit/", views.AccountAudit.as_view(), name="audit"),
     ],
     "accounts",
 )
@@ -132,18 +130,12 @@ managed_group_patterns = (
             views.ManagedGroupAutocomplete.as_view(),
             name="autocomplete",
         ),
-        path("audit/", views.ManagedGroupAudit.as_view(), name="audit"),
         path(
             "visualization/",
             views.ManagedGroupVisualization.as_view(),
             name="visualization",
         ),
         path("<slug:slug>/", views.ManagedGroupDetail.as_view(), name="detail"),
-        path(
-            "<slug:slug>/audit/",
-            views.ManagedGroupMembershipAudit.as_view(),
-            name="audit_membership",
-        ),
         path("<slug:slug>/delete", views.ManagedGroupDelete.as_view(), name="delete"),
         path("<slug:parent_group_slug>/member_groups/", include(member_group_patterns)),
         path("<slug:group_slug>/member_accounts/", include(member_account_patterns)),
@@ -223,7 +215,6 @@ workspace_patterns = (
         #     views.WorkspaceClone.as_view(),
         #     name="clone",
         # ),
-        path("audit/", views.WorkspaceAudit.as_view(), name="audit"),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/delete/",
             views.WorkspaceDelete.as_view(),
@@ -233,11 +224,6 @@ workspace_patterns = (
             "<slug:billing_project_slug>/<slug:workspace_slug>/",
             views.WorkspaceDetail.as_view(),
             name="detail",
-        ),
-        path(
-            "<slug:billing_project_slug>/<slug:workspace_slug>/audit/",
-            views.WorkspaceSharingAudit.as_view(),
-            name="audit_sharing",
         ),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/sharing/",
@@ -303,4 +289,5 @@ urlpatterns = [
     path("group_group_membership/", include(group_group_membership_patterns)),
     path("group_account_membership/", include(group_account_membership_patterns)),
     path("workspace_group_sharing/", include(workspace_group_sharing_patterns)),
+    path("audit/", include("anvil_consortium_manager.auditor.urls")),
 ]

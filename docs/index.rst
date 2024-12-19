@@ -20,7 +20,7 @@ Welcome to django-anvil-consortium-manager's documentation!
    management_commands
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 3
    :caption: Reference
 
    api/anvil_consortium_manager
