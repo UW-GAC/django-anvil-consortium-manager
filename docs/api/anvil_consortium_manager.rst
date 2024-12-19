@@ -8,7 +8,7 @@ Subpackages
    :maxdepth: 4
 
    anvil_consortium_manager.adapters
-   anvil_consortium_manager.audit
+   anvil_consortium_manager.auditor
    anvil_consortium_manager.management
 
 Submodules
@@ -19,6 +19,7 @@ Submodules
 
    anvil_consortium_manager.admin
    anvil_consortium_manager.anvil_api
+   anvil_consortium_manager.app_settings
    anvil_consortium_manager.apps
    anvil_consortium_manager.auth
    anvil_consortium_manager.exceptions

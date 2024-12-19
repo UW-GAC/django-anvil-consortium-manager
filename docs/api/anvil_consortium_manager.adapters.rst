@@ -9,6 +9,7 @@ Submodules
 
    anvil_consortium_manager.adapters.account
    anvil_consortium_manager.adapters.default
+   anvil_consortium_manager.adapters.managed_group
    anvil_consortium_manager.adapters.workspace
 
 Module contents
