@@ -34,6 +34,8 @@ Required Settings
 
           # This app:
           "anvil_consortium_manager",
+          # The associated app for auditing information against AnVIL (required):
+          "anvil_consortium_manager.auditor",
       ]
 
 2. Set the ``ANVIL_API_SERVICE_ACCOUNT_FILE`` setting to the path to the service account credentials file.
