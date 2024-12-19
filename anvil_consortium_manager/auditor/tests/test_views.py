@@ -1669,6 +1669,119 @@ class IgnoredManagedGroupMembershipListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
+    def test_view_with_filter_group_name_return_no_object(self):
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="foo")
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"group__name__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_group_name_returns_one_object_exact(self):
+        instance = factories.IgnoredManagedGroupMembershipFactory.create(group__name="foo")
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"group__name__icontains": "foo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_group_name_returns_one_object_case_insensitive(self):
+        instance = factories.IgnoredManagedGroupMembershipFactory.create(group__name="Foo")
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"group__name__icontains": "foo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_group_name_returns_one_object_case_contains(self):
+        instance = factories.IgnoredManagedGroupMembershipFactory.create(group__name="foo")
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"group__name__icontains": "oo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_group_name_returns_multiple_objects(self):
+        instance_1 = factories.IgnoredManagedGroupMembershipFactory.create(group__name="group1")
+        instance_2 = factories.IgnoredManagedGroupMembershipFactory.create(group__name="group2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"group__name__icontains": "group"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertIn(instance_1, response.context_data["table"].data)
+        self.assertIn(instance_2, response.context_data["table"].data)
+
+    def test_view_with_filter_email_return_no_object(self):
+        factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo@test.com")
+        factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_email_returns_one_object_exact(self):
+        instance = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo@test.com")
+        factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "foo@test.com"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_email_returns_one_object_case_insensitive(self):
+        instance = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="Foo@test.com")
+        factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "foo@test.com"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_email_returns_one_object_case_contains(self):
+        instance = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo@test.com")
+        factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "oo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_email_returns_multiple_objects(self):
+        instance_1 = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo1@test.com")
+        instance_2 = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo2@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "foo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertIn(instance_1, response.context_data["table"].data)
+        self.assertIn(instance_2, response.context_data["table"].data)
+
+    def test_view_with_filter_group_name_and_email(self):
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="abc", ignored_email="foo@test.com")
+        instance = factories.IgnoredManagedGroupMembershipFactory.create(
+            group__name="def", ignored_email="foo@test.com"
+        )
+        factories.IgnoredManagedGroupMembershipFactory.create(group__name="def", ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"group__name__icontains": "def", "ignored_email__icontains": "foo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
 
 class IgnoredManagedGroupMembershipUpdateTest(TestCase):
     def setUp(self):
