@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.28.0 (2025-01-06)
 
 * Restructure audits by moving them to their own sub-app (`anvil_consortium_manager.auditor`)
 * Allow users to ignore a specific ManagedGroupMembershipAudit "not in app" record
