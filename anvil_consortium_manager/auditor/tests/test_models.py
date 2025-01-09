@@ -115,10 +115,10 @@ class IgnoredWorkspaceSharingTest(TestCase):
         self.assertIsInstance(instance.__str__(), str)
         self.assertEqual(instance.__str__(), "foo/bar sharing: ignoring email@example.com")
 
-    # def test_get_absolute_url(self):
-    #     """The get_absolute_url() method works."""
-    #     instance = factories.IgnoredWorkspaceSharingFactory()
-    #     self.assertIsInstance(instance.get_absolute_url(), str)
+    def test_get_absolute_url(self):
+        """The get_absolute_url() method works."""
+        instance = factories.IgnoredWorkspaceSharingFactory()
+        self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_history(self):
         """A simple history record is created when model is updated."""

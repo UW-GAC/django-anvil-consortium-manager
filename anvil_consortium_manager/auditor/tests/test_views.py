@@ -2426,3 +2426,151 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo", workspace_slug=self.workspace.name)
+
+
+class IgnoredWorkspaceSharingDetailTest(TestCase):
+    """Tests for the IgnoredWorkspaceSharingDetail view."""
+
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:detail", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredWorkspaceSharingDetail.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar", "bar@example.com"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar", "bar@example.com"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url("foo", "bar", "bar@example.com"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo1", "bar", "bar@example.com"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_invalid_obj(self):
+        """Raises a 404 error with an invalid object pk."""
+        request = self.factory.get(self.get_url("foo1", "bar", "bar@example.com"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_invalid_obj_different_billing_project(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        request = self.factory.get(self.get_url("foo", obj.workspace.name, obj.ignored_email))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_invalid_obj_different_workspace(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        request = self.factory.get(self.get_url(obj.workspace.billing_project.name, "bar", obj.ignored_email))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_invalid_obj_different_email(self):
+        """Raises a 404 error with an invalid object pk."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        email = fake.email()
+        request = self.factory.get(self.get_url(obj.workspace.billing_project.name, obj.workspace.name, email))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_detail_page_links_staff_view(self):
+        """Links to other object detail pages appear correctly when user has staff view permission."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        html = """<a href="{url}">{text}</a>""".format(url=obj.workspace.get_absolute_url(), text=str(obj.workspace))
+        self.assertContains(response, html)
+        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        # Action buttons.
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:delete",
+            args=[obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email],
+        )
+        self.assertNotContains(response, expected_url)
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:update",
+            args=[obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email],
+        )
+        self.assertNotContains(response, expected_url)
+
+    def test_detail_page_links_staff_edit(self):
+        """Links to other object detail pages appear correctly when user has staff edit permission."""
+        user = User.objects.create_user(username="staff-edit", password="testpassword")
+        user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(user)
+        response = self.client.get(obj.get_absolute_url())
+        html = """<a href="{url}">{text}</a>""".format(url=obj.workspace.get_absolute_url(), text=str(obj.workspace))
+        self.assertContains(response, html)
+        # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
+        # Action buttons.
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:delete",
+            args=[obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email],
+        )
+        self.assertContains(response, expected_url)
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:update",
+            args=[obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email],
+        )
+        self.assertContains(response, expected_url)
+
+    def test_detail_page_links_user_get_absolute_url(self):
+        """HTML includes a link to the user profile when the added_by user has a get_absolute_url method."""
+
+        # Dynamically set the get_absolute_url method. This is hacky...
+        def foo(self):
+            return "test_profile_{}".format(self.username)
+
+        UserModel = get_user_model()
+        setattr(UserModel, "get_absolute_url", foo)
+        user = UserModel.objects.create(username="testuser2", password="testpassword")
+        obj = factories.IgnoredWorkspaceSharingFactory.create(added_by=user)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, user.get_absolute_url())

@@ -278,3 +278,31 @@ class WorkspaceSharingAudit(
 
     def get_audit_instance(self):
         return workspace_audit.WorkspaceSharingAudit(self.object)
+
+
+class IgnoredWorkspaceSharingDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
+    """View to display the details of an models.IgnoredWorkspaceSharing object."""
+
+    model = models.IgnoredWorkspaceSharing
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        email = self.kwargs.get("email", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            ignored_email=email,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
