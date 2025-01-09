@@ -25,8 +25,8 @@ class IgnoredManagedGroupMembershipFactory(DjangoModelFactory):
         model = models.IgnoredManagedGroupMembership
 
 
-class IgnoredWorkspaceGroupSharingFactory(DjangoModelFactory):
-    """A factory for the IgnoredWorkspaceGroupSharing model."""
+class IgnoredWorkspaceSharingFactory(DjangoModelFactory):
+    """A factory for the IgnoredWorkspaceSharing model."""
 
     workspace = SubFactory(WorkspaceFactory)
     ignored_email = Faker("email")
@@ -34,4 +34,4 @@ class IgnoredWorkspaceGroupSharingFactory(DjangoModelFactory):
     note = Faker("sentence")
 
     class Meta:
-        model = models.IgnoredWorkspaceGroupSharing
+        model = models.IgnoredWorkspaceSharing

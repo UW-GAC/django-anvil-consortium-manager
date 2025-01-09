@@ -90,25 +90,25 @@ class IgnoredManagedGroupMembershipTest(TestCase):
             instance_2.save()
 
 
-class IgnoredWorkspaceGroupSharingTest(TestCase):
-    """Tests for the models.IgnoredWorkspaceGroupSharing model."""
+class IgnoredWorkspaceSharingTest(TestCase):
+    """Tests for the models.IgnoredWorkspaceSharing model."""
 
     def test_model_saving(self):
         """Creation using the model constructor and .save() works."""
         workspace = WorkspaceFactory.create()
         user = factories.UserFactory.create()
-        instance = models.IgnoredWorkspaceGroupSharing(
+        instance = models.IgnoredWorkspaceSharing(
             workspace=workspace,
             ignored_email="email@example.com",
             added_by=user,
             note="foo",
         )
         instance.save()
-        self.assertIsInstance(instance, models.IgnoredWorkspaceGroupSharing)
+        self.assertIsInstance(instance, models.IgnoredWorkspaceSharing)
 
     def test_str_method(self):
         """The custom __str__ method returns the correct string."""
-        instance = factories.IgnoredWorkspaceGroupSharingFactory.create(
+        instance = factories.IgnoredWorkspaceSharingFactory.create(
             workspace__name="bar", workspace__billing_project__name="foo", ignored_email="email@example.com"
         )
         instance.save()
@@ -117,12 +117,12 @@ class IgnoredWorkspaceGroupSharingTest(TestCase):
 
     # def test_get_absolute_url(self):
     #     """The get_absolute_url() method works."""
-    #     instance = factories.IgnoredWorkspaceGroupSharingFactory()
+    #     instance = factories.IgnoredWorkspaceSharingFactory()
     #     self.assertIsInstance(instance.get_absolute_url(), str)
 
     def test_history(self):
         """A simple history record is created when model is updated."""
-        obj = factories.IgnoredWorkspaceGroupSharingFactory.create()
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
         # History was created.
         self.assertEqual(obj.history.count(), 1)
         # A new entry is created on update.
@@ -131,19 +131,19 @@ class IgnoredWorkspaceGroupSharingTest(TestCase):
         self.assertEqual(obj.history.count(), 2)
         # An entry is created upon deletion.
         obj.delete()
-        self.assertEqual(models.IgnoredWorkspaceGroupSharing.history.count(), 3)
+        self.assertEqual(models.IgnoredWorkspaceSharing.history.count(), 3)
 
     def test_unique(self):
         # Cannot save the same record for the same group and email.
         workspace = WorkspaceFactory.create()
         email = "email@example.com"
-        instance_1 = factories.IgnoredWorkspaceGroupSharingFactory.build(
+        instance_1 = factories.IgnoredWorkspaceSharingFactory.build(
             workspace=workspace,
             ignored_email=email,
             added_by=factories.UserFactory.create(),
         )
         instance_1.save()
-        instance_2 = factories.IgnoredWorkspaceGroupSharingFactory.build(
+        instance_2 = factories.IgnoredWorkspaceSharingFactory.build(
             workspace=workspace,
             ignored_email=email,
             added_by=factories.UserFactory.create(),
@@ -155,13 +155,13 @@ class IgnoredWorkspaceGroupSharingTest(TestCase):
         # Cannot save the same record for the same group and email.
         workspace = WorkspaceFactory.create()
         email = "email@example.com"
-        instance_1 = factories.IgnoredWorkspaceGroupSharingFactory.build(
+        instance_1 = factories.IgnoredWorkspaceSharingFactory.build(
             workspace=workspace,
             ignored_email=email,
             added_by=factories.UserFactory.create(),
         )
         instance_1.save()
-        instance_2 = factories.IgnoredWorkspaceGroupSharingFactory.build(
+        instance_2 = factories.IgnoredWorkspaceSharingFactory.build(
             workspace=workspace,
             ignored_email=email.upper(),
             added_by=factories.UserFactory.create(),

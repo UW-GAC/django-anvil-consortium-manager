@@ -53,7 +53,7 @@ class IgnoredManagedGroupMembership(IgnoredAuditResult):
         )
 
 
-class IgnoredWorkspaceGroupSharing(IgnoredAuditResult):
+class IgnoredWorkspaceSharing(IgnoredAuditResult):
     """A model to store audit records that can be ignored during a WorkspaceGroupSharing audit.
 
     Right now this model is intended to track "not in app" records that can be ignored."""
