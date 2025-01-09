@@ -57,7 +57,7 @@ workspace_sharing_by_group_ignore_patterns = (
         path("<str:email>/", views.IgnoredWorkspaceSharingDetail.as_view(), name="detail"),
         path("<str:email>/new/", views.IgnoredWorkspaceSharingCreate.as_view(), name="new"),
         path("<str:email>/update/", views.IgnoredWorkspaceSharingUpdate.as_view(), name="update"),
-        # path("<str:email>/delete/", views.IgnoredWorkspaceSharingDelete.as_view(), name="delete"),
+        path("<str:email>/delete/", views.IgnoredWorkspaceSharingDelete.as_view(), name="delete"),
     ],
     "ignored",
 )

@@ -406,3 +406,35 @@ class IgnoredWorkspaceSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired
         context["workspace"] = self.object.workspace
         context["email"] = self.object.ignored_email
         return context
+
+
+class IgnoredWorkspaceSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
+    model = models.IgnoredWorkspaceSharing
+    success_message = "Successfully stopped ignoring workspace sharing record."
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        email = self.kwargs.get("email", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            ignored_email=email,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get_success_url(self):
+        return self.object.workspace.get_absolute_url()

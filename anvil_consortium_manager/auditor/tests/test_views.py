@@ -19,6 +19,7 @@ from anvil_consortium_manager.models import (
 from anvil_consortium_manager.tests.factories import (
     AccountFactory,
     BillingProjectFactory,
+    DefaultWorkspaceDataFactory,
     GroupAccountMembershipFactory,
     ManagedGroupFactory,
     WorkspaceFactory,
@@ -3065,3 +3066,133 @@ class IgnoredWorkspaceSharingUpdateTest(TestCase):
         self.assertIn("required", form.errors["note"][0])
         obj.refresh_from_db()
         self.assertEqual(obj.note, "original note")
+
+
+class IgnoredWorkspaceSharingDeleteTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:delete", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredWorkspaceSharingDelete.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar", "email"))
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar", "email"))
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email)
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "email"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url("foo", "bar", "email"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo", "bar", "email"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url("foo", "bar", "email"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request)
+
+    def test_view_deletes_object(self):
+        """Posting submit to the form successfully deletes the object."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email), {"submit": ""}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Account.objects.count(), 0)
+        # History is added.
+        self.assertEqual(obj.history.count(), 2)
+        self.assertEqual(obj.history.latest().history_type, "-")
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email),
+            {"submit": ""},
+            follow=True,
+        )
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.IgnoredWorkspaceSharingDelete.success_message, str(messages[0]))
+
+    def test_only_deletes_specified_pk(self):
+        """View only deletes the specified pk."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        other_obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email),
+            {"submit": ""},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 1)
+        self.assertQuerySetEqual(
+            Account.objects.all(),
+            Account.objects.filter(pk=other_obj.pk),
+        )
+
+    def test_success_url(self):
+        """Redirects to the expected page."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        # Need to use the client instead of RequestFactory to check redirection url.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email),
+            {"submit": ""},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, obj.workspace.get_absolute_url())
