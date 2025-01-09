@@ -371,3 +371,38 @@ class IgnoredWorkspaceSharingDetail(auth.AnVILConsortiumManagerStaffViewRequired
                 _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
+
+
+class IgnoredWorkspaceSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView):
+    """View to update an existing models.IgnoredWorkspaceSharing."""
+
+    model = models.IgnoredWorkspaceSharing
+    fields = ("note",)
+    success_message = "Successfully updated ignored record."
+
+    def get_object(self, queryset=None):
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        email = self.kwargs.get("email", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            ignored_email=email,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace"] = self.object.workspace
+        context["email"] = self.object.ignored_email
+        return context
