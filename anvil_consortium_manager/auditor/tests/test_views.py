@@ -3196,3 +3196,199 @@ class IgnoredWorkspaceSharingDeleteTest(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, obj.workspace.get_absolute_url())
+
+
+class IgnoredWorkspaceSharingListTest(TestCase):
+    def setUp(self):
+        """Set up test class."""
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:ignored", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredWorkspaceSharingList.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_template_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_view_has_correct_table_class(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("table", response.context_data)
+        self.assertIsInstance(response.context_data["table"], tables.IgnoredWorkspaceSharingTable)
+
+    def test_view_with_no_objects(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_one_object(self):
+        factories.IgnoredWorkspaceSharingFactory()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_two_objects(self):
+        factories.IgnoredWorkspaceSharingFactory.create_batch(2)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_workspace_name_return_no_object(self):
+        factories.IgnoredWorkspaceSharingFactory.create(workspace__name="foo")
+        factories.IgnoredWorkspaceSharingFactory.create(workspace__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"workspace__name__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_workspace_name_returns_one_object_exact(self):
+        instance = factories.IgnoredWorkspaceSharingFactory.create(workspace__name="foo")
+        factories.IgnoredWorkspaceSharingFactory.create(workspace__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"workspace__name__icontains": "foo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_workspace_name_returns_one_object_case_insensitive(self):
+        instance = factories.IgnoredWorkspaceSharingFactory.create(workspace__name="Foo")
+        factories.IgnoredWorkspaceSharingFactory.create(workspace__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"workspace__name__icontains": "foo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_workspace_name_returns_one_object_case_contains(self):
+        instance = factories.IgnoredWorkspaceSharingFactory.create(workspace__name="foo")
+        factories.IgnoredWorkspaceSharingFactory.create(workspace__name="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"workspace__name__icontains": "oo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_workspace_name_returns_multiple_objects(self):
+        instance_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace__name="workspace1")
+        instance_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace__name="workspace2")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"workspace__name__icontains": "workspace"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertIn(instance_1, response.context_data["table"].data)
+        self.assertIn(instance_2, response.context_data["table"].data)
+
+    def test_view_with_filter_email_return_no_object(self):
+        factories.IgnoredWorkspaceSharingFactory.create(ignored_email="foo@test.com")
+        factories.IgnoredWorkspaceSharingFactory.create(ignored_email="bar")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 0)
+
+    def test_view_with_filter_email_returns_one_object_exact(self):
+        instance = factories.IgnoredWorkspaceSharingFactory.create(ignored_email="foo@test.com")
+        factories.IgnoredWorkspaceSharingFactory.create(ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "foo@test.com"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_email_returns_one_object_case_insensitive(self):
+        instance = factories.IgnoredWorkspaceSharingFactory.create(ignored_email="Foo@test.com")
+        factories.IgnoredWorkspaceSharingFactory.create(ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "foo@test.com"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_email_returns_one_object_case_contains(self):
+        instance = factories.IgnoredWorkspaceSharingFactory.create(ignored_email="foo@test.com")
+        factories.IgnoredWorkspaceSharingFactory.create(ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "oo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)
+
+    def test_view_with_filter_email_returns_multiple_objects(self):
+        instance_1 = factories.IgnoredWorkspaceSharingFactory.create(ignored_email="foo1@test.com")
+        instance_2 = factories.IgnoredWorkspaceSharingFactory.create(ignored_email="foo2@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"ignored_email__icontains": "foo"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+        self.assertIn(instance_1, response.context_data["table"].data)
+        self.assertIn(instance_2, response.context_data["table"].data)
+
+    def test_view_with_filter_workspace_name_and_email(self):
+        factories.IgnoredWorkspaceSharingFactory.create(workspace__name="abc", ignored_email="foo@test.com")
+        instance = factories.IgnoredWorkspaceSharingFactory.create(workspace__name="def", ignored_email="foo@test.com")
+        factories.IgnoredWorkspaceSharingFactory.create(workspace__name="def", ignored_email="bar@test.com")
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(), {"workspace__name__icontains": "def", "ignored_email__icontains": "foo"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+        self.assertIn(instance, response.context_data["table"].data)

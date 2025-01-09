@@ -438,3 +438,12 @@ class IgnoredWorkspaceSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired
 
     def get_success_url(self):
         return self.object.workspace.get_absolute_url()
+
+
+class IgnoredWorkspaceSharingList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
+    """View to display a list of models.IgnoredWorkspaceSharing."""
+
+    model = models.IgnoredWorkspaceSharing
+    table_class = tables.IgnoredWorkspaceSharingTable
+    template_name = "auditor/ignoredworkspacesharing_list.html"
+    filterset_class = filters.IgnoredWorkspaceSharingFilter

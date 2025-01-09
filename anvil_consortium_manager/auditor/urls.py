@@ -71,6 +71,7 @@ workspace_sharing_by_group_patterns = (
 )
 workspace_sharing_patterns = (
     [
+        path("ignored/", views.IgnoredWorkspaceSharingList.as_view(), name="ignored"),
         path("<slug:billing_project_slug>/<slug:workspace_slug>/", include(workspace_sharing_by_group_patterns)),
     ],
     "sharing",

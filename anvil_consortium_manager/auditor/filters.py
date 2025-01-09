@@ -10,3 +10,10 @@ class IgnoredManagedGroupMembershipFilter(FilterSet):
         model = models.IgnoredManagedGroupMembership
         fields = {"group__name": ["icontains"], "ignored_email": ["icontains"]}
         form = FilterForm
+
+
+class IgnoredWorkspaceSharingFilter(FilterSet):
+    class Meta:
+        model = models.IgnoredWorkspaceSharing
+        fields = {"workspace__name": ["icontains"], "ignored_email": ["icontains"]}
+        form = FilterForm
