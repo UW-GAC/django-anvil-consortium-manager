@@ -280,6 +280,71 @@ class WorkspaceSharingAudit(
         return workspace_audit.WorkspaceSharingAudit(self.object)
 
 
+class IgnoredWorkspaceSharingCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
+    """View to create a new models.IgnoredWorkspaceSharing."""
+
+    model = models.IgnoredWorkspaceSharing
+    form_class = forms.IgnoredWorkspaceSharingForm
+    message_already_exists = "Record already exists for this workspace and email."
+    success_message = "Successfully ignored workspace sharing."
+
+    def get_workspace(self):
+        try:
+            billing_project_name = self.kwargs["billing_project_slug"]
+            workspace_name = self.kwargs["workspace_slug"]
+            group = Workspace.objects.get(billing_project__name=billing_project_name, name=workspace_name)
+        except Workspace.DoesNotExist:
+            raise Http404("Workspace not found.")
+        return group
+
+    def get_email(self):
+        return self.kwargs["email"]
+
+    def get(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        self.email = self.get_email()
+        try:
+            obj = models.IgnoredWorkspaceSharing.objects.get(workspace=self.workspace, ignored_email=self.email)
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.IgnoredWorkspaceSharing.DoesNotExist:
+            return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        self.email = self.get_email()
+        try:
+            obj = models.IgnoredWorkspaceSharing.objects.get(workspace=self.workspace, ignored_email=self.email)
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.IgnoredWorkspaceSharing.DoesNotExist:
+            return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["workspace"] = self.workspace
+        initial["ignored_email"] = self.email
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["workspace"].widget = HiddenInput()
+        form.fields["ignored_email"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace"] = self.workspace
+        context["email"] = self.email
+        return context
+
+    def form_valid(self, form):
+        """If the form is valid, save the associated model."""
+        form.instance.added_by = self.request.user
+        return super().form_valid(form)
+
+
 class IgnoredWorkspaceSharingDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
     """View to display the details of an models.IgnoredWorkspaceSharing object."""
 

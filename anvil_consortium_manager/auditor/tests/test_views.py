@@ -2574,3 +2574,341 @@ class IgnoredWorkspaceSharingDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, user.get_absolute_url())
+
+
+class IgnoredWorkspaceSharingCreateTest(TestCase):
+    """Tests for the IgnoredWorkspaceSharingCreate view."""
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
+        self.workspace = WorkspaceFactory.create()
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:new", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.IgnoredWorkspaceSharingCreate.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar", "bar@example.com"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar", "bar@example.com"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, "foo@bar.com")
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar", "bar@example.com"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url("foo", "bar", "bar@example.com"))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo", "bar", "bar@example.com"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name, fake.email()))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.IgnoredWorkspaceSharingForm)
+
+    def test_context_workspace(self):
+        """Context contains the workspace."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name, fake.email()))
+        self.assertTrue("workspace" in response.context_data)
+        self.assertEqual(response.context_data["workspace"], self.workspace)
+
+    def test_context_email(self):
+        """Context contains the email."""
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name, email))
+        self.assertTrue("email" in response.context_data)
+        self.assertEqual(response.context_data["email"], email)
+
+    def test_form_hidden_input(self):
+        """The proper inputs are hidden in the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name, fake.email()))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"].fields["workspace"].widget, HiddenInput)
+        self.assertIsInstance(response.context_data["form"].fields["ignored_email"].widget, HiddenInput)
+
+    def test_get_initial(self):
+        """Initial data is set correctly."""
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name, email))
+        initial = response.context_data["form"].initial
+        self.assertIn("workspace", initial)
+        self.assertEqual(self.workspace, initial["workspace"])
+        self.assertIn("ignored_email", initial)
+        self.assertEqual(email, initial["ignored_email"])
+
+    def test_can_create_an_object(self):
+        """Posting valid data to the form creates an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, "my@email.com"),
+            {"workspace": self.workspace.pk, "ignored_email": "my@email.com", "note": "foo bar"},
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.IgnoredWorkspaceSharing.objects.latest("pk")
+        self.assertIsInstance(new_object, models.IgnoredWorkspaceSharing)
+        self.assertEqual(new_object.workspace, self.workspace)
+        self.assertEqual(new_object.ignored_email, "my@email.com")
+        self.assertEqual(new_object.note, "foo bar")
+        self.assertEqual(new_object.added_by, self.user)
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, email),
+            {
+                "workspace": self.workspace.pk,
+                "ignored_email": email,
+                "note": fake.sentence(),
+            },
+            follow=True,
+        )
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.IgnoredWorkspaceSharingCreate.success_message, str(messages[0]))
+
+    def test_success_redirect(self):
+        """After successfully creating an object, view redirects to the model's list view."""
+        # This needs to use the client because the RequestFactory doesn't handle redirects.
+        email = fake.email()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, email),
+            {
+                "workspace": self.workspace.pk,
+                "ignored_email": email,
+                "note": fake.sentence(),
+            },
+        )
+        obj = models.IgnoredWorkspaceSharing.objects.latest("pk")
+        self.assertRedirects(response, obj.get_absolute_url())
+
+    def test_cannot_create_duplicate_object(self):
+        """Cannot create a second object for the same group and email."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create(note="original note")
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, obj.ignored_email),
+            {"workspace": obj.workspace.pk, "ignored_email": obj.ignored_email, "note": "foo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        # import ipdb; ipdb.set_trace()
+        self.assertIn("already exists", form.non_field_errors()[0])
+        self.assertQuerySetEqual(
+            models.IgnoredWorkspaceSharing.objects.all(),
+            models.IgnoredWorkspaceSharing.objects.filter(pk=obj.pk),
+        )
+        obj.refresh_from_db()
+        self.assertEqual(obj.note, "original note")
+
+    def test_get_workspace_not_found_billing_project(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url("foo", self.workspace.name, "test@eaxmple.com"))
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_get_workspace_not_found_workspace_name(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, "foo", "test@eaxmple.com"))
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_post_workspace_not_found_billing_project(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url("foo", self.workspace.name, "test@eaxmple.com"),
+            {
+                "workspace": self.workspace,
+                "ignored_email": "test@example.com",
+                "note": "a note",
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_post_workspace_not_found_name(self):
+        """Raises 404 if group in URL does not exist when posting data."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, "foo", "test@eaxmple.com"),
+            {
+                "workspace": self.workspace,
+                "ignored_email": "test@example.com",
+                "note": "a note",
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_invalid_input_email(self):
+        """Posting invalid data to role field does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, "foo"),
+            {
+                "workspace": self.workspace.pk,
+                "ignored_email": "foo",
+                "note": "bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("ignored_email", form.errors.keys())
+        self.assertEqual(len(form.errors["ignored_email"]), 1)
+        self.assertIn("valid email", form.errors["ignored_email"][0])
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_post_blank_data(self):
+        """Posting blank data does not create an object."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, "foo@bar.com"), {}
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("workspace", form.errors.keys())
+        self.assertIn("required", form.errors["workspace"][0])
+        self.assertIn("ignored_email", form.errors.keys())
+        self.assertIn("required", form.errors["ignored_email"][0])
+        self.assertIn("note", form.errors.keys())
+        self.assertIn("required", form.errors["note"][0])
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_post_blank_data_workspace(self):
+        """Posting blank data to the group field does not create an object."""
+        email = fake.email(0)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, email),
+            {
+                "ignored_email": email,
+                "note": "foo bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("workspace", form.errors.keys())
+        self.assertIn("required", form.errors["workspace"][0])
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_post_blank_data_email(self):
+        """Posting blank data to the account field does not create an object."""
+        email = fake.email(0)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, email),
+            {
+                "workspace": self.workspace.pk,
+                # "ignored_email": email,
+                "note": "foo bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("ignored_email", form.errors.keys())
+        self.assertIn("required", form.errors["ignored_email"][0])
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_post_blank_data_note(self):
+        """Posting blank data to the note field does not create an object."""
+        email = fake.email(0)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name, email),
+            {
+                "workspace": self.workspace.pk,
+                "ignored_email": email,
+                # "note": "foo bar",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("note", form.errors.keys())
+        self.assertIn("required", form.errors["note"][0])
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 0)
+
+    def test_get_object_exists(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email)
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+
+    def test_post_object_exists(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.ignored_email),
+            {
+                "workspace": obj.workspace.pk,
+                "ignored_email": obj.ignored_email,
+                "note": fake.sentence(),
+            },
+        )
+        self.assertRedirects(response, obj.get_absolute_url())
+        self.assertEqual(models.IgnoredWorkspaceSharing.objects.count(), 1)
+        self.assertIn(obj, models.IgnoredWorkspaceSharing.objects.all())
