@@ -1,10 +1,12 @@
+import django_tables2 as tables
+
 from anvil_consortium_manager.anvil_api import AnVILAPIClient
 from anvil_consortium_manager.models import Workspace
 
-from .base import AnVILAudit, ModelInstanceResult, NotInAppResult
+from . import base
 
 
-class WorkspaceAudit(AnVILAudit):
+class WorkspaceAudit(base.AnVILAudit):
     """Class to runs an audit for Workspace instances."""
 
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
@@ -38,7 +40,7 @@ class WorkspaceAudit(AnVILAudit):
         response = AnVILAPIClient().list_workspaces(fields=",".join(fields))
         workspaces_on_anvil = response.json()
         for workspace in Workspace.objects.all():
-            model_instance_result = ModelInstanceResult(workspace)
+            model_instance_result = base.ModelInstanceResult(workspace)
             try:
                 i = next(
                     idx
@@ -89,10 +91,63 @@ class WorkspaceAudit(AnVILAudit):
             if x["accessLevel"] == "OWNER"
         ]
         for workspace_name in not_in_app:
-            self.add_result(NotInAppResult(workspace_name))
+            self.add_result(base.NotInAppResult(workspace_name))
 
 
-class WorkspaceSharingAudit(AnVILAudit):
+class WorkspaceSharingNotInAppResult(base.NotInAppResult):
+    """Class to store a not in app audit result for a specific WorkspaceSharing record."""
+
+    def __init__(self, *args, workspace=None, email=None, access=None, can_compute=None, can_share=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.workspace = workspace
+        self.email = email
+        self.access = access
+        self.can_compute = can_compute
+        self.can_share = can_share
+
+
+class WorkspaceSharingNotInAppTable(base.NotInAppTable):
+    workspace = tables.Column()
+    email = tables.Column()
+    access = tables.Column()
+    can_compute = tables.Column()
+    can_share = tables.Column()
+    # ignore = tables.TemplateColumn(
+    #     template_name="anvil_consortium_manager/snippets/audit_managedgroupmembership_notinapp_ignore_button.html",
+    #     orderable=False,
+    #     verbose_name="Ignore?",
+    # )
+
+    class Meta:
+        fields = (
+            "workspace",
+            "email",
+            "access",
+            "can_compute",
+            "can_share",
+        )
+        exclude = ("record",)
+
+
+# class WorkspaceSharingIgnoredTable(base.IgnoredTable):
+#     """A table specific to the IgnoredWorkspaceSharing model."""
+
+#     model_instance = tables.columns.Column(linkify=True, verbose_name="Details")
+#     model_instance__workspace = tables.columns.Column(linkify=True, verbose_name="Workspace", orderable=False)
+#     model_instance__ignored_email = tables.columns.Column(orderable=False, verbose_name="Ignored email")
+#     model_instance__added_by = tables.columns.Column(orderable=False, verbose_name="Ignored by")
+
+#     class Meta:
+#         fields = (
+#             "model_instance",
+#             "model_instance__workspace",
+#             "model_instance__ignored_email",
+#             "model_instance__added_by",
+#             "record",
+#         )
+
+
+class WorkspaceSharingAudit(base.AnVILAudit):
     """Class that runs an audit for sharing of a specific Workspace instance."""
 
     ERROR_NOT_SHARED_IN_ANVIL = "Not shared in AnVIL"
@@ -106,6 +161,9 @@ class WorkspaceSharingAudit(AnVILAudit):
 
     ERROR_DIFFERENT_CAN_COMPUTE = "can_compute value does not match in AnVIL"
     """Error when the can_compute value for a ManagedGroup does not match what's on AnVIL."""
+
+    not_in_app_table_class = WorkspaceSharingNotInAppTable
+    # ignored_table_class = WorkspaceSharingIgnoredTable
 
     def __init__(self, workspace, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -124,7 +182,7 @@ class WorkspaceSharingAudit(AnVILAudit):
             pass
         for access in self.workspace.workspacegroupsharing_set.all():
             # Create an audit result instance for this model.
-            model_instance_result = ModelInstanceResult(access)
+            model_instance_result = base.ModelInstanceResult(access)
             try:
                 access_details = acl_in_anvil.pop(access.group.email.lower())
             except KeyError:
@@ -144,6 +202,24 @@ class WorkspaceSharingAudit(AnVILAudit):
             # Save the results for this model instance.
             self.add_result(model_instance_result)
 
-        # Add any access that the app doesn't know about.
+        # # Handle ignored records.
+        # for obj in models.IgnoredWorkspaceSharing.objects.filter(workspace=self.workspace):
+        #     try:
+        #         acl = acl_in_anvil.pop(obj.ignored_email)
+        #         record = "{}: {}".format(acl["accessLevel"], obj.ignored_email)
+        #         self.add_result(base.IgnoredResult(obj, record=record))
+        #     except ValueError:
+        #         self.add_result(base.IgnoredResult(obj, record=None))
+
+        # Add any remaining records as "not in app".
         for key in acl_in_anvil:
-            self.add_result(NotInAppResult("{}: {}".format(acl_in_anvil[key]["accessLevel"], key)))
+            self.add_result(
+                WorkspaceSharingNotInAppResult(
+                    "{}: {}".format(acl_in_anvil[key]["accessLevel"], key),
+                    workspace=self.workspace,
+                    email=key,
+                    access=acl_in_anvil[key]["accessLevel"],
+                    can_compute=acl_in_anvil[key]["canCompute"],
+                    can_share=acl_in_anvil[key]["canShare"],
+                )
+            )

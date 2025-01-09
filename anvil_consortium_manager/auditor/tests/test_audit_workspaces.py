@@ -1459,7 +1459,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         model_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(model_result.record, "READER: test-member@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "READER")
+        self.assertEqual(model_result.email, "test-member@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
 
     def test_two_group_readers_not_in_app(self):
         """anvil_audit works correctly if this workspace has two group readers not in the app."""
@@ -1478,9 +1482,17 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 2)
         model_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(model_result.record, "READER: test-member-1@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "READER")
+        self.assertEqual(model_result.email, "test-member-1@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
         model_result = audit_results.get_not_in_app_results()[1]
-        self.assertEqual(model_result.record, "READER: test-member-2@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "READER")
+        self.assertEqual(model_result.email, "test-member-2@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
 
     def test_one_group_members_case_insensitive(self):
         """anvil_audit ignores case."""
@@ -1601,7 +1613,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         model_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(model_result.record, "WRITER: test-writer@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "WRITER")
+        self.assertEqual(model_result.email, "test-writer@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
 
     def test_two_group_writers_not_in_app(self):
         """anvil_audit works correctly if this workspace has two group writers not in the app."""
@@ -1620,9 +1636,61 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 2)
         model_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(model_result.record, "WRITER: test-writer-1@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "WRITER")
+        self.assertEqual(model_result.email, "test-writer-1@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
         model_result = audit_results.get_not_in_app_results()[1]
-        self.assertEqual(model_result.record, "WRITER: test-writer-2@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "WRITER")
+        self.assertEqual(model_result.email, "test-writer-2@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
+
+    def test_one_group_writer_not_in_app_can_compute(self):
+        """anvil_audit works correctly if this workspace has one group writer not in the app."""
+        self.update_api_response("test-writer@firecloud.org", "WRITER", can_compute=True)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
+        model_result = audit_results.get_not_in_app_results()[0]
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "WRITER")
+        self.assertEqual(model_result.email, "test-writer@firecloud.org")
+        self.assertTrue(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
+
+    def test_one_group_writer_not_in_app_can_share(self):
+        """anvil_audit works correctly if this workspace has one group writer not in the app."""
+        self.update_api_response("test-writer@firecloud.org", "WRITER", can_share=True)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
+        model_result = audit_results.get_not_in_app_results()[0]
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "WRITER")
+        self.assertEqual(model_result.email, "test-writer@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertTrue(model_result.can_share)
 
     def test_one_group_admin_case_insensitive(self):
         """anvil_audit works correctly if this workspace has one group member not in the app."""
@@ -1747,7 +1815,11 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
         model_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(model_result.record, "OWNER: test-writer@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "OWNER")
+        self.assertEqual(model_result.email, "test-writer@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
 
     def test_two_group_owners_not_in_app(self):
         """anvil_audit works correctly if this workspace has two group owners not in the app."""
@@ -1766,9 +1838,17 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 2)
         model_result = audit_results.get_not_in_app_results()[0]
-        self.assertEqual(model_result.record, "OWNER: test-writer-1@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "OWNER")
+        self.assertEqual(model_result.email, "test-writer-1@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
         model_result = audit_results.get_not_in_app_results()[1]
-        self.assertEqual(model_result.record, "OWNER: test-writer-2@firecloud.org")
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "OWNER")
+        self.assertEqual(model_result.email, "test-writer-2@firecloud.org")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
 
     def test_one_group_owner_case_insensitive(self):
         """anvil_audit works correctly with different cases for owner emails."""
