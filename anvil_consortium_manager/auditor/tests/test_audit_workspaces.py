@@ -1519,8 +1519,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(record_result.current_can_share)
 
     def test_two_readers_ignored(self):
-        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
-        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-1@bar.com")
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-2@bar.com")
         self.update_api_response(obj_1.ignored_email, "READER")
         self.update_api_response(obj_2.ignored_email, "READER")
         self.anvil_response_mock.add(
@@ -1796,8 +1796,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(record_result.current_can_share)
 
     def test_two_writer_ignored(self):
-        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
-        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-1@bar.com")
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-2@bar.com")
         self.update_api_response(obj_1.ignored_email, "WRITER")
         self.update_api_response(obj_2.ignored_email, "WRITER")
         self.anvil_response_mock.add(
@@ -2033,8 +2033,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(record_result.current_can_share)
 
     def test_two_owner_ignored(self):
-        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
-        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-1@bar.com")
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-2@bar.com")
         self.update_api_response(obj_1.ignored_email, "OWNER")
         self.update_api_response(obj_2.ignored_email, "OWNER")
         self.anvil_response_mock.add(
@@ -2412,3 +2412,28 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIsNone(record_result.current_access)
         self.assertIsNone(record_result.current_can_compute)
         self.assertIsNone(record_result.current_can_share)
+
+    def test_ignored_order_by_email(self):
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-2@bar.com")
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-1@bar.com")
+        self.update_api_response(obj_1.ignored_email, "READER")
+        self.update_api_response(obj_2.ignored_email, "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 2)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_2)
+        record_result = audit_results.get_ignored_results()[1]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_1)

@@ -219,7 +219,7 @@ class WorkspaceSharingAudit(base.AnVILAudit):
             self.add_result(model_instance_result)
 
         # Handle ignored records.
-        for obj in models.IgnoredWorkspaceSharing.objects.filter(workspace=self.workspace):
+        for obj in models.IgnoredWorkspaceSharing.objects.filter(workspace=self.workspace).order_by("ignored_email"):
             try:
                 acl = acl_in_anvil.pop(obj.ignored_email)
                 record = "{}: {}".format(acl["accessLevel"], obj.ignored_email)
