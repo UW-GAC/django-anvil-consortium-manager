@@ -1407,8 +1407,9 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         self.assertEqual(len(audit_results.get_ignored_results()), 1)
         record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, managed_groups.ManagedGroupMembershipIgnoredResult)
         self.assertEqual(record_result.model_instance, obj)
-        self.assertEqual(record_result.record, "MEMBER: " + obj.ignored_email)
+        self.assertEqual(record_result.current_role, "MEMBER")
 
     def test_two_group_members_ignored(self):
         """anvil_audit works correctly if this group has two ignored group members."""
@@ -1438,9 +1439,11 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_ignored_results()), 2)
         record_results = audit_results.get_ignored_results()
         record_result = [record_result for record_result in record_results if record_result.model_instance == obj_1][0]
-        self.assertEqual(record_result.record, "MEMBER: " + obj_1.ignored_email)
+        self.assertEqual(record_result.model_instance, obj_1)
+        self.assertEqual(record_result.current_role, "MEMBER")
         record_result = [record_result for record_result in record_results if record_result.model_instance == obj_2][0]
-        self.assertEqual(record_result.record, "MEMBER: " + obj_2.ignored_email)
+        self.assertEqual(record_result.model_instance, obj_2)
+        self.assertEqual(record_result.current_role, "MEMBER")
 
     def test_ignored_still_reports_records_when_email_not_member_of_group(self):
         obj = factories.IgnoredManagedGroupMembershipFactory.create()
@@ -1468,7 +1471,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_ignored_results()), 1)
         record_result = audit_results.get_ignored_results()[0]
         self.assertEqual(record_result.model_instance, obj)
-        self.assertIsNone(record_result.record)
+        self.assertIsNone(record_result.current_role)
 
     def test_one_group_member_ignored_case_insensitive(self):
         obj = factories.IgnoredManagedGroupMembershipFactory.create(ignored_email="foo@bar.com")
@@ -1741,6 +1744,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_ignored_results()), 1)
         record_result = audit_results.get_ignored_results()[0]
         self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_role, "ADMIN")
 
     def test_two_group_admins_ignored(self):
         group = ManagedGroupFactory.create()
@@ -2202,4 +2206,34 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(record_result.record, "ADMIN: foo@bar.com")
         record_result = audit_results.get_ignored_results()[0]
         self.assertEqual(record_result.model_instance, obj)
-        self.assertIsNone(record_result.record)
+        self.assertIsNone(record_result.current_role)
+
+    def test_ignored_order_by_email(self):
+        group = ManagedGroupFactory.create()
+        obj_1 = factories.IgnoredManagedGroupMembershipFactory.create(group=group, ignored_email="foo-2@bar.com")
+        obj_2 = factories.IgnoredManagedGroupMembershipFactory.create(group=group, ignored_email="foo-1@bar.com")
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=GetGroupMembershipResponseFactory(response=[obj_1.ignored_email, obj_2.ignored_email]).response,
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=GetGroupMembershipAdminResponseFactory().response,
+        )
+        audit_results = managed_groups.ManagedGroupMembershipAudit(group)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 2)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertEqual(record_result.model_instance, obj_2)
+        record_result = audit_results.get_ignored_results()[1]
+        self.assertEqual(record_result.model_instance, obj_1)
