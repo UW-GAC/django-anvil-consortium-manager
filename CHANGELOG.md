@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Allow users to ignore a specific WorkspaceSharingAudit "not in app" record.
+
 ## 0.28.0 (2025-01-06)
 
 * Restructure audits by moving them to their own sub-app (`anvil_consortium_manager.auditor`)
