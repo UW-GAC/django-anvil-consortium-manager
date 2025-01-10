@@ -3,6 +3,7 @@ import django_tables2 as tables
 from anvil_consortium_manager.anvil_api import AnVILAPIClient
 from anvil_consortium_manager.models import Workspace
 
+from .. import models
 from . import base
 
 
@@ -112,11 +113,11 @@ class WorkspaceSharingNotInAppTable(base.NotInAppTable):
     access = tables.Column()
     can_compute = tables.Column()
     can_share = tables.Column()
-    # ignore = tables.TemplateColumn(
-    #     template_name="anvil_consortium_manager/snippets/audit_managedgroupmembership_notinapp_ignore_button.html",
-    #     orderable=False,
-    #     verbose_name="Ignore?",
-    # )
+    ignore = tables.TemplateColumn(
+        template_name="auditor/snippets/audit_workspacegroupsharing_notinapp_ignore_button.html",
+        orderable=False,
+        verbose_name="Ignore?",
+    )
 
     class Meta:
         fields = (
@@ -129,22 +130,37 @@ class WorkspaceSharingNotInAppTable(base.NotInAppTable):
         exclude = ("record",)
 
 
-# class WorkspaceSharingIgnoredTable(base.IgnoredTable):
-#     """A table specific to the IgnoredWorkspaceSharing model."""
+class WorkspaceSharingIgnoredResult(base.IgnoredResult):
+    """Class to store a not in app audit result for a specific WorkspaceSharing record."""
 
-#     model_instance = tables.columns.Column(linkify=True, verbose_name="Details")
-#     model_instance__workspace = tables.columns.Column(linkify=True, verbose_name="Workspace", orderable=False)
-#     model_instance__ignored_email = tables.columns.Column(orderable=False, verbose_name="Ignored email")
-#     model_instance__added_by = tables.columns.Column(orderable=False, verbose_name="Ignored by")
+    def __init__(self, *args, current_access=None, current_can_compute=None, current_can_share=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_access = current_access
+        self.current_can_compute = current_can_compute
+        self.current_can_share = current_can_share
 
-#     class Meta:
-#         fields = (
-#             "model_instance",
-#             "model_instance__workspace",
-#             "model_instance__ignored_email",
-#             "model_instance__added_by",
-#             "record",
-#         )
+
+class WorkspaceSharingIgnoredTable(base.IgnoredTable):
+    """A table specific to the IgnoredWorkspaceSharing model."""
+
+    model_instance = tables.columns.Column(linkify=True, verbose_name="Details")
+    model_instance__workspace = tables.columns.Column(linkify=True, verbose_name="Workspace", orderable=False)
+    model_instance__ignored_email = tables.columns.Column(orderable=False, verbose_name="Ignored email")
+    model_instance__added_by = tables.columns.Column(orderable=False, verbose_name="Ignored by")
+    current_access = tables.columns.Column(orderable=False, verbose_name="Current access")
+    current_can_compute = tables.columns.Column(orderable=False, verbose_name="Current can compute")
+    current_can_share = tables.columns.Column(orderable=False, verbose_name="Current can share")
+
+    class Meta:
+        fields = (
+            "model_instance",
+            "model_instance__workspace",
+            "model_instance__ignored_email",
+            "model_instance__added_by",
+            "current_access",
+            "current_can_compute",
+            "current_can_share",
+        )
 
 
 class WorkspaceSharingAudit(base.AnVILAudit):
@@ -163,7 +179,7 @@ class WorkspaceSharingAudit(base.AnVILAudit):
     """Error when the can_compute value for a ManagedGroup does not match what's on AnVIL."""
 
     not_in_app_table_class = WorkspaceSharingNotInAppTable
-    # ignored_table_class = WorkspaceSharingIgnoredTable
+    ignored_table_class = WorkspaceSharingIgnoredTable
 
     def __init__(self, workspace, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -202,14 +218,30 @@ class WorkspaceSharingAudit(base.AnVILAudit):
             # Save the results for this model instance.
             self.add_result(model_instance_result)
 
-        # # Handle ignored records.
-        # for obj in models.IgnoredWorkspaceSharing.objects.filter(workspace=self.workspace):
-        #     try:
-        #         acl = acl_in_anvil.pop(obj.ignored_email)
-        #         record = "{}: {}".format(acl["accessLevel"], obj.ignored_email)
-        #         self.add_result(base.IgnoredResult(obj, record=record))
-        #     except ValueError:
-        #         self.add_result(base.IgnoredResult(obj, record=None))
+        # Handle ignored records.
+        for obj in models.IgnoredWorkspaceSharing.objects.filter(workspace=self.workspace):
+            try:
+                acl = acl_in_anvil.pop(obj.ignored_email)
+                record = "{}: {}".format(acl["accessLevel"], obj.ignored_email)
+                self.add_result(
+                    WorkspaceSharingIgnoredResult(
+                        obj,
+                        record=record,
+                        current_access=acl["accessLevel"],
+                        current_can_compute=acl["canCompute"],
+                        current_can_share=acl["canShare"],
+                    )
+                )
+            except KeyError:
+                self.add_result(
+                    WorkspaceSharingIgnoredResult(
+                        obj,
+                        record=None,
+                        current_access=None,
+                        current_can_compute=None,
+                        current_can_share=None,
+                    )
+                )
 
         # Add any remaining records as "not in app".
         for key in acl_in_anvil:

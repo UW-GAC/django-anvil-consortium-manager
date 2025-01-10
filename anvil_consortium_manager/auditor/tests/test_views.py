@@ -2378,6 +2378,68 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("not_in_app_table", response.context_data)
         self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
 
+    def test_audit_not_in_app_link_to_ignore(self):
+        """Link to ignore create view appears when a not_in_app result is found."""
+        self.update_api_response("foo@bar.com", "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:new",
+            args=[self.workspace.billing_project.name, self.workspace.name, "foo@bar.com"],
+        )
+        self.assertIn(expected_url, response.content.decode("utf-8"))
+
+    def test_audit_ignored(self):
+        """ignored_table is in the context data."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+
+    def test_audit_one_ignored_record(self):
+        """ignored_table with one ignored record."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj.ignored_email, "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_one_ignored_record_not_in_anvil(self):
+        """The ignored record does not have the workspace shared with them in AnVIL."""
+        factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
     def test_audit_ok_is_ok(self):
         """audit_ok when audit_results.ok() is True."""
         self.anvil_response_mock.add(

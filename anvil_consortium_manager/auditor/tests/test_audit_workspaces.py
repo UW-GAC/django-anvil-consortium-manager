@@ -11,6 +11,7 @@ from anvil_consortium_manager.tests.factories import (
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin
 
 from ..audit import workspaces as workspaces
+from . import factories
 
 fake = Faker()
 
@@ -1359,7 +1360,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
 
-    def test_one_group_reader(self):
+    def test_one_reader(self):
         """anvil_audit works correctly if this group has one group member."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.update_api_response(access.group.email, access.access)
@@ -1378,7 +1379,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertTrue(model_result.ok())
 
-    def test_two_group_readers(self):
+    def test_two_readers(self):
         """anvil_audit works correctly if this workspace has two group readers."""
         access_1 = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         access_2 = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
@@ -1401,7 +1402,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access_2)
         self.assertTrue(model_result.ok())
 
-    def test_one_group_reader_not_in_anvil(self):
+    def test_one_reader_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has one group reader not in anvil."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.anvil_response_mock.add(
@@ -1420,7 +1421,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
-    def test_two_group_readers_not_in_anvil(self):
+    def test_two_readers_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group readers not in anvil."""
         access_1 = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         access_2 = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
@@ -1443,7 +1444,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
-    def test_one_group_readers_not_in_app(self):
+    def test_one_reader_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group reader not in the app."""
         self.update_api_response("test-member@firecloud.org", "READER")
         self.anvil_response_mock.add(
@@ -1465,7 +1466,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.can_compute)
         self.assertFalse(model_result.can_share)
 
-    def test_two_group_readers_not_in_app(self):
+    def test_two_readers_not_in_app(self):
         """anvil_audit works correctly if this workspace has two group readers not in the app."""
         self.update_api_response("test-member-1@firecloud.org", "READER")
         self.update_api_response("test-member-2@firecloud.org", "READER")
@@ -1494,7 +1495,61 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.can_compute)
         self.assertFalse(model_result.can_share)
 
-    def test_one_group_members_case_insensitive(self):
+    def test_one_reader_ignored(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj.ignored_email, "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "READER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_two_readers_ignored(self):
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj_1.ignored_email, "READER")
+        self.update_api_response(obj_2.ignored_email, "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 2)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_1)
+        self.assertEqual(record_result.current_access, "READER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+        record_result = audit_results.get_ignored_results()[1]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_2)
+        self.assertEqual(record_result.current_access, "READER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_one_reader_case_insensitive(self):
         """anvil_audit ignores case."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, group__name="tEsT-mEmBeR")
         self.update_api_response("Test-Member@firecloud.org", "READER")
@@ -1513,7 +1568,32 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertTrue(model_result.ok())
 
-    def test_one_group_writer(self):
+    def test_one_reader_ignored_case_insensitive(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(
+            workspace=self.workspace, ignored_email="test-member@firecloud.org"
+        )
+        self.update_api_response("Test-Member@firecloud.org", "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "READER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_one_writer(self):
         """anvil_audit works correctly if this workspace has one group writer."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.WRITER)
         self.update_api_response(access.group.email, "WRITER")
@@ -1532,7 +1612,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertTrue(model_result.ok())
 
-    def test_two_group_writers(self):
+    def test_two_writers(self):
         """anvil_audit works correctly if this workspace has two group writers."""
         access_1 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.WRITER)
         access_2 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.WRITER)
@@ -1555,7 +1635,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access_2)
         self.assertTrue(model_result.ok())
 
-    def test_one_group_writer_not_in_anvil(self):
+    def test_one_writer_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has one group writer not in anvil."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.WRITER)
         self.anvil_response_mock.add(
@@ -1574,7 +1654,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
-    def test_two_group_writers_not_in_anvil(self):
+    def test_two_writers_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group writers not in anvil."""
         access_1 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.WRITER)
         access_2 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.WRITER)
@@ -1597,7 +1677,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
-    def test_one_group_writer_not_in_app(self):
+    def test_one_writer_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group writer not in the app."""
         self.update_api_response("test-writer@firecloud.org", "WRITER")
         self.anvil_response_mock.add(
@@ -1619,7 +1699,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.can_compute)
         self.assertFalse(model_result.can_share)
 
-    def test_two_group_writers_not_in_app(self):
+    def test_two_writers_not_in_app(self):
         """anvil_audit works correctly if this workspace has two group writers not in the app."""
         self.update_api_response("test-writer-1@firecloud.org", "WRITER")
         self.update_api_response("test-writer-2@firecloud.org", "WRITER")
@@ -1648,7 +1728,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.can_compute)
         self.assertFalse(model_result.can_share)
 
-    def test_one_group_writer_not_in_app_can_compute(self):
+    def test_one_writer_not_in_app_can_compute(self):
         """anvil_audit works correctly if this workspace has one group writer not in the app."""
         self.update_api_response("test-writer@firecloud.org", "WRITER", can_compute=True)
         self.anvil_response_mock.add(
@@ -1670,7 +1750,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertTrue(model_result.can_compute)
         self.assertFalse(model_result.can_share)
 
-    def test_one_group_writer_not_in_app_can_share(self):
+    def test_one_writer_not_in_app_can_share(self):
         """anvil_audit works correctly if this workspace has one group writer not in the app."""
         self.update_api_response("test-writer@firecloud.org", "WRITER", can_share=True)
         self.anvil_response_mock.add(
@@ -1692,7 +1772,61 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.can_compute)
         self.assertTrue(model_result.can_share)
 
-    def test_one_group_admin_case_insensitive(self):
+    def test_one_writer_ignored(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj.ignored_email, "WRITER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "WRITER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_two_writer_ignored(self):
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj_1.ignored_email, "WRITER")
+        self.update_api_response(obj_2.ignored_email, "WRITER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 2)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_1)
+        self.assertEqual(record_result.current_access, "WRITER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+        record_result = audit_results.get_ignored_results()[1]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_2)
+        self.assertEqual(record_result.current_access, "WRITER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_one_writer_case_insensitive(self):
         """anvil_audit works correctly if this workspace has one group member not in the app."""
         access = WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
@@ -1715,7 +1849,32 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertTrue(model_result.ok())
 
-    def test_one_group_owner(self):
+    def test_one_writer_ignored_case_insensitive(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(
+            workspace=self.workspace, ignored_email="test@firecloud.org"
+        )
+        self.update_api_response("Test@firecloud.org", "WRITER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "WRITER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_one_owner(self):
         """anvil_audit works correctly if this workspace has one group owner."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.OWNER)
         self.update_api_response(access.group.email, "OWNER", can_share=True)
@@ -1734,7 +1893,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertTrue(model_result.ok())
 
-    def test_two_group_owners(self):
+    def test_two_owners(self):
         """anvil_audit works correctly if this workspace has two group owners."""
         access_1 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.OWNER)
         access_2 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.OWNER)
@@ -1757,7 +1916,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access_2)
         self.assertTrue(model_result.ok())
 
-    def test_one_group_owner_not_in_anvil(self):
+    def test_one_owner_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has one group owners not in anvil."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.OWNER)
         self.anvil_response_mock.add(
@@ -1776,7 +1935,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
-    def test_two_group_owners_not_in_anvil(self):
+    def test_two_owners_not_in_anvil(self):
         """anvil_audit works correctly if this workspace has two group owners not in anvil."""
         access_1 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.OWNER)
         access_2 = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.OWNER)
@@ -1799,7 +1958,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_NOT_SHARED_IN_ANVIL]))
 
-    def test_one_group_owner_not_in_app(self):
+    def test_one_owner_not_in_app(self):
         """anvil_audit works correctly if this workspace has one group owner not in the app."""
         self.update_api_response("test-writer@firecloud.org", "OWNER")
         self.anvil_response_mock.add(
@@ -1821,7 +1980,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.can_compute)
         self.assertFalse(model_result.can_share)
 
-    def test_two_group_owners_not_in_app(self):
+    def test_two_owners_not_in_app(self):
         """anvil_audit works correctly if this workspace has two group owners not in the app."""
         self.update_api_response("test-writer-1@firecloud.org", "OWNER")
         self.update_api_response("test-writer-2@firecloud.org", "OWNER")
@@ -1850,7 +2009,61 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.can_compute)
         self.assertFalse(model_result.can_share)
 
-    def test_one_group_owner_case_insensitive(self):
+    def test_one_owner_ignored(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj.ignored_email, "OWNER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "OWNER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_two_owner_ignored(self):
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj_1.ignored_email, "OWNER")
+        self.update_api_response(obj_2.ignored_email, "OWNER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 2)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_1)
+        self.assertEqual(record_result.current_access, "OWNER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+        record_result = audit_results.get_ignored_results()[1]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj_2)
+        self.assertEqual(record_result.current_access, "OWNER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_one_owner_case_insensitive(self):
         """anvil_audit works correctly with different cases for owner emails."""
         access = WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
@@ -1873,7 +2086,32 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertTrue(model_result.ok())
 
-    def test_group_different_access_reader_in_app_writer_in_anvil(self):
+    def test_one_owner_ignored_case_insensitive(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(
+            workspace=self.workspace, ignored_email="test@firecloud.org"
+        )
+        self.update_api_response("Test@firecloud.org", "OWNER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "OWNER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_different_access_reader_in_app_writer_in_anvil(self):
         """anvil_audit works correctly if a group has different access to a workspace in AnVIL."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.READER)
         self.update_api_response(access.group.email, "WRITER")
@@ -1893,7 +2131,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_ACCESS]))
 
-    def test_group_different_access_reader_in_app_owner_in_anvil(self):
+    def test_different_access_reader_in_app_owner_in_anvil(self):
         """anvil_audit works correctly if a group has different access to a workspace in AnVIL."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.READER)
         self.update_api_response(access.group.email, "OWNER", can_compute=True, can_share=True)
@@ -1922,7 +2160,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             ),
         )
 
-    def test_group_different_can_compute(self):
+    def test_different_can_compute(self):
         """anvil_audit works correctly if can_compute is different between the app and AnVIL."""
         access = WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
@@ -1946,7 +2184,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_COMPUTE]))
 
-    def test_group_different_can_share(self):
+    def test_different_can_share(self):
         """anvil_audit works correctly if can_share is True in AnVIL."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.WRITER)
         self.update_api_response(access.group.email, "WRITER", can_share=True)
@@ -1982,7 +2220,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
 
-    def test_group_owner_can_share_true(self):
+    def test_owner_can_share_true(self):
         """Owners must have can_share=True."""
         access = WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
@@ -2003,7 +2241,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
 
-    def test_group_writer_can_share_false(self):
+    def test_writer_can_share_false(self):
         """Writers must have can_share=False."""
         access = WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
@@ -2027,7 +2265,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE]))
 
-    def test_group_reader_can_share_false(self):
+    def test_reader_can_share_false(self):
         """Readers must have can_share=False."""
         access = WorkspaceGroupSharingFactory.create(
             workspace=self.workspace,
@@ -2050,3 +2288,127 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         model_result = audit_results.get_result_for_model_instance(access)
         self.assertFalse(model_result.ok())
         self.assertEqual(model_result.errors, set([audit_results.ERROR_DIFFERENT_CAN_SHARE]))
+
+    def test_ignored_can_share(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj.ignored_email, "WRITER", can_share=True)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "WRITER")
+        self.assertFalse(record_result.current_can_compute)
+        self.assertTrue(record_result.current_can_share)
+
+    def test_ignored_can_compute(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response(obj.ignored_email, "WRITER", can_compute=True)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertEqual(record_result.current_access, "WRITER")
+        self.assertTrue(record_result.current_can_compute)
+        self.assertFalse(record_result.current_can_share)
+
+    def test_ignored_same_email_different_workspace(self):
+        """The email is ignored for a different workspace."""
+        # Create an ignored record for this email, but for a different workspace.
+        obj = factories.IgnoredWorkspaceSharingFactory.create()
+        self.update_api_response(obj.ignored_email, "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
+        self.assertEqual(len(audit_results.get_ignored_results()), 0)
+        model_result = audit_results.get_not_in_app_results()[0]
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "READER")
+        self.assertEqual(model_result.email, obj.ignored_email)
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
+
+    def test_ignored_different_email_same_workspace(self):
+        """A different email is ignored for this workspace."""
+        # Create an ignored record for this email, but for a different workspace.
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.update_api_response("other-email@example.com", "READER")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        model_result = audit_results.get_not_in_app_results()[0]
+        self.assertIsInstance(model_result, workspaces.WorkspaceSharingNotInAppResult)
+        self.assertEqual(model_result.access, "READER")
+        self.assertEqual(model_result.email, "other-email@example.com")
+        self.assertFalse(model_result.can_compute)
+        self.assertFalse(model_result.can_share)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertIsNone(record_result.current_access)
+        self.assertIsNone(record_result.current_can_compute)
+        self.assertIsNone(record_result.current_can_share)
+
+    def test_ignored_still_reports_records_when_not_shared_with_email(self):
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        audit_results = workspaces.WorkspaceSharingAudit(self.workspace)
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        self.assertEqual(len(audit_results.get_ignored_results()), 1)
+        record_result = audit_results.get_ignored_results()[0]
+        self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
+        self.assertEqual(record_result.model_instance, obj)
+        self.assertIsNone(record_result.current_access)
+        self.assertIsNone(record_result.current_can_compute)
+        self.assertIsNone(record_result.current_can_share)
