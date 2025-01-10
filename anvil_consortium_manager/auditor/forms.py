@@ -31,3 +31,21 @@ class IgnoredManagedGroupMembershipForm(Bootstrap5MediaFormMixin, forms.ModelFor
             "ignored_email",
             "note",
         )
+
+
+class IgnoredWorkspaceSharingForm(Bootstrap5MediaFormMixin, forms.ModelForm):
+    """Form for the IgnoredWorkspaceSharing model."""
+
+    class Meta:
+        model = models.IgnoredWorkspaceSharing
+        fields = (
+            "workspace",
+            "ignored_email",
+            "note",
+        )
+        widgets = {
+            "workspace": autocomplete.ModelSelect2(
+                url="anvil_consortium_manager:workspaces:autocomplete",
+                attrs={"data-theme": "bootstrap-5"},
+            ),
+        }

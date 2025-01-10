@@ -278,3 +278,172 @@ class WorkspaceSharingAudit(
 
     def get_audit_instance(self):
         return workspace_audit.WorkspaceSharingAudit(self.object)
+
+
+class IgnoredWorkspaceSharingCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
+    """View to create a new models.IgnoredWorkspaceSharing."""
+
+    model = models.IgnoredWorkspaceSharing
+    form_class = forms.IgnoredWorkspaceSharingForm
+    message_already_exists = "Record already exists for this workspace and email."
+    success_message = "Successfully ignored workspace sharing."
+
+    def get_workspace(self):
+        try:
+            billing_project_name = self.kwargs["billing_project_slug"]
+            workspace_name = self.kwargs["workspace_slug"]
+            group = Workspace.objects.get(billing_project__name=billing_project_name, name=workspace_name)
+        except Workspace.DoesNotExist:
+            raise Http404("Workspace not found.")
+        return group
+
+    def get_email(self):
+        return self.kwargs["email"]
+
+    def get(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        self.email = self.get_email()
+        try:
+            obj = models.IgnoredWorkspaceSharing.objects.get(workspace=self.workspace, ignored_email=self.email)
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.IgnoredWorkspaceSharing.DoesNotExist:
+            return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        self.email = self.get_email()
+        try:
+            obj = models.IgnoredWorkspaceSharing.objects.get(workspace=self.workspace, ignored_email=self.email)
+            messages.error(self.request, self.message_already_exists)
+            return HttpResponseRedirect(obj.get_absolute_url())
+        except models.IgnoredWorkspaceSharing.DoesNotExist:
+            return super().post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["workspace"] = self.workspace
+        initial["ignored_email"] = self.email
+        return initial
+
+    def get_form(self, **kwargs):
+        """Get the form and set the inputs to use a hidden widget."""
+        form = super().get_form(**kwargs)
+        form.fields["workspace"].widget = HiddenInput()
+        form.fields["ignored_email"].widget = HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace"] = self.workspace
+        context["email"] = self.email
+        return context
+
+    def form_valid(self, form):
+        """If the form is valid, save the associated model."""
+        form.instance.added_by = self.request.user
+        return super().form_valid(form)
+
+
+class IgnoredWorkspaceSharingDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
+    """View to display the details of an models.IgnoredWorkspaceSharing object."""
+
+    model = models.IgnoredWorkspaceSharing
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        email = self.kwargs.get("email", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            ignored_email=email,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+
+class IgnoredWorkspaceSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView):
+    """View to update an existing models.IgnoredWorkspaceSharing."""
+
+    model = models.IgnoredWorkspaceSharing
+    fields = ("note",)
+    success_message = "Successfully updated ignored record."
+
+    def get_object(self, queryset=None):
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        email = self.kwargs.get("email", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            ignored_email=email,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["workspace"] = self.object.workspace
+        context["email"] = self.object.ignored_email
+        return context
+
+
+class IgnoredWorkspaceSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
+    model = models.IgnoredWorkspaceSharing
+    success_message = "Successfully stopped ignoring workspace sharing record."
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        email = self.kwargs.get("email", None)
+        queryset = queryset.filter(
+            workspace__billing_project__name=billing_project_slug,
+            workspace__name=workspace_slug,
+            ignored_email=email,
+        )
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def get_success_url(self):
+        return self.object.workspace.get_absolute_url()
+
+
+class IgnoredWorkspaceSharingList(auth.AnVILConsortiumManagerStaffViewRequired, SingleTableMixin, FilterView):
+    """View to display a list of models.IgnoredWorkspaceSharing."""
+
+    model = models.IgnoredWorkspaceSharing
+    table_class = tables.IgnoredWorkspaceSharingTable
+    template_name = "auditor/ignoredworkspacesharing_list.html"
+    filterset_class = filters.IgnoredWorkspaceSharingFilter

@@ -1,0 +1,29 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% block title %}Stop ignoring Workspace Sharing Audit result{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+
+      <h2>Stop ignoring Workspace Sharing Audit result</h2>
+
+      <p>Are you sure you want to remove <a href="{{ object.get_absolute_url }}">{{ object }}</a> on AnVIL?</p>
+
+      <form method="POST">{% csrf_token %}
+          {{ form }}
+          <input type="submit" class="btn btn-danger" value="Yes, remove"/>
+          <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">
+          No, cancel</a>
+      </form>
+
+    </div>
+  </div>
+
+
+</div>
+{% endblock content %}

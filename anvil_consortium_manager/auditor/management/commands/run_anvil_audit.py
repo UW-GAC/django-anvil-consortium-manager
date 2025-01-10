@@ -121,4 +121,4 @@ class Command(BaseCommand):
             )
 
         if "Workspace" in models_to_audit:
-            self._run_audit(workspace_audit.WorkspaceAudit(), **options)
+            self._run_audit(workspace_audit.WorkspaceAudit(), ignore_model=models.IgnoredWorkspaceSharing, **options)

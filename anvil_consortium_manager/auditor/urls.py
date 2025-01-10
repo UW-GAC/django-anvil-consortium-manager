@@ -52,13 +52,27 @@ managed_group_patterns = (
     "managed_groups",
 )
 
+workspace_sharing_by_group_ignore_patterns = (
+    [
+        path("<str:email>/", views.IgnoredWorkspaceSharingDetail.as_view(), name="detail"),
+        path("<str:email>/new/", views.IgnoredWorkspaceSharingCreate.as_view(), name="new"),
+        path("<str:email>/update/", views.IgnoredWorkspaceSharingUpdate.as_view(), name="update"),
+        path("<str:email>/delete/", views.IgnoredWorkspaceSharingDelete.as_view(), name="delete"),
+    ],
+    "ignored",
+)
+
+workspace_sharing_by_group_patterns = (
+    [
+        path("", views.WorkspaceSharingAudit.as_view(), name="all"),
+        path("ignored/", include(workspace_sharing_by_group_ignore_patterns)),
+    ],
+    "by_workspace",
+)
 workspace_sharing_patterns = (
     [
-        path(
-            "",
-            views.WorkspaceSharingAudit.as_view(),
-            name="all",
-        ),
+        path("ignored/", views.IgnoredWorkspaceSharingList.as_view(), name="ignored"),
+        path("<slug:billing_project_slug>/<slug:workspace_slug>/", include(workspace_sharing_by_group_patterns)),
     ],
     "sharing",
 )
@@ -66,7 +80,7 @@ workspace_sharing_patterns = (
 workspace_patterns = (
     [
         path("", views.WorkspaceAudit.as_view(), name="all"),
-        path("<slug:billing_project_slug>/<slug:workspace_slug>/sharing/", include(workspace_sharing_patterns)),
+        path("sharing/", include(workspace_sharing_patterns)),
     ],
     "workspaces",
 )

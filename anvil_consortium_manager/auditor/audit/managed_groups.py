@@ -101,6 +101,14 @@ class ManagedGroupMembershipNotInAppTable(base.NotInAppTable):
         exclude = ("record",)
 
 
+class ManagedGroupMembershipIgnoredResult(base.IgnoredResult):
+    """Class to store a not in app audit result for a specific ManagedGroupMembership record."""
+
+    def __init__(self, *args, current_role=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_role = current_role
+
+
 class ManagedGroupMembershipIgnoredTable(base.IgnoredTable):
     """A table specific to the IgnoredManagedGroupMembership model."""
 
@@ -108,6 +116,7 @@ class ManagedGroupMembershipIgnoredTable(base.IgnoredTable):
     model_instance__group = tables.columns.Column(linkify=True, verbose_name="Managed group", orderable=False)
     model_instance__ignored_email = tables.columns.Column(orderable=False, verbose_name="Ignored email")
     model_instance__added_by = tables.columns.Column(orderable=False, verbose_name="Ignored by")
+    current_role = tables.columns.Column(verbose_name="Current role")
 
     class Meta:
         fields = (
@@ -115,8 +124,9 @@ class ManagedGroupMembershipIgnoredTable(base.IgnoredTable):
             "model_instance__group",
             "model_instance__ignored_email",
             "model_instance__added_by",
-            "record",
+            "current_role",
         )
+        exclude = ("record",)
 
 
 class ManagedGroupMembershipAudit(base.AnVILAudit):
@@ -219,19 +229,26 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
             self.add_result(model_instance_result)
 
         # Add any admin that the app doesn't know about.
-        for obj in models.IgnoredManagedGroupMembership.objects.filter(group=self.managed_group):
+        ignored_qs = models.IgnoredManagedGroupMembership.objects.filter(group=self.managed_group)
+        for obj in ignored_qs.order_by("ignored_email"):
             try:
                 admins_in_anvil.remove(obj.ignored_email)
                 record = "{}: {}".format(GroupAccountMembership.ADMIN, obj.ignored_email)
-                self.add_result(base.IgnoredResult(obj, record=record))
+                self.add_result(
+                    ManagedGroupMembershipIgnoredResult(obj, record=record, current_role=GroupAccountMembership.ADMIN)
+                )
             except ValueError:
                 try:
                     members_in_anvil.remove(obj.ignored_email)
                     record = "{}: {}".format(GroupAccountMembership.MEMBER, obj.ignored_email)
-                    self.add_result(base.IgnoredResult(obj, record=record))
+                    self.add_result(
+                        ManagedGroupMembershipIgnoredResult(
+                            obj, record=record, current_role=GroupAccountMembership.MEMBER
+                        )
+                    )
                 except ValueError:
                     # This email is not in the list of members or admins.
-                    self.add_result(base.IgnoredResult(obj, record=None))
+                    self.add_result(ManagedGroupMembershipIgnoredResult(obj, record=None))
 
         for member in admins_in_anvil:
             record = "{}: {}".format(GroupAccountMembership.ADMIN, member)
