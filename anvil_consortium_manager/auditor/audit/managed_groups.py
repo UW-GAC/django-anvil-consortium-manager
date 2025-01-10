@@ -125,8 +125,8 @@ class ManagedGroupMembershipIgnoredTable(base.IgnoredTable):
             "model_instance__ignored_email",
             "model_instance__added_by",
             "current_role",
-            # "record",
         )
+        exclude = ("record",)
 
 
 class ManagedGroupMembershipAudit(base.AnVILAudit):

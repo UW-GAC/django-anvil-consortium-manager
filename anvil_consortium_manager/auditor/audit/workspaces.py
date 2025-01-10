@@ -161,6 +161,7 @@ class WorkspaceSharingIgnoredTable(base.IgnoredTable):
             "current_can_compute",
             "current_can_share",
         )
+        exclude = ("record",)
 
 
 class WorkspaceSharingAudit(base.AnVILAudit):
