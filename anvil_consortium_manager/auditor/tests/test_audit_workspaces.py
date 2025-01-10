@@ -1519,8 +1519,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(record_result.current_can_share)
 
     def test_two_readers_ignored(self):
-        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-1@bar.com")
-        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-2@bar.com")
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
         self.update_api_response(obj_1.ignored_email, "READER")
         self.update_api_response(obj_2.ignored_email, "READER")
         self.anvil_response_mock.add(
@@ -1536,13 +1536,14 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         self.assertEqual(len(audit_results.get_ignored_results()), 2)
-        record_result = audit_results.get_ignored_results()[0]
+        record_results = audit_results.get_ignored_results()
+        record_result = [record_result for record_result in record_results if record_result.model_instance == obj_1][0]
         self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
         self.assertEqual(record_result.model_instance, obj_1)
         self.assertEqual(record_result.current_access, "READER")
         self.assertFalse(record_result.current_can_compute)
         self.assertFalse(record_result.current_can_share)
-        record_result = audit_results.get_ignored_results()[1]
+        record_result = [record_result for record_result in record_results if record_result.model_instance == obj_2][0]
         self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
         self.assertEqual(record_result.model_instance, obj_2)
         self.assertEqual(record_result.current_access, "READER")
@@ -1796,8 +1797,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(record_result.current_can_share)
 
     def test_two_writer_ignored(self):
-        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-1@bar.com")
-        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-2@bar.com")
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
         self.update_api_response(obj_1.ignored_email, "WRITER")
         self.update_api_response(obj_2.ignored_email, "WRITER")
         self.anvil_response_mock.add(
@@ -1813,13 +1814,14 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         self.assertEqual(len(audit_results.get_ignored_results()), 2)
-        record_result = audit_results.get_ignored_results()[0]
+        record_results = audit_results.get_ignored_results()
+        record_result = [record_result for record_result in record_results if record_result.model_instance == obj_1][0]
         self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
         self.assertEqual(record_result.model_instance, obj_1)
         self.assertEqual(record_result.current_access, "WRITER")
         self.assertFalse(record_result.current_can_compute)
         self.assertFalse(record_result.current_can_share)
-        record_result = audit_results.get_ignored_results()[1]
+        record_result = [record_result for record_result in record_results if record_result.model_instance == obj_2][0]
         self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
         self.assertEqual(record_result.model_instance, obj_2)
         self.assertEqual(record_result.current_access, "WRITER")
@@ -2033,8 +2035,8 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(record_result.current_can_share)
 
     def test_two_owner_ignored(self):
-        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-1@bar.com")
-        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace, ignored_email="foo-2@bar.com")
+        obj_1 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        obj_2 = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
         self.update_api_response(obj_1.ignored_email, "OWNER")
         self.update_api_response(obj_2.ignored_email, "OWNER")
         self.anvil_response_mock.add(
@@ -2050,13 +2052,14 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         self.assertEqual(len(audit_results.get_ignored_results()), 2)
-        record_result = audit_results.get_ignored_results()[0]
+        record_results = audit_results.get_ignored_results()
+        record_result = [record_result for record_result in record_results if record_result.model_instance == obj_1][0]
         self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
         self.assertEqual(record_result.model_instance, obj_1)
         self.assertEqual(record_result.current_access, "OWNER")
         self.assertFalse(record_result.current_can_compute)
         self.assertFalse(record_result.current_can_share)
-        record_result = audit_results.get_ignored_results()[1]
+        record_result = [record_result for record_result in record_results if record_result.model_instance == obj_2][0]
         self.assertIsInstance(record_result, workspaces.WorkspaceSharingIgnoredResult)
         self.assertEqual(record_result.model_instance, obj_2)
         self.assertEqual(record_result.current_access, "OWNER")
