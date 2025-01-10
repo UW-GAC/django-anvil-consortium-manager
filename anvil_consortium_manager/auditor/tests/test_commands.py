@@ -30,6 +30,35 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
     def get_api_url_billing_project(self, billing_project_name):
         return self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name
 
+    def get_api_workspace_json(self, billing_project_name, workspace_name, access, auth_domains=[]):
+        """Return the json dictionary for a single workspace on AnVIL."""
+        return {
+            "accessLevel": access,
+            "workspace": {
+                "name": workspace_name,
+                "namespace": billing_project_name,
+                "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
+                "isLocked": False,
+            },
+        }
+
+    def get_api_workspace_acl_response(self):
+        """Return a json for the workspace/acl method where no one else can access."""
+        return {
+            "acl": {
+                self.service_account_email: {
+                    "accessLevel": "OWNER",
+                    "canCompute": True,
+                    "canShare": True,
+                    "pending": False,
+                }
+            }
+        }
+
+    def get_api_bucket_options_response(self):
+        """Return a json for the workspace/acl method that is not requester pays."""
+        return {"bucketOptions": {"requesterPays": False}}
+
     def test_command_output_invalid_model(self):
         """Appropriate error is returned when an invalid model is specified."""
         out = StringIO()
@@ -109,7 +138,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)
         self.assertIn("WorkspaceAudit... ok!", out.getvalue())
 
-    def test_command_output_ignored_one_record(self):
+    def test_command_output_managed_groups_ignored_one_record(self):
         """Test command output."""
         factories.IgnoredManagedGroupMembershipFactory.create(group__name="test-group")
         self.anvil_response_mock.add(
@@ -134,7 +163,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command("run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out)
         self.assertIn("ManagedGroupAudit... ok! (ignoring 1 records)", out.getvalue())
 
-    def test_command_output_ignored_two_records(self):
+    def test_command_output_managed_groups_ignored_two_records(self):
         """Test command output."""
         factories.IgnoredManagedGroupMembershipFactory.create_batch(2, group__name="test-group")
         self.anvil_response_mock.add(
@@ -158,6 +187,67 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", models=["ManagedGroup"], stdout=out)
         self.assertIn("ManagedGroupAudit... ok! (ignoring 2 records)", out.getvalue())
+
+    def test_command_output_workspaces_ignored_one_record(self):
+        """Test command output."""
+        factories.IgnoredWorkspaceSharingFactory.create(
+            workspace__billing_project__name="test-bp",
+            workspace__name="test-ws",
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "OWNER")],
+        )
+        # Response to check workspace access.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces/test-bp/test-ws/acl",
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces/test-bp/test-ws",
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        out = StringIO()
+        call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)
+        self.assertIn("WorkspaceAudit... ok! (ignoring 1 records)", out.getvalue())
+
+    def test_command_output_workspaces_ignored_two_records(self):
+        """Test command output."""
+        factories.IgnoredWorkspaceSharingFactory.create_batch(
+            2,
+            workspace__billing_project__name="test-bp",
+            workspace__name="test-ws",
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "OWNER")],
+        )
+        # Response to check workspace access.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces/test-bp/test-ws/acl",
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces/test-bp/test-ws",
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        out = StringIO()
+        call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)
+        self.assertIn("WorkspaceAudit... ok! (ignoring 2 records)", out.getvalue())
 
     def test_command_run_audit_one_instance_ok(self):
         """Test command output."""
