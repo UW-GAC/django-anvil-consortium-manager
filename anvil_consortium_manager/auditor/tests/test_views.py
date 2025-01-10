@@ -1140,7 +1140,8 @@ class IgnoredManagedGroupMembershipDetailTest(TestCase):
         obj = factories.IgnoredManagedGroupMembershipFactory.create(added_by=user)
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
-        self.assertContains(response, user.get_absolute_url())
+        delattr(UserModel, "get_absolute_url")
+        self.assertContains(response, "test_profile_testuser2")
 
 
 class IgnoredManagedGroupMembershipCreateTest(TestCase):
@@ -2636,7 +2637,8 @@ class IgnoredWorkspaceSharingDetailTest(TestCase):
         obj = factories.IgnoredWorkspaceSharingFactory.create(added_by=user)
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
-        self.assertContains(response, user.get_absolute_url())
+        delattr(UserModel, "get_absolute_url")
+        self.assertContains(response, "test_profile_testuser2")
 
 
 class IgnoredWorkspaceSharingCreateTest(TestCase):
