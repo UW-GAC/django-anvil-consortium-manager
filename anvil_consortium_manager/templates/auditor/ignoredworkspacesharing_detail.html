@@ -28,6 +28,10 @@
 
 {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_edit %}
   <p>
-  </p>
+    <p>
+      <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:update' object.workspace.billing_project.name object.workspace.name object.ignored_email %}" class="btn btn-secondary" role="button">Update</a>
+      <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:delete' object.workspace.billing_project.name object.workspace.name object.ignored_email %}" class="btn btn-danger" role="button">Stop ignoring</a>
+    </p>
+    </p>
 {% endif %}
 {% endblock action_buttons %}
