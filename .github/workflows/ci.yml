@@ -71,6 +71,9 @@ jobs:
           echo "DBPASSWORD=rootpw" >> $GITHUB_ENV
           echo "DBHOST=127.0.0.1" >> $GITHUB_ENV
 
+      - name: List installed packages
+        run: hatch -e $TEST_ENV run pip freeze
+
       - name: Run Tests
         run: hatch run $TEST_ENV:cov
 
