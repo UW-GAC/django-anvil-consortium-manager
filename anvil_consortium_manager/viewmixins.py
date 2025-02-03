@@ -123,9 +123,13 @@ class ManagedGroupGraphMixin:
                     colorscale="YlGnBu",
                     colorbar=dict(
                         thickness=15,
-                        title="Group or account members",
+                        # title="Group or account members",
                         xanchor="left",
-                        titleside="right",
+                        # titleside="right",
+                        title=dict(
+                            side="right",
+                            text="Group or account members",
+                        ),
                         tickmode="array",
                         tickvals=[np.min(node_color), np.max(node_color)],
                         ticktext=["Fewer", "More"],
