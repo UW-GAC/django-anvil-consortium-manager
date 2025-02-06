@@ -230,3 +230,6 @@ extra-dependencies = [
 ]
 [tool.hatch.envs.docs.scripts]
 build = "(cd docs && make html)"
+[tool.hatch.envs.docs.env-vars]
+# This doesn't need to be set to anything meaningful because we're not making any API calls.
+ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
