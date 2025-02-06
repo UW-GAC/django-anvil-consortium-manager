@@ -6,18 +6,18 @@
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
-SPHINXBUILDDIR      ?= _build
+BUILDDIR      = _build
 APP = ../anvil_consortium_manager
 
 # Put it first so that "make" without argument is like "make help".
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(SPHINXBUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: help livehtml apidocs Makefile
 
 # Build, watch and serve docs with live reload
 livehtml:
-	sphinx-autobuild -b html --open-browser --port 7001 --watch $(APP) -c . $(SOURCEDIR) $(SPHINXBUILDDIR)/html
+	sphinx-autobuild -b html --open-browser --port 7001 --watch $(APP) -c . $(SOURCEDIR) $(BUILDDIR)/html
 
 # Outputs rst files from django application code
 apidocs:
@@ -26,4 +26,4 @@ apidocs:
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(SPHINXBUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
