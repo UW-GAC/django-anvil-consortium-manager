@@ -4,6 +4,7 @@
 
 * Allow users to ignore a specific WorkspaceSharingAudit "not in app" record.
 * Update for changes in plotly 6.0.0.
+* Fix docs build on readthedocs, which has been broken since ~0.20.
 
 ## 0.28.0 (2025-01-06)
 
