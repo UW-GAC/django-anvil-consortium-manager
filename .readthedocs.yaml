@@ -10,4 +10,5 @@ build:
   jobs:
     build:
       html:
+        - pip install hatch
         - hatch run docs:build
