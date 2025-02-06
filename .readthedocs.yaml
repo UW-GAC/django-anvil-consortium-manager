@@ -12,5 +12,5 @@ build:
       html:
         - pip install hatch
         - mkdir -p $READTHEDOCS_OUTPUT/html/
-        - export SPHINXBUILDDIR=../$READTHEDOCS_OUTPUT/
         - hatch run docs:build
+        - mv docs/_build/html/* $READTHEDOCS_OUTPUT/html/
