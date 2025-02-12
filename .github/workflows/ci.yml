@@ -125,7 +125,7 @@ jobs:
           ls -la .
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5.1.2
+        uses: codecov/codecov-action@v5.3.1
         with:
           fail_ci_if_error: true # optional (default = false)
           token: ${{ secrets.CODECOV_TOKEN }}
