@@ -22,7 +22,7 @@ class CustomWorkspaceForm(WorkspaceForm):
         help_texts = {
             "name": "Enter the name of the workspace to create. (Hint: Example workspace names cannot include a 'y'.)",
             "authorization_domains": (
-                "An authorization domain will be automatically created " "using the name of the workspace."
+                "An authorization domain will be automatically created using the name of the workspace."
             ),
         }
 
