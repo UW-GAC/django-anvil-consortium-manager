@@ -83,7 +83,7 @@ jobs:
           mv .coverage.* coverage-${{ strategy.job-index }}
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v4.6.1
         with:
           name: coverage-data-${{ strategy.job-index }}
           path: coverage-${{ strategy.job-index }}
