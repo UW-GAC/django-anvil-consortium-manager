@@ -389,6 +389,11 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         # Add a success message.
         messages.add_message(self.request, messages.SUCCESS, self.message_success)
 
+        # Call account adapter after verify hook
+        adapter_class = get_account_adapter()
+        adapter_instance = adapter_class()
+        adapter_instance.after_account_link_verify(user=account.user)
+
         return super().get(request, *args, **kwargs)
 
 
