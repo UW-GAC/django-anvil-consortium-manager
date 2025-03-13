@@ -34,6 +34,8 @@ Optionally, you can override the following methods:
 
 - ``get_autocomplete_queryset(self, queryset, q)``: a method that allows the user to provide custom filtering for the autocomplete view. By default, this filters to Accounts whose email contains the case-insensitive search string in ``q``.
 - ``get_autocomplete_label(self, account)``: a method that allows the user to set the label for an account shown in forms using the autocomplete widget.
+- ``after_account_link_verify(self, user)``: a method to perform any custom actions after an account is successfully linked.
+
 
 .. _managed_group_adapter:
 
