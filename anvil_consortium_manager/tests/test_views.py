@@ -1,6 +1,7 @@
 import datetime
 import json
 from unittest import skip
+from unittest.mock import patch
 from uuid import uuid4
 
 import responses
@@ -21,6 +22,7 @@ from faker import Faker
 from freezegun import freeze_time
 
 from .. import __version__, filters, forms, models, tables, views
+from ..adapters.account import get_account_adapter
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
@@ -2524,6 +2526,23 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
+
+    def test_after_account_link_verify_hook_called(self):
+        with patch.object(get_account_adapter(), "after_account_link_verify") as mock_verify_function:
+            email = "test@example.com"
+            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+            token = account_verification_token.make_token(email_entry)
+            api_url = self.get_api_url(email)
+            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+            # Need a client because messages are added.
+            self.client.force_login(self.user)
+            response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+
+            # Assert success
+            self.assertEqual(response.status_code, 200)
+
+            # Verify hook called
+            mock_verify_function.assert_called_once()
 
     @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_custom_redirect(self):
