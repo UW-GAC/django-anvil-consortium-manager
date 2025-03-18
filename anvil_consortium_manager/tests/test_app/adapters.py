@@ -63,6 +63,13 @@ class TestAccountAdapter(BaseAccountAdapter):
         return "TEST {}".format(account.email)
 
 
+class TestAccountHookFailAdapter(TestAccountAdapter):
+    account_link_verify_exception_log_msg = "TestAccountHookFailAdapter:after_account_link_verify:test_exception"
+
+    def after_account_link_verify(self, user):
+        raise Exception(self.account_link_verify_exception_log_msg)
+
+
 class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     """Adapter for TestForeignKeyWorkspace."""
 

@@ -31,6 +31,7 @@ from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import (
+    TestAccountHookFailAdapter,
     TestAfterWorkspaceCreateAdapter,
     TestAfterWorkspaceImportAdapter,
     TestBeforeWorkspaceCreateAdapter,
@@ -2543,6 +2544,28 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
 
             # Verify hook called
             mock_verify_function.assert_called_once()
+
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountHookFailAdapter"
+    )
+    def test_after_account_link_hook_fail_handled(self):
+        with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
+            email = "test@example.com"
+            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+            token = account_verification_token.make_token(email_entry)
+            api_url = self.get_api_url(email)
+            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+            # Need a client because messages are added.
+            self.client.force_login(self.user)
+            response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+
+            # Assert success
+            self.assertEqual(response.status_code, 200)
+
+        # Verify log contents contain message from adapter exception
+        self.assertIn(TestAccountHookFailAdapter.account_link_verify_exception_log_msg, log_context.output[0])
+        # Verify log contents contain views log of exception caught
+        self.assertIn(views.AccountLinkVerify.log_message_after_account_failed, log_context.output[0])
 
     @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_custom_redirect(self):

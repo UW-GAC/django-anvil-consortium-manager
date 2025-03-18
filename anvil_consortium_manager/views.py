@@ -1,3 +1,5 @@
+import logging
+
 from dal import autocomplete
 from django.conf import settings
 from django.contrib import messages
@@ -20,6 +22,8 @@ from .adapters.account import get_account_adapter
 from .adapters.workspace import workspace_adapter_registry
 from .anvil_api import AnVILAPIClient, AnVILAPIError
 from .tokens import account_verification_token
+
+logger = logging.getLogger(__name__)
 
 
 class Index(auth.AnVILConsortiumManagerStaffViewRequired, TemplateView):
@@ -313,6 +317,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_service_account = "Account is already marked as a service account."
     message_success = get_account_adapter().account_link_verify_message
+    log_message_after_account_failed = "Error in after_account_link_verify hook"
 
     def get_redirect_url(self, *args, **kwargs):
         return reverse(get_account_adapter().account_link_redirect)
@@ -392,7 +397,12 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         # Call account adapter after verify hook
         adapter_class = get_account_adapter()
         adapter_instance = adapter_class()
-        adapter_instance.after_account_link_verify(user=account.user)
+
+        try:
+            adapter_instance.after_account_link_verify(user=account.user)
+        except Exception as e:
+            # Log but do not stop execution
+            logger.error(f"[AccountLinkVerify] {self.log_message_after_account_failed}: {e}")
 
         return super().get(request, *args, **kwargs)
 
