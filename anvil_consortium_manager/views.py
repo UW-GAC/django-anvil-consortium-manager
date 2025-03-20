@@ -412,7 +412,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             error_description = f"{type(e).__name__}: {str(e)}"
 
             # Send a mail about issue if account veriy notification email is set
-            if get_account_adapter().account_verify_notification_email:
+            if adapter_instance.account_verify_notification_email:
                 mail_content = render_to_string(
                     self.mail_template_after_account_link_failed,
                     {"email_entry": email_entry, "account": account, "error_description": error_description},
@@ -421,7 +421,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
                     subject=self.mail_subject_after_account_link_failed,
                     message=mail_content,
                     from_email=None,
-                    recipient_list=[get_account_adapter().account_verify_notification_email],
+                    recipient_list=[adapter_instance.account_verify_notification_email],
                     fail_silently=False,
                 )
 
