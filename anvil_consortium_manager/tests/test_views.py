@@ -1,6 +1,7 @@
 import datetime
 import json
 from unittest import skip
+from unittest.mock import patch
 from uuid import uuid4
 
 import responses
@@ -14,6 +15,7 @@ from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.forms import BaseInlineFormSet, HiddenInput
 from django.http.response import Http404
 from django.shortcuts import resolve_url
+from django.template.loader import render_to_string
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -21,6 +23,7 @@ from faker import Faker
 from freezegun import freeze_time
 
 from .. import __version__, filters, forms, models, tables, views
+from ..adapters.account import get_account_adapter
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
@@ -29,6 +32,7 @@ from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import (
+    TestAccountHookFailAdapter,
     TestAfterWorkspaceCreateAdapter,
     TestAfterWorkspaceImportAdapter,
     TestBeforeWorkspaceCreateAdapter,
@@ -2524,6 +2528,68 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
+
+    def test_after_account_link_verify_hook_called(self):
+        with patch.object(get_account_adapter(), "after_account_link_verify") as mock_verify_function:
+            email = "test@example.com"
+            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+            token = account_verification_token.make_token(email_entry)
+            api_url = self.get_api_url(email)
+            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+            # Need a client because messages are added.
+            self.client.force_login(self.user)
+            response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+
+            # Assert success
+            self.assertEqual(response.status_code, 200)
+
+            # Verify hook called
+            mock_verify_function.assert_called_once()
+
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountHookFailAdapter"
+    )
+    def test_after_account_link_hook_fail_handled(self):
+        with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
+            email = "test@example.com"
+            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+            token = account_verification_token.make_token(email_entry)
+            api_url = self.get_api_url(email)
+            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+            # Need a client because messages are added.
+            self.client.force_login(self.user)
+            response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+            account_object = models.Account.objects.latest("pk")
+            # Assert success
+            self.assertEqual(response.status_code, 200)
+
+            # Verify log contents contain message from adapter exception
+            self.assertIn(TestAccountHookFailAdapter.account_link_verify_exception_log_msg, log_context.output[0])
+            # Verify log contents contain views log of exception caught
+            self.assertIn(views.AccountLinkVerify.log_message_after_account_link_failed, log_context.output[0])
+
+            # Get the 2nd email from the outbox
+            self.assertEqual(len(mail.outbox), 2)
+            email = mail.outbox[1]
+
+            # Verify the recipient
+            self.assertEqual(email.to, [TestAccountHookFailAdapter.account_verify_notification_email])
+
+            # Verify the subject
+            self.assertEqual(email.subject, views.AccountLinkVerify.mail_subject_after_account_link_failed)
+
+            # Verify content in the email body
+            error_description_string = f"Exception: {TestAccountHookFailAdapter.account_link_verify_exception_log_msg}"
+            context = {
+                "account": account_object,
+                "email_entry": email_entry,
+                "error_description": error_description_string,
+            }
+            expected_content = render_to_string(
+                views.AccountLinkVerify.mail_template_after_account_link_failed, context
+            )
+
+            self.assertEqual(email.body, expected_content)
 
     @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_custom_redirect(self):
