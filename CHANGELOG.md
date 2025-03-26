@@ -1,6 +1,6 @@
 # Change log
 
-## Devel
+## 0.29.0 (2025-03-26)
 
 * Allow users to ignore a specific WorkspaceSharingAudit "not in app" record.
 * Update for changes in plotly 6.0.0.
