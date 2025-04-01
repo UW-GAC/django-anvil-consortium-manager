@@ -389,7 +389,6 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         # Mark the entry as verified.
         email_entry.date_verified = timezone.now()
         email_entry.save()
-        email_entry.send_notification_email()
 
         # Save the account
         account.full_clean()
@@ -424,6 +423,9 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
                     recipient_list=[adapter_instance.account_verify_notification_email],
                     fail_silently=False,
                 )
+
+        # Send a notification email if rqeuested.
+        email_entry.send_notification_email()
 
         return super().get(request, *args, **kwargs)
 

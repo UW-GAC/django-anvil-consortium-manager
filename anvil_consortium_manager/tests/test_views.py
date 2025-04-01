@@ -2570,7 +2570,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
 
             # Get the 2nd email from the outbox
             self.assertEqual(len(mail.outbox), 2)
-            email = mail.outbox[1]
+            email = mail.outbox[0]
 
             # Verify the recipient
             self.assertEqual(email.to, [TestAccountHookFailAdapter.account_verify_notification_email])
