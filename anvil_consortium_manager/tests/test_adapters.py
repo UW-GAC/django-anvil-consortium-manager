@@ -1,5 +1,8 @@
+from unittest.mock import patch
+
 import django_tables2
 from django.conf import settings
+from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import Form, ModelForm
 from django.test import TestCase, override_settings
@@ -219,6 +222,36 @@ class AccountAdapterTestCase(TestCase):
         TestAdapter = self.get_test_adapter()
         setattr(TestAdapter, "account_verification_email_template", custom_template)
         self.assertEqual(TestAdapter().account_verification_email_template, custom_template)
+
+    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
+    def test_send_account_verification_email_default(self):
+        account = factories.AccountFactory.create()
+        adapter_instance = DefaultAccountAdapter()
+        with self.assertTemplateUsed("anvil_consortium_manager/account_verification_email.html"):
+            adapter_instance.send_account_verify_notification_email(account)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
+        self.assertEqual(mail.outbox[0].to, ["test@example.com"])
+
+    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
+    @patch.object(DefaultAccountAdapter, "account_verification_email_template", "anvil_consortium_manager/base.html")
+    def test_send_account_verification_email_with_custom_template(self):
+        account = factories.AccountFactory.create()
+        adapter_instance = DefaultAccountAdapter()
+        with self.assertTemplateUsed("anvil_consortium_manager/base.html"):
+            adapter_instance.send_account_verify_notification_email(account)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
+
+    @patch.object(DefaultAccountAdapter, "account_verification_email_template", "anvil_consortium_manager/base.html")
+    def test_send_account_verification_email_with_custom_definition(self):
+        account = factories.AccountFactory.create()
+        with patch.object(DefaultAccountAdapter, "send_account_verify_notification_email") as mock:
+            mock.return_value = None
+            adapter_instance = DefaultAccountAdapter()
+            adapter_instance.send_account_verify_notification_email(account)
+        # Our mock doesn't do anything.
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class ManagedGroupAdapterTest(TestCase):

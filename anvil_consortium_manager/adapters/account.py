@@ -4,6 +4,8 @@ from abc import ABC, abstractproperty
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils.module_loading import import_string
 from django_filters import FilterSet
 
@@ -73,6 +75,25 @@ class BaseAccountAdapter(ABC):
     def after_account_link_verify(self, user):
         """Custom actions to take for a user after their account is verified."""
         pass
+
+    def send_account_verify_notification_email(self, account):
+        """Send an email to the account_verify_notification_email address after an account is linked."""
+        mail_subject = "User verified AnVIL account"
+        message = render_to_string(
+            self.account_verification_email_template,
+            {
+                "email": account.email,
+                "user": account.user,
+            },
+        )
+        # Send the message.
+        send_mail(
+            mail_subject,
+            message,
+            None,
+            [self.account_verify_notification_email],
+            fail_silently=False,
+        )
 
 
 def get_account_adapter():
