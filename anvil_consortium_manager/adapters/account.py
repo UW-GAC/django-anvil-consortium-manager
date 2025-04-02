@@ -30,6 +30,8 @@ class BaseAccountAdapter(ABC):
     """path to account verification email template"""
     account_verification_email_template = "anvil_consortium_manager/account_verification_email.html"
 
+    account_verification_notify_email_template = "anvil_consortium_manager/account_notification_email.html"
+
     @abstractproperty
     def list_table_class(self):
         """Table class to use in a list of Accounts."""
@@ -76,15 +78,19 @@ class BaseAccountAdapter(ABC):
         """Custom actions to take for a user after their account is verified."""
         pass
 
+    def get_account_link_verify_notification_context(self, account):
+        """Return the context for the account link verify notification email."""
+        return {
+            "email": account.email,
+            "user": account.user,
+        }
+
     def send_account_verify_notification_email(self, account):
         """Send an email to the account_verify_notification_email address after an account is linked."""
         mail_subject = "User verified AnVIL account"
         message = render_to_string(
-            self.account_verification_email_template,
-            {
-                "email": account.email,
-                "user": account.user,
-            },
+            self.account_verification_notify_email_template,
+            self.get_account_link_verify_notification_context(account),
         )
         # Send the message.
         send_mail(

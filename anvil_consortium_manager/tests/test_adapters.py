@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import Form, ModelForm
+from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from django_filters import FilterSet
 
@@ -227,14 +228,16 @@ class AccountAdapterTestCase(TestCase):
     def test_send_account_verification_email_default(self):
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
-        with self.assertTemplateUsed("anvil_consortium_manager/account_verification_email.html"):
+        with self.assertTemplateUsed("anvil_consortium_manager/account_notification_email.html"):
             adapter_instance.send_account_verify_notification_email(account)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
         self.assertEqual(mail.outbox[0].to, ["test@example.com"])
 
     @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
-    @patch.object(DefaultAccountAdapter, "account_verification_email_template", "anvil_consortium_manager/base.html")
+    @patch.object(
+        DefaultAccountAdapter, "account_verification_notify_email_template", "anvil_consortium_manager/base.html"
+    )
     def test_send_account_verification_email_with_custom_template(self):
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
@@ -243,7 +246,7 @@ class AccountAdapterTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
 
-    @patch.object(DefaultAccountAdapter, "account_verification_email_template", "anvil_consortium_manager/base.html")
+    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
     def test_send_account_verification_email_with_custom_definition(self):
         account = factories.AccountFactory.create()
         with patch.object(DefaultAccountAdapter, "send_account_verify_notification_email") as mock:
@@ -252,6 +255,42 @@ class AccountAdapterTestCase(TestCase):
             adapter_instance.send_account_verify_notification_email(account)
         # Our mock doesn't do anything.
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_get_account_link_verify_notification_context_default(self):
+        """get_account_link_verify_notification_context returns the correct context by default."""
+        account = factories.AccountFactory.create()
+        adapter_instance = DefaultAccountAdapter()
+        context = adapter_instance.get_account_link_verify_notification_context(account)
+        self.assertEqual(context, {"email": account.email, "user": account.user})
+
+    @patch.object(DefaultAccountAdapter, "get_account_link_verify_notification_context", return_value={"foo": "bar"})
+    def test_get_account_link_verify_notification_context_custom(self, mock):
+        """get_account_link_verify_notification_context returns the correct context by default."""
+        account = factories.AccountFactory.create()
+        adapter_instance = DefaultAccountAdapter()
+        context = adapter_instance.get_account_link_verify_notification_context(account)
+        self.assertEqual(context, {"foo": "bar"})
+
+    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
+    @patch.object(DefaultAccountAdapter, "get_account_link_verify_notification_context", return_value={"foo": "bar"})
+    def test_send_account_verification_email_with_custom_context(self, mock):
+        """get_account_link_verify_notification_context returns the correct context by default."""
+        account = factories.AccountFactory.create()
+        adapter_instance = DefaultAccountAdapter()
+        adapter_instance.send_account_verify_notification_email(account)
+        # Check the email
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
+        expected_content = render_to_string(
+            DefaultAccountAdapter.account_verification_notify_email_template,
+            {"foo": "bar"},
+        )
+        self.assertEqual(mail.outbox[0].body, expected_content)
+        unexpected_content = render_to_string(
+            DefaultAccountAdapter.account_verification_notify_email_template,
+            {"email": account.email, "user": account.user},
+        )
+        self.assertNotEqual(mail.outbox[0].body, unexpected_content)
 
 
 class ManagedGroupAdapterTest(TestCase):
