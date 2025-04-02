@@ -32,6 +32,7 @@ from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import (
+    TestAccountAdapter,
     TestAccountHookFailAdapter,
     TestAfterWorkspaceCreateAdapter,
     TestAfterWorkspaceImportAdapter,
@@ -2584,6 +2585,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
                 "account": account_object,
                 "email_entry": email_entry,
                 "error_description": error_description_string,
+                "hook": "after_account_link_verify",
             }
             expected_content = render_to_string(
                 views.AccountLinkVerify.mail_template_after_account_link_failed, context
@@ -2958,6 +2960,60 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(len(mail.outbox[0].to), 1)
         self.assertIn("test@example.com", mail.outbox[0].to)
+
+    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
+    @patch.object(
+        TestAccountAdapter,
+        "send_account_verify_notification_email",
+    )
+    def test_send_account_verify_notification_email_hook_fail_handled(self, mock):
+        error_message = "send_account_verify_notification_email:test_exception"
+        mock.side_effect = Exception(error_message)
+        with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
+            email = "test@example.com"
+            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+            token = account_verification_token.make_token(email_entry)
+            api_url = self.get_api_url(email)
+            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+            # Need a client because messages are added.
+            self.client.force_login(self.user)
+            response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+            account_object = models.Account.objects.latest("pk")
+            # Assert success
+            self.assertEqual(response.status_code, 200)
+
+            # Verify log contents contain message from adapter exception
+            self.assertIn(error_message, log_context.output[0])
+            # Verify log contents contain views log of exception caught
+            self.assertIn(
+                views.AccountLinkVerify.log_message_send_account_verify_notification_email_failed, log_context.output[0]
+            )
+
+            # Only one the error notification email was sent because the hook failed.
+            self.assertEqual(len(mail.outbox), 1)
+            email = mail.outbox[0]
+
+            # Verify the recipient
+            self.assertEqual(email.to, [TestAccountAdapter.account_verify_notification_email])
+
+            # Verify the subject
+            self.assertEqual(
+                email.subject, views.AccountLinkVerify.mail_subject_send_account_verify_notification_email_failed
+            )
+
+            # Verify content in the email body
+            error_description_string = f"Exception: {error_message}"
+            context = {
+                "account": account_object,
+                "email_entry": email_entry,
+                "error_description": error_description_string,
+                "hook": "send_account_verify_notification_email",
+            }
+            expected_content = render_to_string(
+                views.AccountLinkVerify.mail_template_send_account_verify_notification_email_failed, context
+            )
+
+            self.assertEqual(email.body, expected_content)
 
 
 class AccountListTest(TestCase):

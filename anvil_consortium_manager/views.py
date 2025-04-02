@@ -323,6 +323,14 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     log_message_after_account_link_failed = "Error in after_account_link_verify hook"
     mail_subject_after_account_link_failed = "AccountLinkVerify - error encountered in after_account_link_verify"
     mail_template_after_account_link_failed = "anvil_consortium_manager/account_link_error_email.html"
+    # send_account_verify_notification_email hook errors
+    log_message_send_account_verify_notification_email_failed = "Error in send_account_verify_notification_email hook"
+    mail_subject_send_account_verify_notification_email_failed = (
+        "AccountLinkVerify - error encountered in send_account_verify_notification_email"
+    )
+    mail_template_send_account_verify_notification_email_failed = (
+        "anvil_consortium_manager/account_link_error_email.html"
+    )
 
     def get_redirect_url(self, *args, **kwargs):
         return reverse(get_account_adapter().account_link_redirect)
@@ -415,7 +423,12 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             if adapter_instance.account_verify_notification_email:
                 mail_content = render_to_string(
                     self.mail_template_after_account_link_failed,
-                    {"email_entry": email_entry, "account": account, "error_description": error_description},
+                    {
+                        "email_entry": email_entry,
+                        "account": account,
+                        "error_description": error_description,
+                        "hook": "after_account_link_verify",
+                    },
                 )
                 send_mail(
                     subject=self.mail_subject_after_account_link_failed,
@@ -425,9 +438,36 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
                     fail_silently=False,
                 )
 
-        # Send a notification email if requested.
-        if adapter_instance.account_verify_notification_email:
-            adapter_instance.send_account_verify_notification_email(account)
+        try:
+            if adapter_instance.account_verify_notification_email:
+                adapter_instance.send_account_verify_notification_email(account)
+        except Exception as e:
+            # Log but do not stop execution
+            logger.exception(
+                f"[AccountLinkVerify] {self.log_message_send_account_verify_notification_email_failed}: {e}"
+            )
+
+            # Get the exception type and message
+            error_description = f"{type(e).__name__}: {str(e)}"
+
+            # Send a mail about issue if account veriy notification email is set
+            if adapter_instance.account_verify_notification_email:
+                mail_content = render_to_string(
+                    self.mail_template_send_account_verify_notification_email_failed,
+                    {
+                        "email_entry": email_entry,
+                        "account": account,
+                        "error_description": error_description,
+                        "hook": "send_account_verify_notification_email",
+                    },
+                )
+                send_mail(
+                    subject=self.mail_subject_send_account_verify_notification_email_failed,
+                    message=mail_content,
+                    from_email=None,
+                    recipient_list=[adapter_instance.account_verify_notification_email],
+                    fail_silently=False,
+                )
 
         return super().get(request, *args, **kwargs)
 
