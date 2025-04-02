@@ -224,8 +224,15 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_verification_email_template", custom_template)
         self.assertEqual(TestAdapter().account_verification_email_template, custom_template)
 
+    def test_send_account_verification_email_default_no_email(self):
+        # No mail sent by default, since there is no address to send it to.
+        account = factories.AccountFactory.create()
+        adapter_instance = DefaultAccountAdapter()
+        adapter_instance.send_account_verify_notification_email(account)
+        self.assertEqual(len(mail.outbox), 0)
+
     @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
-    def test_send_account_verification_email_default(self):
+    def test_send_account_verification_email_with_notification_email_set(self):
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
         with self.assertTemplateUsed("anvil_consortium_manager/account_notification_email.html"):
@@ -246,7 +253,6 @@ class AccountAdapterTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
 
-    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
     def test_send_account_verification_email_with_custom_definition(self):
         account = factories.AccountFactory.create()
         with patch.object(DefaultAccountAdapter, "send_account_verify_notification_email") as mock:
@@ -272,12 +278,13 @@ class AccountAdapterTestCase(TestCase):
         self.assertEqual(context, {"foo": "bar"})
 
     @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
-    @patch.object(DefaultAccountAdapter, "get_account_link_verify_notification_context", return_value={"foo": "bar"})
-    def test_send_account_verification_email_with_custom_context(self, mock):
+    def test_send_account_verification_email_with_custom_context(self):
         """get_account_link_verify_notification_context returns the correct context by default."""
         account = factories.AccountFactory.create()
-        adapter_instance = DefaultAccountAdapter()
-        adapter_instance.send_account_verify_notification_email(account)
+        with patch.object(DefaultAccountAdapter, "get_account_link_verify_notification_context") as mock:
+            mock.return_value = {"foo": "bar"}
+            adapter_instance = DefaultAccountAdapter()
+            adapter_instance.send_account_verify_notification_email(account)
         # Check the email
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
@@ -291,6 +298,8 @@ class AccountAdapterTestCase(TestCase):
             {"email": account.email, "user": account.user},
         )
         self.assertNotEqual(mail.outbox[0].body, unexpected_content)
+        # Verify custom context was called.
+        mock.assert_called_once()
 
 
 class ManagedGroupAdapterTest(TestCase):

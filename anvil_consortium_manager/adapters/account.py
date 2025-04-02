@@ -93,6 +93,7 @@ class BaseAccountAdapter(ABC):
             self.get_account_link_verify_notification_context(account),
         )
         # Send the message.
+        # Current django behavior: If self.account_verify_notification_email is None, no emails are sent.
         send_mail(
             mail_subject,
             message,

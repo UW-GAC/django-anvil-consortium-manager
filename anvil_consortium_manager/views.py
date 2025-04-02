@@ -439,8 +439,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
                 )
 
         try:
-            if adapter_instance.account_verify_notification_email:
-                adapter_instance.send_account_verify_notification_email(account)
+            adapter_instance.send_account_verify_notification_email(account)
         except Exception as e:
             # Log but do not stop execution
             logger.exception(
