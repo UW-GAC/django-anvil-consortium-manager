@@ -319,6 +319,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     message_account_does_not_exist = "This account does not exist on AnVIL."
     message_service_account = "Account is already marked as a service account."
     message_success = get_account_adapter().account_link_verify_message
+    # after_account_link_verify hook errors
     log_message_after_account_link_failed = "Error in after_account_link_verify hook"
     mail_subject_after_account_link_failed = "AccountLinkVerify - error encountered in after_account_link_verify"
     mail_template_after_account_link_failed = "anvil_consortium_manager/account_link_error_email.html"
@@ -424,8 +425,9 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
                     fail_silently=False,
                 )
 
-        # Send a notification email if rqeuested.
-        email_entry.send_notification_email()
+        # Send a notification email if requested.
+        if adapter_instance.account_verify_notification_email:
+            adapter_instance.send_account_verify_notification_email(account)
 
         return super().get(request, *args, **kwargs)
 

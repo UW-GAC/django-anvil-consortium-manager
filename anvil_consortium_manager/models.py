@@ -162,25 +162,6 @@ class UserEmailEntry(TimeStampedModel, models.Model):
         )
         send_mail(mail_subject, message, None, [self.email], fail_silently=False)
 
-    def send_notification_email(self):
-        """Send notification email after account is verified if the email setting is set"""
-        if get_account_adapter().account_verify_notification_email:
-            mail_subject = "User verified AnVIL account"
-            message = render_to_string(
-                "anvil_consortium_manager/account_notification_email.html",
-                {
-                    "email": self.email,
-                    "user": self.user,
-                },
-            )
-            send_mail(
-                mail_subject,
-                message,
-                None,
-                [get_account_adapter().account_verify_notification_email],
-                fail_silently=False,
-            )
-
 
 class Account(TimeStampedModel, ActivatorModel):
     """A model to store information about AnVIL accounts."""
