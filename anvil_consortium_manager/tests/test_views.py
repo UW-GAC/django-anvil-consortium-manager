@@ -2530,8 +2530,8 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), views.AccountLinkVerify.message_success)
 
-    def test_after_account_link_verify_hook_called(self):
-        with patch.object(get_account_adapter(), "after_account_link_verify") as mock_verify_function:
+    def test_after_account_verification_hook_called(self):
+        with patch.object(get_account_adapter(), "after_account_verification") as mock_verify_function:
             email = "test@example.com"
             email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
             token = account_verification_token.make_token(email_entry)
@@ -2590,7 +2590,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
                 "account": account_object,
                 "email_entry": email_entry,
                 "error_description": error_description_string,
-                "hook": "after_account_link_verify",
+                "hook": "after_account_verification",
             }
             expected_content = render_to_string(
                 views.AccountLinkVerify.mail_template_after_account_link_failed, context

@@ -64,9 +64,9 @@ class TestAccountAdapter(BaseAccountAdapter):
 
 
 class TestAccountHookFailAdapter(TestAccountAdapter):
-    account_link_verify_exception_log_msg = "TestAccountHookFailAdapter:after_account_link_verify:test_exception"
+    account_link_verify_exception_log_msg = "TestAccountHookFailAdapter:after_account_verification:test_exception"
 
-    def after_account_link_verify(self, user):
+    def after_account_verification(self, user):
         raise Exception(self.account_link_verify_exception_log_msg)
 
 

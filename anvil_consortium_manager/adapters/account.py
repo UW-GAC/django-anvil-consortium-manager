@@ -85,7 +85,7 @@ class BaseAccountAdapter(ABC):
         """Adapter to provide a label for an account in autocomplete views."""
         return str(account)
 
-    def after_account_link_verify(self, user):
+    def after_account_verification(self, user):
         """Custom actions to take for a user after their account is verified."""
         pass
 
