@@ -413,7 +413,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
         adapter_instance = adapter_class()
 
         try:
-            adapter_instance.after_account_verification(user=account.user)
+            adapter_instance.after_account_verification(account)
         except Exception as e:
             # Log but do not stop execution
             logger.exception(f"[AccountLinkVerify] {self.log_message_after_account_link_failed}: {e}")

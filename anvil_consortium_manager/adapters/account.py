@@ -90,9 +90,14 @@ class BaseAccountAdapter(ABC):
         """Adapter to provide a label for an account in autocomplete views."""
         return str(account)
 
-    def after_account_verification(self, user):
-        """Custom actions to take for a user after their account is verified."""
-        pass
+    def after_account_verification(self, account):
+        """Custom actions to take for an account after it has been verified by a user."""
+        # Check that account is an instance of Account.
+        if not isinstance(account, models.Account):
+            raise TypeError("account must be an instance of anvil_consortium_manager.models.Account.")
+        # Check that account is verified by a user.
+        if not account.user:
+            raise ValueError("account must be linked to a user.")
 
     def get_account_verification_notification_context(self, account):
         """Return the context for the account link verify notification email."""

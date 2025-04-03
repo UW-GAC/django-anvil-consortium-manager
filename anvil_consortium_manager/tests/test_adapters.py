@@ -224,6 +224,31 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_link_email_template", custom_template)
         self.assertEqual(TestAdapter().account_link_email_template, custom_template)
 
+    def test_after_account_verification(self):
+        """after_account_verification when run with correct input."""
+        account = factories.AccountFactory.create(verified=True)
+        adapter_instance = DefaultAccountAdapter()
+        adapter_instance.after_account_verification(account)
+        # Our mock doesn't do anything; we want to make sure it is not raising any exceptions.
+
+    def test_after_account_verification_wrong_class(self):
+        """after_account_verification when called with an incorrect class."""
+        account = factories.AccountFactory.create(verified=True)
+        adapter_instance = DefaultAccountAdapter()
+        with self.assertRaises(TypeError) as e:
+            adapter_instance.after_account_verification(account.user)
+        self.assertIn("account must be an instance", str(e.exception))
+        # Our mock doesn't do anything; we want to make sure it is not raising any exceptions.
+
+    def test_after_account_verification_not_linked_to_user(self):
+        """after_account_verification when called with an account not linked to a user."""
+        account = factories.AccountFactory.create()
+        adapter_instance = DefaultAccountAdapter()
+        with self.assertRaises(ValueError) as e:
+            adapter_instance.after_account_verification(account)
+        self.assertIn("account must be linked to a user", str(e.exception))
+        # Our mock doesn't do anything; we want to make sure it is not raising any exceptions.
+
     def test_send_account_verification_email_default_no_email(self):
         # No mail sent by default, since there is no address to send it to.
         account = factories.AccountFactory.create()
