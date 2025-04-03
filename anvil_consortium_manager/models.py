@@ -144,7 +144,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             domain (str): The domain of the current site, used to create the link.
         """
         mail_subject = get_account_adapter().account_link_email_subject
-        account_verification_template = get_account_adapter().account_verification_email_template
+        account_verification_template = get_account_adapter().account_link_email_template
 
         url_subdirectory = "http://{domain}{url}".format(
             domain=domain,

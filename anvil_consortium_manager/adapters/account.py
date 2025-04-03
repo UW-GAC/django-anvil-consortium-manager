@@ -24,11 +24,11 @@ class BaseAccountAdapter(ABC):
     """Subject line for AnVIL account verification emails."""
     account_link_email_subject = "Verify your AnVIL account email"
 
+    """path to account verification email template"""
+    account_link_email_template = "anvil_consortium_manager/account_verification_email.html"
+
     """If desired, specify the email address to send an email to after a user verifies an account."""
     account_verification_notification_email = None
-
-    """path to account verification email template"""
-    account_verification_email_template = "anvil_consortium_manager/account_verification_email.html"
 
     """Template to use for the account verification notification email."""
     account_verification_notify_email_template = "anvil_consortium_manager/account_notification_email.html"
@@ -43,6 +43,9 @@ class BaseAccountAdapter(ABC):
             raise DeprecationWarning(msg)
         if hasattr(self, "after_account_link_verify"):
             msg = "after_account_link_verify is deprecated. Please use after_account_verification instead."
+            raise DeprecationWarning(msg)
+        if hasattr(self, "account_verification_email_template"):
+            msg = "account_verification_email_template is deprecated. Please use account_link_email_template instead."
             raise DeprecationWarning(msg)
 
     @abstractproperty
