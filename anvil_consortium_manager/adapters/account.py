@@ -31,7 +31,7 @@ class BaseAccountAdapter(ABC):
     account_verification_notification_email = None
 
     """Template to use for the account verification notification email."""
-    account_verification_notify_email_template = "anvil_consortium_manager/account_notification_email.html"
+    account_verification_notification_template = "anvil_consortium_manager/account_notification_email.html"
 
     def __init__(self, *args, **kwargs):
         """Check for deprecations."""
@@ -46,6 +46,12 @@ class BaseAccountAdapter(ABC):
             raise DeprecationWarning(msg)
         if hasattr(self, "account_verification_email_template"):
             msg = "account_verification_email_template is deprecated. Please use account_link_email_template instead."
+            raise DeprecationWarning(msg)
+        if hasattr(self, "account_verification_notify_email_template"):
+            msg = (
+                "account_verification_notify_email_template is deprecated. "
+                "Please use account_verification_notification_template instead."
+            )
             raise DeprecationWarning(msg)
 
     @abstractproperty
@@ -110,7 +116,7 @@ class BaseAccountAdapter(ABC):
         """Send an email to the account_verification_notification_email address after an account is linked."""
         mail_subject = "User verified AnVIL account"
         message = render_to_string(
-            self.account_verification_notify_email_template,
+            self.account_verification_notification_template,
             self.get_account_verification_notification_context(account),
         )
         # Send the message.

@@ -268,7 +268,7 @@ class AccountAdapterTestCase(TestCase):
 
     @patch.object(DefaultAccountAdapter, "account_verification_notification_email", "test@example.com")
     @patch.object(
-        DefaultAccountAdapter, "account_verification_notify_email_template", "anvil_consortium_manager/base.html"
+        DefaultAccountAdapter, "account_verification_notification_template", "anvil_consortium_manager/base.html"
     )
     def test_send_account_verification_email_with_custom_template(self):
         account = factories.AccountFactory.create()
@@ -314,12 +314,12 @@ class AccountAdapterTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
         expected_content = render_to_string(
-            DefaultAccountAdapter.account_verification_notify_email_template,
+            DefaultAccountAdapter.account_verification_notification_template,
             {"foo": "bar"},
         )
         self.assertEqual(mail.outbox[0].body, expected_content)
         unexpected_content = render_to_string(
-            DefaultAccountAdapter.account_verification_notify_email_template,
+            DefaultAccountAdapter.account_verification_notification_template,
             {"email": account.email, "user": account.user},
         )
         self.assertNotEqual(mail.outbox[0].body, unexpected_content)
@@ -352,14 +352,27 @@ class AccountAdapterTestCase(TestCase):
             str(e.exception),
         )
 
-    @patch.object(DefaultAccountAdapter, "account_verification_email_template", create=True)
-    def test_deprecated_account_verification_email_template(self, mock):
+    @patch.object(DefaultAccountAdapter, "account_verification_email_template", "test/test.html", create=True)
+    def test_deprecated_account_verification_email_template(self):
         """__init__ raises an DeprecationWarning if account_verification_email_template is set."""
-        mock.return_value = None
         with self.assertRaises(DeprecationWarning) as e:
             DefaultAccountAdapter()
         expected_message = (
             "account_verification_email_template is deprecated. Please use account_link_email_template instead."
+        )
+        self.assertIn(
+            expected_message,
+            str(e.exception),
+        )
+
+    @patch.object(DefaultAccountAdapter, "account_verification_notify_email_template", "test/test.html", create=True)
+    def test_deprecated_account_verification_notify_email_template(self):
+        """__init__ raises an DeprecationWarning if account_verification_notify_email_template is set."""
+        with self.assertRaises(DeprecationWarning) as e:
+            DefaultAccountAdapter()
+        expected_message = (
+            "account_verification_notify_email_template is deprecated. "
+            "Please use account_verification_notification_template instead."
         )
         self.assertIn(
             expected_message,
