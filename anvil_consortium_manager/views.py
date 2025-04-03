@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.mail import send_mail
+from django.core.mail import mail_admins
 from django.db import transaction
 from django.db.models import ProtectedError, RestrictedError
 from django.forms import Form, HiddenInput, inlineformset_factory
@@ -419,24 +419,21 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             # Get the exception type and message
             error_description = f"{type(e).__name__}: {str(e)}"
 
-            # Send a mail about issue if account veriy notification email is set
-            if adapter_instance.account_verify_notification_email:
-                mail_content = render_to_string(
-                    self.mail_template_after_account_link_failed,
-                    {
-                        "email_entry": email_entry,
-                        "account": account,
-                        "error_description": error_description,
-                        "hook": "after_account_link_verify",
-                    },
-                )
-                send_mail(
-                    subject=self.mail_subject_after_account_link_failed,
-                    message=mail_content,
-                    from_email=None,
-                    recipient_list=[adapter_instance.account_verify_notification_email],
-                    fail_silently=False,
-                )
+            # Send a mail about issue to the admins.
+            mail_content = render_to_string(
+                self.mail_template_after_account_link_failed,
+                {
+                    "email_entry": email_entry,
+                    "account": account,
+                    "error_description": error_description,
+                    "hook": "after_account_link_verify",
+                },
+            )
+            mail_admins(
+                subject=self.mail_subject_after_account_link_failed,
+                message=mail_content,
+                fail_silently=False,
+            )
 
         try:
             adapter_instance.send_account_verify_notification_email(account)
@@ -449,24 +446,21 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             # Get the exception type and message
             error_description = f"{type(e).__name__}: {str(e)}"
 
-            # Send a mail about issue if account veriy notification email is set
-            if adapter_instance.account_verify_notification_email:
-                mail_content = render_to_string(
-                    self.mail_template_send_account_verify_notification_email_failed,
-                    {
-                        "email_entry": email_entry,
-                        "account": account,
-                        "error_description": error_description,
-                        "hook": "send_account_verify_notification_email",
-                    },
-                )
-                send_mail(
-                    subject=self.mail_subject_send_account_verify_notification_email_failed,
-                    message=mail_content,
-                    from_email=None,
-                    recipient_list=[adapter_instance.account_verify_notification_email],
-                    fail_silently=False,
-                )
+            # Send a mail about issue to the admins.
+            mail_content = render_to_string(
+                self.mail_template_send_account_verify_notification_email_failed,
+                {
+                    "email_entry": email_entry,
+                    "account": account,
+                    "error_description": error_description,
+                    "hook": "send_account_verify_notification_email",
+                },
+            )
+            mail_admins(
+                subject=self.mail_subject_send_account_verify_notification_email_failed,
+                message=mail_content,
+                fail_silently=False,
+            )
 
         return super().get(request, *args, **kwargs)
 

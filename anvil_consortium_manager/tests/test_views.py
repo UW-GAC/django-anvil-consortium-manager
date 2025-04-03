@@ -2548,7 +2548,8 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             mock_verify_function.assert_called_once()
 
     @override_settings(
-        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountHookFailAdapter"
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountHookFailAdapter",
+        ADMINS=[("Admin", "admin@example.com")],
     )
     def test_after_account_link_hook_fail_handled(self):
         with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
@@ -2574,10 +2575,14 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             email = mail.outbox[0]
 
             # Verify the recipient
-            self.assertEqual(email.to, [TestAccountHookFailAdapter.account_verify_notification_email])
+            self.assertEqual(email.to, ["admin@example.com"])
 
-            # Verify the subject
-            self.assertEqual(email.subject, views.AccountLinkVerify.mail_subject_after_account_link_failed)
+            # Verify the subject. Note that when using mail_admins, django prefixes the subject with
+            # settings.EMAIL_SUBJECT_PREFIX
+            self.assertIn(
+                views.AccountLinkVerify.mail_subject_after_account_link_failed,
+                email.subject,
+            )
 
             # Verify content in the email body
             error_description_string = f"Exception: {TestAccountHookFailAdapter.account_link_verify_exception_log_msg}"
@@ -2961,7 +2966,10 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(mail.outbox[0].to), 1)
         self.assertIn("test@example.com", mail.outbox[0].to)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
+    @override_settings(
+        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter",
+        ADMINS=[("Admin", "admin@example.com")],
+    )
     @patch.object(
         TestAccountAdapter,
         "send_account_verify_notification_email",
@@ -2994,11 +3002,13 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             email = mail.outbox[0]
 
             # Verify the recipient
-            self.assertEqual(email.to, [TestAccountAdapter.account_verify_notification_email])
+            self.assertEqual(email.to, ["admin@example.com"])
 
-            # Verify the subject
-            self.assertEqual(
-                email.subject, views.AccountLinkVerify.mail_subject_send_account_verify_notification_email_failed
+            # Verify the subject. Note that when using mail_admins, django prefixes the subject with
+            # settings.EMAIL_SUBJECT_PREFIX
+            self.assertIn(
+                views.AccountLinkVerify.mail_subject_send_account_verify_notification_email_failed,
+                email.subject,
             )
 
             # Verify content in the email body
