@@ -96,7 +96,7 @@ class BaseAccountAdapter(ABC):
         if not isinstance(account, models.Account):
             raise TypeError("account must be an instance of anvil_consortium_manager.models.Account.")
         # Check that account is verified by a user.
-        if hasattr(account, "user") and account.user:
+        if not (hasattr(account, "user") and account.user):
             raise ValueError("account must be linked to a user.")
 
     def get_account_verification_notification_context(self, account):
