@@ -36,12 +36,14 @@ class BaseAccountAdapter(ABC):
     def __init__(self, *args, **kwargs):
         """Check for deprecations."""
         if hasattr(self, "account_verify_notification_email"):
-            raise DeprecationWarning(
-                (
-                    "account_verify_notification_email is deprecated. "
-                    "Please use account_verification_notification_email instead."
-                )
+            msg = (
+                "account_verify_notification_email is deprecated. "
+                "Please use account_verification_notification_email instead."
             )
+            raise DeprecationWarning(msg)
+        if hasattr(self, "after_account_link_verify"):
+            msg = "after_account_link_verify is deprecated. Please use after_account_verification instead."
+            raise DeprecationWarning(msg)
 
     @abstractproperty
     def list_table_class(self):

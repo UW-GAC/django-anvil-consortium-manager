@@ -315,6 +315,18 @@ class AccountAdapterTestCase(TestCase):
             str(e.exception),
         )
 
+    @patch.object(DefaultAccountAdapter, "after_account_link_verify", create=True)
+    def test_deprecated_after_account_link_verify(self, mock):
+        """__init__ raises an DeprecationWarning if account_verify_notification_email is set."""
+        mock.return_value = None
+        with self.assertRaises(DeprecationWarning) as e:
+            DefaultAccountAdapter()
+        expected_message = "after_account_link_verify is deprecated. Please use after_account_verification instead."
+        self.assertIn(
+            expected_message,
+            str(e.exception),
+        )
+
 
 class ManagedGroupAdapterTest(TestCase):
     """Tests for ManagedGroup adapters."""
