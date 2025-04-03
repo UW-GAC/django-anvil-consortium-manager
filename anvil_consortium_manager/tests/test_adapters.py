@@ -199,16 +199,16 @@ class AccountAdapterTestCase(TestCase):
         setattr(TestAdapter, "account_link_email_subject", custom_subject)
         self.assertEqual(TestAdapter().account_link_email_subject, custom_subject)
 
-    def test_account_verify_notification_email_default(self):
-        """account_verify_notification_email returns the correct email when using the default adapter."""
-        self.assertEqual(DefaultAccountAdapter().account_verify_notification_email, None)
+    def test_account_verification_notification_email_default(self):
+        """account_verification_notification_email returns the correct email when using the default adapter."""
+        self.assertEqual(DefaultAccountAdapter().account_verification_notification_email, None)
 
-    def test_account_verify_notification_email_custom(self):
-        """account_verify_notification_email returns the correct email when using a custom adapter."""
+    def test_account_verification_notification_email_custom(self):
+        """account_verification_notification_email returns the correct email when using a custom adapter."""
         custom_email = "test@example.com"
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_verify_notification_email", custom_email)
-        self.assertEqual(TestAdapter().account_verify_notification_email, custom_email)
+        setattr(TestAdapter, "account_verification_notification_email", custom_email)
+        self.assertEqual(TestAdapter().account_verification_notification_email, custom_email)
 
     def test_account_verification_email_template_default(self):
         """account_verification_email_template returns the correct template when using the default adapter."""
@@ -228,20 +228,20 @@ class AccountAdapterTestCase(TestCase):
         # No mail sent by default, since there is no address to send it to.
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
-        adapter_instance.send_account_verify_notification_email(account)
+        adapter_instance.send_account_verification_notification_email(account)
         self.assertEqual(len(mail.outbox), 0)
 
-    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
+    @patch.object(DefaultAccountAdapter, "account_verification_notification_email", "test@example.com")
     def test_send_account_verification_email_with_notification_email_set(self):
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
         with self.assertTemplateUsed("anvil_consortium_manager/account_notification_email.html"):
-            adapter_instance.send_account_verify_notification_email(account)
+            adapter_instance.send_account_verification_notification_email(account)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
         self.assertEqual(mail.outbox[0].to, ["test@example.com"])
 
-    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
+    @patch.object(DefaultAccountAdapter, "account_verification_notification_email", "test@example.com")
     @patch.object(
         DefaultAccountAdapter, "account_verification_notify_email_template", "anvil_consortium_manager/base.html"
     )
@@ -249,42 +249,42 @@ class AccountAdapterTestCase(TestCase):
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
         with self.assertTemplateUsed("anvil_consortium_manager/base.html"):
-            adapter_instance.send_account_verify_notification_email(account)
+            adapter_instance.send_account_verification_notification_email(account)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
 
     def test_send_account_verification_email_with_custom_definition(self):
         account = factories.AccountFactory.create()
-        with patch.object(DefaultAccountAdapter, "send_account_verify_notification_email") as mock:
+        with patch.object(DefaultAccountAdapter, "send_account_verification_notification_email") as mock:
             mock.return_value = None
             adapter_instance = DefaultAccountAdapter()
-            adapter_instance.send_account_verify_notification_email(account)
+            adapter_instance.send_account_verification_notification_email(account)
         # Our mock doesn't do anything.
         self.assertEqual(len(mail.outbox), 0)
 
-    def test_get_account_link_verify_notification_context_default(self):
-        """get_account_link_verify_notification_context returns the correct context by default."""
+    def test_get_account_verification_notification_context_default(self):
+        """get_account_verification_notification_context returns the correct context by default."""
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
-        context = adapter_instance.get_account_link_verify_notification_context(account)
+        context = adapter_instance.get_account_verification_notification_context(account)
         self.assertEqual(context, {"email": account.email, "user": account.user})
 
-    @patch.object(DefaultAccountAdapter, "get_account_link_verify_notification_context", return_value={"foo": "bar"})
-    def test_get_account_link_verify_notification_context_custom(self, mock):
-        """get_account_link_verify_notification_context returns the correct context by default."""
+    @patch.object(DefaultAccountAdapter, "get_account_verification_notification_context", return_value={"foo": "bar"})
+    def test_get_account_verification_notification_context_custom(self, mock):
+        """get_account_verification_notification_context returns the correct context by default."""
         account = factories.AccountFactory.create()
         adapter_instance = DefaultAccountAdapter()
-        context = adapter_instance.get_account_link_verify_notification_context(account)
+        context = adapter_instance.get_account_verification_notification_context(account)
         self.assertEqual(context, {"foo": "bar"})
 
-    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com")
+    @patch.object(DefaultAccountAdapter, "account_verification_notification_email", "test@example.com")
     def test_send_account_verification_email_with_custom_context(self):
-        """get_account_link_verify_notification_context returns the correct context by default."""
+        """get_account_verification_notification_context returns the correct context by default."""
         account = factories.AccountFactory.create()
-        with patch.object(DefaultAccountAdapter, "get_account_link_verify_notification_context") as mock:
+        with patch.object(DefaultAccountAdapter, "get_account_verification_notification_context") as mock:
             mock.return_value = {"foo": "bar"}
             adapter_instance = DefaultAccountAdapter()
-            adapter_instance.send_account_verify_notification_email(account)
+            adapter_instance.send_account_verification_notification_email(account)
         # Check the email
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "User verified AnVIL account")
@@ -300,6 +300,20 @@ class AccountAdapterTestCase(TestCase):
         self.assertNotEqual(mail.outbox[0].body, unexpected_content)
         # Verify custom context was called.
         mock.assert_called_once()
+
+    @patch.object(DefaultAccountAdapter, "account_verify_notification_email", "test@example.com", create=True)
+    def test_deprecated_get_account_link_verify_notification_context(self):
+        """__init__ raises an DeprecationWarning if account_verify_notification_email is set."""
+        with self.assertRaises(DeprecationWarning) as e:
+            DefaultAccountAdapter()
+        expected_message = (
+            "account_verify_notification_email is deprecated. "
+            "Please use account_verification_notification_email instead."
+        )
+        self.assertIn(
+            expected_message,
+            str(e.exception),
+        )
 
 
 class ManagedGroupAdapterTest(TestCase):

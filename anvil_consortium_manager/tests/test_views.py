@@ -2938,7 +2938,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual("AnVIL API Error: other error", str(messages[0]))
 
     def test_no_notification_email(self):
-        """Notification email is not sent if account_verify_notification_email is not set"""
+        """Notification email is not sent if account_verification_notification_email is not set"""
         email = "test@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
         token = account_verification_token.make_token(email_entry)
@@ -2952,7 +2952,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
 
     @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_notification_email(self):
-        """Notification email is sent if account_verify_notification_email set."""
+        """Notification email is sent if account_verification_notification_email set."""
         email = "test1@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
         token = account_verification_token.make_token(email_entry)
@@ -2972,10 +2972,10 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
     )
     @patch.object(
         TestAccountAdapter,
-        "send_account_verify_notification_email",
+        "send_account_verification_notification_email",
     )
-    def test_send_account_verify_notification_email_hook_fail_handled(self, mock):
-        error_message = "send_account_verify_notification_email:test_exception"
+    def test_send_account_verification_notification_email_hook_fail_handled(self, mock):
+        error_message = "send_account_verification_notification_email:test_exception"
         mock.side_effect = Exception(error_message)
         with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
             email = "test@example.com"
@@ -2994,7 +2994,8 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             self.assertIn(error_message, log_context.output[0])
             # Verify log contents contain views log of exception caught
             self.assertIn(
-                views.AccountLinkVerify.log_message_send_account_verify_notification_email_failed, log_context.output[0]
+                views.AccountLinkVerify.log_message_send_account_verification_notification_email_failed,
+                log_context.output[0],
             )
 
             # Only one the error notification email was sent because the hook failed.
@@ -3007,7 +3008,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             # Verify the subject. Note that when using mail_admins, django prefixes the subject with
             # settings.EMAIL_SUBJECT_PREFIX
             self.assertIn(
-                views.AccountLinkVerify.mail_subject_send_account_verify_notification_email_failed,
+                views.AccountLinkVerify.mail_subject_send_account_verification_notification_email_failed,
                 email.subject,
             )
 
@@ -3017,10 +3018,10 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
                 "account": account_object,
                 "email_entry": email_entry,
                 "error_description": error_description_string,
-                "hook": "send_account_verify_notification_email",
+                "hook": "send_account_verification_notification_email",
             }
             expected_content = render_to_string(
-                views.AccountLinkVerify.mail_template_send_account_verify_notification_email_failed, context
+                views.AccountLinkVerify.mail_template_send_account_verification_notification_email_failed, context
             )
 
             self.assertEqual(email.body, expected_content)

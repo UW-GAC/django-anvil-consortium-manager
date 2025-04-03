@@ -323,12 +323,14 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
     log_message_after_account_link_failed = "Error in after_account_link_verify hook"
     mail_subject_after_account_link_failed = "AccountLinkVerify - error encountered in after_account_link_verify"
     mail_template_after_account_link_failed = "anvil_consortium_manager/account_link_error_email.html"
-    # send_account_verify_notification_email hook errors
-    log_message_send_account_verify_notification_email_failed = "Error in send_account_verify_notification_email hook"
-    mail_subject_send_account_verify_notification_email_failed = (
-        "AccountLinkVerify - error encountered in send_account_verify_notification_email"
+    # send_account_verification_notification_email hook errors
+    log_message_send_account_verification_notification_email_failed = (
+        "Error in send_account_verification_notification_email hook"
     )
-    mail_template_send_account_verify_notification_email_failed = (
+    mail_subject_send_account_verification_notification_email_failed = (
+        "AccountLinkVerify - error encountered in send_account_verification_notification_email"
+    )
+    mail_template_send_account_verification_notification_email_failed = (
         "anvil_consortium_manager/account_link_error_email.html"
     )
 
@@ -436,11 +438,11 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             )
 
         try:
-            adapter_instance.send_account_verify_notification_email(account)
+            adapter_instance.send_account_verification_notification_email(account)
         except Exception as e:
             # Log but do not stop execution
             logger.exception(
-                f"[AccountLinkVerify] {self.log_message_send_account_verify_notification_email_failed}: {e}"
+                f"[AccountLinkVerify] {self.log_message_send_account_verification_notification_email_failed}: {e}"
             )
 
             # Get the exception type and message
@@ -448,16 +450,16 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
 
             # Send a mail about issue to the admins.
             mail_content = render_to_string(
-                self.mail_template_send_account_verify_notification_email_failed,
+                self.mail_template_send_account_verification_notification_email_failed,
                 {
                     "email_entry": email_entry,
                     "account": account,
                     "error_description": error_description,
-                    "hook": "send_account_verify_notification_email",
+                    "hook": "send_account_verification_notification_email",
                 },
             )
             mail_admins(
-                subject=self.mail_subject_send_account_verify_notification_email_failed,
+                subject=self.mail_subject_send_account_verification_notification_email_failed,
                 message=mail_content,
                 fail_silently=False,
             )

@@ -25,12 +25,23 @@ class BaseAccountAdapter(ABC):
     account_link_email_subject = "Verify your AnVIL account email"
 
     """If desired, specify the email address to send an email to after a user verifies an account."""
-    account_verify_notification_email = None
+    account_verification_notification_email = None
 
     """path to account verification email template"""
     account_verification_email_template = "anvil_consortium_manager/account_verification_email.html"
 
+    """Template to use for the account verification notification email."""
     account_verification_notify_email_template = "anvil_consortium_manager/account_notification_email.html"
+
+    def __init__(self, *args, **kwargs):
+        """Check for deprecations."""
+        if hasattr(self, "account_verify_notification_email"):
+            raise DeprecationWarning(
+                (
+                    "account_verify_notification_email is deprecated. "
+                    "Please use account_verification_notification_email instead."
+                )
+            )
 
     @abstractproperty
     def list_table_class(self):
@@ -78,27 +89,27 @@ class BaseAccountAdapter(ABC):
         """Custom actions to take for a user after their account is verified."""
         pass
 
-    def get_account_link_verify_notification_context(self, account):
+    def get_account_verification_notification_context(self, account):
         """Return the context for the account link verify notification email."""
         return {
             "email": account.email,
             "user": account.user,
         }
 
-    def send_account_verify_notification_email(self, account):
-        """Send an email to the account_verify_notification_email address after an account is linked."""
+    def send_account_verification_notification_email(self, account):
+        """Send an email to the account_verification_notification_email address after an account is linked."""
         mail_subject = "User verified AnVIL account"
         message = render_to_string(
             self.account_verification_notify_email_template,
-            self.get_account_link_verify_notification_context(account),
+            self.get_account_verification_notification_context(account),
         )
         # Send the message.
-        # Current django behavior: If self.account_verify_notification_email is None, no emails are sent.
+        # Current django behavior: If self.account_verification_notification_email is None, no emails are sent.
         send_mail(
             mail_subject,
             message,
             None,
-            [self.account_verify_notification_email],
+            [self.account_verification_notification_email],
             fail_silently=False,
         )
 
