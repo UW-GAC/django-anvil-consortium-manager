@@ -1,5 +1,18 @@
 # Change log
 
+## 0.30.0 (Devel)
+
+* Add ability to customize account verification notification emails.
+* Restructure `AccountLinkVerify` such that account verification notification emails are sent after custom actions defined in `after_account_link_verify`.
+* Restructure attribute and method names for `AccountAdapter` to be more consistent. Deprecation warnings have been added.
+    * Rename `BaseAccountAdapter.account_verify_notification_email` to `BaseAccountAdapter.account_verification_notification_email`.
+    * Rename `BaseAccountAdapter.after_account_link_verify` to `BaseAccountAdapter.after_account_verification`.
+    * Rename `BaseAccountAdapter.account_verification_email_template` to `BaseAccountAdapter.account_link_email_template`.
+    * Rename `BaseAccountAdapter.account_verification_notify_email_template` to `BaseAccountAdapter.account_verification_notification_template`.
+    * Change `after_account_verification` to operate on an Account instead of a user.
+    * Add type and value checking on `account` in `after_account_verification`.
+
+
 ## 0.29.0 (2025-03-26)
 
 * Allow users to ignore a specific WorkspaceSharingAudit "not in app" record.
