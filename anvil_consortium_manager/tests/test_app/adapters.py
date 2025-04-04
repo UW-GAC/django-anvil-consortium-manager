@@ -51,8 +51,8 @@ class TestAccountAdapter(BaseAccountAdapter):
     account_link_verify_message = "Test Thank you for linking your AnVIL account."
     account_link_redirect = "test_login"
     account_link_email_subject = "custom subject"
-    account_verify_notification_email = "test@example.com"
-    account_verification_email_template = "test_account_verification_email.html"
+    account_verification_notification_email = "test@example.com"
+    account_link_email_template = "test_account_verification_email.html"
 
     def get_autocomplete_queryset(self, queryset, q):
         if q:
@@ -64,9 +64,9 @@ class TestAccountAdapter(BaseAccountAdapter):
 
 
 class TestAccountHookFailAdapter(TestAccountAdapter):
-    account_link_verify_exception_log_msg = "TestAccountHookFailAdapter:after_account_link_verify:test_exception"
+    account_link_verify_exception_log_msg = "TestAccountHookFailAdapter:after_account_verification:test_exception"
 
-    def after_account_link_verify(self, user):
+    def after_account_verification(self, user):
         raise Exception(self.account_link_verify_exception_log_msg)
 
 

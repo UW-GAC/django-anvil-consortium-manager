@@ -4,6 +4,8 @@ from abc import ABC, abstractproperty
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils.module_loading import import_string
 from django_filters import FilterSet
 
@@ -22,11 +24,35 @@ class BaseAccountAdapter(ABC):
     """Subject line for AnVIL account verification emails."""
     account_link_email_subject = "Verify your AnVIL account email"
 
-    """If desired, specify the email address to send an email to after a user verifies an account."""
-    account_verify_notification_email = None
-
     """path to account verification email template"""
-    account_verification_email_template = "anvil_consortium_manager/account_verification_email.html"
+    account_link_email_template = "anvil_consortium_manager/account_verification_email.html"
+
+    """If desired, specify the email address to send an email to after a user verifies an account."""
+    account_verification_notification_email = None
+
+    """Template to use for the account verification notification email."""
+    account_verification_notification_template = "anvil_consortium_manager/account_notification_email.html"
+
+    def __init__(self, *args, **kwargs):
+        """Check for deprecations."""
+        if hasattr(self, "account_verify_notification_email"):
+            msg = (
+                "account_verify_notification_email is deprecated. "
+                "Please use account_verification_notification_email instead."
+            )
+            raise DeprecationWarning(msg)
+        if hasattr(self, "after_account_link_verify"):
+            msg = "after_account_link_verify is deprecated. Please use after_account_verification instead."
+            raise DeprecationWarning(msg)
+        if hasattr(self, "account_verification_email_template"):
+            msg = "account_verification_email_template is deprecated. Please use account_link_email_template instead."
+            raise DeprecationWarning(msg)
+        if hasattr(self, "account_verification_notify_email_template"):
+            msg = (
+                "account_verification_notify_email_template is deprecated. "
+                "Please use account_verification_notification_template instead."
+            )
+            raise DeprecationWarning(msg)
 
     @abstractproperty
     def list_table_class(self):
@@ -70,9 +96,38 @@ class BaseAccountAdapter(ABC):
         """Adapter to provide a label for an account in autocomplete views."""
         return str(account)
 
-    def after_account_link_verify(self, user):
-        """Custom actions to take for a user after their account is verified."""
-        pass
+    def after_account_verification(self, account):
+        """Custom actions to take for an account after it has been verified by a user."""
+        # Check that account is an instance of Account.
+        if not isinstance(account, models.Account):
+            raise TypeError("account must be an instance of anvil_consortium_manager.models.Account.")
+        # Check that account is verified by a user.
+        if not (hasattr(account, "user") and account.user):
+            raise ValueError("account must be linked to a user.")
+
+    def get_account_verification_notification_context(self, account):
+        """Return the context for the account link verify notification email."""
+        return {
+            "email": account.email,
+            "user": account.user,
+        }
+
+    def send_account_verification_notification_email(self, account):
+        """Send an email to the account_verification_notification_email address after an account is linked."""
+        mail_subject = "User verified AnVIL account"
+        message = render_to_string(
+            self.account_verification_notification_template,
+            self.get_account_verification_notification_context(account),
+        )
+        # Send the message.
+        # Current django behavior: If self.account_verification_notification_email is None, no emails are sent.
+        send_mail(
+            mail_subject,
+            message,
+            None,
+            [self.account_verification_notification_email],
+            fail_silently=False,
+        )
 
 
 def get_account_adapter():

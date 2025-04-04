@@ -144,7 +144,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             domain (str): The domain of the current site, used to create the link.
         """
         mail_subject = get_account_adapter().account_link_email_subject
-        account_verification_template = get_account_adapter().account_verification_email_template
+        account_verification_template = get_account_adapter().account_link_email_template
 
         url_subdirectory = "http://{domain}{url}".format(
             domain=domain,
@@ -161,25 +161,6 @@ class UserEmailEntry(TimeStampedModel, models.Model):
             },
         )
         send_mail(mail_subject, message, None, [self.email], fail_silently=False)
-
-    def send_notification_email(self):
-        """Send notification email after account is verified if the email setting is set"""
-        if get_account_adapter().account_verify_notification_email:
-            mail_subject = "User verified AnVIL account"
-            message = render_to_string(
-                "anvil_consortium_manager/account_notification_email.html",
-                {
-                    "email": self.email,
-                    "user": self.user,
-                },
-            )
-            send_mail(
-                mail_subject,
-                message,
-                None,
-                [get_account_adapter().account_verify_notification_email],
-                fail_silently=False,
-            )
 
 
 class Account(TimeStampedModel, ActivatorModel):

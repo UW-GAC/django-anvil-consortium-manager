@@ -201,30 +201,6 @@ class UserEmailEntryTest(TestCase):
         self.assertIn(account_verification_token.make_token(email_entry), email_body)
         self.assertIn(str(email_entry.uuid), email_body)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
-    def test_send_notification_email(self):
-        """Notification email is sent if account_verify_notification_email is set"""
-        email_entry = factories.UserEmailEntryFactory.create()
-        email_entry.send_notification_email()
-        self.assertEqual(len(mail.outbox), 1)
-
-    def test_not_send_notification_email(self):
-        """Notification email is not sent if account_verify_notification_email is not set."""
-        email_entry = factories.UserEmailEntryFactory.create()
-        email_entry.send_notification_email()
-        self.assertEqual(len(mail.outbox), 0)
-
-    @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
-    def test_send_verification_email_custom_template(self):
-        email_entry = factories.UserEmailEntryFactory.create()
-        email_entry.send_verification_email("www.test.com")
-        # One message has been sent.
-        self.assertEqual(len(mail.outbox), 1)
-        # Correct custom template is used.
-        email_body = mail.outbox[0].body
-        self.assertIn("This is a custom template", email_body)
-
 
 class AccountTest(TestCase):
     def test_model_saving(self):
