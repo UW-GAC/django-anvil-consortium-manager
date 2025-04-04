@@ -1,6 +1,6 @@
 # Change log
 
-## 0.30.0 (Devel)
+## 0.30.0 (2025-03-04)
 
 * Add ability to customize account verification notification emails.
 * Restructure `AccountLinkVerify` such that account verification notification emails are sent after custom actions defined in `after_account_link_verify`.
