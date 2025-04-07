@@ -2106,14 +2106,6 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             # Error - we are not an owner.
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
         )
-        # Response to check workspace bucket options.
-        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            workspace_acl_url,
-            status=200,
-            json=self.get_api_bucket_options_response(),
-        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("error_table", response.context_data)
@@ -2172,14 +2164,6 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             # Error - we are not admin.
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
-        )
-        # Response to check workspace bucket options.
-        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            workspace_acl_url,
-            status=200,
-            json=self.get_api_bucket_options_response(),
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())

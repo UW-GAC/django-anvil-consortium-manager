@@ -1,5 +1,9 @@
 # Change log
 
+## 0.30.1 (Devel)
+
+* Only make additional API calls in `WorkspaceAudit.run_audit` if the app is an owner of the workspace.
+
 ## 0.30.0 (2025-03-04)
 
 * Add ability to customize account verification notification emails.

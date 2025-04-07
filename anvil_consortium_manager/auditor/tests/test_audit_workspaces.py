@@ -152,14 +152,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
         )
-        # Response to check workspace bucket options.
-        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            workspace_acl_url,
-            status=200,
-            json=self.get_api_bucket_options_response(),
-        )
+        # We only check other API calls if the app is an owner.
         audit_results = workspaces.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -180,14 +173,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "WRITER")],
         )
-        # Response to check workspace bucket options.
-        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            workspace_acl_url,
-            status=200,
-            json=self.get_api_bucket_options_response(),
-        )
+        # We only check other API calls if the app is an owner.
         audit_results = workspaces.WorkspaceAudit()
         audit_results.run_audit()
         self.assertFalse(audit_results.ok())
@@ -543,14 +529,6 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             workspace_acl_url_2,
             status=200,
             json=self.get_api_workspace_acl_response(),
-        )
-        # Response to check workspace bucket options.
-        workspace_acl_url = self.get_api_bucket_options_url(workspace_1.billing_project.name, workspace_1.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            workspace_acl_url,
-            status=200,
-            json=self.get_api_bucket_options_response(),
         )
         # Response to check workspace bucket options.
         workspace_acl_url = self.get_api_bucket_options_url(workspace_2.billing_project.name, workspace_2.name)
@@ -1232,7 +1210,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
 
     def test_one_workspace_with_two_errors(self):
-        """One workspace has two errors: different auth domains and not owner."""
+        """One workspace has two errors: different auth domains and different lock status."""
         workspace = WorkspaceFactory.create()
         WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         api_url = self.get_api_url()
@@ -1240,7 +1218,15 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             responses.GET,
             api_url,
             status=200,
-            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER", is_locked=True)],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
         )
         # Response to check workspace bucket options.
         workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
@@ -1262,7 +1248,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             record_result.errors,
             set(
                 [
-                    audit_results.ERROR_NOT_OWNER_ON_ANVIL,
+                    audit_results.ERROR_DIFFERENT_LOCK,
                     audit_results.ERROR_DIFFERENT_AUTH_DOMAINS,
                 ]
             ),

@@ -64,6 +64,14 @@ class WorkspaceAudit(base.AnVILAudit):
                     sharing_audit.run_audit()
                     if not sharing_audit.ok():
                         model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
+                    # Check is_requester_pays status. Unfortunately we have to make a separate API call.
+                    response = AnVILAPIClient().get_workspace(
+                        workspace.billing_project.name,
+                        workspace.name,
+                        fields=["bucketOptions"],
+                    )
+                    if workspace.is_requester_pays != response.json()["bucketOptions"]["requesterPays"]:
+                        model_instance_result.add_error(self.ERROR_DIFFERENT_REQUESTER_PAYS)
                 # Check auth domains.
                 auth_domains_on_anvil = [
                     x["membersGroupName"] for x in workspace_details["workspace"]["authorizationDomain"]
@@ -74,14 +82,6 @@ class WorkspaceAudit(base.AnVILAudit):
                 # Check lock status.
                 if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
                     model_instance_result.add_error(self.ERROR_DIFFERENT_LOCK)
-                # Check is_requester_pays status. Unfortunately we have to make a separate API call.
-                response = AnVILAPIClient().get_workspace(
-                    workspace.billing_project.name,
-                    workspace.name,
-                    fields=["bucketOptions"],
-                )
-                if workspace.is_requester_pays != response.json()["bucketOptions"]["requesterPays"]:
-                    model_instance_result.add_error(self.ERROR_DIFFERENT_REQUESTER_PAYS)
 
             self.add_result(model_instance_result)
 
