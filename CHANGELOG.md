@@ -1,6 +1,6 @@
 # Change log
 
-## 0.30.1 (Devel)
+## 0.30.1 (2025-03-07)
 
 * Only make additional API calls in `WorkspaceAudit.run_audit` if the app is an owner of the workspace.
 
