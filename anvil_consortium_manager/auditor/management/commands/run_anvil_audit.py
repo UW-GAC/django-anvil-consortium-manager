@@ -1,3 +1,4 @@
+import logging
 import pprint
 
 import django_tables2 as tables
@@ -14,6 +15,8 @@ from ...audit import base as base_audit
 from ...audit import billing_projects as billing_project_audit
 from ...audit import managed_groups as managed_group_audit
 from ...audit import workspaces as workspace_audit
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorTableWithLink(base_audit.ErrorTable):
@@ -66,8 +69,11 @@ class Command(BaseCommand):
         try:
             # Assume the method is called anvil_audit.
             audit_results.run_audit()
-        except AnVILAPIError:
-            raise CommandError("API error.")
+        except AnVILAPIError as e:
+            api_error_msg = str(e)
+            logger.exception(f"[run_anvil_audit] Encountered api error {api_error_msg}")
+            raise CommandError(f"API error: {api_error_msg}")
+
         else:
             if not audit_results.ok():
                 self.stdout.write(self.style.ERROR("problems found."))
