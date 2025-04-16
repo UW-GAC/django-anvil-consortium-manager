@@ -29,6 +29,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         access,
         auth_domains=[],
         is_locked=False,
+        public=False,
     ):
         """Return the json dictionary for a single workspace on AnVIL."""
         return {
@@ -39,6 +40,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
                 "authorizationDomain": [{"membersGroupName": x} for x in auth_domains],
                 "isLocked": is_locked,
             },
+            "public": public,
         }
 
     def get_api_workspace_acl_url(self, billing_project_name, workspace_name):
@@ -51,18 +53,17 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             + "/acl"
         )
 
-    def get_api_workspace_acl_response(self):
+    def get_api_workspace_acl_response(self, service_account_access="OWNER", can_share=True, can_compute=True):
         """Return a json for the workspace/acl method where no one else can access."""
-        return {
-            "acl": {
-                self.service_account_email: {
-                    "accessLevel": "OWNER",
-                    "canCompute": True,
-                    "canShare": True,
-                    "pending": False,
-                }
+        acl = {}
+        if service_account_access:
+            acl[self.service_account_email] = {
+                "accessLevel": service_account_access,
+                "canCompute": can_compute,
+                "canShare": can_share,
+                "pending": False,
             }
-        }
+        return {"acl": acl}
 
     def get_api_bucket_options_url(self, billing_project_name, workspace_name):
         return self.api_client.rawls_entry_point + "/api/workspaces/" + billing_project_name + "/" + workspace_name
