@@ -715,6 +715,88 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
         self.assertTrue(record_result.ok())
 
+    def test_one_workspace_one_auth_domain_owner_but_not_auth_domain_member(self):
+        """Workspace has NO ACCESS in workspace list but ACL shows owner.
+
+        This can occur if a workspace has an auth domain."""
+        auth_domain = WorkspaceAuthorizationDomainFactory.create(group__is_managed_by_app=False)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    auth_domain.workspace.billing_project.name,
+                    auth_domain.workspace.name,
+                    "NO ACCESS",
+                    auth_domains=[auth_domain.group.name],
+                )
+            ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
+        self.assertTrue(record_result.ok())
+
+    def test_one_workspace_one_auth_domain_no_access_on_anvil(self):
+        """App has NO ACCESS and isn't an owner on AnVIL.
+
+        This can occur if a workspace has an auth domain."""
+        auth_domain = WorkspaceAuthorizationDomainFactory.create(group__is_managed_by_app=False)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    auth_domain.workspace.billing_project.name,
+                    auth_domain.workspace.name,
+                    "NO ACCESS",
+                    auth_domains=[auth_domain.group.name],
+                )
+            ],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(
+            auth_domain.workspace.billing_project.name, auth_domain.workspace.name
+        )
+        self.anvil_response_mock.add(responses.GET, workspace_acl_url, status=404, json={"message": "error"})
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_OWNER_ON_ANVIL]))
+
     def test_one_workspace_two_auth_domains(self):
         """anvil_audit works properly when there is one workspace with two auth domains."""
         workspace = WorkspaceFactory.create()

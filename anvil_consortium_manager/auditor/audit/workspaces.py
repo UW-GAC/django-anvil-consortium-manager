@@ -1,6 +1,6 @@
 import django_tables2 as tables
 
-from anvil_consortium_manager.anvil_api import AnVILAPIClient
+from anvil_consortium_manager.anvil_api import AnVILAPIClient, AnVILAPIError404
 from anvil_consortium_manager.models import Workspace
 
 from .. import models
@@ -27,6 +27,30 @@ class WorkspaceAudit(base.AnVILAudit):
 
     ERROR_DIFFERENT_REQUESTER_PAYS = "Workspace bucket requester_pays status does not match on AnVIL"
     """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
+
+    def _check_workspace_ownership(self, workspace_details):
+        """Check if the service account is an owner of the workspace.
+
+        Args:
+            workspace_details (dict): The details of the workspace from AnVIL API.
+        """
+        if workspace_details["accessLevel"] == "OWNER":
+            return True
+        elif workspace_details["accessLevel"] == "NO ACCESS":
+            # extra acl checks
+            try:
+                AnVILAPIClient().get_workspace_acl(
+                    workspace_details["workspace"]["namespace"],
+                    workspace_details["workspace"]["name"],
+                )
+            except AnVILAPIError404:
+                # We don't have permission to check the ACL, so we are not an owner.
+                return False
+            else:
+                # The app can check ACLs, so it is an owner.
+                return True
+        else:
+            return False
 
     def run_audit(self):
         """Run an audit on Workspaces in the app."""
@@ -56,7 +80,8 @@ class WorkspaceAudit(base.AnVILAudit):
             else:
                 # Check role.
                 workspace_details = workspaces_on_anvil.pop(i)
-                if workspace_details["accessLevel"] != "OWNER":
+                if not self._check_workspace_ownership(workspace_details):
+                    # The service account is not an owner of the workspace.
                     model_instance_result.add_error(self.ERROR_NOT_OWNER_ON_ANVIL)
                 else:
                     # Since we're the owner, check workspace access.
@@ -188,12 +213,11 @@ class WorkspaceSharingAudit(base.AnVILAudit):
 
     def run_audit(self):
         """Run the audit for all workspace instances."""
-        api_client = AnVILAPIClient()
-        response = api_client.get_workspace_acl(self.workspace.billing_project.name, self.workspace.name)
+        response = AnVILAPIClient().get_workspace_acl(self.workspace.billing_project.name, self.workspace.name)
         acl_in_anvil = {k.lower(): v for k, v in response.json()["acl"].items()}
         # Remove the service account.
         try:
-            acl_in_anvil.pop(api_client.auth_session.credentials.service_account_email.lower())
+            acl_in_anvil.pop(AnVILAPIClient().auth_session.credentials.service_account_email.lower())
         except KeyError:
             # In some cases, the workspace is shared with a group we are part of instead of directly with us.
             pass
