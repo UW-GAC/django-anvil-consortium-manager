@@ -1974,12 +1974,12 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             }
         }
 
-    def get_api_bucket_options_url(self, billing_project_name, workspace_name):
-        return self.api_client.rawls_entry_point + "/api/workspaces/" + billing_project_name + "/" + workspace_name
-
-    def get_api_bucket_options_response(self):
-        """Return a json for the workspace/acl method that is not requester pays."""
-        return {"bucketOptions": {"requesterPays": False}}
+    def get_api_workspace_settings_url(self, billing_project_name, workspace_name):
+        return "{}/api/workspaces/v2/{}/{}/settings".format(
+            self.api_client.rawls_entry_point,
+            billing_project_name,
+            workspace_name,
+        )
 
     def get_view(self):
         """Return the view being tested."""
@@ -2067,14 +2067,10 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
-        # Response to check workspace bucket options.
-        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            workspace_acl_url,
-            status=200,
-            json=self.get_api_bucket_options_response(),
-        )
+        # Response to check workspace settings.
+        api_url = self.get_api_workspace_settings_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=[])
+        # Run the audit
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("verified_table", response.context_data)

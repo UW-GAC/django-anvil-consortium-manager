@@ -90,13 +90,18 @@ class WorkspaceAudit(base.AnVILAudit):
                     if not sharing_audit.ok():
                         model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
                     # Check is_requester_pays status. Unfortunately we have to make a separate API call.
-                    response = AnVILAPIClient().get_workspace(
+                    response = AnVILAPIClient().get_workspace_settings(
                         workspace.billing_project.name,
                         workspace.name,
-                        fields=["bucketOptions"],
                     )
-                    if workspace.is_requester_pays != response.json()["bucketOptions"]["requesterPays"]:
+                    tmp = [x for x in response.json() if x["settingType"] == "GcpBucketRequesterPays"]
+                    if len(tmp) == 0:
+                        is_requester_pays_on_anvil = False
+                    else:
+                        is_requester_pays_on_anvil = tmp[0]["config"]["enabled"]
+                    if workspace.is_requester_pays != is_requester_pays_on_anvil:
                         model_instance_result.add_error(self.ERROR_DIFFERENT_REQUESTER_PAYS)
+
                 # Check auth domains.
                 auth_domains_on_anvil = [
                     x["membersGroupName"] for x in workspace_details["workspace"]["authorizationDomain"]
