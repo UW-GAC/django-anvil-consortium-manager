@@ -111,13 +111,13 @@ class WorkspaceAudit(base.AnVILAudit):
             self.add_result(model_instance_result)
 
         # Check for remaining workspaces on AnVIL where we are OWNER.
-        not_in_app = [
-            "{}/{}".format(x["workspace"]["namespace"], x["workspace"]["name"])
-            for x in workspaces_on_anvil
-            if x["accessLevel"] == "OWNER"
-        ]
-        for workspace_name in not_in_app:
-            self.add_result(base.NotInAppResult(workspace_name))
+        for workspace_details in workspaces_on_anvil:
+            if self._check_workspace_ownership(workspace_details):
+                # The service account is an owner of the workspace.
+                workspace_name = "{}/{}".format(
+                    workspace_details["workspace"]["namespace"], workspace_details["workspace"]["name"]
+                )
+                self.add_result(base.NotInAppResult(workspace_name))
 
 
 class WorkspaceSharingNotInAppResult(base.NotInAppResult):

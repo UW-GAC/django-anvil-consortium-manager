@@ -593,6 +593,52 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         record_result = audit_results.get_not_in_app_results()[0]
         self.assertEqual(record_result.record, "test-bp/test-ws")
 
+    def test_anvil_audit_one_workspace_missing_in_app_no_access_but_owner(self):
+        """Audit reports a not_in_app record when the access level is NO ACCESS but the app is an owner."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "NO ACCESS")],
+        )
+        # API call to check workspace ACLs
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url("test-bp", "test-ws")
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 1)
+        record_result = audit_results.get_not_in_app_results()[0]
+        self.assertEqual(record_result.record, "test-bp/test-ws")
+
+    def test_anvil_audit_one_workspace_missing_in_app_no_access_not_owner(self):
+        """Audit reports no issues for a workspace where the access level is NO ACCESS and the app is not an owner."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "NO ACCESS")],
+        )
+        # Response to check workspace access - it is a 404 bc it is not shared with us.
+        workspace_acl_url = self.get_api_workspace_acl_url("test-bp", "test-ws")
+        self.anvil_response_mock.add(responses.GET, workspace_acl_url, status=404, json={"message": "error"})
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+
     def test_anvil_audit_two_workspaces_missing_in_app(self):
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
