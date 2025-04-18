@@ -310,6 +310,7 @@ class Account(TimeStampedModel, ActivatorModel):
         accessible_workspaces = set()
         for ws in workspaces:
             authorized_domains = list(ws.workspace.authorization_domains.all())
+            # Check if the app controls all auth domains; it might not.
             # import ipdb; ipdb.set_trace()
             if len(set(authorized_domains).difference(set(groups))) == 0:
                 accessible_workspaces.add(ws.workspace)
@@ -617,23 +618,6 @@ class ManagedGroup(TimeStampedModel):
                 # This email is not associated with an Account in the app.
                 pass
 
-    def is_in_authorization_domain(self, workspace):
-        """Check if this group (or a group that it is part of) is in the auth domain of a workspace."""
-        return workspace.is_in_authorization_domain(self)
-
-    def is_shared(self, workspace):
-        """Check if a workspace is shared with this group (or a group that it is part of)."""
-        return workspace.is_shared(self)
-
-    def has_access(self, workspace):
-        """Check if this group has access to a workspace.
-
-        Both criteria need to be met for a group to have access to a workspace:
-        1. The workspace must be shared with the group (or a group that it is in).
-        2. The group (or a group that it is in) must be in all auth domains for the workspace.
-        """
-        return workspace.has_access(self)
-
 
 class Workspace(TimeStampedModel):
     """A model to store information about AnVIL workspaces."""
@@ -703,19 +687,6 @@ class Workspace(TimeStampedModel):
         return "https://anvil.terra.bio/#workspaces/{billing_project}/{group}".format(
             billing_project=self.billing_project.name, group=self.name
         )
-
-    def is_in_authorization_domain(self, group):
-        """Check if a group (or a group that it is part of) is in the auth domain of this workspace."""
-        in_auth_domain = True
-        for auth_domain in self.authorization_domains.all():
-            in_auth_domain = (in_auth_domain) and (group in auth_domain.get_all_children())
-        return in_auth_domain
-
-    def is_shared(self, group):
-        """Check if this workspace is shared with a group (or a group that it is part of)."""
-        parents = group.get_all_parents()
-        is_shared = self.workspacegroupsharing_set.filter(models.Q(group=group) | models.Q(group__in=parents)).exists()
-        return is_shared
 
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""
