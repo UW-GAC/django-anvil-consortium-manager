@@ -843,6 +843,37 @@ class Workspace(TimeStampedModel):
 
         return workspace
 
+    def is_in_authorization_domain(self, account):
+        """Check if an account is in the authorization domain(s) for this workspace.
+
+        Args:
+            account (Account): The account to check.
+
+        Returns:
+            bool: True if the user is in the authorization domain, False otherwise.
+
+        Raises:
+            AnVILNotGroupAdminError: If any of the authorization domains are not managed by the app.
+        """
+        if not isinstance(account, Account):
+            raise ValueError("account must be an instance of `Account`.")
+        # Get the groups that are in the authorization domain.
+        auth_domains = self.authorization_domains.all()
+        # Separate into managed by app and not managed by app.
+        groups_managed_by_app = auth_domains.filter(is_managed_by_app=True)
+        groups_not_managed_by_app = auth_domains.filter(is_managed_by_app=False)
+        # Get the list of groups that the user is in.
+        account_groups = account.get_all_groups()
+        # Check if the user is in any of the groups that are managed by the app.
+        if len(set(groups_managed_by_app).difference(set(account_groups))) == 0:
+            # Now check if any are not managed by the app - this would be an "unknown" case.
+            if groups_not_managed_by_app.exists():
+                raise exceptions.AnVILNotGroupAdminError("At least one auth domain is not managed by the app.")
+            else:
+                return True
+        else:
+            return False
+
 
 class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""

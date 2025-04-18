@@ -12,6 +12,7 @@ from django.test import override_settings
 from django.utils import timezone
 from freezegun import freeze_time
 
+from .. import exceptions
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..models import (
     Account,
@@ -2349,3 +2350,175 @@ class WorkspaceGroupSharingTest(TestCase):
         instance_2 = WorkspaceGroupSharing(group=group, workspace=workspace, access=WorkspaceGroupSharing.WRITER)
         with self.assertRaises(IntegrityError):
             instance_2.save()
+
+
+class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
+    """Tests for the Workspace.is_in_authorization_domain method."""
+
+    def test_account_wrong_class(self):
+        """The account is not an instance of Account."""
+        workspace = factories.WorkspaceFactory.create()
+        with self.assertRaises(ValueError) as e:
+            workspace.is_in_authorization_domain("foo")
+        self.assertEqual(
+            str(e.exception),
+            "account must be an instance of `Account`.",
+        )
+
+    def test_no_auth_domain(self):
+        """The workspace has no auth domains."""
+        workspace = factories.WorkspaceFactory.create()
+        account = factories.AccountFactory.create()
+        self.assertTrue(workspace.is_in_authorization_domain(account))
+
+    def test_one_auth_domain_not_member(self):
+        """The workspace has one auth domain and the account is not in it."""
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
+        account = factories.AccountFactory.create()
+        self.assertFalse(auth_domain.workspace.is_in_authorization_domain(account))
+
+    def test_one_auth_domain_member(self):
+        """The workspace has one auth domain and the account is in it."""
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
+        account = factories.AccountFactory.create()
+        GroupAccountMembership.objects.create(
+            account=account,
+            group=auth_domain.group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        self.assertTrue(auth_domain.workspace.is_in_authorization_domain(account))
+
+    def test_two_auth_domains_not_member_of_both(self):
+        """The workspace has two auth domains and the account is not in either."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create_batch(2, workspace=workspace)
+        account = factories.AccountFactory.create()
+        self.assertFalse(workspace.is_in_authorization_domain(account))
+
+    def test_two_auth_domains_member_of_one(self):
+        """The workspace has two auth domains and the account is in one."""
+        workspace = factories.WorkspaceFactory.create()
+        auth_domains = factories.WorkspaceAuthorizationDomainFactory.create_batch(2, workspace=workspace)
+        account = factories.AccountFactory.create()
+        GroupAccountMembership.objects.create(
+            account=account,
+            group=auth_domains[0].group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        self.assertFalse(workspace.is_in_authorization_domain(account))
+
+    def test_two_auth_domains_member_of_both(self):
+        """The workspace has two auth domains and the account is in both."""
+        workspace = factories.WorkspaceFactory.create()
+        auth_domains = factories.WorkspaceAuthorizationDomainFactory.create_batch(2, workspace=workspace)
+        account = factories.AccountFactory.create()
+        GroupAccountMembership.objects.create(
+            account=account,
+            group=auth_domains[0].group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        GroupAccountMembership.objects.create(
+            account=account,
+            group=auth_domains[1].group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        self.assertTrue(workspace.is_in_authorization_domain(account))
+
+    def test_one_auth_domain_not_managed_by_app(self):
+        """The workspace has one auth domain that is not managed by app."""
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(group__is_managed_by_app=False)
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+            auth_domain.workspace.is_in_authorization_domain(account)
+        self.assertEqual(
+            str(e.exception),
+            "At least one auth domain is not managed by the app.",
+        )
+
+    def test_two_auth_domains_one_member_one_not_managed_by_app(self):
+        """The workspace has two auth domains; the user is in one and the other is not managed by the app."""
+        workspace = factories.WorkspaceFactory.create()
+        auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace,
+            group__is_managed_by_app=False,
+        )
+        account = factories.AccountFactory.create()
+        GroupAccountMembership.objects.create(
+            account=account,
+            group=auth_domain.group,
+            role=GroupAccountMembership.MEMBER,
+        )
+        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+            workspace.is_in_authorization_domain(account)
+
+    def test_two_auth_domains_one_not_member_one_not_managed_by_app(self):
+        """The workspace has two auth domains; the user is not in one and the other is not managed by the app."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace,
+            group__is_managed_by_app=False,
+        )
+        account = factories.AccountFactory.create()
+        self.assertFalse(workspace.is_in_authorization_domain(account))
+
+    def test_two_auth_domains_both_not_managed_by_app(self):
+        """The workspace has two auth domains and neither is managed by the app."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create_batch(
+            2, workspace=workspace, group__is_managed_by_app=False
+        )
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+            workspace.is_in_authorization_domain(account)
+
+    def test_one_auth_domain_member_of_parent(self):
+        """The workspace has one auth domain and the account is in a parent group."""
+        # Group setup.
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(parent_group=group, child_group=child_group)
+        # Workspace setup.
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group=child_group)
+        # Account setup.
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(
+            account=account,
+            group=group,
+        )
+        self.assertFalse(workspace.is_in_authorization_domain(account))
+
+    def test_one_auth_domain_member_of_child(self):
+        """The workspace has one auth domain and the account is in a child group."""
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(parent_group=group, child_group=child_group)
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group=group)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(
+            account=account,
+            group=child_group,
+        )
+        self.assertTrue(workspace.is_in_authorization_domain(account))
+
+    def test_one_auth_domain_member_of_grandchild(self):
+        """The workspace has one auth domain and the account is in a grandchild group."""
+        # Group setup
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        grandchild_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(parent_group=group, child_group=child_group)
+        factories.GroupGroupMembershipFactory.create(parent_group=child_group, child_group=grandchild_group)
+        # Workspace setup
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group=group)
+        # Account setup.
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(
+            account=account,
+            group=grandchild_group,
+        )
+        self.assertTrue(workspace.is_in_authorization_domain(account))
