@@ -6,43 +6,17 @@
 {% block title %}{{ workspace_type_display_name }}: {{ object }}{% endblock %}
 
 {% block pills %}
-  {% if object.is_locked %}
-  <span class="badge bg-danger"><span class="fa-solid fa-lock me-2"></span>Locked</span>
-  {% endif %}
 
-  <span class="badge bg-{% if has_access %}success{% else %}danger{% endif %}">
-    <span class="me-2 fa-solid fa-{% if has_access %}lock-open{% else %}lock{% endif %}"></span>
-    {% if has_access %}
-      You have access to this workspace
-    {% else %}
-      No access to workspace
-    {% endif %}
-    <span class="ms-2 fa-solid fa-circle-question"
-    data-bs-toggle="tooltip"
-    data-bs-placement="bottom"
-    data-bs-title="To have access to a workspace, you must have linked an AnVIL account, be in all of the authorization domains for the workspace, and have the workspace shared with you."
-    ></span>
-  </span>
+  {% include 'anvil_consortium_manager/snippets/workspace_is_locked_pill.html' %}
 
-  {% if object.is_requester_pays %}
-  <span class="badge bg-warning text-dark"><span class="fa-solid fa-circle-dollar-to-slot me-2"></span>Requester pays
-    <span class="ms-2 fa-solid fa-circle-question"
-    data-bs-toggle="tooltip"
-    data-bs-placement="bottom"
-    data-bs-title="You must select a billing project when listing files or using data in this workspace."
-    ></span>
-  </span>
-  {% endif %}
+  {% include 'anvil_consortium_manager/snippets/workspace_access_pill.html' %}
+
+  {% include 'anvil_consortium_manager/snippets/workspace_requester_pays_pill.html' %}
 
   {% block extra_pills %}
   {% endblock extra_pills %}
 
-  {% if has_access or user.is_superuser %}
-  <a class="badge bg-light text-dark btn btn-light" href="{{ object.get_anvil_url }}" target="_blank" role="button">
-    <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
-    View on AnVIL
-  </a>
-  {% endif %}
+  {% include 'anvil_consortium_manager/snippets/workspace_view_on_anvil_pill.html' %}
 
 {% endblock pills %}
 

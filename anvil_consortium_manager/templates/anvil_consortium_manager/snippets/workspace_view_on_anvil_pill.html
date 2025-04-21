@@ -1,0 +1,6 @@
+{% if has_access or user.is_superuser %}
+<a class="badge bg-light text-dark btn btn-light" href="{{ object.get_anvil_url }}" target="_blank" role="button">
+  <span class="fa-solid fa-arrow-up-right-from-square mx-1"></span>
+  View on AnVIL
+</a>
+{% endif %}
