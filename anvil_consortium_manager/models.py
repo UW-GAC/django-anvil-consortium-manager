@@ -874,6 +874,34 @@ class Workspace(TimeStampedModel):
         else:
             return False
 
+    def is_shared(self, account):
+        """Check if the workspace is shared with any groups the account is in.
+
+        Args:
+            account (Account): The account to check.
+
+        Returns:
+            bool: True if the user is in the authorization domain, False otherwise.
+
+        Raises:
+            AnVILNotGroupAdminError: If the code cannot determine whether the workspace is shared or not.
+        """
+        if not isinstance(account, Account):
+            raise ValueError("account must be an instance of `Account`.")
+        # Get the list of groups that the workspace is shared with.
+        workspace_groups = ManagedGroup.objects.filter(workspacegroupsharing__workspace=self)
+        # Get the list of groups that the account is in.
+        account_groups = account.get_all_groups()
+        # Check if any of the groups that the workspace is shared with are in the account's groups.
+        if len(set(workspace_groups).intersection(set(account_groups))) > 0:
+            return True
+        else:
+            if workspace_groups.filter(is_managed_by_app=False).exists():
+                raise exceptions.AnVILNotGroupAdminError(
+                    "Workspace is shared with some groups that are not managed by the app."
+                )
+            return False
+
 
 class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""

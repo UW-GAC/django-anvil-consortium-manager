@@ -2522,3 +2522,149 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             group=grandchild_group,
         )
         self.assertTrue(workspace.is_in_authorization_domain(account))
+
+
+class WorkspaceMethodIsSharedTest(TestCase):
+    """Tests for the Workspace.is_shared method."""
+
+    def test_account_wrong_class(self):
+        """The account is not an instance of Account."""
+        workspace = factories.WorkspaceFactory.create()
+        with self.assertRaises(ValueError) as e:
+            workspace.is_shared("foo")
+        self.assertEqual(
+            str(e.exception),
+            "account must be an instance of `Account`.",
+        )
+
+    def test_not_shared(self):
+        """The workspace is not shared."""
+        workspace = factories.WorkspaceFactory.create()
+        account = factories.AccountFactory.create()
+        self.assertFalse(workspace.is_shared(account))
+
+    def test_shared_with_one_group_member(self):
+        """The workspace is shared with a group and the account is a member of that group."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(
+            account=account,
+            group=group,
+        )
+        self.assertTrue(workspace.is_shared(account))
+
+    def test_shared_with_one_group_not_member(self):
+        """The workspace is shared with a group and the account is not a member of that group."""
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
+        account = factories.AccountFactory.create()
+        self.assertFalse(workspace.is_shared(account))
+
+    def test_shared_with_one_group_member_of_parent(self):
+        """The workspace is shared with a group and the account is a member of a parent group."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(parent_group=group, child_group=child_group)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=child_group)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(account=account, group=group)
+        self.assertFalse(workspace.is_shared(account))
+
+    def test_shared_with_one_group_member_of_child(self):
+        """The workspace is shared with a group and the account is a member of a child group."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(parent_group=group, child_group=child_group)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(account=account, group=child_group)
+        self.assertTrue(workspace.is_shared(account))
+
+    def test_shared_with_one_group_member_of_grandchild(self):
+        """The workspace is shared with a group and the account is a member of a grandchild group."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        child_group = factories.ManagedGroupFactory.create()
+        grandchild_group = factories.ManagedGroupFactory.create()
+        factories.GroupGroupMembershipFactory.create(parent_group=group, child_group=child_group)
+        factories.GroupGroupMembershipFactory.create(parent_group=child_group, child_group=grandchild_group)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(account=account, group=grandchild_group)
+        self.assertTrue(workspace.is_shared(account))
+
+    def test_shared_with_one_group_not_managed_by_app(self):
+        """The workspace is only shared with a group that is not managed by the app."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+            workspace.is_shared(account)
+        self.assertEqual(
+            str(e.exception),
+            "Workspace is shared with some groups that are not managed by the app.",
+        )
+
+    def test_shared_with_two_groups_member_of_one(self):
+        """The workspace is shared with two groups and the account is a member of one."""
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(account=account, group=group_1)
+        self.assertTrue(workspace.is_shared(account))
+
+    def test_shared_with_two_groups_member_of_neither(self):
+        """The workspace is shared with two groups and the account is not a member of either."""
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
+        account = factories.AccountFactory.create()
+        self.assertFalse(workspace.is_shared(account))
+
+    def test_shared_with_two_groups_member_of_both(self):
+        """The workspace is shared with two groups and the account is a member of both."""
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(account=account, group=group_1)
+        factories.GroupAccountMembershipFactory.create(account=account, group=group_2)
+        self.assertTrue(workspace.is_shared(account))
+
+    def test_shared_with_two_groups_one_not_managed_by_app_and_one_member(self):
+        """Workspace is shared with a group that the account is member of and a group that is not managed by app."""
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
+        account = factories.AccountFactory.create()
+        factories.GroupAccountMembershipFactory.create(account=account, group=group_1)
+        self.assertTrue(workspace.is_shared(account))
+
+    def test_shared_with_two_groups_one_not_managed_by_app_and_one_not_member(self):
+        """Workspace is shared with group that the account is not member of and a group that is not managed by app."""
+        workspace = factories.WorkspaceFactory.create()
+        group_1 = factories.ManagedGroupFactory.create()
+        group_2 = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+            workspace.is_shared(account)
+        self.assertEqual(
+            str(e.exception),
+            "Workspace is shared with some groups that are not managed by the app.",
+        )
