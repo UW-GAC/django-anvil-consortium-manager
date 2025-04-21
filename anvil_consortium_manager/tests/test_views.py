@@ -6783,7 +6783,7 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("has_access", response.context)
-        self.assertFalse(response.context["has_access"])
+        self.assertEqual(response.context["has_access"], False)
         self.assertContains(response, "No access to workspace")
 
     def test_access_badge_no_access(self):
@@ -6792,28 +6792,39 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("has_access", response.context)
-        self.assertFalse(response.context["has_access"])
+        self.assertEqual(response.context["has_access"], False)
         self.assertContains(response, "No access to workspace")
 
-    def test_access_badge_access(self):
-        obj = factories.DefaultWorkspaceDataFactory.create()
+    def test_access_badge_with_access(self):
         account = factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
         factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("has_access", response.context)
-        self.assertTrue(response.context["has_access"])
+        self.assertEqual(response.context["has_access"], True)
         self.assertContains(response, "You have access to this workspace")
 
-    def test_anvil_link_with_access(self):
-        """Link to AnVIL appears on the page when the user has access."""
+    def test_access_badge_unknown_access(self):
+        factories.AccountFactory.create(user=self.user, verified=True)
         obj = factories.DefaultWorkspaceDataFactory.create()
-        account = factories.AccountFactory.create(user=self.user, verified=True)
-        group = factories.ManagedGroupFactory.create()
-        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertIsNone(response.context["has_access"])
+        self.assertContains(response, "Unknown access to workspace")
+
+    def test_anvil_link_access(self):
+        """Link to AnVIL appears on the page when the user does has access."""
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, "View on AnVIL")
@@ -6821,6 +6832,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_anvil_link_no_access(self):
         """Link to AnVIL does not appear on the page when the user does not have access."""
+        factories.AccountFactory.create(user=self.user, verified=True)
         obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
@@ -6832,6 +6844,17 @@ class WorkspaceDetailTest(TestCase):
         superuser = User.objects.create_superuser(username="test-superuser", password="test-superuser")
         obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(superuser)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, obj.workspace.get_anvil_url())
+
+    def test_anvil_link_access_unknown(self):
+        """Link to AnVIL appears on the page when the user has unknown access."""
+        factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, "View on AnVIL")
         self.assertContains(response, obj.workspace.get_anvil_url())

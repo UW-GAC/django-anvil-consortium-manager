@@ -1,13 +1,14 @@
-<span class="badge bg-{% if has_access %}success{% else %}danger{% endif %}">
-    <span class="me-2 fa-solid fa-{% if has_access %}lock-open{% else %}lock{% endif %}"></span>
-    {% if has_access %}
-      You have access to this workspace
-    {% else %}
-      No access to workspace
-    {% endif %}
+  <span class="badge bg-{{ has_access | yesno:"success,danger,warning" }}">
+    <span class="me-2 fa-solid fa-{{ has_access | yesno:"lock-open,lock,unlock" }}"></span>
+    {{ has_access | yesno:"You have access to this workspace,No access to workspace,Unknown access to workspace" }}
     <span class="ms-2 fa-solid fa-circle-question"
     data-bs-toggle="tooltip"
     data-bs-placement="bottom"
-    data-bs-title="To have access to a workspace, you must have linked an AnVIL account, be in all of the authorization domains for the workspace, and have the workspace shared with you."
+    data-bs-title="
+        To have access to a workspace, you must have linked an AnVIL account, be in all of the authorization domains for the workspace, and have the workspace shared with you.
+        {% if has_access is None %}
+        Access is unknown because some groups associated with this workspace are not managed by this app.
+        {% endif %}
+    "
     ></span>
   </span>

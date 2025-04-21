@@ -1016,9 +1016,16 @@ class WorkspaceDetail(
         # Add custom variables for this view.
         context["workspace_data_object"] = self.get_workspace_data_object()
         context["show_edit_links"] = has_edit_perms
-        context["has_access"] = hasattr(
-            self.request.user, "account"
-        ) and self.request.user.account.has_workspace_access(self.object)
+
+        try:
+            account = self.request.user.account
+            try:
+                has_access = self.object.is_accessible_by(account)
+            except exceptions.AnVILNotGroupAdminError:
+                has_access = None
+        except models.Account.DoesNotExist:
+            has_access = False
+        context["has_access"] = has_access
         # Tables.
         table_class = tables.ManagedGroupStaffTable if has_staff_view_perms else tables.ManagedGroupUserTable
         context["authorization_domain_table"] = table_class(
