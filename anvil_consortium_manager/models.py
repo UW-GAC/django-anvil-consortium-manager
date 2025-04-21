@@ -902,6 +902,21 @@ class Workspace(TimeStampedModel):
                 )
             return False
 
+    def is_accessible_by(self, account):
+        """Check if an account has access to a workspace.
+
+        Args:
+            account (Account): The account to check.
+
+        Returns:
+            bool: True if the account has access, False otherwise.
+
+        Raises:
+            ValueError: If the account is not an instance of Account.
+            AnVILNotGroupAdminError: If the app cannot determine whether an Account has access.
+        """
+        return self.is_in_authorization_domain(account) and self.is_shared(account)
+
 
 class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""
