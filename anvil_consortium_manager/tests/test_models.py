@@ -1504,7 +1504,7 @@ class ManagedGroupTest(TestCase):
         group = factories.ManagedGroupFactory.create(name="other-group")
         self.assertEqual(group.get_all_children().count(), 0)
 
-    def test_cannot_delete_group_used_as_is_in_authorization_domain(self):
+    def test_cannot_delete_group_used_as_has_in_authorization_domain(self):
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
         workspace.authorization_domains.add(group)
@@ -1685,7 +1685,7 @@ class WorkspaceTest(TestCase):
         # Make sure you can access it.
         self.assertEqual(Workspace.history.all()[1].billing_project_id, billing_project_pk)
 
-    def test_workspace_on_delete_is_in_authorization_domain(self):
+    def test_workspace_on_delete_has_in_authorization_domain(self):
         """Workspace can be deleted if it has an authorization domain."""
         group = factories.ManagedGroupFactory.create()
         workspace = factories.WorkspaceFactory.create()
@@ -1756,45 +1756,45 @@ class WorkspaceTest(TestCase):
         with self.assertRaises(IntegrityError):
             instance.save()
 
-    def test_one_is_in_authorization_domain(self):
+    def test_one_has_in_authorization_domain(self):
         """Can create a workspace with one authorization domain."""
-        is_in_authorization_domain = factories.ManagedGroupFactory.create()
+        has_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
         instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 1)
-        self.assertIn(is_in_authorization_domain, instance.authorization_domains.all())
+        self.assertIn(has_in_authorization_domain, instance.authorization_domains.all())
 
-    def test_two_is_in_authorization_domains(self):
+    def test_two_has_in_authorization_domains(self):
         """Can create a workspace with two authorization domains."""
-        is_in_authorization_domain_1 = factories.ManagedGroupFactory.create()
-        is_in_authorization_domain_2 = factories.ManagedGroupFactory.create()
+        has_in_authorization_domain_1 = factories.ManagedGroupFactory.create()
+        has_in_authorization_domain_2 = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
         instance.authorization_domains.set(ManagedGroup.objects.all())
         self.assertEqual(len(instance.authorization_domains.all()), 2)
-        self.assertIn(is_in_authorization_domain_1, instance.authorization_domains.all())
-        self.assertIn(is_in_authorization_domain_2, instance.authorization_domains.all())
+        self.assertIn(has_in_authorization_domain_1, instance.authorization_domains.all())
+        self.assertIn(has_in_authorization_domain_2, instance.authorization_domains.all())
 
-    def test_is_in_authorization_domain_unique(self):
+    def test_has_in_authorization_domain_unique(self):
         """Adding the same auth domain twice does nothing."""
-        is_in_authorization_domain = factories.ManagedGroupFactory.create()
+        has_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.add(is_in_authorization_domain)
-        instance.authorization_domains.add(is_in_authorization_domain)
+        instance.authorization_domains.add(has_in_authorization_domain)
+        instance.authorization_domains.add(has_in_authorization_domain)
         self.assertEqual(len(instance.authorization_domains.all()), 1)
-        self.assertIn(is_in_authorization_domain, instance.authorization_domains.all())
+        self.assertIn(has_in_authorization_domain, instance.authorization_domains.all())
 
-    def test_can_delete_workspace_with_is_in_authorization_domain(self):
-        is_in_authorization_domain = factories.ManagedGroupFactory.create()
+    def test_can_delete_workspace_with_has_in_authorization_domain(self):
+        has_in_authorization_domain = factories.ManagedGroupFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-project")
         instance = Workspace(billing_project=billing_project, name="test-name")
         instance.save()
-        instance.authorization_domains.add(is_in_authorization_domain)
+        instance.authorization_domains.add(has_in_authorization_domain)
         instance.save()
         # Now try to delete it.
         instance.refresh_from_db()
@@ -1802,7 +1802,7 @@ class WorkspaceTest(TestCase):
         self.assertEqual(len(Workspace.objects.all()), 0)
         self.assertEqual(len(WorkspaceAuthorizationDomain.objects.all()), 0)
         # The group has not been deleted.
-        self.assertIn(is_in_authorization_domain, ManagedGroup.objects.all())
+        self.assertIn(has_in_authorization_domain, ManagedGroup.objects.all())
 
     def test_get_anvil_url(self):
         """get_anvil_url returns a string."""
@@ -2353,13 +2353,13 @@ class WorkspaceGroupSharingTest(TestCase):
 
 
 class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
-    """Tests for the Workspace.is_in_authorization_domain method."""
+    """Tests for the Workspace.has_in_authorization_domain method."""
 
     def test_account_wrong_class(self):
         """The account is not an instance of Account."""
         workspace = factories.WorkspaceFactory.create()
         with self.assertRaises(ValueError) as e:
-            workspace.is_in_authorization_domain("foo")
+            workspace.has_in_authorization_domain("foo")
         self.assertEqual(
             str(e.exception),
             "account must be an instance of `Account`.",
@@ -2369,13 +2369,13 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
         """The workspace has no auth domains."""
         workspace = factories.WorkspaceFactory.create()
         account = factories.AccountFactory.create()
-        self.assertTrue(workspace.is_in_authorization_domain(account))
+        self.assertTrue(workspace.has_in_authorization_domain(account))
 
     def test_one_auth_domain_not_member(self):
         """The workspace has one auth domain and the account is not in it."""
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
         account = factories.AccountFactory.create()
-        self.assertFalse(auth_domain.workspace.is_in_authorization_domain(account))
+        self.assertFalse(auth_domain.workspace.has_in_authorization_domain(account))
 
     def test_one_auth_domain_member(self):
         """The workspace has one auth domain and the account is in it."""
@@ -2386,14 +2386,14 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             group=auth_domain.group,
             role=GroupAccountMembership.MEMBER,
         )
-        self.assertTrue(auth_domain.workspace.is_in_authorization_domain(account))
+        self.assertTrue(auth_domain.workspace.has_in_authorization_domain(account))
 
     def test_two_auth_domains_not_member_of_both(self):
         """The workspace has two auth domains and the account is not in either."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory.create_batch(2, workspace=workspace)
         account = factories.AccountFactory.create()
-        self.assertFalse(workspace.is_in_authorization_domain(account))
+        self.assertFalse(workspace.has_in_authorization_domain(account))
 
     def test_two_auth_domains_member_of_one(self):
         """The workspace has two auth domains and the account is in one."""
@@ -2405,7 +2405,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             group=auth_domains[0].group,
             role=GroupAccountMembership.MEMBER,
         )
-        self.assertFalse(workspace.is_in_authorization_domain(account))
+        self.assertFalse(workspace.has_in_authorization_domain(account))
 
     def test_two_auth_domains_member_of_both(self):
         """The workspace has two auth domains and the account is in both."""
@@ -2422,14 +2422,14 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             group=auth_domains[1].group,
             role=GroupAccountMembership.MEMBER,
         )
-        self.assertTrue(workspace.is_in_authorization_domain(account))
+        self.assertTrue(workspace.has_in_authorization_domain(account))
 
     def test_one_auth_domain_not_managed_by_app(self):
         """The workspace has one auth domain that is not managed by app."""
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(group__is_managed_by_app=False)
         account = factories.AccountFactory.create()
         with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
-            auth_domain.workspace.is_in_authorization_domain(account)
+            auth_domain.workspace.has_in_authorization_domain(account)
         self.assertEqual(
             str(e.exception),
             "At least one auth domain is not managed by the app.",
@@ -2450,7 +2450,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             role=GroupAccountMembership.MEMBER,
         )
         with self.assertRaises(exceptions.AnVILNotGroupAdminError):
-            workspace.is_in_authorization_domain(account)
+            workspace.has_in_authorization_domain(account)
 
     def test_two_auth_domains_one_not_member_one_not_managed_by_app(self):
         """The workspace has two auth domains; the user is not in one and the other is not managed by the app."""
@@ -2461,7 +2461,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             group__is_managed_by_app=False,
         )
         account = factories.AccountFactory.create()
-        self.assertFalse(workspace.is_in_authorization_domain(account))
+        self.assertFalse(workspace.has_in_authorization_domain(account))
 
     def test_two_auth_domains_both_not_managed_by_app(self):
         """The workspace has two auth domains and neither is managed by the app."""
@@ -2471,7 +2471,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
         )
         account = factories.AccountFactory.create()
         with self.assertRaises(exceptions.AnVILNotGroupAdminError):
-            workspace.is_in_authorization_domain(account)
+            workspace.has_in_authorization_domain(account)
 
     def test_one_auth_domain_member_of_parent(self):
         """The workspace has one auth domain and the account is in a parent group."""
@@ -2488,7 +2488,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             account=account,
             group=group,
         )
-        self.assertFalse(workspace.is_in_authorization_domain(account))
+        self.assertFalse(workspace.has_in_authorization_domain(account))
 
     def test_one_auth_domain_member_of_child(self):
         """The workspace has one auth domain and the account is in a child group."""
@@ -2502,7 +2502,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             account=account,
             group=child_group,
         )
-        self.assertTrue(workspace.is_in_authorization_domain(account))
+        self.assertTrue(workspace.has_in_authorization_domain(account))
 
     def test_one_auth_domain_member_of_grandchild(self):
         """The workspace has one auth domain and the account is in a grandchild group."""
@@ -2521,7 +2521,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             account=account,
             group=grandchild_group,
         )
-        self.assertTrue(workspace.is_in_authorization_domain(account))
+        self.assertTrue(workspace.has_in_authorization_domain(account))
 
 
 class WorkspaceMethodIsSharedTest(TestCase):
@@ -2531,7 +2531,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         """The account is not an instance of Account."""
         workspace = factories.WorkspaceFactory.create()
         with self.assertRaises(ValueError) as e:
-            workspace.is_shared("foo")
+            workspace.is_shared_with("foo")
         self.assertEqual(
             str(e.exception),
             "account must be an instance of `Account`.",
@@ -2541,7 +2541,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         """The workspace is not shared."""
         workspace = factories.WorkspaceFactory.create()
         account = factories.AccountFactory.create()
-        self.assertFalse(workspace.is_shared(account))
+        self.assertFalse(workspace.is_shared_with(account))
 
     def test_shared_with_one_group_member(self):
         """The workspace is shared with a group and the account is a member of that group."""
@@ -2553,14 +2553,14 @@ class WorkspaceMethodIsSharedTest(TestCase):
             account=account,
             group=group,
         )
-        self.assertTrue(workspace.is_shared(account))
+        self.assertTrue(workspace.is_shared_with(account))
 
     def test_shared_with_one_group_not_member(self):
         """The workspace is shared with a group and the account is not a member of that group."""
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace)
         account = factories.AccountFactory.create()
-        self.assertFalse(workspace.is_shared(account))
+        self.assertFalse(workspace.is_shared_with(account))
 
     def test_shared_with_one_group_member_of_parent(self):
         """The workspace is shared with a group and the account is a member of a parent group."""
@@ -2571,7 +2571,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=child_group)
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=group)
-        self.assertFalse(workspace.is_shared(account))
+        self.assertFalse(workspace.is_shared_with(account))
 
     def test_shared_with_one_group_member_of_child(self):
         """The workspace is shared with a group and the account is a member of a child group."""
@@ -2582,7 +2582,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=child_group)
-        self.assertTrue(workspace.is_shared(account))
+        self.assertTrue(workspace.is_shared_with(account))
 
     def test_shared_with_one_group_member_of_grandchild(self):
         """The workspace is shared with a group and the account is a member of a grandchild group."""
@@ -2595,7 +2595,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=grandchild_group)
-        self.assertTrue(workspace.is_shared(account))
+        self.assertTrue(workspace.is_shared_with(account))
 
     def test_shared_with_one_group_not_managed_by_app(self):
         """The workspace is only shared with a group that is not managed by the app."""
@@ -2604,7 +2604,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
         with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
-            workspace.is_shared(account)
+            workspace.is_shared_with(account)
         self.assertEqual(
             str(e.exception),
             "Workspace is shared with some groups that are not managed by the app.",
@@ -2619,7 +2619,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=group_1)
-        self.assertTrue(workspace.is_shared(account))
+        self.assertTrue(workspace.is_shared_with(account))
 
     def test_shared_with_two_groups_member_of_neither(self):
         """The workspace is shared with two groups and the account is not a member of either."""
@@ -2629,7 +2629,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
         account = factories.AccountFactory.create()
-        self.assertFalse(workspace.is_shared(account))
+        self.assertFalse(workspace.is_shared_with(account))
 
     def test_shared_with_two_groups_member_of_both(self):
         """The workspace is shared with two groups and the account is a member of both."""
@@ -2641,7 +2641,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=group_1)
         factories.GroupAccountMembershipFactory.create(account=account, group=group_2)
-        self.assertTrue(workspace.is_shared(account))
+        self.assertTrue(workspace.is_shared_with(account))
 
     def test_shared_with_two_groups_one_not_managed_by_app_and_one_member(self):
         """Workspace is shared with a group that the account is member of and a group that is not managed by app."""
@@ -2652,7 +2652,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=group_1)
-        self.assertTrue(workspace.is_shared(account))
+        self.assertTrue(workspace.is_shared_with(account))
 
     def test_shared_with_two_groups_one_not_managed_by_app_and_one_not_member(self):
         """Workspace is shared with group that the account is not member of and a group that is not managed by app."""
@@ -2663,7 +2663,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
         account = factories.AccountFactory.create()
         with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
-            workspace.is_shared(account)
+            workspace.is_shared_with(account)
         self.assertEqual(
             str(e.exception),
             "Workspace is shared with some groups that are not managed by the app.",

@@ -843,7 +843,7 @@ class Workspace(TimeStampedModel):
 
         return workspace
 
-    def is_in_authorization_domain(self, account):
+    def has_in_authorization_domain(self, account):
         """Check if an account is in the authorization domain(s) for this workspace.
 
         Args:
@@ -874,7 +874,7 @@ class Workspace(TimeStampedModel):
         else:
             return False
 
-    def is_shared(self, account):
+    def is_shared_with(self, account):
         """Check if the workspace is shared with any groups the account is in.
 
         Args:
@@ -915,7 +915,7 @@ class Workspace(TimeStampedModel):
             ValueError: If the account is not an instance of Account.
             AnVILNotGroupAdminError: If the app cannot determine whether an Account has access.
         """
-        return self.is_in_authorization_domain(account) and self.is_shared(account)
+        return self.has_in_authorization_domain(account) and self.is_shared_with(account)
 
 
 class BaseWorkspaceData(models.Model):
