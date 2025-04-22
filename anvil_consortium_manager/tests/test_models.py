@@ -2428,7 +2428,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
         """The workspace has one auth domain that is not managed by app."""
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(group__is_managed_by_app=False)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+        with self.assertRaises(exceptions.WorkspaceAccountAuthorizationDomainUnknownError) as e:
             auth_domain.workspace.has_in_authorization_domain(account)
         self.assertEqual(
             str(e.exception),
@@ -2449,7 +2449,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             group=auth_domain.group,
             role=GroupAccountMembership.MEMBER,
         )
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountAuthorizationDomainUnknownError):
             workspace.has_in_authorization_domain(account)
 
     def test_two_auth_domains_one_not_member_one_not_managed_by_app(self):
@@ -2470,7 +2470,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
             2, workspace=workspace, group__is_managed_by_app=False
         )
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountAuthorizationDomainUnknownError):
             workspace.has_in_authorization_domain(account)
 
     def test_one_auth_domain_member_of_parent(self):
@@ -2603,7 +2603,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+        with self.assertRaises(exceptions.WorkspaceAccountSharingUnknownError) as e:
             workspace.is_shared_with(account)
         self.assertEqual(
             str(e.exception),
@@ -2662,7 +2662,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+        with self.assertRaises(exceptions.WorkspaceAccountSharingUnknownError) as e:
             workspace.is_shared_with(account)
         self.assertEqual(
             str(e.exception),
@@ -2708,12 +2708,9 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError) as e:
+        with self.assertRaises(exceptions.WorkspaceAccountSharingUnknownError) as e:
             workspace.is_accessible_by(account)
-        self.assertEqual(
-            str(e.exception),
-            "Workspace is shared with some groups that are not managed by the app.",
-        )
+        self.assertIn("shared with some groups that are not managed", str(e.exception))
 
     def test_no_auth_domain_shared_with_two_groups_member_of_none(self):
         workspace = factories.WorkspaceFactory.create()
@@ -2752,7 +2749,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountSharingUnknownError):
             workspace.is_accessible_by(account)
 
     def test_no_auth_domain_shared_with_two_groups_one_not_managed_by_app_one_member(self):
@@ -2772,7 +2769,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_1)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group_2)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountSharingUnknownError):
             workspace.is_accessible_by(account)
 
     def test_one_auth_domain_not_member_not_shared(self):
@@ -2813,8 +2810,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
-            workspace.is_accessible_by(account)
+        self.assertFalse(workspace.is_accessible_by(account))
 
     def test_one_auth_domain_not_managed_by_app_shared(self):
         workspace = factories.WorkspaceFactory.create()
@@ -2823,8 +2819,9 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=group)
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountAuthorizationDomainUnknownError) as e:
             workspace.is_accessible_by(account)
+        self.assertIn("auth domain is not managed by the app", str(e.exception))
 
     def test_one_auth_domain_not_managed_by_app_shared_not_managed_by_app(self):
         workspace = factories.WorkspaceFactory.create()
@@ -2832,8 +2829,9 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountAccessUnknownError) as e:
             workspace.is_accessible_by(account)
+        self.assertIn("Workspace sharing and auth domain status is unknown for", str(e.exception))
 
     def test_two_auth_domains_not_member_of_either_not_shared(self):
         workspace = factories.WorkspaceFactory.create()
@@ -2894,7 +2892,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.GroupAccountMembershipFactory.create(account=account, group=group)
         self.assertTrue(workspace.is_accessible_by(account))
 
-    def two_auth_domains_one_not_managed_by_app_one_not_member_not_shared(self):
+    def test_two_auth_domains_one_not_managed_by_app_one_not_member_not_shared(self):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory.create_batch(
             2, workspace=workspace, group__is_managed_by_app=False
@@ -2902,7 +2900,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         account = factories.AccountFactory.create()
         self.assertFalse(workspace.is_accessible_by(account))
 
-    def two_auth_domains_one_not_managed_by_app_one_not_member_shared(self):
+    def test_two_auth_domains_one_not_managed_by_app_one_not_member_shared(self):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
@@ -2912,7 +2910,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.GroupAccountMembershipFactory.create(account=account, group=group)
         self.assertFalse(workspace.is_accessible_by(account))
 
-    def two_auth_domains_one_not_managed_by_app_one_member_not_shared(self):
+    def test_two_auth_domains_one_not_managed_by_app_one_member_not_shared(self):
         workspace = factories.WorkspaceFactory.create()
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
@@ -2922,7 +2920,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.GroupAccountMembershipFactory.create(account=account, group=auth_domain.group)
         self.assertFalse(workspace.is_accessible_by(account))
 
-    def two_auth_domains_one_not_managed_by_app_one_member_shared(self):
+    def test_two_auth_domains_one_not_managed_by_app_one_member_shared(self):
         workspace = factories.WorkspaceFactory.create()
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
@@ -2931,19 +2929,18 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=auth_domain.group)
         factories.GroupAccountMembershipFactory.create(account=account, group=group)
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountAuthorizationDomainUnknownError):
             workspace.is_accessible_by(account)
 
-    def two_auth_domains_both_not_managed_by_app_not_shared(self):
+    def test_two_auth_domains_both_not_managed_by_app_not_shared(self):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory.create_batch(
             2, workspace=workspace, group__is_managed_by_app=False
         )
         account = factories.AccountFactory.create()
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
-            workspace.is_accessible_by(account)
+        self.assertFalse(workspace.is_accessible_by(account))
 
-    def two_auth_domains_both_not_managed_by_app_shared(self):
+    def test_two_auth_domains_both_not_managed_by_app_shared(self):
         workspace = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory.create_batch(
             2, workspace=workspace, group__is_managed_by_app=False
@@ -2952,5 +2949,5 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
         account = factories.AccountFactory.create()
         factories.GroupAccountMembershipFactory.create(account=account, group=group)
-        with self.assertRaises(exceptions.AnVILNotGroupAdminError):
+        with self.assertRaises(exceptions.WorkspaceAccountAuthorizationDomainUnknownError):
             workspace.is_accessible_by(account)

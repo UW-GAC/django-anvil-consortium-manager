@@ -853,7 +853,7 @@ class Workspace(TimeStampedModel):
             bool: True if the user is in the authorization domain, False otherwise.
 
         Raises:
-            AnVILNotGroupAdminError: If any of the authorization domains are not managed by the app.
+            WorkspaceAccountAuthorizationDomainUnknownError: If any authorization domains are not managed by the app.
         """
         if not isinstance(account, Account):
             raise ValueError("account must be an instance of `Account`.")
@@ -868,7 +868,9 @@ class Workspace(TimeStampedModel):
         if len(set(groups_managed_by_app).difference(set(account_groups))) == 0:
             # Now check if any are not managed by the app - this would be an "unknown" case.
             if groups_not_managed_by_app.exists():
-                raise exceptions.AnVILNotGroupAdminError("At least one auth domain is not managed by the app.")
+                raise exceptions.WorkspaceAccountAuthorizationDomainUnknownError(
+                    "At least one auth domain is not managed by the app."
+                )
             else:
                 return True
         else:
@@ -884,7 +886,7 @@ class Workspace(TimeStampedModel):
             bool: True if the user is in the authorization domain, False otherwise.
 
         Raises:
-            AnVILNotGroupAdminError: If the code cannot determine whether the workspace is shared or not.
+            WorkspaceAccountSharingUnknownError: If the code cannot determine whether the workspace is shared or not.
         """
         if not isinstance(account, Account):
             raise ValueError("account must be an instance of `Account`.")
@@ -897,7 +899,7 @@ class Workspace(TimeStampedModel):
             return True
         else:
             if workspace_groups.filter(is_managed_by_app=False).exists():
-                raise exceptions.AnVILNotGroupAdminError(
+                raise exceptions.WorkspaceAccountSharingUnknownError(
                     "Workspace is shared with some groups that are not managed by the app."
                 )
             return False
@@ -913,9 +915,34 @@ class Workspace(TimeStampedModel):
 
         Raises:
             ValueError: If the account is not an instance of Account.
-            AnVILNotGroupAdminError: If the app cannot determine whether an Account has access.
+            WorkspaceAccessUnknownError: If the code cannot determine both sharing status and auth domain status.
+            WorkspaceAccountSharingUnknownError: If the code cannot determine sharing status.
+            WorkspaceAccountAuthorizationDomainUnknownError: If the code cannot determine auth domain status.
         """
-        return self.has_in_authorization_domain(account) and self.is_shared_with(account)
+        # First check sharing, then check auth domain membership.
+        try:
+            is_shared = self.is_shared_with(account)
+            if not is_shared:
+                return False
+        except exceptions.WorkspaceAccountSharingUnknownError as e:
+            try:
+                in_auth_domain = self.has_in_authorization_domain(account)
+            except exceptions.WorkspaceAccountAuthorizationDomainUnknownError:
+                # In this case, we don't know sharing status OR auth domain status.
+                raise exceptions.WorkspaceAccountAccessUnknownError(
+                    "Workspace sharing and auth domain status is unknown for {}.".format(account)
+                )
+            # If we don't know if it's shared but the account is not in the auth domain, they don't have access.
+            # If the account is in the auth domain, then we should re-raise the sharing exception.
+            if not in_auth_domain:
+                return False
+            else:
+                raise e
+        else:
+            # If we've gotten here, sharing is either False or True.
+            # Check auth domain membership. If it is unknown, this method raises the correct exception.
+            in_auth_domain = self.has_in_authorization_domain(account)
+            return in_auth_domain and is_shared
 
 
 class BaseWorkspaceData(models.Model):
