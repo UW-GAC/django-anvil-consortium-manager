@@ -192,8 +192,12 @@ class WorkspaceAccessUnknownStaffTable(WorkspaceStaffTable):
 
     Requires the Workspace objects to be modified to have sharing_unknown and auth_domain_unknown boolean fields."""
 
-    sharing_known = tables.BooleanColumn()
-    auth_domain_known = tables.BooleanColumn()
+    sharing_known = BooleanIconColumn(
+        verbose_name="Is shared?", show_false_icon=True, false_icon="question-circle-fill"
+    )
+    auth_domain_known = BooleanIconColumn(
+        verbose_name="In auth domain?", show_false_icon=True, false_icon="question-circle-fill"
+    )
 
     class Meta(WorkspaceStaffTable.Meta):
         exclude = (

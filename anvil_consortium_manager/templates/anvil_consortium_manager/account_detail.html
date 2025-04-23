@@ -134,8 +134,9 @@
               <ul>
                 <li>The Workspace is shared with a group that is not managed by this app</li>
                 <li>At least one of the Workspace's authorization domains is not managed by this app</li>
+              </ul>
+              The "Is shared?" and "In auth domain?" columns display a red question mark when the app cannot determine access due to sharing or authorization domain membership, respectively.
             </p>
-
             {% render_table unknown_access_workspace_table %}
           </div>
         </div>
