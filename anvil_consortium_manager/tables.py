@@ -5,6 +5,41 @@ from . import models
 from .adapters.workspace import workspace_adapter_registry
 
 
+class BooleanIconColumn(tables.BooleanColumn):
+    """A column that displays a boolean value using boostrap icons."""
+
+    def __init__(
+        self,
+        show_false_icon=False,
+        true_color="green",
+        false_color="red",
+        true_icon="check-circle-fill",
+        false_icon="x-circle-fill",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.show_false_icon = show_false_icon
+        self.true_color = true_color
+        self.false_color = false_color
+        self.true_icon = true_icon
+        self.false_icon = false_icon
+
+    def render(self, value, record, bound_column):
+        value = self._get_bool_value(record, value, bound_column)
+        if value:
+            rendered_value = mark_safe(
+                f"""<i class="bi bi-{self.true_icon} bi-align-center px-2" style="color: {self.true_color};"></i>"""
+            )
+        else:
+            if self.show_false_icon:
+                rendered_value = mark_safe(
+                    f"""<i class="bi bi-{self.false_icon} bi-align-center px-2" style="color: {self.false_color};"></i>"""  # noqa: E501
+                )
+            else:
+                rendered_value = ""
+        return rendered_value
+
+
 class BillingProjectStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
