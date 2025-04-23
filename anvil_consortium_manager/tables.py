@@ -152,6 +152,21 @@ class GroupGroupMembershipStaffTable(tables.Table):
         return "See details"
 
 
+class WorkspaceAccessUnknownStaffTable(WorkspaceStaffTable):
+    """Class to render a WorkspaceStaffTable but include information about why access is unknown.
+
+    Requires the Workspace objects to be modified to have sharing_unknown and auth_domain_unknown boolean fields."""
+
+    sharing_known = tables.BooleanColumn()
+    auth_domain_known = tables.BooleanColumn()
+
+    class Meta(WorkspaceStaffTable.Meta):
+        exclude = (
+            "created",
+            "number_groups",
+        )
+
+
 class GroupAccountMembershipStaffTable(tables.Table):
     """Class to render a GroupAccountMembership table."""
 

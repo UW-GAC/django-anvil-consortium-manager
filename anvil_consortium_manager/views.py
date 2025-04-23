@@ -168,12 +168,44 @@ class AccountDetail(
             exclude=["account", "is_service_account"],
         )
 
-        workspace_sharing = models.WorkspaceGroupSharing.objects.filter(
-            workspace__in=self.object.get_accessible_workspaces(),
-            group__in=self.object.get_all_groups(),
-        ).order_by("workspace", "group")
+        account_groups = self.object.get_all_groups()
 
-        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingStaffTable(workspace_sharing)
+        # Get a list of all workspaces.
+        # For each workspace, check if it's accessible to the account.
+        # Put unknown workspaces into their own array.
+        accessible_workspaces = []
+        unknown_workspaces = []
+        for workspace in models.Workspace.objects.all():
+            try:
+                if workspace.is_accessible_by(self.object):
+                    accessible_workspaces.append(workspace)
+                else:
+                    pass
+            # Determine why access is not known, and add fields to be used in the table later.
+            except exceptions.WorkspaceAccountSharingUnknownError:
+                # This means that the app can't determine workspace access due to sharing.
+                workspace.sharing_known = False
+                workspace.auth_domain_known = True
+                unknown_workspaces.append(workspace)
+            except exceptions.WorkspaceAccountAuthorizationDomainUnknownError:
+                # This means that the app can't determine workspace access due to auth domain membership.
+                workspace.sharing_known = True
+                workspace.auth_domain_known = False
+                unknown_workspaces.append(workspace)
+            except exceptions.WorkspaceAccountAccessUnknownError:
+                workspace.sharing_known = False
+                workspace.auth_domain_known = False
+                unknown_workspaces.append(workspace)
+        # Accessible
+        accessible_sharing = models.WorkspaceGroupSharing.objects.filter(
+            workspace__in=accessible_workspaces,
+            group__in=account_groups,
+        ).order_by("workspace", "group")
+        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingStaffTable(accessible_sharing)
+
+        # List of workspaces with unknown access.
+        # We do not show sharing records here because it is too confusing.
+        context["unknown_access_workspace_table"] = tables.WorkspaceAccessUnknownStaffTable(unknown_workspaces)
         return context
 
 

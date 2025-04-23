@@ -1435,6 +1435,119 @@ class AccountDetailTest(TestCase):
         self.assertEqual(len(table.rows), 1)
         self.assertIn(sharing, table.data)
 
+    def test_accessible_workspaces_with_unknown_auth_domain_membership(self):
+        """Does not include workspaces where the auth_domain membership is unknown."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        table = response.context_data["accessible_workspace_table"]
+        self.assertEqual(len(table.rows), 0)
+
+    def test_accessible_workspaces_with_unknown_sharing(self):
+        """Does not include workspaces where the sharing is unknown."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        table = response.context_data["accessible_workspace_table"]
+        self.assertEqual(len(table.rows), 0)
+
+    def test_unknown_access_workspace_table(self):
+        """The unknown_access_workspace_table exists."""
+        obj = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["unknown_access_workspace_table"],
+            tables.WorkspaceStaffTable,
+        )
+
+    def test_unknown_access_workspace_none(self):
+        """the unknown_access_workspace_table has no records when there are no workspaces."""
+        account = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
+
+    def test_unknown_access_workspace_one_unknown_sharing(self):
+        """One workspace is shown if it is shared with a group not managed by app."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, False)
+        self.assertEqual(record.auth_domain_known, True)
+
+    def test_unknown_access_workspace_one_unknown_auth_domain(self):
+        """One workspace is shown if it is shared but the auth domain is not managed by app."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, True)
+        self.assertEqual(record.auth_domain_known, False)
+
+    def test_unknown_access_workspace_one_unknown_sharing_and_auth_domain(self):
+        """One workspace is shown if has unknown sharing and unknown auth domain access."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, False)
+        self.assertEqual(record.auth_domain_known, False)
+
+    def test_unknown_access_workspace_unknown_sharing_not_in_auth_domain(self):
+        """Workspace does not appear in table if it is has unknown sharing but the user is not in the auth domain."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
+
+    def test_unknown_access_workspace_not_shared_unknown_auth_domain(self):
+        """Workspace does not appear in table if it is has unknown auth domain but is not shared."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
+
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
 
