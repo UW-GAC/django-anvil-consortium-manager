@@ -50,6 +50,7 @@ class BillingProjectStaffTable(tables.Table):
         orderable=False,
         accessor="workspace_set__count",
     )
+    has_app_as_user = BooleanIconColumn(show_false_icon=True)
 
     class Meta:
         model = models.BillingProject
@@ -60,6 +61,7 @@ class AccountStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
     email = tables.Column(linkify=True)
+    is_service_account = BooleanIconColumn()
 
     class Meta:
         model = models.Account
@@ -91,6 +93,7 @@ class ManagedGroupStaffTable(tables.Table):
         orderable=False,
         accessor="groupaccountmembership_set__count",
     )
+    is_managed_by_app = BooleanIconColumn(show_false_icon=True)
 
     class Meta:
         model = models.ManagedGroup
@@ -211,7 +214,7 @@ class GroupAccountMembershipStaffTable(tables.Table):
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
     account = tables.Column(linkify=True)
-    is_service_account = tables.BooleanColumn(accessor="account__is_service_account")
+    is_service_account = BooleanIconColumn(accessor="account__is_service_account")
     status = tables.Column(accessor="account__status")
     group = tables.Column(linkify=True)
     role = tables.Column()
@@ -232,7 +235,7 @@ class WorkspaceGroupSharingStaffTable(tables.Table):
     workspace = tables.Column(linkify=True)
     group = tables.Column(linkify=True)
     access = tables.Column()
-    can_compute = tables.BooleanColumn(verbose_name="Compute allowed?")
+    can_compute = BooleanIconColumn(verbose_name="Compute allowed?")
     last_update = tables.DateTimeColumn(verbose_name="Last update", accessor="modified")
 
     class Meta:
