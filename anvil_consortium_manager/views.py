@@ -1207,7 +1207,7 @@ class WorkspaceImport(
             workspaces = [
                 w["workspace"]["namespace"] + "/" + w["workspace"]["name"]
                 for w in all_workspaces
-                if (w["accessLevel"] == "OWNER")
+                if (w["accessLevel"] == "OWNER" or w["accessLevel"] == "NO ACCESS")
                 and not models.Workspace.objects.filter(
                     billing_project__name=w["workspace"]["namespace"],
                     name=w["workspace"]["name"],

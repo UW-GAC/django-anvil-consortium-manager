@@ -28,6 +28,7 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
 from . import factories
+from .api_factories import ErrorResponseFactory
 from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
@@ -8188,8 +8189,8 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(formset.forms), 1)
         self.assertIsInstance(formset.forms[0], forms.DefaultWorkspaceDataForm)
 
-    def test_form_choices_no_available_workspaces(self):
-        """Choices are populated correctly with one available workspace."""
+    def test_form_choices_no_workspaces(self):
+        """Choices are populated correctly with no workspace."""
         self.anvil_response_mock.add(
             responses.GET,
             self.workspace_list_url,
@@ -8211,7 +8212,59 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
 
-    def test_form_choices_one_available_workspace(self):
+    def test_form_choices_one_workspace_reader(self):
+        """Workspaces with reader access are excluded."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("bp", "ws-reader", access="READER"),
+            ],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+        form_choices = response.context_data["form"].fields["workspace"].choices
+        # Choices are populated.
+        self.assertEqual(len(form_choices), 1)
+        self.assertFalse(("bp/ws-reader", "bp/ws-reader") in form_choices)
+        # A message is shown.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
+
+    def test_form_choices_one_workspace_writer(self):
+        """Workspaces with writer access are excluded."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("bp", "ws-writer", access="WRITER"),
+            ],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+        form_choices = response.context_data["form"].fields["workspace"].choices
+        # Choices are populated.
+        self.assertEqual(len(form_choices), 1)
+        self.assertFalse(("bp/ws-writer", "bp/ws-writer") in form_choices)
+        # A message is shown.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
+
+    def test_form_choices_one_workspace_owner(self):
         """Choices are populated correctly with one available workspace."""
         self.anvil_response_mock.add(
             responses.GET,
@@ -8232,7 +8285,28 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Second choice is the workspace.
         self.assertTrue(("bp-1/ws-1", "bp-1/ws-1") in workspace_choices)
 
-    def test_form_choices_two_available_workspaces(self):
+    def test_form_choices_one_workspace_no_access(self):
+        """Workspaces with NO ACCESS access are included."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response("bp-1", "ws-1", access="NO ACCESS")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        # Choices are populated correctly.
+        workspace_choices = response.context_data["form"].fields["workspace"].choices
+        self.assertEqual(len(workspace_choices), 2)
+        # The first choice is the empty string.
+        self.assertEqual("", workspace_choices[0][0])
+        # Second choice is the workspace.
+        self.assertTrue(("bp-1/ws-1", "bp-1/ws-1") in workspace_choices)
+
+    def test_form_choices_two_workspaces_owner(self):
         """Choices are populated correctly with two available workspaces."""
         self.anvil_response_mock.add(
             responses.GET,
@@ -8309,30 +8383,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
-
-    def test_form_does_not_show_workspaces_not_owner(self):
-        """The form does not show workspaces where we aren't owners in the choices."""
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.workspace_list_url,
-            match=[
-                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
-            ],
-            status=200,
-            json=[
-                self.get_api_json_response("bp", "ws-owner", access="OWNER"),
-                self.get_api_json_response("bp", "ws-reader", access="READER"),
-            ],
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type))
-        self.assertTrue("form" in response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
-        form_choices = response.context_data["form"].fields["workspace"].choices
-        # Choices are populated.
-        self.assertEqual(len(form_choices), 2)
-        self.assertTrue(("bp/ws-owner", "bp/ws-owner") in form_choices)
-        self.assertFalse(("bp/ws-reader", "bp/ws-reader") in form_choices)
 
     def test_can_import_workspace_and_billing_project_as_user(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
@@ -9489,6 +9539,93 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
         self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "imported!")
+
+    def test_can_import_workspace_no_access_but_owner(self):
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        auth_domain_name = "auth-group"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            status=200,
+            json=[
+                self.get_api_json_response(
+                    billing_project.name,
+                    workspace_name,
+                    authorization_domains=[auth_domain_name],
+                    access="NO ACCESS",
+                )
+            ],
+        )
+        # API call for workspace details.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=404,  # 404 - we can't call this without actually having access.
+            json=ErrorResponseFactory().response,
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        # Response for group query to import auth domain.
+        # No records returned because we are not part of this group.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=[],
+        )
+        # Response for group email query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/" + auth_domain_name,
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json="foo@example.com",
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        # History is added for the workspace.
+        self.assertEqual(new_workspace.history.count(), 1)
+        self.assertEqual(new_workspace.history.latest().history_type, "+")
+        # An authorization domain group was created.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        group = models.ManagedGroup.objects.latest()
+        self.assertEqual(group.name, auth_domain_name)
+        self.assertEqual(group.is_managed_by_app, False)
+        # The workspace authorization domain relationship was created.
+        auth_domain = models.WorkspaceAuthorizationDomain.objects.latest("pk")
+        self.assertEqual(auth_domain.workspace, new_workspace)
+        self.assertEqual(auth_domain.group, group)
+        self.assertEqual(auth_domain.history.count(), 1)
+        self.assertEqual(auth_domain.history.latest().history_type, "+")
+        # History is added for the authorization domain.
+        self.assertEqual(models.WorkspaceAuthorizationDomain.history.count(), 1)
+        self.assertEqual(models.WorkspaceAuthorizationDomain.history.latest().history_type, "+")
+
+
+#        self.fail("Write tests for no access but app is owner")
 
 
 class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
