@@ -542,7 +542,9 @@ class ManagedGroup(TimeStampedModel):
                     group.is_managed_by_app = True
         # Make sure a group was found.
         if count == 0:
-            raise exceptions.AnVILNotGroupMemberError("group {} not found in response.".format(group_name))
+            # Check that the group actually exists in AnVIL.
+            response = AnVILAPIClient().get_group_email(group_name)
+            group.email = response.json()
         # Verify it is still correct after modifying some fields.
         with transaction.atomic():
             group.full_clean()
@@ -777,11 +779,35 @@ class Workspace(TimeStampedModel):
                 # At this point, they should be valid objects.
 
                 # Make sure we actually have access to the workspace.
-                response = AnVILAPIClient().get_workspace(billing_project_name, workspace_name)
-                workspace_json = response.json()
+                try:
+                    response = AnVILAPIClient().get_workspace(billing_project_name, workspace_name)
+                    workspace_json = response.json()
+                except AnVILAPIError404:
+                    # This exception is raised if a workspace is shared with us, but we aren't in the auth domain.
+                    # In this case, we need to pull the information we need from the list of all workspaces.
+                    response = AnVILAPIClient().list_workspaces()
+                    workspaces = [
+                        x
+                        for x in response.json()
+                        if x["workspace"]["name"] == workspace_name
+                        and x["workspace"]["namespace"] == billing_project_name
+                    ]
+                    if len(workspaces) == 1:
+                        workspace_json = workspaces[0]
+                    else:
+                        raise exceptions.AnVILNotWorkspaceOwnerError(billing_project_name + "/" + workspace_name)
 
                 # Make sure that we are owners of the workspace.
-                if workspace_json["accessLevel"] != "OWNER":
+                # We will either be listed as "OWNER" or "NO ACCESS" in the response.
+                if workspace_json["accessLevel"] == "OWNER" or workspace_json["accessLevel"] == "NO ACCESS":
+                    # Get the list of groups that it is shared with and create records for them.
+                    try:
+                        response = AnVILAPIClient().get_workspace_acl(billing_project_name, workspace_name)
+                        acl = response.json()["acl"]
+                    except AnVILAPIError404:
+                        # This exception is raised if the workspace is not shared with us.
+                        raise exceptions.AnVILNotWorkspaceOwnerError(billing_project_name + "/" + workspace_name)
+                else:
                     raise exceptions.AnVILNotWorkspaceOwnerError(billing_project_name + "/" + workspace_name)
 
                 # Now we can proceed with saving the objects.
@@ -807,7 +833,6 @@ class Workspace(TimeStampedModel):
 
                 # Check the authorization domains and import them.
                 auth_domains = [ad["membersGroupName"] for ad in workspace_json["workspace"]["authorizationDomain"]]
-
                 # We don't need to check if we are members of the auth domains, because if we weren't we wouldn't be
                 # able to see the workspace.
                 for auth_domain in auth_domains:
@@ -819,10 +844,7 @@ class Workspace(TimeStampedModel):
                     # Add it as an authorization domain for this workspace.
                     WorkspaceAuthorizationDomain.objects.create(workspace=workspace, group=group)
 
-                # Get the list of groups that it is shared with and create records for them.
-                response = AnVILAPIClient().get_workspace_acl(workspace.billing_project.name, workspace.name)
-                # import ipdb; ipdb.set_trace()
-                acl = response.json()["acl"]
+                # Set up group sharing.
                 for email, item in acl.items():
                     if email.endswith("@firecloud.org"):
                         try:
