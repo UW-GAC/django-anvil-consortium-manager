@@ -2398,7 +2398,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Same billing project.
         self.assertEqual(models.BillingProject.objects.latest("pk"), billing_project)
 
-    # failing
     def test_anvil_import_workspace_not_shared(self):
         """A workspace cannot be imported from AnVIL if we do not have access."""
         billing_project_name = "test-billing-project"
@@ -3027,7 +3026,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # No groups were created.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
-    # failing
     def test_anvil_import_no_access_not_owner(self):
         """Cannot import a workspace when we are not an owner and not in the auth domain."""
         billing_project_name = "test-bp"
@@ -3077,7 +3075,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # No groups were created.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
-    # failing
     def test_anvil_import_reader(self):
         """Cannot import a workspace when we are a reader."""
         billing_project_name = "test-billing-project"
@@ -3122,7 +3119,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.BillingProject.objects.count(), 0)
 
-    # failing
     def test_anvil_import_writer(self):
         """Cannot import a workspace when we are a writer."""
         """Cannot import a workspace when we are a reader."""
@@ -3435,7 +3431,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Check workspace sharing.
         self.assertEqual(workspace.workspacegroupsharing_set.count(), 0)
 
-    # failing
     def test_acl_api_error(self):
         """Nothing is added when there is an API error on the workspace ACL call."""
         billing_project_name = "test-billing-project"
