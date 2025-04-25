@@ -1,5 +1,15 @@
 # Change log
 
+## 0.31.0 (Devel)
+
+* Allow the app to manage workspaces where it is an owner but does not have access (e.g., due to auth domain membership).
+* Rework methods for determining access to workspaces.
+    * Add `Workspace.has_in_authorization_domain()`, `Workspace.is_shared_with()`, `Workspace.is_accessible_by()` methods to determine access to a workspace for an account.
+    * Remove old `Workspace` methods used for determining workspace access: `is_in_authorization_domain`, `is_shared`.
+    * Remove old `ManagedGroup` methods used for determining workspace access: `is_in_authorization_domain`, `is_shared`, `has_access`.
+    * Remove old `Account` methods used for determine workspace access: `get_accessible_workspaces`, `has_workspace_access`.
+
+
 ## 0.30.1 (2025-03-07)
 
 * Only make additional API calls in `WorkspaceAudit.run_audit` if the app is an owner of the workspace.
