@@ -292,29 +292,29 @@ class Account(TimeStampedModel, ActivatorModel):
             membership.anvil_delete()
             membership.delete()
 
-    def get_accessible_workspaces(self):
-        """Get a list of workspaces an Account has access to.
+    # def get_accessible_workspaces(self):
+    #     """Get a list of workspaces an Account has access to.
 
-        To be considered accessible, two criteria must be met:
-        1. The workspace is shared the Account via a group (or parent group).
-        2. The Account must be part of all groups used as the authorization domain for the workspace,
-        either directly or indirectly.
+    #     To be considered accessible, two criteria must be met:
+    #     1. The workspace is shared the Account via a group (or parent group).
+    #     2. The Account must be part of all groups used as the authorization domain for the workspace,
+    #     either directly or indirectly.
 
-        Returns:
-            A list of workspaces that are accessible to the account.
-        """
-        groups = self.get_all_groups()
-        # check what workspaces have been shared with any of those groups;
-        workspaces = WorkspaceGroupSharing.objects.filter(group__in=groups)
-        # check if all the auth domains for each workspace are in the Account's set of groups.
-        accessible_workspaces = set()
-        for ws in workspaces:
-            authorized_domains = list(ws.workspace.authorization_domains.all())
-            # Check if the app controls all auth domains; it might not.
-            # import ipdb; ipdb.set_trace()
-            if len(set(authorized_domains).difference(set(groups))) == 0:
-                accessible_workspaces.add(ws.workspace)
-        return accessible_workspaces
+    #     Returns:
+    #         A list of workspaces that are accessible to the account.
+    #     """
+    #     groups = self.get_all_groups()
+    #     # check what workspaces have been shared with any of those groups;
+    #     workspaces = WorkspaceGroupSharing.objects.filter(group__in=groups)
+    #     # check if all the auth domains for each workspace are in the Account's set of groups.
+    #     accessible_workspaces = set()
+    #     for ws in workspaces:
+    #         authorized_domains = list(ws.workspace.authorization_domains.all())
+    #         # Check if the app controls all auth domains; it might not.
+    #         # import ipdb; ipdb.set_trace()
+    #         if len(set(authorized_domains).difference(set(groups))) == 0:
+    #             accessible_workspaces.add(ws.workspace)
+    #     return accessible_workspaces
 
     def get_all_groups(self):
         """get a list of all groups that an Account is in, directly and indirectly"""
@@ -328,10 +328,10 @@ class Account(TimeStampedModel, ActivatorModel):
                 groups.add(group)
         return groups
 
-    def has_workspace_access(self, workspace):
-        """Return a boolean indicator of whether the workspace can be accessed by this Account."""
-        accessible_workspaces = self.get_accessible_workspaces()
-        return workspace in accessible_workspaces
+    # def has_workspace_access(self, workspace):
+    #     """Return a boolean indicator of whether the workspace can be accessed by this Account."""
+    #     accessible_workspaces = self.get_accessible_workspaces()
+    #     return workspace in accessible_workspaces
 
     def unlink_user(self):
         """Unlink the user from this account.
