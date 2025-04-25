@@ -2356,7 +2356,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot import a workspace if we are not owners of it and the billing project doesn't exist in Django yet."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        # No billing project API calls.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2402,7 +2408,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """A workspace cannot be imported from AnVIL if we do not have access."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        # No API call for billing projects.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2450,6 +2462,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is an internal error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2470,6 +2489,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is some other error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2490,19 +2516,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is an internal error from the AnVIL API for the billing project call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.get_api_url(billing_project_name, workspace_name),
-            status=200,  # successful response code.
-            json=self.get_api_json_response(billing_project_name, workspace_name),
-        )
-        # Response for ACL query.
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.get_api_url_acl(billing_project_name, workspace_name),
-            status=200,  # successful response code.
-            json=self.api_json_response_acl,
-        )
         # Error in billing project call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -2524,19 +2537,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is another error from the AnVIL API for the billing project call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.get_api_url(billing_project_name, workspace_name),
-            status=200,  # successful response code.
-            json=self.get_api_json_response(billing_project_name, workspace_name),
-        )
-        # Response for ACL query.
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.get_api_url_acl(billing_project_name, workspace_name),
-            status=200,  # successful response code.
-            json=self.api_json_response_acl,
-        )
         # Error in billing project call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -3030,7 +3030,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot import a workspace when we are not an owner and not in the auth domain."""
         billing_project_name = "test-bp"
         workspace_name = "test-workspace"
-        # Workspace details.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -3079,7 +3085,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot import a workspace when we are a reader."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        # No API call for billing projects.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -3121,10 +3133,15 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_anvil_import_writer(self):
         """Cannot import a workspace when we are a writer."""
-        """Cannot import a workspace when we are a reader."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        # No API call for billing projects.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -3436,7 +3453,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         factories.ManagedGroupFactory.create()
-        # Response for workspace query.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         workspace_url = self.get_api_url(billing_project_name, workspace_name)
         self.anvil_response_mock.add(
             responses.GET,

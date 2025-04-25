@@ -9051,6 +9051,13 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_other_anvil_api_error(self):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name,
+            status=200,
+        )
+        # Response for workspace details.
         # Available workspaces API call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -9623,9 +9630,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # History is added for the authorization domain.
         self.assertEqual(models.WorkspaceAuthorizationDomain.history.count(), 1)
         self.assertEqual(models.WorkspaceAuthorizationDomain.history.latest().history_type, "+")
-
-
-#        self.fail("Write tests for no access but app is owner")
 
 
 class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):

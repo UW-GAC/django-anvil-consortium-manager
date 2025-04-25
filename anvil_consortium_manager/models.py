@@ -757,26 +757,33 @@ class Workspace(TimeStampedModel):
             # The workspace doesn't exist: continue to creation.
             pass
 
+        # Create a workspace object to start the cleaning process.
+        # Do not set the billing project yet, since we may need to import it.
+        # We can check other types of cleaning, like workspace name and type.
+        workspace = cls(name=workspace_name, workspace_type=workspace_type, note=note)
+        # If it fails the clean, we don't want to continue importing.
+        workspace.clean_fields(exclude=["billing_project"])
+
         # Run in a transaction since we may need to create the billing project, but we only want
         # it to be saved if everything succeeds.
         try:
             with transaction.atomic():
-                # Make temporary versions of the objects to validate them before checking for the workspace.
-                # This is primarily to check that the fields are valid.
-                # We only want ot make the API call if they are valid.
+                # Import the billing project, or create it if we are not a member.
                 try:
                     billing_project = BillingProject.objects.get(name=billing_project_name)
-                    billing_project_exists = True
                 except BillingProject.DoesNotExist:
-                    temporary_billing_project = BillingProject(name=billing_project_name, has_app_as_user=False)
-                    temporary_billing_project.clean_fields()
-                    billing_project_exists = False
+                    try:
+                        billing_project = BillingProject.anvil_import(billing_project_name)
+                    except AnVILAPIError404:
+                        # This means that we are not a user in the billing project, or it does not exist.
+                        billing_project = BillingProject(name=billing_project_name, has_app_as_user=False)
+                        billing_project.full_clean()
+                        billing_project.save()
 
-                # Do not set the Billing yet, since we might be importing it or creating it later.
-                # This is only to validate the other fields.
-                workspace = cls(name=workspace_name, workspace_type=workspace_type, note=note)
-                workspace.clean_fields(exclude="billing_project")
-                # At this point, they should be valid objects.
+                # Set the billing project and try cleaning again.
+                workspace.billing_project = billing_project
+                workspace.full_clean()
+                # At this point, they should be valid objects, but do not save yet. We have other checks to make.
 
                 # Make sure we actually have access to the workspace.
                 try:
@@ -812,22 +819,11 @@ class Workspace(TimeStampedModel):
 
                 # Now we can proceed with saving the objects.
 
-                # Import the billing project from AnVIL if it doesn't already exist.
-                if not billing_project_exists:
-                    try:
-                        billing_project = BillingProject.anvil_import(billing_project_name)
-                    except AnVILAPIError404:
-                        # Use the temporary billing project we previously created above.
-                        billing_project = temporary_billing_project
-                        billing_project.save()
-
                 # Check if the workspace is locked.
                 if workspace_json["workspace"]["isLocked"]:
                     workspace.is_locked = True
 
-                # Finally, set the workspace's billing project to the existing or newly-added BillingProject.
-                workspace.billing_project = billing_project
-                # Redo cleaning, including checks for uniqueness.
+                # Redo cleaning just before saving.
                 workspace.full_clean()
                 workspace.save()
 
