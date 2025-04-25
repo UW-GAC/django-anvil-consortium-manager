@@ -7,7 +7,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import mail_admins
 from django.db import transaction
-from django.db.models import ProtectedError, RestrictedError
+from django.db.models import ProtectedError, Q, RestrictedError
 from django.forms import Form, HiddenInput, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
 from django.template.loader import render_to_string
@@ -175,7 +175,10 @@ class AccountDetail(
         # Put unknown workspaces into their own array.
         accessible_workspaces = []
         unknown_workspaces = []
-        for workspace in models.Workspace.objects.all():
+        for workspace in models.Workspace.objects.filter(
+            Q(workspacegroupsharing__group__in=account_groups)
+            | Q(workspacegroupsharing__group__is_managed_by_app=False)
+        ):
             try:
                 if workspace.is_accessible_by(self.object, account_groups=account_groups):
                     accessible_workspaces.append(workspace)
