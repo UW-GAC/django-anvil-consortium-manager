@@ -177,7 +177,7 @@ class AccountDetail(
         unknown_workspaces = []
         for workspace in models.Workspace.objects.all():
             try:
-                if workspace.is_accessible_by(self.object):
+                if workspace.is_accessible_by(self.object, account_groups=account_groups):
                     accessible_workspaces.append(workspace)
                 else:
                     pass
