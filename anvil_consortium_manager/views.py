@@ -1051,6 +1051,9 @@ class WorkspaceDetail(
         # Add custom variables for this view.
         context["workspace_data_object"] = self.get_workspace_data_object()
         context["show_edit_links"] = has_edit_perms
+        context["has_authorization_domain_not_managed_by_app"] = self.object.authorization_domains.filter(
+            is_managed_by_app=False
+        ).exists()
 
         try:
             account = self.request.user.account

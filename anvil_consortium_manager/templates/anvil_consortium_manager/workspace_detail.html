@@ -7,6 +7,12 @@
 
 {% block pills %}
 
+  {% if has_authorization_domain_not_managed_by_app %}
+  <div class="alert alert-warning my-3" role="alert">
+    This workspace has at least one authorization domain that is not managed by the app, so access cannot always be determined.
+  </div>
+  {% endif %}
+
   {% include 'anvil_consortium_manager/snippets/workspace_is_locked_pill.html' %}
 
   {% include 'anvil_consortium_manager/snippets/workspace_access_pill.html' %}

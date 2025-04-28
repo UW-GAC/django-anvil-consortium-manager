@@ -7003,6 +7003,19 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(workspace.get_absolute_url())
         self.assertContains(response, """<span class="badge">Extra workspace pill</span>""")
 
+    def test_two_auth_domains_one_not_managed_by_app(self):
+        """Response contains an alert if the workspace has an auth domain that is not managed by the app."""
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace.workspace)
+        factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace.workspace, group__is_managed_by_app=False
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertIn("has_authorization_domain_not_managed_by_app", response.context)
+        self.assertTrue(response.context["has_authorization_domain_not_managed_by_app"])
+        self.assertContains(response, "authorization domain that is not managed by the app")
+
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 201
