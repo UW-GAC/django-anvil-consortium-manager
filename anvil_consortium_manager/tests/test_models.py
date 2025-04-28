@@ -1887,7 +1887,7 @@ class WorkspaceGroupSharingTest(TestCase):
             instance_2.save()
 
 
-class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
+class WorkspaceMethodHasAccountInAuthorizationDomainsTest(TestCase):
     """Tests for the Workspace.has_account_in_authorization_domain method."""
 
     def test_account_wrong_class(self):
@@ -2075,7 +2075,7 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
         )
 
 
-class WorkspaceMethodIsSharedTest(TestCase):
+class WorkspaceMethodIsSharedWithAccountTest(TestCase):
     """Tests for the Workspace.is_shared method."""
 
     def test_account_wrong_class(self):
@@ -2235,7 +2235,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         self.assertFalse(workspace.is_shared_with_account(account, all_account_groups=other_groups))
 
 
-class WorkspaceMethodIsAccessibleBy(TestCase):
+class WorkspaceMethodIsAccessibleByAccount(TestCase):
     """Tests for the Workspace.can_access method."""
 
     def test_account_wrong_class(self):
