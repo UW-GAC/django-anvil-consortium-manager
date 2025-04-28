@@ -2058,8 +2058,8 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
         )
         self.assertTrue(workspace.has_account_in_authorization_domain(account))
 
-    def test_account_groups(self):
-        """Uses account_groups if specified instead of querying the database."""
+    def test_all_account_groups(self):
+        """Uses all_account_groups if specified instead of querying the database."""
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create()
         account = factories.AccountFactory.create()
         GroupAccountMembership.objects.create(
@@ -2069,9 +2069,9 @@ class WorkspaceMethodIsInAuthorizationDomainsTest(TestCase):
         )
         other_groups = factories.ManagedGroupFactory.create_batch(2)
         self.assertTrue(auth_domain.workspace.has_account_in_authorization_domain(account))
-        # Pass the other groups to check that account_groups is used.
+        # Pass the other groups to check that all_account_groups is used.
         self.assertFalse(
-            auth_domain.workspace.has_account_in_authorization_domain(account, account_groups=other_groups)
+            auth_domain.workspace.has_account_in_authorization_domain(account, all_account_groups=other_groups)
         )
 
 
@@ -2220,8 +2220,8 @@ class WorkspaceMethodIsSharedTest(TestCase):
             "Workspace is shared with some groups that are not managed by the app.",
         )
 
-    def test_account_groups(self):
-        """The account_groups argument is used instead of querying for the user's groups."""
+    def test_all_account_groups(self):
+        """The all_account_groups argument is used instead of querying for the user's groups."""
         workspace = factories.WorkspaceFactory.create()
         group = factories.ManagedGroupFactory.create()
         factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
@@ -2232,7 +2232,7 @@ class WorkspaceMethodIsSharedTest(TestCase):
         )
         self.assertTrue(workspace.is_shared_with_account(account))
         other_groups = factories.ManagedGroupFactory.create_batch(2)
-        self.assertFalse(workspace.is_shared_with_account(account, account_groups=other_groups))
+        self.assertFalse(workspace.is_shared_with_account(account, all_account_groups=other_groups))
 
 
 class WorkspaceMethodIsAccessibleBy(TestCase):
@@ -2517,7 +2517,7 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         with self.assertRaises(exceptions.WorkspaceAccountAuthorizationDomainUnknownError):
             workspace.is_accessible_by_account(account)
 
-    def test_account_groups(self):
+    def test_all_account_groups(self):
         workspace = factories.WorkspaceFactory.create()
         auth_domain = factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
         group = factories.ManagedGroupFactory.create()
@@ -2527,4 +2527,4 @@ class WorkspaceMethodIsAccessibleBy(TestCase):
         factories.GroupAccountMembershipFactory.create(account=account, group=group)
         self.assertTrue(workspace.is_accessible_by_account(account))
         other_groups = factories.ManagedGroupFactory.create_batch(2)
-        self.assertFalse(workspace.is_accessible_by_account(account, account_groups=other_groups))
+        self.assertFalse(workspace.is_accessible_by_account(account, all_account_groups=other_groups))

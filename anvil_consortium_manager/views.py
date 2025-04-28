@@ -168,7 +168,7 @@ class AccountDetail(
             exclude=["account", "is_service_account"],
         )
 
-        account_groups = self.object.get_all_groups()
+        all_account_groups = self.object.get_all_groups()
 
         # Get a list of all workspaces.
         # For each workspace, check if it's accessible to the account.
@@ -176,11 +176,11 @@ class AccountDetail(
         accessible_workspaces = []
         unknown_workspaces = []
         for workspace in models.Workspace.objects.filter(
-            Q(workspacegroupsharing__group__in=account_groups)
+            Q(workspacegroupsharing__group__in=all_account_groups)
             | Q(workspacegroupsharing__group__is_managed_by_app=False)
         ):
             try:
-                if workspace.is_accessible_by_account(self.object, account_groups=account_groups):
+                if workspace.is_accessible_by_account(self.object, all_account_groups=all_account_groups):
                     accessible_workspaces.append(workspace)
                 else:
                     pass
@@ -202,7 +202,7 @@ class AccountDetail(
         # Accessible
         accessible_sharing = models.WorkspaceGroupSharing.objects.filter(
             workspace__in=accessible_workspaces,
-            group__in=account_groups,
+            group__in=all_account_groups,
         ).order_by("workspace", "group")
         context["accessible_workspace_table"] = tables.WorkspaceGroupSharingStaffTable(accessible_sharing)
 
