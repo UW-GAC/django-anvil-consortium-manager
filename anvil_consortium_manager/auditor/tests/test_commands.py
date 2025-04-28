@@ -210,10 +210,11 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         # Response to check workspace bucket options.
         self.anvil_response_mock.add(
             responses.GET,
-            self.api_client.rawls_entry_point + "/api/workspaces/test-bp/test-ws",
+            self.api_client.rawls_entry_point + "/api/workspaces/v2/test-bp/test-ws/settings",
             status=200,
-            json=self.get_api_bucket_options_response(),
+            json=[],
         )
+
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)
         self.assertIn("WorkspaceAudit... ok! (ignoring 1 records)", out.getvalue())
@@ -238,12 +239,12 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=self.get_api_workspace_acl_response(),
         )
-        # Response to check workspace bucket options.
+        # Response to check workspace settings
         self.anvil_response_mock.add(
             responses.GET,
-            self.api_client.rawls_entry_point + "/api/workspaces/test-bp/test-ws",
+            self.api_client.rawls_entry_point + "/api/workspaces/v2/test-bp/test-ws/settings",
             status=200,
-            json=self.get_api_bucket_options_response(),
+            json=[],
         )
         out = StringIO()
         call_command("run_anvil_audit", "--no-color", models=["Workspace"], stdout=out)

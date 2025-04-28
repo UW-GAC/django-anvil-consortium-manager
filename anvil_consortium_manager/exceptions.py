@@ -23,3 +23,15 @@ class AnVILRemoveAccountFromGroupError(Exception):
 
 class AnVILGroupNotFound(Exception):
     """Exception to be raised when a group is not found on AnVIL."""
+
+
+class WorkspaceAccessUnknownError(Exception):
+    """Exception to be raised when the app cannot determine the access to a workspace."""
+
+
+class WorkspaceAccessSharingUnknownError(WorkspaceAccessUnknownError):
+    """Exception to be raised when the app cannot determine the access to a workspace due to sharing."""
+
+
+class WorkspaceAccessAuthorizationDomainUnknownError(WorkspaceAccessUnknownError):
+    """Exception to be raised when the app cannot determine the access to a workspace due to auth domain membership."""

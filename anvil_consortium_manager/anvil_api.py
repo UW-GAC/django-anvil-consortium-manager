@@ -256,6 +256,21 @@ class AnVILAPIClient:
         else:
             return self.auth_session.get(url, 200)
 
+    def get_workspace_settings(self, workspace_namespace, workspace_name):
+        """Get information about a specific workspace on AnVIL.
+
+        Calls the Rawls /api/workspaces/v2/{workspace_namespace}/{workspace_name}/settings GET method.
+
+        Args:
+            workspace_namespace (str): The namespace (or billing project) of the workspace.
+            workspace_name (str):  The name of the workspace.
+
+        Returns:
+            requests.Response
+        """
+        url = self.rawls_entry_point + "/api/workspaces/v2/" + workspace_namespace + "/" + workspace_name + "/settings"
+        return self.auth_session.get(url, 200)
+
     def create_workspace(self, workspace_namespace, workspace_name, authorization_domains=[]):
         """Create a workspace on AnVIL.
 

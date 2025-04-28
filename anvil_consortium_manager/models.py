@@ -292,29 +292,6 @@ class Account(TimeStampedModel, ActivatorModel):
             membership.anvil_delete()
             membership.delete()
 
-    def get_accessible_workspaces(self):
-        """Get a list of workspaces an Account has access to.
-
-        To be considered accessible, two criteria must be met:
-        1. The workspace is shared the Account via a group (or parent group).
-        2. The Account must be part of all groups used as the authorization domain for the workspace,
-        either directly or indirectly.
-
-        Returns:
-            A list of workspaces that are accessible to the account.
-        """
-        groups = self.get_all_groups()
-        # check what workspaces have been shared with any of those groups;
-        workspaces = WorkspaceGroupSharing.objects.filter(group__in=groups)
-        # check if all the auth domains for each workspace are in the Account's set of groups.
-        accessible_workspaces = set()
-        for ws in workspaces:
-            authorized_domains = list(ws.workspace.authorization_domains.all())
-            # import ipdb; ipdb.set_trace()
-            if len(set(authorized_domains).difference(set(groups))) == 0:
-                accessible_workspaces.add(ws.workspace)
-        return accessible_workspaces
-
     def get_all_groups(self):
         """get a list of all groups that an Account is in, directly and indirectly"""
         groups = set()
@@ -326,11 +303,6 @@ class Account(TimeStampedModel, ActivatorModel):
             for group in parents:
                 groups.add(group)
         return groups
-
-    def has_workspace_access(self, workspace):
-        """Return a boolean indicator of whether the workspace can be accessed by this Account."""
-        accessible_workspaces = self.get_accessible_workspaces()
-        return workspace in accessible_workspaces
 
     def unlink_user(self):
         """Unlink the user from this account.
@@ -541,7 +513,9 @@ class ManagedGroup(TimeStampedModel):
                     group.is_managed_by_app = True
         # Make sure a group was found.
         if count == 0:
-            raise exceptions.AnVILNotGroupMemberError("group {} not found in response.".format(group_name))
+            # Check that the group actually exists in AnVIL.
+            response = AnVILAPIClient().get_group_email(group_name)
+            group.email = response.json()
         # Verify it is still correct after modifying some fields.
         with transaction.atomic():
             group.full_clean()
@@ -617,23 +591,6 @@ class ManagedGroup(TimeStampedModel):
                 # This email is not associated with an Account in the app.
                 pass
 
-    def is_in_authorization_domain(self, workspace):
-        """Check if this group (or a group that it is part of) is in the auth domain of a workspace."""
-        return workspace.is_in_authorization_domain(self)
-
-    def is_shared(self, workspace):
-        """Check if a workspace is shared with this group (or a group that it is part of)."""
-        return workspace.is_shared(self)
-
-    def has_access(self, workspace):
-        """Check if this group has access to a workspace.
-
-        Both criteria need to be met for a group to have access to a workspace:
-        1. The workspace must be shared with the group (or a group that it is in).
-        2. The group (or a group that it is in) must be in all auth domains for the workspace.
-        """
-        return workspace.has_access(self)
-
 
 class Workspace(TimeStampedModel):
     """A model to store information about AnVIL workspaces."""
@@ -704,19 +661,6 @@ class Workspace(TimeStampedModel):
             billing_project=self.billing_project.name, group=self.name
         )
 
-    def is_in_authorization_domain(self, group):
-        """Check if a group (or a group that it is part of) is in the auth domain of this workspace."""
-        in_auth_domain = True
-        for auth_domain in self.authorization_domains.all():
-            in_auth_domain = (in_auth_domain) and (group in auth_domain.get_all_children())
-        return in_auth_domain
-
-    def is_shared(self, group):
-        """Check if this workspace is shared with a group (or a group that it is part of)."""
-        parents = group.get_all_parents()
-        is_shared = self.workspacegroupsharing_set.filter(models.Q(group=group) | models.Q(group__in=parents)).exists()
-        return is_shared
-
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""
         try:
@@ -784,59 +728,78 @@ class Workspace(TimeStampedModel):
             # The workspace doesn't exist: continue to creation.
             pass
 
+        # Create a workspace object to start the cleaning process.
+        # Do not set the billing project yet, since we may need to import it.
+        # We can check other types of cleaning, like workspace name and type.
+        workspace = cls(name=workspace_name, workspace_type=workspace_type, note=note)
+        # If it fails the clean, we don't want to continue importing.
+        workspace.clean_fields(exclude=["billing_project"])
+
         # Run in a transaction since we may need to create the billing project, but we only want
         # it to be saved if everything succeeds.
         try:
             with transaction.atomic():
-                # Make temporary versions of the objects to validate them before checking for the workspace.
-                # This is primarily to check that the fields are valid.
-                # We only want ot make the API call if they are valid.
+                # Import the billing project, or create it if we are not a member.
                 try:
                     billing_project = BillingProject.objects.get(name=billing_project_name)
-                    billing_project_exists = True
                 except BillingProject.DoesNotExist:
-                    temporary_billing_project = BillingProject(name=billing_project_name, has_app_as_user=False)
-                    temporary_billing_project.clean_fields()
-                    billing_project_exists = False
-
-                # Do not set the Billing yet, since we might be importing it or creating it later.
-                # This is only to validate the other fields.
-                workspace = cls(name=workspace_name, workspace_type=workspace_type, note=note)
-                workspace.clean_fields(exclude="billing_project")
-                # At this point, they should be valid objects.
-
-                # Make sure we actually have access to the workspace.
-                response = AnVILAPIClient().get_workspace(billing_project_name, workspace_name)
-                workspace_json = response.json()
-
-                # Make sure that we are owners of the workspace.
-                if workspace_json["accessLevel"] != "OWNER":
-                    raise exceptions.AnVILNotWorkspaceOwnerError(billing_project_name + "/" + workspace_name)
-
-                # Now we can proceed with saving the objects.
-
-                # Import the billing project from AnVIL if it doesn't already exist.
-                if not billing_project_exists:
                     try:
                         billing_project = BillingProject.anvil_import(billing_project_name)
                     except AnVILAPIError404:
-                        # Use the temporary billing project we previously created above.
-                        billing_project = temporary_billing_project
+                        # This means that we are not a user in the billing project, or it does not exist.
+                        billing_project = BillingProject(name=billing_project_name, has_app_as_user=False)
+                        billing_project.full_clean()
                         billing_project.save()
+
+                # Set the billing project and try cleaning again.
+                workspace.billing_project = billing_project
+                workspace.full_clean()
+                # At this point, they should be valid objects, but do not save yet. We have other checks to make.
+
+                # Make sure we actually have access to the workspace.
+                try:
+                    response = AnVILAPIClient().get_workspace(billing_project_name, workspace_name)
+                    workspace_json = response.json()
+                except AnVILAPIError404:
+                    # This exception is raised if a workspace is shared with us, but we aren't in the auth domain.
+                    # In this case, we need to pull the information we need from the list of all workspaces.
+                    response = AnVILAPIClient().list_workspaces()
+                    workspaces = [
+                        x
+                        for x in response.json()
+                        if x["workspace"]["name"] == workspace_name
+                        and x["workspace"]["namespace"] == billing_project_name
+                    ]
+                    if len(workspaces) == 1:
+                        workspace_json = workspaces[0]
+                    else:
+                        raise exceptions.AnVILNotWorkspaceOwnerError(billing_project_name + "/" + workspace_name)
+
+                # Make sure that we are owners of the workspace.
+                # We will either be listed as "OWNER" or "NO ACCESS" in the response.
+                if workspace_json["accessLevel"] == "OWNER" or workspace_json["accessLevel"] == "NO ACCESS":
+                    # Get the list of groups that it is shared with and create records for them.
+                    try:
+                        response = AnVILAPIClient().get_workspace_acl(billing_project_name, workspace_name)
+                        acl = response.json()["acl"]
+                    except AnVILAPIError404:
+                        # This exception is raised if the workspace is not shared with us.
+                        raise exceptions.AnVILNotWorkspaceOwnerError(billing_project_name + "/" + workspace_name)
+                else:
+                    raise exceptions.AnVILNotWorkspaceOwnerError(billing_project_name + "/" + workspace_name)
+
+                # Now we can proceed with saving the objects.
 
                 # Check if the workspace is locked.
                 if workspace_json["workspace"]["isLocked"]:
                     workspace.is_locked = True
 
-                # Finally, set the workspace's billing project to the existing or newly-added BillingProject.
-                workspace.billing_project = billing_project
-                # Redo cleaning, including checks for uniqueness.
+                # Redo cleaning just before saving.
                 workspace.full_clean()
                 workspace.save()
 
                 # Check the authorization domains and import them.
                 auth_domains = [ad["membersGroupName"] for ad in workspace_json["workspace"]["authorizationDomain"]]
-
                 # We don't need to check if we are members of the auth domains, because if we weren't we wouldn't be
                 # able to see the workspace.
                 for auth_domain in auth_domains:
@@ -848,10 +811,7 @@ class Workspace(TimeStampedModel):
                     # Add it as an authorization domain for this workspace.
                     WorkspaceAuthorizationDomain.objects.create(workspace=workspace, group=group)
 
-                # Get the list of groups that it is shared with and create records for them.
-                response = AnVILAPIClient().get_workspace_acl(workspace.billing_project.name, workspace.name)
-                # import ipdb; ipdb.set_trace()
-                acl = response.json()["acl"]
+                # Set up group sharing.
                 for email, item in acl.items():
                     if email.endswith("@firecloud.org"):
                         try:
@@ -871,6 +831,185 @@ class Workspace(TimeStampedModel):
             raise
 
         return workspace
+
+    def has_account_in_authorization_domain(self, account, all_account_groups=None):
+        """Check if an account is in the authorization domain(s) for this workspace.
+
+        Args:
+            account (Account): The account to check.
+            all_account_groups (list): A list of all groups that the account is in (directly and indirectly).
+                If not provided, it will be retrieved from the app, which may be slow. Useful if you have already
+                obtained a queryset of the account's groups.
+
+        Returns:
+            bool: True if the user is in the authorization domain, False otherwise.
+
+        Raises:
+            WorkspaceAccessAuthorizationDomainUnknownError: If some authorization domains are not managed by the app.
+        """
+        if not isinstance(account, Account):
+            raise ValueError("account must be an instance of `Account`.")
+        # Get the groups that are in the authorization domain.
+        auth_domains = self.authorization_domains.all()
+        # Separate into managed by app and not managed by app.
+        groups_managed_by_app = auth_domains.filter(is_managed_by_app=True)
+        groups_not_managed_by_app = auth_domains.filter(is_managed_by_app=False)
+        # Get the list of groups that the user is in.
+        if not all_account_groups:
+            all_account_groups = account.get_all_groups()
+        # Check if the user is in any of the groups that are managed by the app.
+        if len(set(groups_managed_by_app).difference(set(all_account_groups))) == 0:
+            # Now check if any are not managed by the app - this would be an "unknown" case.
+            if groups_not_managed_by_app.exists():
+                raise exceptions.WorkspaceAccessAuthorizationDomainUnknownError(
+                    "At least one auth domain is not managed by the app."
+                )
+            else:
+                return True
+        else:
+            return False
+
+    def has_group_in_authorization_domain(self, group, all_parent_groups=None):
+        """Check if a group is in the authorization domain(s) for this workspace.
+
+        Args:
+            group (ManagedGroup): The group to check.
+            all_parent_groups (list): A list of all groups that the group is in (directly and indirectly).
+                If not provided, it will be retrieved from the app, which may be slow. Useful if you have already
+                obtained a queryset of the account's groups.
+
+        Returns:
+            bool: True if the group is in the authorization domain, False otherwise.
+
+        Raises:
+            ValueError: If the group is not an instance of ManagedGroup.
+            WorkspaceAccessAuthorizationDomainUnknownError: If some authorization domains are not managed by the app.
+        """
+        if not isinstance(group, ManagedGroup):
+            raise ValueError("group must be an instance of `ManagedGroup`.")
+        # Get the groups that are in the authorization domain.
+        auth_domains = self.authorization_domains.all()
+        # Separate into managed by app and not managed by app.
+        groups_managed_by_app = auth_domains.filter(is_managed_by_app=True)
+        groups_not_managed_by_app = auth_domains.filter(is_managed_by_app=False)
+        # Get the list of groups that the user is in.
+        if not all_parent_groups:
+            all_parent_groups = group.get_all_parents()
+        # Check if the user is in any of the groups that are managed by the app.
+        if len(set(groups_managed_by_app).difference(set(all_parent_groups))) == 0:
+            # Now check if any are not managed by the app - this would be an "unknown" case.
+            if groups_not_managed_by_app.exists():
+                raise exceptions.WorkspaceAccessAuthorizationDomainUnknownError(
+                    "At least one auth domain is not managed by the app."
+                )
+            else:
+                return True
+        else:
+            return False
+
+    def is_shared_with_account(self, account, all_account_groups=None):
+        """Check if the workspace is shared with any groups the account is in.
+
+        Args:
+            account (Account): The account to check.
+
+        Returns:
+            bool: True if the user is in the authorization domain, False otherwise.
+
+        Raises:
+            WorkspaceAccessSharingUnknownError: If the code cannot determine whether the workspace is shared or not.
+        """
+        if not isinstance(account, Account):
+            raise ValueError("account must be an instance of `Account`.")
+        # Get the list of groups that the workspace is shared with.
+        workspace_groups = ManagedGroup.objects.filter(workspacegroupsharing__workspace=self)
+        # Get the list of groups that the account is in.
+        if not all_account_groups:
+            all_account_groups = account.get_all_groups()
+        # Check if any of the groups that the workspace is shared with are in the account's groups.
+        if len(set(workspace_groups).intersection(set(all_account_groups))) > 0:
+            return True
+        else:
+            if workspace_groups.filter(is_managed_by_app=False).exists():
+                raise exceptions.WorkspaceAccessSharingUnknownError(
+                    "Workspace is shared with some groups that are not managed by the app."
+                )
+            return False
+
+    def is_shared_with_group(self, group, all_parent_groups=None):
+        """Check if the workspace is shared with any parent groups of the group.
+
+        Args:
+            group (ManagedGroup): The group to check.
+
+        Returns:
+            bool: True if the group is in the authorization domain, False otherwise.
+
+        Raises:
+            WorkspaceAccessSharingUnknownError: If the code cannot determine whether the workspace is shared or not.
+        """
+        if not isinstance(group, ManagedGroup):
+            raise ValueError("group must be an instance of `ManagedGroup`.")
+        # Get the list of groups that the workspace is shared with.
+        workspace_groups = ManagedGroup.objects.filter(workspacegroupsharing__workspace=self)
+        # Get the list of groups that the account is in.
+        if not all_parent_groups:
+            all_parent_groups = group.get_all_parents()
+        # Check if any of the groups that the workspace is shared with are in the account's groups.
+        if len(set(workspace_groups).intersection(set(all_parent_groups))) > 0:
+            return True
+        else:
+            if workspace_groups.filter(is_managed_by_app=False).exists():
+                raise exceptions.WorkspaceAccessSharingUnknownError(
+                    "Workspace is shared with some groups that are not managed by the app."
+                )
+            return False
+
+    def is_accessible_by_account(self, account, all_account_groups=None):
+        """Check if an account has access to a workspace.
+
+        Args:
+            account (Account): The account to check.
+
+        Returns:
+            bool: True if the account has access, False otherwise.
+
+        Raises:
+            ValueError: If the account is not an instance of Account.
+            WorkspaceAccessUnknownError: If the code cannot determine both sharing status and auth domain status.
+            WorkspaceAccessSharingUnknownError: If the code cannot determine sharing status.
+            WorkspaceAccessAuthorizationDomainUnknownError: If the code cannot determine auth domain status.
+        """
+        if not isinstance(account, Account):
+            raise ValueError("account must be an instance of `Account`.")
+        if not all_account_groups:
+            all_account_groups = account.get_all_groups()
+        # First check sharing, then check auth domain membership.
+        try:
+            is_shared = self.is_shared_with_account(account, all_account_groups=all_account_groups)
+            if not is_shared:
+                return False
+        except exceptions.WorkspaceAccessSharingUnknownError as e:
+            try:
+                in_auth_domain = self.has_account_in_authorization_domain(
+                    account, all_account_groups=all_account_groups
+                )
+            except exceptions.WorkspaceAccessAuthorizationDomainUnknownError:
+                # In this case, we don't know sharing status OR auth domain status.
+                raise exceptions.WorkspaceAccessUnknownError(
+                    "Workspace sharing and auth domain status is unknown for {}.".format(account)
+                )
+            # If we don't know if it's shared but the account is not in the auth domain, they don't have access.
+            # If the account is in the auth domain, then we should re-raise the sharing exception.
+            if not in_auth_domain:
+                return False
+            else:
+                raise e
+        else:
+            # If we've gotten here, sharing is either False or True.
+            # Check auth domain membership. If it is unknown, this method raises the correct exception.
+            in_auth_domain = self.has_account_in_authorization_domain(account, all_account_groups=all_account_groups)
+            return in_auth_domain and is_shared
 
 
 class BaseWorkspaceData(models.Model):

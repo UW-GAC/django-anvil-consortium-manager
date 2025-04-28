@@ -5,6 +5,41 @@ from . import models
 from .adapters.workspace import workspace_adapter_registry
 
 
+class BooleanIconColumn(tables.BooleanColumn):
+    """A column that displays a boolean value using boostrap icons."""
+
+    def __init__(
+        self,
+        show_false_icon=False,
+        true_color="green",
+        false_color="red",
+        true_icon="check-circle-fill",
+        false_icon="x-circle-fill",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.show_false_icon = show_false_icon
+        self.true_color = true_color
+        self.false_color = false_color
+        self.true_icon = true_icon
+        self.false_icon = false_icon
+
+    def render(self, value, record, bound_column):
+        value = self._get_bool_value(record, value, bound_column)
+        if value:
+            rendered_value = mark_safe(
+                f"""<i class="bi bi-{self.true_icon} bi-align-center px-2" style="color: {self.true_color};"></i>"""
+            )
+        else:
+            if self.show_false_icon:
+                rendered_value = mark_safe(
+                    f"""<i class="bi bi-{self.false_icon} bi-align-center px-2" style="color: {self.false_color};"></i>"""  # noqa: E501
+                )
+            else:
+                rendered_value = ""
+        return rendered_value
+
+
 class BillingProjectStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
@@ -15,6 +50,7 @@ class BillingProjectStaffTable(tables.Table):
         orderable=False,
         accessor="workspace_set__count",
     )
+    has_app_as_user = BooleanIconColumn(show_false_icon=True)
 
     class Meta:
         model = models.BillingProject
@@ -25,6 +61,7 @@ class AccountStaffTable(tables.Table):
     """Class to display a BillingProject table."""
 
     email = tables.Column(linkify=True)
+    is_service_account = BooleanIconColumn()
 
     class Meta:
         model = models.Account
@@ -56,6 +93,7 @@ class ManagedGroupStaffTable(tables.Table):
         orderable=False,
         accessor="groupaccountmembership_set__count",
     )
+    is_managed_by_app = BooleanIconColumn(show_false_icon=True)
 
     class Meta:
         model = models.ManagedGroup
@@ -152,12 +190,31 @@ class GroupGroupMembershipStaffTable(tables.Table):
         return "See details"
 
 
+class WorkspaceAccessUnknownStaffTable(WorkspaceStaffTable):
+    """Class to render a WorkspaceStaffTable but include information about why access is unknown.
+
+    Requires the Workspace objects to be modified to have sharing_unknown and auth_domain_unknown boolean fields."""
+
+    sharing_known = BooleanIconColumn(
+        verbose_name="Is shared?", show_false_icon=True, false_icon="question-circle-fill"
+    )
+    auth_domain_known = BooleanIconColumn(
+        verbose_name="In auth domain?", show_false_icon=True, false_icon="question-circle-fill"
+    )
+
+    class Meta(WorkspaceStaffTable.Meta):
+        exclude = (
+            "created",
+            "number_groups",
+        )
+
+
 class GroupAccountMembershipStaffTable(tables.Table):
     """Class to render a GroupAccountMembership table."""
 
     pk = tables.Column(linkify=True, verbose_name="Details", orderable=False)
     account = tables.Column(linkify=True)
-    is_service_account = tables.BooleanColumn(accessor="account__is_service_account")
+    is_service_account = BooleanIconColumn(accessor="account__is_service_account")
     status = tables.Column(accessor="account__status")
     group = tables.Column(linkify=True)
     role = tables.Column()
@@ -178,7 +235,7 @@ class WorkspaceGroupSharingStaffTable(tables.Table):
     workspace = tables.Column(linkify=True)
     group = tables.Column(linkify=True)
     access = tables.Column()
-    can_compute = tables.BooleanColumn(verbose_name="Compute allowed?")
+    can_compute = BooleanIconColumn(verbose_name="Compute allowed?")
     last_update = tables.DateTimeColumn(verbose_name="Last update", accessor="modified")
 
     class Meta:

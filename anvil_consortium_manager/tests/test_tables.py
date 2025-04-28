@@ -6,6 +6,63 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from . import factories
 
 
+class BooleanIconColumnTest(TestCase):
+    """Tests for the BooleanIconColumn class."""
+
+    def test_render_default(self):
+        """render method with defaults."""
+        column = tables.BooleanIconColumn()
+        value = column.render(True, None, None)
+        self.assertIn("bi-check-circle-fill", value)
+        self.assertIn("green", value)
+        value = column.render(False, None, None)
+        self.assertEqual(value, "")
+
+    def test_render_show_false_icon(self):
+        """render method with defaults."""
+        column = tables.BooleanIconColumn(show_false_icon=True)
+        value = column.render(True, None, None)
+        self.assertIn("bi-check-circle-fill", value)
+        self.assertIn("green", value)
+        value = column.render(False, None, None)
+        self.assertIn("bi-x-circle-fill", value)
+        self.assertIn("red", value)
+
+    def test_true_color(self):
+        column = tables.BooleanIconColumn(true_color="blue")
+        value = column.render(True, None, None)
+        self.assertIn("bi-check-circle-fill", value)
+        self.assertIn("blue", value)
+        value = column.render(False, None, None)
+        self.assertEqual(value, "")
+
+    def test_true_icon(self):
+        column = tables.BooleanIconColumn(true_icon="dash")
+        value = column.render(True, None, None)
+        self.assertIn("bi-dash", value)
+        self.assertIn("green", value)
+        value = column.render(False, None, None)
+        self.assertEqual(value, "")
+
+    def test_false_color(self):
+        column = tables.BooleanIconColumn(show_false_icon=True, false_color="blue")
+        value = column.render(False, None, None)
+        self.assertIn("bi-x-circle-fill", value)
+        self.assertIn("blue", value)
+        value = column.render(True, None, None)
+        self.assertIn("bi-check-circle-fill", value)
+        self.assertIn("green", value)
+
+    def test_false_icon(self):
+        column = tables.BooleanIconColumn(show_false_icon=True, false_icon="dash")
+        value = column.render(False, None, None)
+        self.assertIn("bi-dash", value)
+        self.assertIn("red", value)
+        value = column.render(True, None, None)
+        self.assertIn("bi-check-circle-fill", value)
+        self.assertIn("green", value)
+
+
 class BillingProjectStaffTableTest(TestCase):
     model = models.BillingProject
     model_factory = factories.BillingProjectFactory
@@ -213,6 +270,31 @@ class WorkspaceStaffTableTest(TestCase):
         # self.assertEqual(table.rows[0].get_cell("number_groups"), 0)
         # self.assertEqual(table.rows[1].get_cell("number_groups"), 1)
         # self.assertEqual(table.rows[2].get_cell("number_groups"), 2)
+
+
+class WorkspaceAccessUnknownStaffTableTest(TestCase):
+    table_class = tables.WorkspaceAccessUnknownStaffTable
+
+    def test_row_count_with_no_objects(self):
+        table = self.table_class([])
+        self.assertEqual(len(table.rows), 0)
+
+    def test_row_count_with_one_object(self):
+        workspace = factories.WorkspaceFactory.create()
+        workspace.sharing_unknown = True
+        workspace.auth_domain_unknown = True
+        table = self.table_class([workspace])
+        self.assertEqual(len(table.rows), 1)
+
+    def test_row_count_with_two_objects(self):
+        workspace_1 = factories.WorkspaceFactory.create()
+        workspace_1.sharing_unknown = True
+        workspace_1.auth_domain_unknown = True
+        workspace_2 = factories.WorkspaceFactory.create()
+        workspace_2.sharing_unknown = False
+        workspace_2.auth_domain_unknown = True
+        table = self.table_class([workspace_1, workspace_2])
+        self.assertEqual(len(table.rows), 2)
 
 
 class GroupGroupMembershipStaffTableTest(TestCase):
