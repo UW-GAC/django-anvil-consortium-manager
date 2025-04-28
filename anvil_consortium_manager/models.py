@@ -832,7 +832,7 @@ class Workspace(TimeStampedModel):
 
         return workspace
 
-    def has_in_authorization_domain(self, account, account_groups=None):
+    def has_account_in_authorization_domain(self, account, account_groups=None):
         """Check if an account is in the authorization domain(s) for this workspace.
 
         Args:
@@ -869,7 +869,7 @@ class Workspace(TimeStampedModel):
         else:
             return False
 
-    def is_shared_with(self, account, account_groups=None):
+    def is_shared_with_account(self, account, account_groups=None):
         """Check if the workspace is shared with any groups the account is in.
 
         Args:
@@ -898,7 +898,7 @@ class Workspace(TimeStampedModel):
                 )
             return False
 
-    def is_accessible_by(self, account, account_groups=None):
+    def is_accessible_by_account(self, account, account_groups=None):
         """Check if an account has access to a workspace.
 
         Args:
@@ -919,12 +919,12 @@ class Workspace(TimeStampedModel):
             account_groups = account.get_all_groups()
         # First check sharing, then check auth domain membership.
         try:
-            is_shared = self.is_shared_with(account, account_groups=account_groups)
+            is_shared = self.is_shared_with_account(account, account_groups=account_groups)
             if not is_shared:
                 return False
         except exceptions.WorkspaceAccountSharingUnknownError as e:
             try:
-                in_auth_domain = self.has_in_authorization_domain(account, account_groups=account_groups)
+                in_auth_domain = self.has_account_in_authorization_domain(account, account_groups=account_groups)
             except exceptions.WorkspaceAccountAuthorizationDomainUnknownError:
                 # In this case, we don't know sharing status OR auth domain status.
                 raise exceptions.WorkspaceAccountAccessUnknownError(
@@ -939,7 +939,7 @@ class Workspace(TimeStampedModel):
         else:
             # If we've gotten here, sharing is either False or True.
             # Check auth domain membership. If it is unknown, this method raises the correct exception.
-            in_auth_domain = self.has_in_authorization_domain(account, account_groups=account_groups)
+            in_auth_domain = self.has_account_in_authorization_domain(account, account_groups=account_groups)
             return in_auth_domain and is_shared
 
 

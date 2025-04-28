@@ -180,7 +180,7 @@ class AccountDetail(
             | Q(workspacegroupsharing__group__is_managed_by_app=False)
         ):
             try:
-                if workspace.is_accessible_by(self.object, account_groups=account_groups):
+                if workspace.is_accessible_by_account(self.object, account_groups=account_groups):
                     accessible_workspaces.append(workspace)
                 else:
                     pass
@@ -1055,7 +1055,7 @@ class WorkspaceDetail(
         try:
             account = self.request.user.account
             try:
-                has_access = self.object.is_accessible_by(account)
+                has_access = self.object.is_accessible_by_account(account)
             except exceptions.WorkspaceAccountAccessUnknownError:
                 has_access = None
         except models.Account.DoesNotExist:
