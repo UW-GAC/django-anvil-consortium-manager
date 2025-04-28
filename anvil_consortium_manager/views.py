@@ -185,17 +185,17 @@ class AccountDetail(
                 else:
                     pass
             # Determine why access is not known, and add fields to be used in the table later.
-            except exceptions.WorkspaceAccountSharingUnknownError:
+            except exceptions.WorkspaceAccessSharingUnknownError:
                 # This means that the app can't determine workspace access due to sharing.
                 workspace.sharing_known = False
                 workspace.auth_domain_known = True
                 unknown_workspaces.append(workspace)
-            except exceptions.WorkspaceAccountAuthorizationDomainUnknownError:
+            except exceptions.WorkspaceAccessAuthorizationDomainUnknownError:
                 # This means that the app can't determine workspace access due to auth domain membership.
                 workspace.sharing_known = True
                 workspace.auth_domain_known = False
                 unknown_workspaces.append(workspace)
-            except exceptions.WorkspaceAccountAccessUnknownError:
+            except exceptions.WorkspaceAccessUnknownError:
                 workspace.sharing_known = False
                 workspace.auth_domain_known = False
                 unknown_workspaces.append(workspace)
@@ -1056,7 +1056,7 @@ class WorkspaceDetail(
             account = self.request.user.account
             try:
                 has_access = self.object.is_accessible_by_account(account)
-            except exceptions.WorkspaceAccountAccessUnknownError:
+            except exceptions.WorkspaceAccessUnknownError:
                 has_access = None
         except models.Account.DoesNotExist:
             has_access = False

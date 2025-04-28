@@ -25,13 +25,13 @@ class AnVILGroupNotFound(Exception):
     """Exception to be raised when a group is not found on AnVIL."""
 
 
-class WorkspaceAccountAccessUnknownError(Exception):
+class WorkspaceAccessUnknownError(Exception):
     """Exception to be raised when the app cannot determine the access to a workspace."""
 
 
-class WorkspaceAccountSharingUnknownError(WorkspaceAccountAccessUnknownError):
+class WorkspaceAccessSharingUnknownError(WorkspaceAccessUnknownError):
     """Exception to be raised when the app cannot determine the access to a workspace due to sharing."""
 
 
-class WorkspaceAccountAuthorizationDomainUnknownError(WorkspaceAccountAccessUnknownError):
+class WorkspaceAccessAuthorizationDomainUnknownError(WorkspaceAccessUnknownError):
     """Exception to be raised when the app cannot determine the access to a workspace due to auth domain membership."""

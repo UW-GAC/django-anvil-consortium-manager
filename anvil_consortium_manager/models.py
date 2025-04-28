@@ -845,7 +845,7 @@ class Workspace(TimeStampedModel):
             bool: True if the user is in the authorization domain, False otherwise.
 
         Raises:
-            WorkspaceAccountAuthorizationDomainUnknownError: If any authorization domains are not managed by the app.
+            WorkspaceAccessAuthorizationDomainUnknownError: If some authorization domains are not managed by the app.
         """
         if not isinstance(account, Account):
             raise ValueError("account must be an instance of `Account`.")
@@ -861,7 +861,45 @@ class Workspace(TimeStampedModel):
         if len(set(groups_managed_by_app).difference(set(all_account_groups))) == 0:
             # Now check if any are not managed by the app - this would be an "unknown" case.
             if groups_not_managed_by_app.exists():
-                raise exceptions.WorkspaceAccountAuthorizationDomainUnknownError(
+                raise exceptions.WorkspaceAccessAuthorizationDomainUnknownError(
+                    "At least one auth domain is not managed by the app."
+                )
+            else:
+                return True
+        else:
+            return False
+
+    def has_group_in_authorization_domain(self, group, all_parent_groups=None):
+        """Check if a group is in the authorization domain(s) for this workspace.
+
+        Args:
+            group (ManagedGroup): The group to check.
+            all_parent_groups (list): A list of all groups that the group is in (directly and indirectly).
+                If not provided, it will be retrieved from the app, which may be slow. Useful if you have already
+                obtained a queryset of the account's groups.
+
+        Returns:
+            bool: True if the group is in the authorization domain, False otherwise.
+
+        Raises:
+            ValueError: If the group is not an instance of ManagedGroup.
+            WorkspaceAccessAuthorizationDomainUnknownError: If some authorization domains are not managed by the app.
+        """
+        if not isinstance(group, ManagedGroup):
+            raise ValueError("group must be an instance of `ManagedGroup`.")
+        # Get the groups that are in the authorization domain.
+        auth_domains = self.authorization_domains.all()
+        # Separate into managed by app and not managed by app.
+        groups_managed_by_app = auth_domains.filter(is_managed_by_app=True)
+        groups_not_managed_by_app = auth_domains.filter(is_managed_by_app=False)
+        # Get the list of groups that the user is in.
+        if not all_parent_groups:
+            all_parent_groups = group.get_all_parents()
+        # Check if the user is in any of the groups that are managed by the app.
+        if len(set(groups_managed_by_app).difference(set(all_parent_groups))) == 0:
+            # Now check if any are not managed by the app - this would be an "unknown" case.
+            if groups_not_managed_by_app.exists():
+                raise exceptions.WorkspaceAccessAuthorizationDomainUnknownError(
                     "At least one auth domain is not managed by the app."
                 )
             else:
@@ -879,7 +917,7 @@ class Workspace(TimeStampedModel):
             bool: True if the user is in the authorization domain, False otherwise.
 
         Raises:
-            WorkspaceAccountSharingUnknownError: If the code cannot determine whether the workspace is shared or not.
+            WorkspaceAccessSharingUnknownError: If the code cannot determine whether the workspace is shared or not.
         """
         if not isinstance(account, Account):
             raise ValueError("account must be an instance of `Account`.")
@@ -893,7 +931,36 @@ class Workspace(TimeStampedModel):
             return True
         else:
             if workspace_groups.filter(is_managed_by_app=False).exists():
-                raise exceptions.WorkspaceAccountSharingUnknownError(
+                raise exceptions.WorkspaceAccessSharingUnknownError(
+                    "Workspace is shared with some groups that are not managed by the app."
+                )
+            return False
+
+    def is_shared_with_group(self, group, all_parent_groups=None):
+        """Check if the workspace is shared with any parent groups of the group.
+
+        Args:
+            group (ManagedGroup): The group to check.
+
+        Returns:
+            bool: True if the group is in the authorization domain, False otherwise.
+
+        Raises:
+            WorkspaceAccessSharingUnknownError: If the code cannot determine whether the workspace is shared or not.
+        """
+        if not isinstance(group, ManagedGroup):
+            raise ValueError("group must be an instance of `ManagedGroup`.")
+        # Get the list of groups that the workspace is shared with.
+        workspace_groups = ManagedGroup.objects.filter(workspacegroupsharing__workspace=self)
+        # Get the list of groups that the account is in.
+        if not all_parent_groups:
+            all_parent_groups = group.get_all_parents()
+        # Check if any of the groups that the workspace is shared with are in the account's groups.
+        if len(set(workspace_groups).intersection(set(all_parent_groups))) > 0:
+            return True
+        else:
+            if workspace_groups.filter(is_managed_by_app=False).exists():
+                raise exceptions.WorkspaceAccessSharingUnknownError(
                     "Workspace is shared with some groups that are not managed by the app."
                 )
             return False
@@ -910,8 +977,8 @@ class Workspace(TimeStampedModel):
         Raises:
             ValueError: If the account is not an instance of Account.
             WorkspaceAccessUnknownError: If the code cannot determine both sharing status and auth domain status.
-            WorkspaceAccountSharingUnknownError: If the code cannot determine sharing status.
-            WorkspaceAccountAuthorizationDomainUnknownError: If the code cannot determine auth domain status.
+            WorkspaceAccessSharingUnknownError: If the code cannot determine sharing status.
+            WorkspaceAccessAuthorizationDomainUnknownError: If the code cannot determine auth domain status.
         """
         if not isinstance(account, Account):
             raise ValueError("account must be an instance of `Account`.")
@@ -922,14 +989,14 @@ class Workspace(TimeStampedModel):
             is_shared = self.is_shared_with_account(account, all_account_groups=all_account_groups)
             if not is_shared:
                 return False
-        except exceptions.WorkspaceAccountSharingUnknownError as e:
+        except exceptions.WorkspaceAccessSharingUnknownError as e:
             try:
                 in_auth_domain = self.has_account_in_authorization_domain(
                     account, all_account_groups=all_account_groups
                 )
-            except exceptions.WorkspaceAccountAuthorizationDomainUnknownError:
+            except exceptions.WorkspaceAccessAuthorizationDomainUnknownError:
                 # In this case, we don't know sharing status OR auth domain status.
-                raise exceptions.WorkspaceAccountAccessUnknownError(
+                raise exceptions.WorkspaceAccessUnknownError(
                     "Workspace sharing and auth domain status is unknown for {}.".format(account)
                 )
             # If we don't know if it's shared but the account is not in the auth domain, they don't have access.
