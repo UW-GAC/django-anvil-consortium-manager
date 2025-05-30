@@ -6426,7 +6426,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:update",
+                "anvil_consortium_manager:workspaces:update:internal",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -6500,7 +6500,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertNotContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:update",
+                "anvil_consortium_manager:workspaces:update:internal",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -6574,7 +6574,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertNotContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:update",
+                "anvil_consortium_manager:workspaces:update:internal",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -6699,7 +6699,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:workspaces:update",
+                "anvil_consortium_manager:workspaces:update:internal",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -10646,7 +10646,7 @@ class WorkspaceUpdateTest(TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:workspaces:update", args=args)
+        return reverse("anvil_consortium_manager:workspaces:update:internal", args=args)
 
     def get_view(self):
         """Return the view being tested."""

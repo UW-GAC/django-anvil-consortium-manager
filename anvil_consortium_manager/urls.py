@@ -181,10 +181,18 @@ workspace_sharing_patterns = (
     "sharing",
 )
 
+workspace_update_patterns = (
+    [
+        path("", views.WorkspaceUpdate.as_view(), name="internal"),
+    ],
+    "update",
+)
+
 workspace_patterns = (
     [
         path("", views.WorkspaceLandingPage.as_view(), name="landing_page"),
         path("all/", views.WorkspaceList.as_view(), name="list_all"),
+        path("<slug:billing_project_slug>/<slug:workspace_slug>/update/", include(workspace_update_patterns)),
         path(
             "autocomplete/",
             views.WorkspaceAutocomplete.as_view(),
@@ -229,11 +237,11 @@ workspace_patterns = (
             "<slug:billing_project_slug>/<slug:workspace_slug>/sharing/",
             include(workspace_sharing_patterns),
         ),
-        path(
-            "<slug:billing_project_slug>/<slug:workspace_slug>/update/",
-            views.WorkspaceUpdate.as_view(),
-            name="update",
-        ),
+        # path(
+        #     "<slug:billing_project_slug>/<slug:workspace_slug>/update/",
+        #     views.WorkspaceUpdate.as_view(),
+        #     name="update",
+        # ),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/clone/<str:workspace_type>/",
             views.WorkspaceClone.as_view(),
