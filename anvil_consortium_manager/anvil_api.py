@@ -389,6 +389,23 @@ class AnVILAPIClient:
         updates = json.dumps(acl_updates)
         return self.auth_session.patch(url, 200, headers={"Content-type": "application/json"}, data=updates)
 
+    def update_workspace_requester_pays(self, workspace_namespace, workspace_name, requester_pays):
+        """Update the requester pays setting for a workspace.
+        You must be an owner of the workspace to use this method.
+
+        Calls the Rawls /api/workspaces/v2/{workspace_namespace}/{workspace_name}/settings PUT method.
+
+        Args:
+            workspace_namespace (str): The namespace (or billing project) of the workspace.
+            workspace_name (str): The name of the workspace.
+            requester_pays (bool): Whether to enable requester pays for the workspace.
+        Returns:
+            requests.Response
+        """
+        url = self.rawls_entry_point + "/api/workspaces/v2/{}/{}/settings".format(workspace_namespace, workspace_name)
+        setting = [{"config": {"enabled": requester_pays}, "settingType": "GcpBucketRequesterPays"}]
+        return self.auth_session.put(url, 200, headers={"Content-type": "application/json"}, data=json.dumps(setting))
+
 
 class AnVILAPISession(AuthorizedSession):
     """An authorized session for use with the AnVIL API.
