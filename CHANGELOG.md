@@ -1,6 +1,6 @@
 # Change log
 
-## 0.31.0 (Devel)
+## 0.31.0 (2025-06-03)
 
 * Add a new to update workspace requester pays status on AnVIL. Note that this removes the "is_requester_pays" field from the `WorkspaceForm`, since updates are now handled via the new `WorkspaceUpdateRequesterPays` view.
 
