@@ -136,7 +136,8 @@
   </p>
 
   <p>
-    <a href="{% url 'anvil_consortium_manager:workspaces:update:internal' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
+    <a href="{% url 'anvil_consortium_manager:workspaces:update:internal' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update ACM info</a>
+    <a href="{% url 'anvil_consortium_manager:workspaces:update:requester_pays' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update requester pays on AnVIL</a>
     {% if not object.is_locked %}
     <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
     {% endif %}

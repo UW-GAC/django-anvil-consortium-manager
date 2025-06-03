@@ -6436,6 +6436,16 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
+                "anvil_consortium_manager:workspaces:update:requester_pays",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
@@ -6510,6 +6520,16 @@ class WorkspaceDetailTest(TestCase):
         self.assertNotContains(
             response,
             reverse(
+                "anvil_consortium_manager:workspaces:update:requester_pays",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
                 "anvil_consortium_manager:workspaces:sharing:new",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
@@ -6575,6 +6595,16 @@ class WorkspaceDetailTest(TestCase):
             response,
             reverse(
                 "anvil_consortium_manager:workspaces:update:internal",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:requester_pays",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
