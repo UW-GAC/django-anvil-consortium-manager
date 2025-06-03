@@ -157,7 +157,6 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
             "billing_project",
             "name",
             "authorization_domains",
-            "is_requester_pays",
             "note",
         )
         widgets = {
@@ -194,6 +193,23 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                 # The workspace already exists - raise a Validation error.
                 raise ValidationError("Workspace with this Billing Project and Name already exists.")
         return self.cleaned_data
+
+
+class WorkspaceRequesterPaysForm(forms.ModelForm):
+    """Form to update the is_requester_pays field for a workspace."""
+
+    class Meta:
+        model = models.Workspace
+        fields = ("is_requester_pays",)
+        widgets = {
+            "is_requester_pays": forms.CheckboxInput(),
+        }
+        help_texts = {
+            "is_requester_pays": (
+                """If you change this box, the workspace's "requester pays" setting will be updated on AnVIL"""
+                """when you save your changes."""
+            )
+        }
 
 
 class WorkspaceImportForm(forms.Form):
