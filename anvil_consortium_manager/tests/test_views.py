@@ -10927,6 +10927,274 @@ class WorkspaceUpdateTest(TestCase):
         self.assertEqual(self.workspace.note, "Foo")
 
 
+class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for the WorkspaceUpdateRequesterPays view."""
+
+    api_success_code = 200
+
+    def setUp(self):
+        """Set up test class."""
+        # The superclass uses the responses package to mock API responses.
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with both view and edit permissions.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
+        )
+        workspace_data = factories.DefaultWorkspaceDataFactory.create()
+        self.workspace = workspace_data.workspace
+        self.api_url = self.api_client.rawls_entry_point + "/api/workspaces/v2/{}/{}/settings".format(
+            self.workspace.billing_project.name, self.workspace.name
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:workspaces:update:requester_pays", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceUpdateRequesterPays.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url("foo", "bar"))
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url("foo", "bar"),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_staff_view_permission(self):
+        """Raises permission denied if user has only view permission."""
+        user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
+        user_with_view_perm.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_with_view_perm
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_has_form_in_context(self):
+        """Response includes a form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceRequesterPaysForm)
+
+    def test_view_with_invalid_pk(self):
+        """Returns a 404 when the object doesn't exist."""
+        request = self.factory.get(self.get_url("foo", "bar"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug="foo",
+                workspace_slug="bar",
+            )
+
+    def test_view_with_invalid_billing_project(self):
+        """Returns a 404 when the billing project doesn't exist."""
+        request = self.factory.get(self.get_url("foo", self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug="foo",
+                workspace_slug=self.workspace.name,
+            )
+
+    def test_view_with_invalid_workspace(self):
+        """Returns a 404 when the workspace name doesn't exist."""
+        request = self.factory.get(self.get_url(self.workspace.billing_project.name, "foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=self.workspace.billing_project.name,
+                workspace_slug="foo",
+            )
+
+    def test_can_update_requester_pays_false_to_true(self):
+        """Can update is_requester_pays through the view."""
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_url,
+            status=self.api_success_code,
+            json={
+                "failures": {},
+                "successes": [{"config": {"enabled": True}, "settingType": "GcpBucketRequesterPays"}],
+            },
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "is_requester_pays": True,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.workspace.refresh_from_db()
+        self.assertTrue(self.workspace.is_requester_pays)
+        # History is added.
+        self.assertEqual(self.workspace.history.count(), 2)
+        self.assertEqual(self.workspace.history.latest().history_type, "~")
+
+    def test_can_update_requester_pays_true_to_false(self):
+        """Can update is_requester_pays through the view."""
+        self.workspace.is_requester_pays = True
+        self.workspace.save()
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_url,
+            status=self.api_success_code,
+            json={
+                "failures": {},
+                "successes": [{"config": {"enabled": False}, "settingType": "GcpBucketRequesterPays"}],
+            },
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "is_requester_pays": False,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.workspace.refresh_from_db()
+        self.assertFalse(self.workspace.is_requester_pays)
+        # History is added.
+        self.assertEqual(self.workspace.history.count(), 3)  # 3 because we modified the object above.
+        self.assertEqual(self.workspace.history.latest().history_type, "~")
+
+    def test_can_update_requester_pays_false_to_false(self):
+        """Can update is_requester_pays through the view."""
+        # No API calls should be made because nothing is changing.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "is_requester_pays": False,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.workspace.refresh_from_db()
+        self.assertFalse(self.workspace.is_requester_pays)
+
+    def test_can_update_requester_pays_true_to_true(self):
+        """Can update is_requester_pays through the view."""
+        self.workspace.is_requester_pays = True
+        self.workspace.save()
+        # No API calls should be made because nothing is changing.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "is_requester_pays": True,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.workspace.refresh_from_db()
+        self.assertTrue(self.workspace.is_requester_pays)
+
+    def test_redirects_to_object_detail(self):
+        """After successfully updating the object, view redirects to the object's detail page."""
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_url,
+            status=self.api_success_code,
+            json={
+                "failures": {},
+                "successes": [{"config": {"enabled": True}, "settingType": "GcpBucketRequesterPays"}],
+            },
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "is_requester_pays": True,
+            },
+        )
+        self.assertRedirects(response, self.workspace.get_absolute_url())
+
+    def test_success_message(self):
+        """Response includes a success message if successful."""
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_url,
+            status=self.api_success_code,
+            json={
+                "failures": {},
+                "successes": [{"config": {"enabled": True}, "settingType": "GcpBucketRequesterPays"}],
+            },
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "is_requester_pays": True,
+            },
+            follow=True,
+        )
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceUpdateRequesterPays.success_message, str(messages[0]))
+
+    def test_api_error_message(self):
+        """Shows a method if an AnVIL API error occurs."""
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_url,
+            status=500,
+            json={"message": "workspace update requester pays test error"},
+        )
+        # Need a client to check messages.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "is_requester_pays": True,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertIn("AnVIL API Error: workspace update requester pays test error", str(messages[0]))
+        # Make sure that no object is created.
+        self.workspace.refresh_from_db()
+        self.assertFalse(self.workspace.is_requester_pays)
+
+
 class WorkspaceListTest(TestCase):
     def setUp(self):
         """Set up test class."""

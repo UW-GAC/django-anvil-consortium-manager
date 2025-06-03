@@ -184,6 +184,7 @@ workspace_sharing_patterns = (
 workspace_update_patterns = (
     [
         path("", views.WorkspaceUpdate.as_view(), name="internal"),
+        path("requester_pays/", views.WorkspaceUpdateRequesterPays.as_view(), name="requester_pays"),
     ],
     "update",
 )
@@ -237,11 +238,6 @@ workspace_patterns = (
             "<slug:billing_project_slug>/<slug:workspace_slug>/sharing/",
             include(workspace_sharing_patterns),
         ),
-        # path(
-        #     "<slug:billing_project_slug>/<slug:workspace_slug>/update/",
-        #     views.WorkspaceUpdate.as_view(),
-        #     name="update",
-        # ),
         path(
             "<slug:billing_project_slug>/<slug:workspace_slug>/clone/<str:workspace_type>/",
             views.WorkspaceClone.as_view(),

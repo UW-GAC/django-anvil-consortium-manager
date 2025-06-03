@@ -763,6 +763,29 @@ class WorkspaceCloneFormMixinTest(TestCase):
         self.assertIn(auth_domain.name, form.errors["authorization_domains"][0])
 
 
+class WorkspaceRequesterPaysFormTest(TestCase):
+    """Tests for the WorkspaceRequesterPaysForm class."""
+
+    form_class = forms.WorkspaceRequesterPaysForm
+
+    def test_valid(self):
+        """Form is valid with necessary input."""
+        form_data = {
+            "is_requester_pays": True,
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+    def test_form_valid_blank_is_requester_pays(self):
+        """Form is valid when missing is_requester_pays."""
+        # This likely evaluates as False.
+        form_data = {
+            # "is_requester_pays": True,
+        }
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
+
 class GroupGroupMembershipFormTest(TestCase):
     form_class = forms.GroupGroupMembershipForm
 

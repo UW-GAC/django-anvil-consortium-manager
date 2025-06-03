@@ -196,6 +196,23 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
         return self.cleaned_data
 
 
+class WorkspaceRequesterPaysForm(forms.ModelForm):
+    """Form to update the is_requester_pays field for a workspace."""
+
+    class Meta:
+        model = models.Workspace
+        fields = ("is_requester_pays",)
+        widgets = {
+            "is_requester_pays": forms.CheckboxInput(),
+        }
+        help_texts = {
+            "is_requester_pays": (
+                """If you change this box, the workspace's "requester pays" setting will be updated on AnVIL"""
+                """when you save your changes."""
+            )
+        }
+
+
 class WorkspaceImportForm(forms.Form):
     """Form to import a workspace from AnVIL -- new version."""
 
