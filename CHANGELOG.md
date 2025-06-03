@@ -1,5 +1,9 @@
 # Change log
 
+## 0.31.0 (Devel)
+
+* Add a new to update workspace requester pays status on AnVIL. Note that this removes the "is_requester_pays" field from the `WorkspaceForm`, since updates are now handled via the new `WorkspaceUpdateRequesterPays` view.
+
 ## 0.30.1 (2025-03-07)
 
 * Only make additional API calls in `WorkspaceAudit.run_audit` if the app is an owner of the workspace.
