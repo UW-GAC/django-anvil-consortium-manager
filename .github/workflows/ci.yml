@@ -148,7 +148,7 @@ jobs:
       - name: Get version
         id: get-version
         run: |
-          export VERSION=`hatch version`
+          export VERSION=v`hatch version`
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Version set to ${VERSION}"
 
