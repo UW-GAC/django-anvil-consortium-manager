@@ -1,0 +1,13 @@
+sort-direction: ascending
+
+categories:
+  - title: "⬆️ Dependencies"
+    labels:
+      - "dependencies"
+      - "update-requirements-files"
+      - "combined-pr"
+
+template: |
+  ## What’s Changed
+
+  $CHANGES
