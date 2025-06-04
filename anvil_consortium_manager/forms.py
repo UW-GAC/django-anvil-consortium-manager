@@ -206,7 +206,7 @@ class WorkspaceRequesterPaysForm(forms.ModelForm):
         }
         help_texts = {
             "is_requester_pays": (
-                """If you change this box, the workspace's "requester pays" setting will be updated on AnVIL"""
+                """If you change this box, the workspace's "requester pays" setting will be updated on AnVIL """
                 """when you save your changes."""
             )
         }
