@@ -187,6 +187,13 @@ LOGGING = {
     "root": {"level": "INFO", "handlers": ["console"]},
 }
 
+# Auditing uses a cache, so set your preferred cache backend.
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+#         "LOCATION": "cache_table",
+#     }
+# }
 
 # django-crispy-forms
 # ------------------------------------------------------------------------------

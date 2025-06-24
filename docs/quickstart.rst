@@ -60,6 +60,20 @@ Required Settings
 
       SITE_ID = 1
 
+1. Set up caching. The app uses caching to improve the speed of auditing, so you will want to set your preferred cache backend following Django documentation.
+
+  For example, to use the db-backend cache, add the following to your settings file:
+
+  .. code-block:: python
+
+      CACHES = {
+          "default": {
+              "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+              "LOCATION": "auditor_cache",
+          }
+      }
+
+
 Optional settings
 ~~~~~~~~~~~~~~~~~
 
