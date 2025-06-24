@@ -1,5 +1,4 @@
 from django.core.exceptions import ImproperlyConfigured
-from django.utils import timezone
 
 
 class AnVILAuditMixin:
@@ -27,7 +26,7 @@ class AnVILAuditMixin:
     def get_context_data(self, *args, **kwargs):
         """Add audit results to the context data."""
         context = super().get_context_data(*args, **kwargs)
-        context["audit_timestamp"] = timezone.now()
+        context["audit_timestamp"] = self.audit_results.timestamp
         context["audit_ok"] = self.audit_results.ok()
         context["verified_table"] = self.audit_results.get_verified_table()
         context["error_table"] = self.audit_results.get_error_table()
