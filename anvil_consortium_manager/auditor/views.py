@@ -21,21 +21,21 @@ from .audit import workspaces as workspace_audit
 class BillingProjectAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Workspaces and display the results."""
 
-    template_name = "anvil_consortium_manager/billing_project_audit.html"
+    template_name = "auditor/billing_project_audit.html"
     audit_class = billing_project_audit.BillingProjectAudit
 
 
 class AccountAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Accounts and display the results."""
 
-    template_name = "anvil_consortium_manager/account_audit.html"
+    template_name = "auditor/account_audit.html"
     audit_class = account_audit.AccountAudit
 
 
 class ManagedGroupAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on ManagedGroups and display the results."""
 
-    template_name = "anvil_consortium_manager/managedgroup_audit.html"
+    template_name = "auditor/managedgroup_audit.html"
     audit_class = managed_group_audit.ManagedGroupAudit
 
 
@@ -49,7 +49,7 @@ class ManagedGroupMembershipAudit(
 
     model = ManagedGroup
     slug_field = "name"
-    template_name = "anvil_consortium_manager/managedgroup_membership_audit.html"
+    template_name = "auditor/managedgroup_membership_audit.html"
     message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
 
     def get(self, request, *args, **kwargs):
@@ -236,7 +236,7 @@ class IgnoredManagedGroupMembershipDelete(
 class WorkspaceAudit(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
     """View to run an audit on Workspaces and display the results."""
 
-    template_name = "anvil_consortium_manager/workspace_audit.html"
+    template_name = "auditor/workspace_audit.html"
     audit_class = workspace_audit.WorkspaceAudit
 
 
@@ -249,7 +249,7 @@ class WorkspaceSharingAudit(
     """View to run an audit on access to a specific Workspace and display the results."""
 
     model = Workspace
-    template_name = "anvil_consortium_manager/workspace_sharing_audit.html"
+    template_name = "auditor/workspace_sharing_audit.html"
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
