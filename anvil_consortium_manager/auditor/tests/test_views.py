@@ -62,7 +62,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.BillingProjectAudit.as_view()
+        return views.BillingProjectAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -213,7 +213,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.AccountAudit.as_view()
+        return views.AccountAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -382,7 +382,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupAudit.as_view()
+        return views.ManagedGroupAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -621,7 +621,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupMembershipAudit.as_view()
+        return views.ManagedGroupMembershipAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -991,7 +991,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
-            views.ManagedGroupMembershipAudit.message_not_managed_by_app,
+            views.ManagedGroupMembershipAuditRun.message_not_managed_by_app,
         )
 
     def test_group_does_not_exist_in_app(self):
@@ -1983,7 +1983,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceAudit.as_view()
+        return views.WorkspaceAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -2217,7 +2217,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceSharingAudit.as_view()
+        return views.WorkspaceSharingAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."

@@ -7,14 +7,14 @@ app_name = "auditor"
 
 billing_project_patterns = (
     [
-        path("", views.BillingProjectAudit.as_view(), name="all"),
+        path("", views.BillingProjectAuditRun.as_view(), name="all"),
     ],
     "billing_projects",
 )
 
 account_patterns = (
     [
-        path("audit/", views.AccountAudit.as_view(), name="all"),
+        path("audit/", views.AccountAuditRun.as_view(), name="all"),
     ],
     "accounts",
 )
@@ -31,7 +31,7 @@ managed_group_membership_by_group_ignore_patterns = (
 
 managed_group_membership_by_group_patterns = (
     [
-        path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+        path("", views.ManagedGroupMembershipAuditRun.as_view(), name="all"),
         path("ignored/", include(managed_group_membership_by_group_ignore_patterns)),
     ],
     "by_group",
@@ -46,7 +46,7 @@ managed_group_membership_patterns = (
 
 managed_group_patterns = (
     [
-        path("audit/", views.ManagedGroupAudit.as_view(), name="all"),
+        path("audit/", views.ManagedGroupAuditRun.as_view(), name="all"),
         path("membership/", include(managed_group_membership_patterns)),
     ],
     "managed_groups",
@@ -64,7 +64,7 @@ workspace_sharing_by_group_ignore_patterns = (
 
 workspace_sharing_by_group_patterns = (
     [
-        path("", views.WorkspaceSharingAudit.as_view(), name="all"),
+        path("", views.WorkspaceSharingAuditRun.as_view(), name="all"),
         path("ignored/", include(workspace_sharing_by_group_ignore_patterns)),
     ],
     "by_workspace",
@@ -79,7 +79,7 @@ workspace_sharing_patterns = (
 
 workspace_patterns = (
     [
-        path("", views.WorkspaceAudit.as_view(), name="all"),
+        path("", views.WorkspaceAuditRun.as_view(), name="all"),
         path("sharing/", include(workspace_sharing_patterns)),
     ],
     "workspaces",
