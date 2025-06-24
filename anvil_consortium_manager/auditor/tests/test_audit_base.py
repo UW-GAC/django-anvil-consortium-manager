@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.utils import timezone
 from django_tables2 import Table
 from faker import Faker
 
@@ -187,6 +188,11 @@ class AnVILAuditTest(TestCase):
         """Init method works as expected."""
         self.assertEqual(len(self.audit_results._model_instance_results), 0)
         self.assertEqual(len(self.audit_results._not_in_app_results), 0)
+
+    def test_timestamp(self):
+        """Timestamp is set by default."""
+        self.assertIsNotNone(self.audit_results.timestamp)
+        self.assertTrue(isinstance(self.audit_results.timestamp, timezone.datetime))
 
     def test_ok_no_results(self):
         """ok() returns True when there are no results."""

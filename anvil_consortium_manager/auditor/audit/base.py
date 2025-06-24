@@ -1,6 +1,7 @@
 from abc import ABC
 
 import django_tables2 as tables
+from django.utils import timezone
 
 
 # Audit classes for individual model instances:
@@ -100,6 +101,7 @@ class AnVILAudit(ABC):
         self._model_instance_results = []
         self._not_in_app_results = []
         self._ignored_results = []
+        self.timestamp = timezone.now()
 
     def ok(self):
         model_instances_ok = all([x.ok() for x in self._model_instance_results])
