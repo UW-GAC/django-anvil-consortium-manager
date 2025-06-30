@@ -23,7 +23,7 @@ class BillingProjectAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewm
     """View to run an audit on Workspaces and display the results."""
 
     audit_class = billing_project_audit.BillingProjectAudit
-    template_name = "auditor/billing_project_audit_run.html"
+    template_name = "auditor/billingproject_audit_run.html"
     cache_key = "billing_project_audit_results"
 
     def get_success_url(self):
@@ -37,7 +37,7 @@ class BillingProjectAuditReview(
 ):
     """View to review the results of a BillingProject audit."""
 
-    template_name = "auditor/billing_project_audit_review.html"
+    template_name = "auditor/billingproject_audit_review.html"
     cache_key = "billing_project_audit_results"
     audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:billing_projects:run"
 
@@ -79,7 +79,7 @@ class ManagedGroupAuditReview(
 ):
     """View to review the results of a ManagedGroup audit."""
 
-    template_name = "auditor/managed_group_audit_review.html"
+    template_name = "auditor/managedgroup_audit_review.html"
     cache_key = "managed_group_audit_results"
     audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:managed_groups:run"
 
@@ -88,7 +88,7 @@ class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmix
     """View to display the results of a ManagedGroup audit."""
 
     audit_class = managed_group_audit.ManagedGroupAudit
-    template_name = "auditor/managed_group_audit_run.html"
+    template_name = "auditor/managedgroup_audit_run.html"
     cache_key = "managed_group_audit_results"
 
     def get_success_url(self):
