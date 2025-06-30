@@ -6,22 +6,5 @@
 {% endblock main_header %}
 
 {% block audit_explanation %}
-<p>
-  A managed group is considered to be "Verified" if the following are true:
-</p>
 
-<ol>
-  <li>Each managed group in the app also exist on AnVIL.</li>
-  <li>The service account running the app has the same role (admin vs member) in the app as on AnVIL.</li>
-  <li>If the app is an admin of the group, the membership of each group in the app matches the membership on AnVIL.</li>
-</ol>
-
-<p>
-  Otherwise, one or more errors will be reported for that managed group in the "Errors" table.
-</p>
-
-<p>
-  The audit also checks for any managed groups that are not in the app but have the app service account as an Admin on AnVIL.
-  If any exist, they will be reported in the "Not in app" section.
-</p>
 {% endblock audit_explanation %}

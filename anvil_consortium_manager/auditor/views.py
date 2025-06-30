@@ -42,18 +42,58 @@ class BillingProjectAuditReview(
     audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:billing_projects:run"
 
 
-class AccountAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+class BillingProjectAccAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
+    """View to run an audit on BillingProjects and display the results."""
+
+    audit_class = billing_project_audit.BillingProjectAudit
+    template_name = "auditor/billing_project_audit_run.html"
+    cache_key = "billing_project_audit_results"
+
+    def get_success_url(self):
+        """Return the URL to redirect to after running the audit."""
+        return reverse("anvil_consortium_manager:auditor:billing_projects:review")
+
+
+class AccountAuditReview(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView):
+    """View to review the results of a Account audit."""
+
+    template_name = "auditor/account_audit_review.html"
+    cache_key = "account_audit_results"
+    audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:accounts:run"
+
+
+class AccountAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
     """View to run an audit on Accounts and display the results."""
 
-    template_name = "auditor/account_audit.html"
     audit_class = account_audit.AccountAudit
+    template_name = "auditor/account_audit_run.html"
+    cache_key = "account_audit_results"
+
+    def get_success_url(self):
+        """Return the URL to redirect to after running the audit."""
+        return reverse("anvil_consortium_manager:auditor:accounts:review")
 
 
-class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
-    """View to run an audit on ManagedGroups and display the results."""
+class ManagedGroupAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView
+):
+    """View to review the results of a ManagedGroup audit."""
 
-    template_name = "auditor/managedgroup_audit.html"
+    template_name = "auditor/managed_group_audit_review.html"
+    cache_key = "managed_group_audit_results"
+    audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:managed_groups:run"
+
+
+class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
+    """View to display the results of a ManagedGroup audit."""
+
     audit_class = managed_group_audit.ManagedGroupAudit
+    template_name = "auditor/managed_group_audit_run.html"
+    cache_key = "managed_group_audit_results"
+
+    def get_success_url(self):
+        """Return the URL to redirect to after running the audit."""
+        return reverse("anvil_consortium_manager:auditor:managed_groups:review")
 
 
 class ManagedGroupMembershipAuditRun(

@@ -15,7 +15,8 @@ billing_project_patterns = (
 
 account_patterns = (
     [
-        path("audit/", views.AccountAuditRun.as_view(), name="all"),
+        path("run/", views.AccountAuditRun.as_view(), name="run"),
+        path("review/", views.AccountAuditReview.as_view(), name="review"),
     ],
     "accounts",
 )
@@ -47,7 +48,8 @@ managed_group_membership_patterns = (
 
 managed_group_patterns = (
     [
-        path("audit/", views.ManagedGroupAuditRun.as_view(), name="all"),
+        path("run/", views.ManagedGroupAuditRun.as_view(), name="run"),
+        path("review/", views.ManagedGroupAuditReview.as_view(), name="review"),
         path("membership/", include(managed_group_membership_patterns)),
     ],
     "managed_groups",
