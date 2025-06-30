@@ -2,8 +2,9 @@ from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from django.forms import HiddenInput
 from django.http import Http404, HttpResponseRedirect
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, FormView, TemplateView, UpdateView
 from django.views.generic.detail import SingleObjectMixin
 from django_filters.views import FilterView
 from django_tables2.views import SingleTableMixin
@@ -18,11 +19,27 @@ from .audit import managed_groups as managed_group_audit
 from .audit import workspaces as workspace_audit
 
 
-class BillingProjectAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+class BillingProjectAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
     """View to run an audit on Workspaces and display the results."""
 
-    template_name = "auditor/billing_project_audit.html"
     audit_class = billing_project_audit.BillingProjectAudit
+    template_name = "auditor/billing_project_audit_run.html"
+    cache_key = "billing_project_audit_results"
+
+    def get_success_url(self):
+        """Return the URL to redirect to after running the audit."""
+        print("success")
+        return reverse("anvil_consortium_manager:auditor:billing_projects:review")
+
+
+class BillingProjectAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView
+):
+    """View to review the results of a BillingProject audit."""
+
+    template_name = "auditor/billing_project_audit_review.html"
+    cache_key = "billing_project_audit_results"
+    audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:billing_projects:run"
 
 
 class AccountAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):

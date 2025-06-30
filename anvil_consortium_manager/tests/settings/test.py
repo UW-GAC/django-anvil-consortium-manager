@@ -152,3 +152,15 @@ ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
 ANVIL_WORKSPACE_ADAPTERS = [
     "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
 ]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "test_anvil_audit_cache_table",
+        "OPTIONS": {
+            # This should be larger than the number of Workspaces + Groups + 4.
+            "MAX_ENTRIES": 1000,  # Maximum number of entries in the cache.
+        },
+        "TIMEOUT": None,  # Cache entries never expire.
+    }
+}

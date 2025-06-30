@@ -12,15 +12,18 @@
 {% block main_header %}
 {% endblock main_header %}
 
-{% if audit_ok %}
-<div class="alert alert-success" role="alert">
-  AnVIL audit did not detect any errors as of {{audit_timestamp|localtime}}.
+<div class="alert alert-{% if audit_ok %}success{% else %}danger{% endif %}" role="alert">
+  <p>
+    {% if audit_ok %}
+    No errors were detected in the last AnVIL audit.
+    {% else %}
+    Errors were detected in the last AnVIL audit.
+    {% endif %}
+  </p>
+
+    The audit was last run on <strong>{{audit_timestamp|localtime}}</strong>.
+    Results can be updated by clicking on the "Update audit" button at the bottom of the page.
 </div>
-{% else %}
-<div class="alert alert-danger" role="alert">
-  AnVIL audit detected errors as of {{audit_timestamp|localtime}}.
-</div>
-{% endif %}
 
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   {% block audit_explanation %}
@@ -128,5 +131,8 @@
 </div>
 {% endblock ignored %}
 
+
+{% block action_buttons %}
+{% endblock action_buttons %}
 
 {% endblock content %}

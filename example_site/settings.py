@@ -188,12 +188,17 @@ LOGGING = {
 }
 
 # Auditing uses a cache, so set your preferred cache backend.
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-#         "LOCATION": "cache_table",
-#     }
-# }
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "anvil_audit_cache_table",
+        "OPTIONS": {
+            # This should be larger than the number of Workspaces + Groups + 4.
+            "MAX_ENTRIES": 1000,  # Maximum number of entries in the cache.
+        },
+        "TIMEOUT": None,  # Cache entries never expire.
+    }
+}
 
 # django-crispy-forms
 # ------------------------------------------------------------------------------
@@ -239,3 +244,7 @@ ANVIL_WORKSPACE_ADAPTERS = [
 
 # Account adapter.
 # ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"  # Default.
+
+# Specify the name of the cache to use for the audit cache.
+# You can change this to a different cache if desired.
+# ANVIL_AUDIT_CACHE = "default"

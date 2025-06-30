@@ -28,3 +28,12 @@
 
 {% block not_in_app %}
 {% endblock not_in_app %}
+
+{% block action_buttons %}
+<div>
+  <p>
+    <a class="btn btn-primary" href="%url 'anvil_consortium_manager:auditor:billing_projects:audit:run' %">Update audit</a>
+  </p>
+
+</div>
+{% endblock action_buttons %}

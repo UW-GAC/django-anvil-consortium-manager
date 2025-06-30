@@ -7,7 +7,8 @@ app_name = "auditor"
 
 billing_project_patterns = (
     [
-        path("", views.BillingProjectAuditRun.as_view(), name="all"),
+        path("run/", views.BillingProjectAuditRun.as_view(), name="run"),
+        path("review/", views.BillingProjectAuditReview.as_view(), name="review"),
     ],
     "billing_projects",
 )
