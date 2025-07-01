@@ -3,7 +3,6 @@ from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
 from django.forms import Form
 from django.http import HttpResponseRedirect
-from django.urls import reverse
 
 from .. import app_settings
 from ..anvil_api import AnVILAPIError
@@ -77,7 +76,7 @@ class AnVILAuditReviewMixin:
         audit_results = self.get_audit_results()
         if audit_results is None:
             messages.error(self.request, self.error_no_cached_result)
-            return HttpResponseRedirect(reverse(self.get_audit_result_not_found_redirect_url()))
+            return HttpResponseRedirect(self.get_audit_result_not_found_redirect_url())
         self.audit_results = self.get_audit_results()
         return super().get(request, *args, **kwargs)
 

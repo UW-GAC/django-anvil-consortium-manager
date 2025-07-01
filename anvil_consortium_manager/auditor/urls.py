@@ -33,7 +33,8 @@ managed_group_membership_by_group_ignore_patterns = (
 
 managed_group_membership_by_group_patterns = (
     [
-        path("", views.ManagedGroupMembershipAuditRun.as_view(), name="all"),
+        path("run/", views.ManagedGroupMembershipAuditRun.as_view(), name="run"),
+        path("review/", views.ManagedGroupMembershipAuditReview.as_view(), name="review"),
         path("ignored/", include(managed_group_membership_by_group_ignore_patterns)),
     ],
     "by_group",

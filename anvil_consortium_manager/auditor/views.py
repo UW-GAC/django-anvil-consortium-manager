@@ -39,7 +39,9 @@ class BillingProjectAuditReview(
 
     template_name = "auditor/billingproject_audit_review.html"
     cache_key = "billing_project_audit_results"
-    audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:billing_projects:run"
+
+    def get_audit_result_not_found_redirect_url(self):
+        return reverse("anvil_consortium_manager:auditor:billing_projects:run")
 
 
 class BillingProjectAccAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
@@ -59,7 +61,9 @@ class AccountAuditReview(auth.AnVILConsortiumManagerStaffViewRequired, viewmixin
 
     template_name = "auditor/account_audit_review.html"
     cache_key = "account_audit_results"
-    audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:accounts:run"
+
+    def get_audit_result_not_found_redirect_url(self):
+        return reverse("anvil_consortium_manager:auditor:accounts:run")
 
 
 class AccountAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
@@ -81,7 +85,9 @@ class ManagedGroupAuditReview(
 
     template_name = "auditor/managedgroup_audit_review.html"
     cache_key = "managed_group_audit_results"
-    audit_result_not_found_redirect_url = "anvil_consortium_manager:auditor:managed_groups:run"
+
+    def get_audit_result_not_found_redirect_url(self):
+        return reverse("anvil_consortium_manager:auditor:managed_groups:run")
 
 
 class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
@@ -96,18 +102,27 @@ class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmix
         return reverse("anvil_consortium_manager:auditor:managed_groups:review")
 
 
-class ManagedGroupMembershipAuditRun(
-    auth.AnVILConsortiumManagerStaffViewRequired,
-    SingleObjectMixin,
-    viewmixins.AnVILAuditMixin,
-    TemplateView,
+class ManagedGroupMembershipAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, SingleObjectMixin, TemplateView
 ):
-    """View to run an audit on ManagedGroups and display the results."""
+    """View to review the results of a ManagedGroup audit."""
 
     model = ManagedGroup
     slug_field = "name"
-    template_name = "auditor/managedgroup_membership_audit.html"
+    template_name = "auditor/managedgroup_membership_audit_review.html"
     message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
+
+    def get_audit_result_not_found_redirect_url(self):
+        """Return the URL to redirect to if no audit results are found."""
+        return reverse(
+            "anvil_consortium_manager:auditor:managed_groups:membership:by_group:run", args=[self.object.name]
+        )
+
+    def get_cache_key(self):
+        return f"managed_group_membership_{self.object.pk}"
+
+    def get_audit_instance(self):
+        return managed_group_audit.ManagedGroupMembershipAudit(self.object)
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -123,8 +138,47 @@ class ManagedGroupMembershipAuditRun(
         # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
+
+class ManagedGroupMembershipAuditRun(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, SingleObjectMixin, FormView
+):
+    """View to display the results of a ManagedGroup audit."""
+
+    model = ManagedGroup
+    slug_field = "name"
+    audit_class = managed_group_audit.ManagedGroupAudit
+    template_name = "auditor/managedgroup_membership_audit_run.html"
+    message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
+
     def get_audit_instance(self):
         return managed_group_audit.ManagedGroupMembershipAudit(self.object)
+
+    def get_cache_key(self):
+        return f"managed_group_membership_{self.object.pk}"
+
+    def get_success_url(self):
+        """Return the URL to redirect to after running the audit."""
+        return reverse(
+            "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review", args=[self.object.name]
+        )
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().post(request, *args, **kwargs)
 
 
 class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
