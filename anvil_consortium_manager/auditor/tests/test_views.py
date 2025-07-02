@@ -171,6 +171,13 @@ class BillingProjectAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_post_errors(self):
         """post with audit errors."""
@@ -185,6 +192,13 @@ class BillingProjectAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_api_error(self):
         billing_project = BillingProjectFactory.create()
@@ -512,6 +526,13 @@ class AccountAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestC
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_post_errors(self):
         """post with audit errors."""
@@ -526,6 +547,13 @@ class AccountAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestC
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_api_error(self):
         account = AccountFactory.create()
@@ -903,6 +931,13 @@ class ManagedGroupAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, 
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_post_errors(self):
         """post with audit errors."""
@@ -918,6 +953,32 @@ class ManagedGroupAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, 
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
+
+    def test_post_not_in_app(self):
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_group_json("foo", "Admin")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_api_error(self):
         api_url = self.get_api_groups_url()
@@ -1292,7 +1353,36 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
 
     def test_post_one_verified(self):
         """audit_verified with one verified record."""
+        membership = GroupAccountMembershipFactory.create(group=self.group, role=GroupAccountMembership.MEMBER)
         # Group membership API call.
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[membership.account.email]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
+
+    def test_post_errors(self):
+        """post with audit errors."""
+        GroupAccountMembershipFactory.create(group=self.group, role=GroupAccountMembership.MEMBER)
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1310,26 +1400,40 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_post_errors(self):
-        """post with audit errors."""
+    def test_post_not_in_app(self):
+        # Group membership API call.
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
-            json=self.get_api_json_response_members(emails=[]),
+            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
         )
         api_url_admins = self.get_api_url_admins(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
             status=200,
-            json=self.get_api_json_response_admins(emails=["foo@bar.com"]),
+            json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_audit_one_ignored_record(self):
         """ignored_table with one ignored record."""
@@ -1351,6 +1455,13 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
     def test_audit_one_ignored_record_not_in_anvil(self):
         """The ignored record is not a group member in AnVIL."""
@@ -1372,6 +1483,13 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
     def test_api_error_members_call(self):
         api_url_members = self.get_api_url_members(self.group.name)
@@ -2781,6 +2899,13 @@ class WorkspaceAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, Tes
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_post_errors(self):
         """post with audit errors."""
@@ -2796,6 +2921,32 @@ class WorkspaceAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, Tes
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
+
+    def test_post_not_in_app(self):
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("foo", "bar", "OWNER")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_api_error(self):
         api_url = self.get_api_url()
@@ -3185,10 +3336,17 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
             self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
         )  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_post_errors(self):
         """post with audit errors."""
-        access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.READER)
         # Different access recorded.
         self.update_api_response(access.group.email, "WRITER")
         # Group membership API call.
@@ -3203,6 +3361,35 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
             self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
         )  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
+
+    def test_post_not_in_app(self):
+        self.update_api_response("foo@bar.com", "READER")
+        # Group membership API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_audit_one_ignored_record(self):
         """ignored_table with one ignored record."""
@@ -3219,6 +3406,13 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
             self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
         )  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
     def test_audit_one_ignored_record_not_in_anvil(self):
         """The ignored record is not a group member in AnVIL."""
@@ -3234,6 +3428,13 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
             self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
         )  # Runs successfully.
         self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
     def test_api_error_acl_call(self):
         self.anvil_response_mock.add(

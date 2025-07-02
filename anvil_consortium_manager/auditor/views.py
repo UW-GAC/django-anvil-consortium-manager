@@ -28,7 +28,6 @@ class BillingProjectAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewm
 
     def get_success_url(self):
         """Return the URL to redirect to after running the audit."""
-        print("success")
         return reverse("anvil_consortium_manager:auditor:billing_projects:review")
 
 
