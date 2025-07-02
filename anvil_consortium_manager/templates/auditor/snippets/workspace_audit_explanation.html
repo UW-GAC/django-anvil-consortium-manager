@@ -1,11 +1,3 @@
-{% extends "auditor/audit.html" %}
-{% block title %}Audit Workspaces{% endblock %}
-
-{% block main_header %}
-<h1>Workspace audit results</h1>
-{% endblock main_header %}
-
-{% block audit_explanation %}
 <p>
   A workspace in the app is considered to be "Verified" if the following are true:
 </p>
@@ -25,4 +17,3 @@
   The audit also checks for any workspaces that are not in the app but have the app service account as an owner on AnVIL.
   If any exist, they will be reported in the "Not in app" section.
 </p>
-{% endblock audit_explanation %}

@@ -83,7 +83,8 @@ workspace_sharing_patterns = (
 
 workspace_patterns = (
     [
-        path("", views.WorkspaceAuditRun.as_view(), name="all"),
+        path("run/", views.WorkspaceAuditRun.as_view(), name="run"),
+        path("review/", views.WorkspaceAuditReview.as_view(), name="review"),
         path("sharing/", include(workspace_sharing_patterns)),
     ],
     "workspaces",

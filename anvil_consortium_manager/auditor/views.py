@@ -344,11 +344,35 @@ class IgnoredManagedGroupMembershipDelete(
         return self.object.group.get_absolute_url()
 
 
-class WorkspaceAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
-    """View to run an audit on Workspaces and display the results."""
+class WorkspaceAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView
+):
+    """View to review the results of a Workspace audit."""
 
-    template_name = "auditor/workspace_audit.html"
+    template_name = "auditor/workspace_audit_review.html"
+    cache_key = "workspace_audit_results"
+
+    def get_audit_result_not_found_redirect_url(self):
+        return reverse("anvil_consortium_manager:auditor:workspaces:run")
+
+
+class WorkspaceAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
+    """View to display the results of a Workspace audit."""
+
     audit_class = workspace_audit.WorkspaceAudit
+    template_name = "auditor/workspace_audit_run.html"
+    cache_key = "workspace_audit_results"
+
+    def get_success_url(self):
+        """Return the URL to redirect to after running the audit."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:review")
+
+
+# class WorkspaceAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditMixin, TemplateView):
+#     """View to run an audit on Workspaces and display the results."""
+
+#     template_name = "auditor/workspace_audit.html"
+#     audit_class = workspace_audit.WorkspaceAudit
 
 
 class WorkspaceSharingAuditRun(
