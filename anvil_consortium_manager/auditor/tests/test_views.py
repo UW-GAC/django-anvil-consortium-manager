@@ -19,6 +19,7 @@ from anvil_consortium_manager.models import (
     Account,
     AnVILProjectManagerAccess,
     GroupAccountMembership,
+    WorkspaceGroupSharing,
 )
 from anvil_consortium_manager.tests.factories import (
     AccountFactory,
@@ -42,7 +43,12 @@ from ..audit.managed_groups import (
     ManagedGroupMembershipIgnoredResult,
     ManagedGroupMembershipNotInAppResult,
 )
-from ..audit.workspaces import WorkspaceAudit
+from ..audit.workspaces import (
+    WorkspaceAudit,
+    WorkspaceSharingAudit,
+    WorkspaceSharingIgnoredResult,
+    WorkspaceSharingNotInAppResult,
+)
 from . import factories
 
 fake = Faker()
@@ -1226,12 +1232,6 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
         )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(self.group.name), {})
-        print(self.get_url(self.group.name))
-        print(
-            reverse(
-                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review", args=[self.group.name]
-            )
-        )
         self.assertRedirects(
             response,
             reverse(
@@ -3009,24 +3009,25 @@ class WorkspaceAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
-class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the WorkspaceSharingAudit view."""
+class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
+    """Tests for the WorkspaceSharingAuditReview view."""
 
     def setUp(self):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
+        # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
             Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
+        self.workspace = WorkspaceFactory.create()
+        self.cache_key = "workspace_sharing_{}".format(self.workspace.pk)
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
         self.api_response = {"acl": {}}
         self.update_api_response(self.service_account_email, "OWNER", can_compute=True, can_share=True)
         # Create a workspace for use in tests.
-        self.workspace = WorkspaceFactory.create()
         self.api_url = (
             self.api_client.rawls_entry_point
             + "/api/workspaces/"
@@ -3035,10 +3036,6 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             + self.workspace.name
             + "/acl"
         )
-
-    def get_url(self, *args):
-        """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:all", args=args)
 
     def update_api_response(self, email, access, can_compute=False, can_share=False):
         """Return a paired down json for a single ACL, including the service account."""
@@ -3052,6 +3049,10 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
                 }
             }
         )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run", args=args)
 
     def get_view(self):
         """Return the view being tested."""
@@ -3068,13 +3069,6 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        # Group membership API call.
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
         self.assertEqual(response.status_code, 200)
@@ -3096,8 +3090,33 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
 
-    def test_template(self):
-        """Template loads successfully."""
+    def test_workspace_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid workspace slug."""
+        billing_project = BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(billing_project.name, self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=billing_project.name,
+                workspace_slug=self.workspace.name,
+            )
+
+    def test_billing_project_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid billing project slug."""
+        request = self.factory.get(self.get_url("foo", self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug=self.workspace.name)
+
+    def test_get_context_has_form(self):
+        """Context has the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("form", response.context_data)
+
+    def test_redirect_url(self):
+        """Redirects to the review view."""
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -3105,12 +3124,17 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertRedirects(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
+                args=[self.workspace.billing_project.name, self.workspace.name],
+            ),
+        )
 
-    def test_audit_verified(self):
+    def test_post_result_is_cached(self):
         """audit_verified is in the context data."""
-        # Group membership API call.
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -3118,12 +3142,34 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+        response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertEqual(response.status_code, 302)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, WorkspaceSharingAudit)
+        self.assertEqual(cached_audit_result.workspace, self.workspace)
 
-    def test_audit_verified_one_record(self):
+    def test_post_updates_existing_cache_result(self):
+        """audit_verified is in the context data."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        with freeze_time(timezone.now() - timezone.timedelta(days=1)):
+            cached_audit_result = WorkspaceSharingAudit(self.workspace)
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, cached_audit_result)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            self.client.force_login(self.user)
+            response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertEqual(response.status_code, 302)
+        new_cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertEqual(new_cached_audit_result.workspace, self.workspace)
+        self.assertEqual(new_cached_audit_result.timestamp, current_timestamp)
+
+    def test_post_one_verified(self):
         """audit_verified with one verified record."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.update_api_response(access.group.email, "READER")
@@ -3135,27 +3181,13 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("verified_table", response.context_data)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
 
-    def test_audit_errors(self):
-        """audit_errors is in the context data."""
-        # Group membership API call.
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
-
-    def test_audit_errors_one_record(self):
-        """audit_errors with one error record."""
+    def test_post_errors(self):
+        """post with audit errors."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         # Different access recorded.
         self.update_api_response(access.group.email, "WRITER")
@@ -3167,70 +3199,10 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("error_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 1)
-
-    def test_audit_not_in_app(self):
-        """audit_not_in_app is in the context data."""
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-            # Admin insetad of member.
-            # json=self.get_api_group_members_json_response(),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
-
-    def test_audit_not_in_app_one_record(self):
-        """audit_not_in_app with one record not in app."""
-        self.update_api_response("foo@bar.com", "READER")
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
-
-    def test_audit_not_in_app_link_to_ignore(self):
-        """Link to ignore create view appears when a not_in_app result is found."""
-        self.update_api_response("foo@bar.com", "READER")
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        expected_url = reverse(
-            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:new",
-            args=[self.workspace.billing_project.name, self.workspace.name, "foo@bar.com"],
-        )
-        self.assertIn(expected_url, response.content.decode("utf-8"))
-
-    def test_audit_ignored(self):
-        """ignored_table is in the context data."""
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
 
     def test_audit_one_ignored_record(self):
         """ignored_table with one ignored record."""
@@ -3243,13 +3215,13 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
 
     def test_audit_one_ignored_record_not_in_anvil(self):
-        """The ignored record does not have the workspace shared with them in AnVIL."""
+        """The ignored record is not a group member in AnVIL."""
         factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
         self.anvil_response_mock.add(
             responses.GET,
@@ -3258,41 +3230,117 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
 
-    def test_audit_ok_is_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error_acl_call(self):
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
-            status=200,
-            json=self.api_response,
-            # Admin insetad of member.
-            # json=self.get_api_group_members_json_response(),
+            status=500,
+            json={"message": "api error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], True)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get(self.cache_key))
+        # A message exists.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
 
-    def test_audit_ok_is_not_ok(self):
-        """audit_ok when audit_results.ok() is False."""
-        self.update_api_response("foo@bar.com", "READER")
+    def test_api_error_does_not_update_cached_result(self):
+        """Existing cached result is not updated when there is an API error."""
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
-            status=200,
-            json=self.api_response,
-            # Not in app
-            # json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+            status=500,
+            json={"message": "api error"},
         )
         self.client.force_login(self.user)
+        # Set up previous cache.
+        previous_timestamp = timezone.now() - timezone.timedelta(minutes=2)
+        with freeze_time(previous_timestamp):
+            previous_cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, previous_cached_audit_result)
+        self.client.force_login(self.user)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        new_cached_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(new_cached_result)
+        self.assertEqual(new_cached_result.timestamp, previous_timestamp)
+
+
+class WorkspaceSharingAuditReviewTest(AuditCacheClearTestMixin, TestCase):
+    """Tests for the ManagedGroupAuditReview view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.workspace = WorkspaceFactory.create()
+        self.cache_key = "workspace_sharing_{}".format(self.workspace.pk)
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceSharingAuditReview.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], False)
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.workspace.billing_project.name, self.workspace.name),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Cache results so we don't get redirected.
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request, billing_project_slug=self.workspace.billing_project.name, workspace_slug=self.workspace.name
+            )
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request, billing_project_slug=self.workspace.billing_project.name, workspace_slug=self.workspace.name
+            )
 
     def test_workspace_does_not_exist_in_app(self):
         """Raises a 404 error with an invalid workspace slug."""
@@ -3312,6 +3360,214 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo", workspace_slug=self.workspace.name)
+
+    def test_redirect_if_no_cached_result(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertRedirects(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run",
+                args=[self.workspace.billing_project.name, self.workspace.name],
+            ),
+        )
+
+    def test_message_if_no_cached_result(self):
+        """A message is displayed when there is no cached result"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name), follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceSharingAuditReview.error_no_cached_result, str(messages[0]))
+
+    def test_timestamp(self):
+        """Shows timestamp of cached audit."""
+        # Store a cached result so that the page loads.
+        timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(timestamp):
+            audit_results = WorkspaceSharingAudit(self.workspace)
+            audit_results.timestamp = timezone.now()
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_timestamp", response.context_data)
+        self.assertEqual(response.context_data["audit_timestamp"], timestamp)
+
+    def test_link_to_update_results(self):
+        """Includes a link to update the audit results."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn(
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run",
+                args=[self.workspace.billing_project.name, self.workspace.name],
+            ),
+            response.content.decode(),
+        )
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(base_audit.ModelInstanceResult(sharing))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        model_result = base_audit.ModelInstanceResult(sharing)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_errors is in the context data."""
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingNotInAppResult(
+                "foo",
+                workspace=self.workspace,
+                email="foo@bar.com",
+                access=WorkspaceGroupSharing.READER,
+                can_compute=False,
+                can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_not_in_app_link_to_ignore(self):
+        """Link to ignore create view appears when a not_in_app result is found."""
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingNotInAppResult(
+                "foo",
+                workspace=self.workspace,
+                email="foo@bar.com",
+                access=WorkspaceGroupSharing.READER,
+                can_compute=False,
+                can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:new",
+            args=[self.workspace.billing_project.name, self.workspace.name, "foo@bar.com"],
+        )
+        self.assertIn(expected_url, response.content.decode("utf-8"))
+
+    def test_audit_ignored(self):
+        """ignored_table is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+
+    def test_audit_one_ignored_record_in_anvil(self):
+        """ignored_table with one ignored record."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingIgnoredResult(
+                obj,
+                record="foo",
+                current_access=WorkspaceGroupSharing.READER,
+                current_can_compute=False,
+                current_can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_one_ignored_record_not_in_anvil(self):
+        """The ignored record is not a group member in AnVIL."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(WorkspaceSharingIgnoredResult(obj, record=None))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingNotInAppResult(
+                "foo",
+                workspace=self.workspace,
+                email="foo@bar.com",
+                access=WorkspaceGroupSharing.READER,
+                can_compute=False,
+                can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
 
 
 class IgnoredWorkspaceSharingDetailTest(TestCase):

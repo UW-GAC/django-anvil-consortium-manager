@@ -116,7 +116,7 @@
 <div class="p-1">
 
   {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
-  <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:all' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
+  <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
   {% endif %}
 
 </div>

@@ -1,0 +1,20 @@
+{% extends "auditor/audit_review.html" %}
+{% block title %}Workspace sharing audit results{% endblock %}
+
+{% block main_header %}
+  <h1>Workspace sharing audit results</h1>
+  <h3>for <a href="{{ object.get_absolute_url }}">{{ object.name }}</a></h3>
+{% endblock main_header %}
+
+{% block audit_explanation %}
+{% include "auditor/snippets/workspace_sharing_audit_explanation.html" %}
+{% endblock audit_explanation %}
+
+{% block action_buttons %}
+<div>
+  <p>
+    <a class="btn btn-primary" href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run' object.billing_project.name object.name %}">Update audit</a>
+  </p>
+
+</div>
+{% endblock action_buttons %}

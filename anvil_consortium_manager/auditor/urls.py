@@ -68,7 +68,8 @@ workspace_sharing_by_group_ignore_patterns = (
 
 workspace_sharing_by_group_patterns = (
     [
-        path("", views.WorkspaceSharingAuditRun.as_view(), name="all"),
+        path("run/", views.WorkspaceSharingAuditRun.as_view(), name="run"),
+        path("review/", views.WorkspaceSharingAuditReview.as_view(), name="review"),
         path("ignored/", include(workspace_sharing_by_group_ignore_patterns)),
     ],
     "by_workspace",
