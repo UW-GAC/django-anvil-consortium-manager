@@ -28,6 +28,8 @@ class WorkspaceAudit(base.AnVILAudit):
     ERROR_DIFFERENT_REQUESTER_PAYS = "Workspace bucket requester_pays status does not match on AnVIL"
     """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
 
+    cache_key = "workspace_audit_results"
+
     def run_audit(self):
         """Run an audit on Workspaces in the app."""
         # Check the list of workspaces.
@@ -185,6 +187,9 @@ class WorkspaceSharingAudit(base.AnVILAudit):
     def __init__(self, workspace, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.workspace = workspace
+
+    def get_cache_key(self):
+        return f"workspace_sharing_{self.workspace.pk}"
 
     def run_audit(self):
         """Run the audit for all workspace instances."""

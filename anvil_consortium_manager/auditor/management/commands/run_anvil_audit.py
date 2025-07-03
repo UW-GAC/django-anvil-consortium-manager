@@ -2,12 +2,14 @@ import pprint
 
 import django_tables2 as tables
 from django.contrib.sites.models import Site
+from django.core.cache import caches
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 
 from anvil_consortium_manager.anvil_api import AnVILAPIError
 
+from .... import app_settings
 from ... import models
 from ...audit import accounts as account_audit
 from ...audit import base as base_audit
@@ -68,40 +70,43 @@ class Command(BaseCommand):
             audit_results.run_audit()
         except AnVILAPIError:
             raise CommandError("API error.")
-        else:
-            if not audit_results.ok():
-                self.stdout.write(self.style.ERROR("problems found."))
-                self.stdout.write(pprint.pformat(audit_results.export(include_verified=False)))
-            else:
-                msg = "ok!"
-                if ignore_model:
-                    n_ignored = ignore_model.objects.all().count()
-                    if n_ignored:
-                        msg += " (ignoring {n_ignored} records)".format(n_ignored=n_ignored)
-                self.stdout.write(self.style.SUCCESS(msg))
 
-            if email and (not errors_only) or (errors_only and not audit_results.ok()):
-                # Set up the email message.
-                subject = "AnVIL audit {} -- {}".format(audit_name, "ok" if audit_results.ok() else "errors!")
-                exported_results = audit_results.export()
-                html_body = render_to_string(
-                    "auditor/email_audit_report.html",
-                    context={
-                        "model_name": audit_name,
-                        "audit_results": audit_results,
-                        "n_ignored": n_ignored,
-                        "errors_table": ErrorTableWithLink(audit_results.get_error_results()),
-                        "not_in_app_table": base_audit.NotInAppTable(audit_results.get_not_in_app_results()),
-                    },
-                )
-                send_mail(
-                    subject,
-                    pprint.pformat(exported_results),
-                    None,
-                    [email],
-                    fail_silently=False,
-                    html_message=html_body,
-                )
+        # Cache the results of the audit.
+        caches[app_settings.AUDIT_CACHE].set(audit_results.get_cache_key(), audit_results)
+
+        if not audit_results.ok():
+            self.stdout.write(self.style.ERROR("problems found."))
+            self.stdout.write(pprint.pformat(audit_results.export(include_verified=False)))
+        else:
+            msg = "ok!"
+            if ignore_model:
+                n_ignored = ignore_model.objects.all().count()
+                if n_ignored:
+                    msg += " (ignoring {n_ignored} records)".format(n_ignored=n_ignored)
+            self.stdout.write(self.style.SUCCESS(msg))
+
+        if email and (not errors_only) or (errors_only and not audit_results.ok()):
+            # Set up the email message.
+            subject = "AnVIL audit {} -- {}".format(audit_name, "ok" if audit_results.ok() else "errors!")
+            exported_results = audit_results.export()
+            html_body = render_to_string(
+                "auditor/email_audit_report.html",
+                context={
+                    "model_name": audit_name,
+                    "audit_results": audit_results,
+                    "n_ignored": n_ignored,
+                    "errors_table": ErrorTableWithLink(audit_results.get_error_results()),
+                    "not_in_app_table": base_audit.NotInAppTable(audit_results.get_not_in_app_results()),
+                },
+            )
+            send_mail(
+                subject,
+                pprint.pformat(exported_results),
+                None,
+                [email],
+                fail_silently=False,
+                html_message=html_body,
+            )
 
     def handle(self, *args, **options):
         if options["models"]:

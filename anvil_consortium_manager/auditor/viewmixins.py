@@ -12,16 +12,7 @@ class AnVILAuditRunMixin:
     """Mixin to display AnVIL audit results."""
 
     audit_class = None
-    cache_key = None
     form_class = Form
-
-    def get_cache_key(self):
-        if not self.cache_key:
-            raise ImproperlyConfigured(
-                "%(cls)s is missing a cache key. Define %(cls)s.cache_name or override "
-                "%(cls)s.get_cache_key()." % {"cls": self.__class__.__name__}
-            )
-        return self.cache_key
 
     def get_audit_instance(self):
         if not self.audit_class:
@@ -40,7 +31,7 @@ class AnVILAuditRunMixin:
             messages.error(self.request, f"AnVIL API Error: {e}")
             return self.render_to_response(self.get_context_data(form=form))
         cache = caches[app_settings.AUDIT_CACHE]
-        cache.set(self.get_cache_key(), self.audit_results)
+        cache.set(self.audit_results.get_cache_key(), self.audit_results)
         return super().form_valid(form)
 
 

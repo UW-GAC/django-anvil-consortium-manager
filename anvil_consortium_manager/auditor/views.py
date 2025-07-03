@@ -24,7 +24,6 @@ class BillingProjectAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewm
 
     audit_class = billing_project_audit.BillingProjectAudit
     template_name = "auditor/billingproject_audit_run.html"
-    cache_key = "billing_project_audit_results"
 
     def get_success_url(self):
         """Return the URL to redirect to after running the audit."""
@@ -70,7 +69,6 @@ class AccountAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.A
 
     audit_class = account_audit.AccountAudit
     template_name = "auditor/account_audit_run.html"
-    cache_key = "account_audit_results"
 
     def get_success_url(self):
         """Return the URL to redirect to after running the audit."""
@@ -94,7 +92,6 @@ class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmix
 
     audit_class = managed_group_audit.ManagedGroupAudit
     template_name = "auditor/managedgroup_audit_run.html"
-    cache_key = "managed_group_audit_results"
 
     def get_success_url(self):
         """Return the URL to redirect to after running the audit."""
@@ -151,9 +148,6 @@ class ManagedGroupMembershipAuditRun(
 
     def get_audit_instance(self):
         return managed_group_audit.ManagedGroupMembershipAudit(self.object)
-
-    def get_cache_key(self):
-        return f"managed_group_membership_{self.object.pk}"
 
     def get_success_url(self):
         """Return the URL to redirect to after running the audit."""
@@ -424,9 +418,6 @@ class WorkspaceSharingAuditRun(
     def get_audit_instance(self):
         return workspace_audit.WorkspaceSharingAudit(self.object)
 
-    def get_cache_key(self):
-        return f"workspace_sharing_{self.object.pk}"
-
     def get_success_url(self):
         """Return the URL to redirect to after running the audit."""
         return reverse(
@@ -460,7 +451,6 @@ class WorkspaceAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins
 
     audit_class = workspace_audit.WorkspaceAudit
     template_name = "auditor/workspace_audit_run.html"
-    cache_key = "workspace_audit_results"
 
     def get_success_url(self):
         """Return the URL to redirect to after running the audit."""

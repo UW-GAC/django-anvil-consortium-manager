@@ -20,6 +20,8 @@ class ManagedGroupAudit(base.AnVILAudit):
     ERROR_GROUP_MEMBERSHIP = "Group membership does not match in AnVIL"
     """Error when a ManagedGroup has a different record of membership in the app compared to on AnVIL."""
 
+    cache_key = "managed_group_audit_results"
+
     def run_audit(self):
         """Run an audit on managed groups in the app."""
         # Check the list of groups.
@@ -156,6 +158,9 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
         if not managed_group.is_managed_by_app:
             raise AnVILNotGroupAdminError("group {} is not managed by app".format(managed_group.name))
         self.managed_group = managed_group
+
+    def get_cache_key(self):
+        return f"managed_group_membership_{self.managed_group.pk}"
 
     def run_audit(self):
         """Run an audit on all membership of the managed group."""

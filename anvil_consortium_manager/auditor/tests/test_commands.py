@@ -7,6 +7,7 @@ from unittest import skip
 import responses
 from django.contrib.sites.models import Site
 from django.core import mail
+from django.core.cache import caches
 from django.core.management import CommandError, call_command
 from django.test import TestCase
 
@@ -19,7 +20,8 @@ from anvil_consortium_manager.tests.api_factories import (
 from anvil_consortium_manager.tests.factories import AccountFactory, BillingProjectFactory
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin
 
-from ..audit import base, billing_projects, managed_groups
+from ... import app_settings
+from ..audit import accounts, base, billing_projects, managed_groups
 from ..management.commands.run_anvil_audit import ErrorTableWithLink
 from . import factories
 
@@ -101,6 +103,36 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertIn("BillingProjectAudit... ok!", out.getvalue())
         self.assertIn("AccountAudit... ok!", out.getvalue())
+
+    def test_command_output_caching(self):
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "--no-color",
+            models=["BillingProject"],
+            stdout=out,
+        )
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
+        cached_audit_results = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(cached_audit_results)
+        self.assertIsInstance(cached_audit_results, billing_projects.BillingProjectAudit)
+
+    def test_command_output_caching_multiple_models(self):
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "--no-color",
+            models=["BillingProject", "Account"],
+            stdout=out,
+        )
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
+        self.assertIn("AccountAudit... ok!", out.getvalue())
+        cached_audit_results = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(cached_audit_results)
+        self.assertIsInstance(cached_audit_results, billing_projects.BillingProjectAudit)
+        cached_audit_results = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(cached_audit_results)
+        self.assertIsInstance(cached_audit_results, accounts.AccountAudit)
 
     def test_command_output_billing_project_no_instances(self):
         """Test command output."""

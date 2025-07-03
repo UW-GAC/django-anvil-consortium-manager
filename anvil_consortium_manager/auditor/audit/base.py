@@ -96,12 +96,21 @@ class AnVILAudit(ABC):
     error_table_class = ErrorTable
     not_in_app_table_class = NotInAppTable
     ignored_table_class = IgnoredTable
+    cache_key = None
 
     def __init__(self):
         self._model_instance_results = []
         self._not_in_app_results = []
         self._ignored_results = []
         self.timestamp = timezone.now()
+
+    def get_cache_key(self):
+        if not self.cache_key:
+            raise NotImplementedError(
+                "%(cls)s is missing a cache key. Define %(cls)s.cache_name or override "
+                "%(cls)s.get_cache_key()." % {"cls": self.__class__.__name__}
+            )
+        return self.cache_key
 
     def ok(self):
         model_instances_ok = all([x.ok() for x in self._model_instance_results])
