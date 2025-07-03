@@ -59,7 +59,7 @@ class ManagedGroupAudit(base.AnVILAudit):
                         model_instance_result.add_error(self.ERROR_DIFFERENT_ROLE)
                     else:
                         membership_audit = ManagedGroupMembershipAudit(group)
-                        membership_audit.run_audit()
+                        membership_audit.run_audit(cache=cache)
                         if not membership_audit.ok():
                             model_instance_result.add_error(self.ERROR_GROUP_MEMBERSHIP)
                 elif not group.is_managed_by_app and "admin" in group_roles:

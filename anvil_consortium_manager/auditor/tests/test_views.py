@@ -1022,6 +1022,43 @@ class ManagedGroupAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, 
         self.assertIsNotNone(new_cached_result)
         self.assertEqual(new_cached_result.timestamp, previous_timestamp)
 
+    def test_caches_membership_audit_results(self):
+        """Membership audit results are cached."""
+        group = ManagedGroupFactory.create()
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_group_json(group.name, "Admin")],
+        )
+        # Group membership API call.
+        api_url_members = self.get_api_url_members(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_membership_{}".format(group.pk))
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, ManagedGroupMembershipAudit)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
+
 
 class ManagedGroupAuditReviewTest(AuditCacheClearTestMixin, TestCase):
     """Tests for the ManagedGroupAuditReview view."""
@@ -2989,6 +3026,40 @@ class WorkspaceAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, Tes
         new_cached_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
         self.assertIsNotNone(new_cached_result)
         self.assertEqual(new_cached_result.timestamp, previous_timestamp)
+
+    def test_caches_sharing_audit_results(self):
+        """Membership audit results are cached."""
+        workspace = WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, WorkspaceSharingAudit)
 
 
 class WorkspaceAuditReviewTest(AuditCacheClearTestMixin, TestCase):

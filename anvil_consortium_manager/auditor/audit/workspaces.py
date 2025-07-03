@@ -63,7 +63,7 @@ class WorkspaceAudit(base.AnVILAudit):
                 else:
                     # Since we're the owner, check workspace access.
                     sharing_audit = WorkspaceSharingAudit(workspace)
-                    sharing_audit.run_audit()
+                    sharing_audit.run_audit(cache=cache)
                     if not sharing_audit.ok():
                         model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
                     # Check is_requester_pays status. Unfortunately we have to make a separate API call.
