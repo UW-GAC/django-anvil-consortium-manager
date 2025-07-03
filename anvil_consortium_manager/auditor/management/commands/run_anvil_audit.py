@@ -52,11 +52,17 @@ class Command(BaseCommand):
             choices=["BillingProject", "Account", "ManagedGroup", "Workspace"],
             help="If specified, run audit on a subset of models. Otherwise, the audit will be run on all models.",
         )
+        parser.add_argument(
+            "--cache-results",
+            action="store_true",
+            help="Cache the results of the audit to enable faster reviewing in the app.",
+        )
 
     def _run_audit(self, audit_results, ignore_model=None, **options):
         """Run the audit for a specific model class."""
         email = options["email"]
         errors_only = options["errors_only"]
+        cache_results = options["cache_results"]
 
         # Track the number of ignored records.
         n_ignored = 0
@@ -65,12 +71,9 @@ class Command(BaseCommand):
         self.stdout.write("Running on {}... ".format(audit_name), ending="")
         try:
             # Assume the method is called anvil_audit.
-            audit_results.run_audit()
+            audit_results.run_audit(cache=cache_results)
         except AnVILAPIError:
             raise CommandError("API error.")
-
-        # Cache the results of the audit.
-        audit_results.cache()
 
         if not audit_results.ok():
             self.stdout.write(self.style.ERROR("problems found."))

@@ -26,11 +26,10 @@ class AnVILAuditRunMixin:
     def form_valid(self, form):
         self.audit_results = self.get_audit_instance()
         try:
-            self.audit_results.run_audit()
+            self.audit_results.run_audit(cache=True)
         except AnVILAPIError as e:
             messages.error(self.request, f"AnVIL API Error: {e}")
             return self.render_to_response(self.get_context_data(form=form))
-        self.audit_results.cache()
         return super().form_valid(form)
 
 

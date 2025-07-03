@@ -104,11 +104,23 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("BillingProjectAudit... ok!", out.getvalue())
         self.assertIn("AccountAudit... ok!", out.getvalue())
 
+    def test_command_output_no_caching_by_default(self):
+        out = StringIO()
+        call_command(
+            "run_anvil_audit",
+            "--no-color",
+            models=["BillingProject"],
+            stdout=out,
+        )
+        self.assertIn("BillingProjectAudit... ok!", out.getvalue())
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results"))
+
     def test_command_output_caching(self):
         out = StringIO()
         call_command(
             "run_anvil_audit",
             "--no-color",
+            "--cache-results",
             models=["BillingProject"],
             stdout=out,
         )
@@ -122,6 +134,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         call_command(
             "run_anvil_audit",
             "--no-color",
+            "--cache-results",
             models=["BillingProject", "Account"],
             stdout=out,
         )

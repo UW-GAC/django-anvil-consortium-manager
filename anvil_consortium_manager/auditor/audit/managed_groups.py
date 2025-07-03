@@ -22,7 +22,7 @@ class ManagedGroupAudit(base.AnVILAudit):
 
     cache_key = "managed_group_audit_results"
 
-    def run_audit(self):
+    def run_audit(self, cache=False):
         """Run an audit on managed groups in the app."""
         # Check the list of groups.
         response = AnVILAPIClient().get_groups()
@@ -72,6 +72,10 @@ class ManagedGroupAudit(base.AnVILAudit):
             # Only report the ones where the app is an admin.
             if "admin" in groups_on_anvil[group_name]:
                 self.add_result(base.NotInAppResult(group_name))
+
+        # Cache the results if requested.
+        if cache:
+            self.cache()
 
 
 class ManagedGroupMembershipNotInAppResult(base.NotInAppResult):
@@ -162,7 +166,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
     def get_cache_key(self):
         return f"managed_group_membership_{self.managed_group.pk}"
 
-    def run_audit(self):
+    def run_audit(self, cache=False):
         """Run an audit on all membership of the managed group."""
         # Get the list of members on AnVIL.
         api_client = AnVILAPIClient()
@@ -270,3 +274,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
                     record, group=self.managed_group, email=member, role=GroupAccountMembership.MEMBER
                 )
             )
+
+        # Cache the results if requested.
+        if cache:
+            self.cache()

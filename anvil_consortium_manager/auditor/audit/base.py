@@ -1,3 +1,4 @@
+import logging
 from abc import ABC
 
 import django_tables2 as tables
@@ -5,6 +6,8 @@ from django.core.cache import caches
 from django.utils import timezone
 
 from ... import app_settings
+
+logger = logging.getLogger(__name__)
 
 
 # Audit classes for individual model instances:
@@ -117,6 +120,7 @@ class AnVILAudit(ABC):
 
     def cache(self):
         """Cache the audit results."""
+        logger.info("Caching audit results as {}".format(self.get_cache_key()))
         cache_key = self.get_cache_key()
         caches[app_settings.AUDIT_CACHE].set(cache_key, self)
 
@@ -125,8 +129,9 @@ class AnVILAudit(ABC):
         not_in_app_ok = len(self._not_in_app_results) == 0
         return model_instances_ok and not_in_app_ok
 
-    def run_audit(self):
-        raise NotImplementedError("Define a run_audit method.")
+    def run_audit(self, cache=False):
+        """Run the audit and optionally cache the results."""
+        raise NotImplementedError("Define a audit method.")
 
     def add_result(self, result):
         if isinstance(result, NotInAppResult):

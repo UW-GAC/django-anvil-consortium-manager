@@ -11,10 +11,14 @@ class BillingProjectAudit(AnVILAudit):
 
     cache_key = "billing_project_audit_results"
 
-    def run_audit(self):
+    def run_audit(self, cache=False):
         # Check that all billing projects exist.
         for billing_project in BillingProject.objects.filter(has_app_as_user=True).all():
             model_instance_result = ModelInstanceResult(billing_project)
             if not billing_project.anvil_exists():
                 model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
             self.add_result(model_instance_result)
+
+        # Cache the results if requested.
+        if cache:
+            self.cache()

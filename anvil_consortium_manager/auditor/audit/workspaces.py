@@ -30,7 +30,7 @@ class WorkspaceAudit(base.AnVILAudit):
 
     cache_key = "workspace_audit_results"
 
-    def run_audit(self):
+    def run_audit(self, cache=False):
         """Run an audit on Workspaces in the app."""
         # Check the list of workspaces.
         fields = [
@@ -95,6 +95,10 @@ class WorkspaceAudit(base.AnVILAudit):
         ]
         for workspace_name in not_in_app:
             self.add_result(base.NotInAppResult(workspace_name))
+
+        # Cache the results if requested.
+        if cache:
+            self.cache()
 
 
 class WorkspaceSharingNotInAppResult(base.NotInAppResult):
@@ -191,7 +195,7 @@ class WorkspaceSharingAudit(base.AnVILAudit):
     def get_cache_key(self):
         return f"workspace_sharing_{self.workspace.pk}"
 
-    def run_audit(self):
+    def run_audit(self, cache=False):
         """Run the audit for all workspace instances."""
         api_client = AnVILAPIClient()
         response = api_client.get_workspace_acl(self.workspace.billing_project.name, self.workspace.name)
@@ -261,3 +265,7 @@ class WorkspaceSharingAudit(base.AnVILAudit):
                     can_share=acl_in_anvil[key]["canShare"],
                 )
             )
+
+        # Cache the results if requested.
+        if cache:
+            self.cache()
