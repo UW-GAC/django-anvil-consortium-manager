@@ -42,28 +42,6 @@ class BillingProjectAuditReview(
         return reverse("anvil_consortium_manager:auditor:billing_projects:run")
 
 
-class BillingProjectAccAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
-    """View to run an audit on BillingProjects and display the results."""
-
-    audit_class = billing_project_audit.BillingProjectAudit
-    template_name = "auditor/billing_project_audit_run.html"
-    cache_key = "billing_project_audit_results"
-
-    def get_success_url(self):
-        """Return the URL to redirect to after running the audit."""
-        return reverse("anvil_consortium_manager:auditor:billing_projects:review")
-
-
-class AccountAuditReview(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView):
-    """View to review the results of a Account audit."""
-
-    template_name = "auditor/account_audit_review.html"
-    cache_key = "account_audit_results"
-
-    def get_audit_result_not_found_redirect_url(self):
-        return reverse("anvil_consortium_manager:auditor:accounts:run")
-
-
 class AccountAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
     """View to run an audit on Accounts and display the results."""
 
@@ -75,16 +53,14 @@ class AccountAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.A
         return reverse("anvil_consortium_manager:auditor:accounts:review")
 
 
-class ManagedGroupAuditReview(
-    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView
-):
-    """View to review the results of a ManagedGroup audit."""
+class AccountAuditReview(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView):
+    """View to review the results of a Account audit."""
 
-    template_name = "auditor/managedgroup_audit_review.html"
-    cache_key = "managed_group_audit_results"
+    template_name = "auditor/account_audit_review.html"
+    cache_key = "account_audit_results"
 
     def get_audit_result_not_found_redirect_url(self):
-        return reverse("anvil_consortium_manager:auditor:managed_groups:run")
+        return reverse("anvil_consortium_manager:auditor:accounts:run")
 
 
 class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
@@ -98,41 +74,16 @@ class ManagedGroupAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmix
         return reverse("anvil_consortium_manager:auditor:managed_groups:review")
 
 
-class ManagedGroupMembershipAuditReview(
-    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, SingleObjectMixin, TemplateView
+class ManagedGroupAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView
 ):
     """View to review the results of a ManagedGroup audit."""
 
-    model = ManagedGroup
-    slug_field = "name"
-    template_name = "auditor/managedgroup_membership_audit_review.html"
-    message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
+    template_name = "auditor/managedgroup_audit_review.html"
+    cache_key = "managed_group_audit_results"
 
     def get_audit_result_not_found_redirect_url(self):
-        """Return the URL to redirect to if no audit results are found."""
-        return reverse(
-            "anvil_consortium_manager:auditor:managed_groups:membership:by_group:run", args=[self.object.name]
-        )
-
-    def get_cache_key(self):
-        return f"managed_group_membership_{self.object.pk}"
-
-    def get_audit_instance(self):
-        return managed_group_audit.ManagedGroupMembershipAudit(self.object)
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        # Check if managed by the app.
-        if not self.object.is_managed_by_app:
-            messages.add_message(
-                self.request,
-                messages.ERROR,
-                self.message_not_managed_by_app,
-            )
-            # Redirect to the object detail page.
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        # Otherwise, return the response.
-        return super().get(request, *args, **kwargs)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:run")
 
 
 class ManagedGroupMembershipAuditRun(
@@ -172,6 +123,43 @@ class ManagedGroupMembershipAuditRun(
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         return super().post(request, *args, **kwargs)
+
+
+class ManagedGroupMembershipAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, SingleObjectMixin, TemplateView
+):
+    """View to review the results of a ManagedGroup audit."""
+
+    model = ManagedGroup
+    slug_field = "name"
+    template_name = "auditor/managedgroup_membership_audit_review.html"
+    message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
+
+    def get_audit_result_not_found_redirect_url(self):
+        """Return the URL to redirect to if no audit results are found."""
+        return reverse(
+            "anvil_consortium_manager:auditor:managed_groups:membership:by_group:run", args=[self.object.name]
+        )
+
+    def get_cache_key(self):
+        return f"managed_group_membership_{self.object.pk}"
+
+    def get_audit_instance(self):
+        return managed_group_audit.ManagedGroupMembershipAudit(self.object)
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
+        return super().get(request, *args, **kwargs)
 
 
 class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
@@ -337,51 +325,27 @@ class IgnoredManagedGroupMembershipDelete(
         return self.object.group.get_absolute_url()
 
 
-class WorkspaceSharingAuditReview(
-    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, SingleObjectMixin, TemplateView
+class WorkspaceAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
+    """View to display the results of a Workspace audit."""
+
+    audit_class = workspace_audit.WorkspaceAudit
+    template_name = "auditor/workspace_audit_run.html"
+
+    def get_success_url(self):
+        """Return the URL to redirect to after running the audit."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:review")
+
+
+class WorkspaceAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView
 ):
-    """View to review the results of a WorkspaceSharingAudit."""
+    """View to review the results of a Workspace audit."""
 
-    model = Workspace
-    slug_field = "name"
-    template_name = "auditor/workspace_sharing_audit_review.html"
-
-    def get_object(self, queryset=None):
-        """Return the object the view is displaying."""
-
-        # Use a custom queryset if provided; this is required for subclasses
-        # like DateDetailView
-        if queryset is None:
-            queryset = self.get_queryset()
-        # Filter the queryset based on kwargs.
-        billing_project_slug = self.kwargs.get("billing_project_slug", None)
-        workspace_slug = self.kwargs.get("workspace_slug", None)
-        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
-        try:
-            # Get the single item from the filtered queryset
-            obj = queryset.get()
-        except queryset.model.DoesNotExist:
-            raise Http404(
-                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
-            )
-        return obj
+    template_name = "auditor/workspace_audit_review.html"
+    cache_key = "workspace_audit_results"
 
     def get_audit_result_not_found_redirect_url(self):
-        """Return the URL to redirect to if no audit results are found."""
-        return reverse(
-            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run",
-            args=[self.object.billing_project.name, self.object.name],
-        )
-
-    def get_cache_key(self):
-        return f"workspace_sharing_{self.object.pk}"
-
-    def get_audit_instance(self):
-        return workspace_audit.WorkspaceSharingAudit(self.object)
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        return super().get(request, *args, **kwargs)
+        return reverse("anvil_consortium_manager:auditor:workspaces:run")
 
 
 class WorkspaceSharingAuditRun(
@@ -434,27 +398,51 @@ class WorkspaceSharingAuditRun(
         return super().post(request, *args, **kwargs)
 
 
-class WorkspaceAuditReview(
-    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, TemplateView
+class WorkspaceSharingAuditReview(
+    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, SingleObjectMixin, TemplateView
 ):
-    """View to review the results of a Workspace audit."""
+    """View to review the results of a WorkspaceSharingAudit."""
 
-    template_name = "auditor/workspace_audit_review.html"
-    cache_key = "workspace_audit_results"
+    model = Workspace
+    slug_field = "name"
+    template_name = "auditor/workspace_sharing_audit_review.html"
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
 
     def get_audit_result_not_found_redirect_url(self):
-        return reverse("anvil_consortium_manager:auditor:workspaces:run")
+        """Return the URL to redirect to if no audit results are found."""
+        return reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run",
+            args=[self.object.billing_project.name, self.object.name],
+        )
 
+    def get_cache_key(self):
+        return f"workspace_sharing_{self.object.pk}"
 
-class WorkspaceAuditRun(auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, FormView):
-    """View to display the results of a Workspace audit."""
+    def get_audit_instance(self):
+        return workspace_audit.WorkspaceSharingAudit(self.object)
 
-    audit_class = workspace_audit.WorkspaceAudit
-    template_name = "auditor/workspace_audit_run.html"
-
-    def get_success_url(self):
-        """Return the URL to redirect to after running the audit."""
-        return reverse("anvil_consortium_manager:auditor:workspaces:review")
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().get(request, *args, **kwargs)
 
 
 class IgnoredWorkspaceSharingCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):

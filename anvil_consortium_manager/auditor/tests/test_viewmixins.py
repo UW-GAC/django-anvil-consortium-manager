@@ -4,9 +4,21 @@ from django.test import TestCase
 from .. import viewmixins
 
 
-class AnVILAuditMixinTest(TestCase):
-    """ManagedGroupGraphMixin tests that aren't covered elsewhere."""
+class AnVILAuditRunMixinTest(TestCase):
+    """AnVILAuditRunMixin tests that aren't covered elsewhere."""
 
-    def test_run_audit_not_implemented(self):
+    def test_get_audit_instance(self):
         with self.assertRaises(ImproperlyConfigured):
-            viewmixins.AnVILAuditMixin().run_audit()
+            viewmixins.AnVILAuditRunMixin().get_audit_instance()
+
+
+class AnVILAuditReviewMixinTest(TestCase):
+    """AnVILAuditReviewMixin tests that aren't covered elsewhere."""
+
+    def test_get_cache_key(self):
+        with self.assertRaises(ImproperlyConfigured):
+            viewmixins.AnVILAuditReviewMixin().get_cache_key()
+
+    def test_get_audit_result_not_found_redirect_url(self):
+        with self.assertRaises(ImproperlyConfigured):
+            viewmixins.AnVILAuditReviewMixin().get_audit_result_not_found_redirect_url()
