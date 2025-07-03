@@ -2,14 +2,12 @@ import pprint
 
 import django_tables2 as tables
 from django.contrib.sites.models import Site
-from django.core.cache import caches
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 
 from anvil_consortium_manager.anvil_api import AnVILAPIError
 
-from .... import app_settings
 from ... import models
 from ...audit import accounts as account_audit
 from ...audit import base as base_audit
@@ -72,7 +70,7 @@ class Command(BaseCommand):
             raise CommandError("API error.")
 
         # Cache the results of the audit.
-        caches[app_settings.AUDIT_CACHE].set(audit_results.get_cache_key(), audit_results)
+        audit_results.cache()
 
         if not audit_results.ok():
             self.stdout.write(self.style.ERROR("problems found."))

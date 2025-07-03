@@ -1,7 +1,10 @@
 from abc import ABC
 
 import django_tables2 as tables
+from django.core.cache import caches
 from django.utils import timezone
+
+from ... import app_settings
 
 
 # Audit classes for individual model instances:
@@ -111,6 +114,11 @@ class AnVILAudit(ABC):
                 "%(cls)s.get_cache_key()." % {"cls": self.__class__.__name__}
             )
         return self.cache_key
+
+    def cache(self):
+        """Cache the audit results."""
+        cache_key = self.get_cache_key()
+        caches[app_settings.AUDIT_CACHE].set(cache_key, self)
 
     def ok(self):
         model_instances_ok = all([x.ok() for x in self._model_instance_results])

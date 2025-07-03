@@ -30,8 +30,7 @@ class AnVILAuditRunMixin:
         except AnVILAPIError as e:
             messages.error(self.request, f"AnVIL API Error: {e}")
             return self.render_to_response(self.get_context_data(form=form))
-        cache = caches[app_settings.AUDIT_CACHE]
-        cache.set(self.audit_results.get_cache_key(), self.audit_results)
+        self.audit_results.cache()
         return super().form_valid(form)
 
 
