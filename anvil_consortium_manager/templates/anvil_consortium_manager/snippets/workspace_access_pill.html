@@ -1,4 +1,4 @@
-  <span class="badge bg-{{ has_access | yesno:"success,danger,warning" }}">
+  <span class="badge bg-{{ has_access | yesno:"success,danger,warning" }} {{ has_access | yesno:",,text-dark" }}">
     <span class="me-2 fa-solid fa-{{ has_access | yesno:"lock-open,lock,unlock" }}"></span>
     {{ has_access | yesno:"You have access to this workspace,No access to workspace,Unknown access to workspace" }}
     <span class="ms-2 fa-solid fa-circle-question"
