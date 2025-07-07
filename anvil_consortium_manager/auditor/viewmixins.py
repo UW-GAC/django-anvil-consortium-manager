@@ -55,6 +55,7 @@ class AnVILAuditReviewMixin:
                 "Define %(cls)s.audit_result_not_found_redirect_url or override "
                 "%(cls)s.get_audit_result_not_found_redirect_url()." % {"cls": self.__class__.__name__}
             )
+        print(self)
         return self.audit_result_not_found_redirect_url
 
     def get_audit_results(self):

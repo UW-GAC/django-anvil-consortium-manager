@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 
@@ -22,3 +24,7 @@ class AnVILAuditReviewMixinTest(TestCase):
     def test_get_audit_result_not_found_redirect_url(self):
         with self.assertRaises(ImproperlyConfigured):
             viewmixins.AnVILAuditReviewMixin().get_audit_result_not_found_redirect_url()
+
+    @patch.object(viewmixins.AnVILAuditReviewMixin, "audit_result_not_found_redirect_url", "foo", create=True)
+    def test_get_audit_result_not_found_redirect_url_not_none(self):
+        self.assertEqual(viewmixins.AnVILAuditReviewMixin().get_audit_result_not_found_redirect_url(), "foo")

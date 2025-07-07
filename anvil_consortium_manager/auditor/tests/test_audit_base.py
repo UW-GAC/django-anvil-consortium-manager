@@ -734,3 +734,8 @@ class AnVILAuditTest(TestCase):
         self.audit_results.add_result(base.NotInAppResult("bar"))
         exported_data = self.audit_results.export()
         self.assertEqual(exported_data["not_in_app"], ["bar", "foo"])
+
+    def test_get_cache_key_not_set(self):
+        """get_cache_key raises NotImplementedError if not set."""
+        with self.assertRaises(NotImplementedError):
+            self.audit_results.get_cache_key()
