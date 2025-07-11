@@ -144,9 +144,6 @@ class ManagedGroupMembershipAuditReview(
     def get_cache_key(self):
         return f"managed_group_membership_{self.object.pk}"
 
-    def get_audit_instance(self):
-        return managed_group_audit.ManagedGroupMembershipAudit(self.object)
-
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         # Check if managed by the app.
@@ -436,9 +433,6 @@ class WorkspaceSharingAuditReview(
 
     def get_cache_key(self):
         return f"workspace_sharing_{self.object.pk}"
-
-    def get_audit_instance(self):
-        return workspace_audit.WorkspaceSharingAudit(self.object)
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
