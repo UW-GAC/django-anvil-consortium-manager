@@ -764,6 +764,7 @@ class AnVILAuditTest(TestCase):
         CACHES={
             "default": {
                 "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+                "LOCATION": "anvil_audit_cache",
                 "OPTIONS": {"MAX_ENTRIES": 6},
             },
         }
@@ -785,6 +786,7 @@ class AnVILAuditTest(TestCase):
         CACHES={
             "default": {
                 "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+                "LOCATION": "anvil_audit_cache",
                 "OPTIONS": {"MAX_ENTRIES": 5},
             },
         }
@@ -807,6 +809,7 @@ class AnVILAuditTest(TestCase):
         CACHES={
             "default": {
                 "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+                "LOCATION": "anvil_audit_cache",
                 "OPTIONS": {"MAX_ENTRIES": 5},
             },
         }
