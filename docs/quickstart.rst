@@ -54,34 +54,43 @@ Required Settings
 
   For more information about customizing the workspace-related behavior of the app, see the :ref:`workspace_adapter` section.
 
-5. Set up a Site in the sites framework. In your settings file:
+4. Set up a Site in the sites framework. In your settings file:
 
   .. code-block:: python
 
       SITE_ID = 1
 
-1. Set up caching.
-  The app uses caching to improve the speed of auditing, so you will want to set your preferred cache backend following Django documentation.
-  We recommend setting up a specific cache for the auditing, rather than using an existing cache.
+5. Set up caching.
+  The app uses caching to improve the speed of auditing.
+  The cache used by the app is required to be a ``DatabaseCache``.
+  You should also set the ``MAX_ENTIRES`` option to be a value greater than 4 + the number of Workspaces + the number of Groups in your app.
+  We recommend using a separate cache for the auditing compared to the default cache, so that the auditing cache can be configured independently of the rest of your app.
 
-  For example, to use the db-backend cache, add the following to your settings file:
+  Here is an example setting for the cache:
 
   .. code-block:: python
 
       CACHES = {
+          # If you don't already have a default cache, you can add one like this:
+          "default": {
+              "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+          },
+          # Add a cache specific for anvil_consortium_manager auditing:
           "anvil_audit": {
               "BACKEND": "django.core.cache.backends.db.DatabaseCache",
               "LOCATION": "anvil_audit_cache_table",
               "OPTIONS": {
                   # This should be larger than the number of Workspaces + Groups + 4.
+                  # If not, you will receive a warnign when you attempt to cache.
                   "MAX_ENTRIES": 1000,  # Maximum number of entries in the cache.
               },
               "TIMEOUT": None,  # Cache entries never expire.
           }
       }
 
-  Then set the ``ANVIL_AUDIT_CACHE`` setting in the settings file:
-  .. code-block:: python
+  Then set the ``ANVIL_AUDIT_CACHE`` setting in the settings file to the key of the cache you just created:
+
+    .. code-block:: python
 
       ANVIL_AUDIT_CACHE = "anvil_audit"
 
@@ -97,7 +106,6 @@ These settings are set to default values automatically, but can be changed by th
 * ``ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT``: Subject of the email when a user links their account (default: "AnVIL Account Verification")
 * ``ANVIL_ACCOUNT_LINK_REDIRECT_URL``: URL to redirect to after linking an account (default: ``settings.LOGIN_REDIRECT_URL``)
 * ``ANVIL_ACCOUNT_ADAPTER``: Adapter to use for Accounts (default: ``"anvil_consortium_manager.adapters.default.DefaultAccountAdapter"``). See the :ref:`account_adapter` section for more information about customizing behavior for accounts.
-* ``ANVIL_AUDIT_CACHE``: Name of the cache to use for auditing (default: ``"default"``). This should match the name of the cache defined in the ``CACHES`` setting.
 
 
 Post-installation
