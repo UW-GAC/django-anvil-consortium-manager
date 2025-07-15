@@ -146,32 +146,38 @@
             <p>
               Audit information in this app against AnVIL.
               These audits check that the information in this app is consistent with AnVIL.
+              Audit results are cached for faster reviewing.
             </p>
           </div>
           <ul class="list-group list-group-flush">
 
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:auditor:billing_projects:all' %}" class="icon-link">Audit Billing Projects</a>
+              <a href="{% url 'anvil_consortium_manager:auditor:billing_projects:review' %}" class="icon-link">Review Billing Project audit</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
 
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:auditor:accounts:all' %}" class="icon-link">Audit Accounts</a>
+              <a href="{% url 'anvil_consortium_manager:auditor:accounts:review' %}" class="icon-link">Review Account audit</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
 
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:all' %}" class="icon-link">Audit Managed Groups</a>
+              <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:review' %}" class="icon-link">Review Managed Group audit</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
 
             <li class ="list-group-item">
-              <a href="{% url 'anvil_consortium_manager:auditor:workspaces:all' %}" class="icon-link">Audit Workspaces</a>
+              <a href="{% url 'anvil_consortium_manager:auditor:workspaces:review' %}" class="icon-link">Review Workspace audit</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
 
             <li class ="list-group-item">
               <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:ignored' %}" class="icon-link">List ignored group memberships</a>
+              <span class="fa-solid fa-angle-right"></span>
+            </li>
+
+            <li class ="list-group-item">
+              <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:ignored' %}" class="icon-link">List ignored workspace sharing</a>
               <span class="fa-solid fa-angle-right"></span>
             </li>
 

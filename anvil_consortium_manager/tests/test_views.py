@@ -113,15 +113,11 @@ class ViewEditUrlTest(TestCase):
         reverse("anvil_consortium_manager:index"),
         reverse("anvil_consortium_manager:status"),
         reverse("anvil_consortium_manager:accounts:list"),
-        reverse("anvil_consortium_manager:auditor:accounts:all"),
         reverse("anvil_consortium_manager:billing_projects:list"),
-        reverse("anvil_consortium_manager:auditor:billing_projects:all"),
         reverse("anvil_consortium_manager:managed_groups:list"),
         reverse("anvil_consortium_manager:managed_groups:visualization"),
-        reverse("anvil_consortium_manager:auditor:managed_groups:all"),
         reverse("anvil_consortium_manager:workspaces:landing_page"),
         reverse("anvil_consortium_manager:workspaces:list_all"),
-        reverse("anvil_consortium_manager:auditor:workspaces:all"),
     )
 
     # other_urls = (
@@ -6467,7 +6463,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:all",
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -6551,7 +6547,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertContains(
             response,
             reverse(
-                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:all",
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -6635,7 +6631,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertNotContains(
             response,
             reverse(
-                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:all",
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,

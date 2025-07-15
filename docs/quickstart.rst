@@ -54,11 +54,48 @@ Required Settings
 
   For more information about customizing the workspace-related behavior of the app, see the :ref:`workspace_adapter` section.
 
-5. Set up a Site in the sites framework. In your settings file:
+4. Set up a Site in the sites framework. In your settings file:
 
   .. code-block:: python
 
       SITE_ID = 1
+
+5. Set up caching.
+  The app uses caching to improve the speed of auditing.
+  The cache used by the app is required to be a ``DatabaseCache``.
+  You should also set the ``MAX_ENTIRES`` option to be a value greater than 4 + the number of Workspaces + the number of Groups in your app.
+  We recommend using a separate cache for the auditing compared to the default cache, so that the auditing cache can be configured independently of the rest of your app.
+
+  Here is an example setting for the cache:
+
+  .. code-block:: python
+
+      CACHES = {
+          # If you don't already have a default cache, you can add one like this:
+          "default": {
+              "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+          },
+          # Add a cache specific for anvil_consortium_manager auditing:
+          "anvil_audit": {
+              "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+              "LOCATION": "anvil_audit_cache_table",
+              "OPTIONS": {
+                  # This should be larger than the number of Workspaces + Groups + 4.
+                  # If not, you will receive a warnign when you attempt to cache.
+                  "MAX_ENTRIES": 1000,  # Maximum number of entries in the cache.
+              },
+              "TIMEOUT": None,  # Cache entries never expire.
+          }
+      }
+
+  Then set the ``ANVIL_AUDIT_CACHE`` setting in the settings file to the key of the cache you just created:
+
+    .. code-block:: python
+
+      ANVIL_AUDIT_CACHE = "anvil_audit"
+
+  Note that you can choose a different cache name or cache settings if desired.
+  We recommend setting either no timeout or a long timeout (e.g., 1 day) for the cache.
 
 Optional settings
 ~~~~~~~~~~~~~~~~~

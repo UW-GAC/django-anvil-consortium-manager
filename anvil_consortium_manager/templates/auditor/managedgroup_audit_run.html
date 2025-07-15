@@ -1,0 +1,38 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% load render_table from django_tables2 %}
+
+{% block title %}Run Managed Group audit{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+
+      <h2>Run Managed Group audit</h2>
+
+      <div class="my-3 p-3 bg-light border rounded shadow-sm">
+        {% include "auditor/snippets/managedgroup_audit_explanation.html" %}
+      </div>
+
+      <p>
+        Are you sure you want to run a Managed Group audit and cache the result?
+      </p>
+
+      <form method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button type="submit" class="btn btn-primary">Run audit</button>
+
+    </form>
+
+    </div>
+  </div>
+
+
+</div>
+{% endblock content %}

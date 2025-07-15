@@ -174,7 +174,7 @@
 {% endif %}
 
 <p>
-  <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:all' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
+  <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:review' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
 </p>
 {% if show_edit_links %}
   <p>

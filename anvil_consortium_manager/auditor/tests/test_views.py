@@ -3,18 +3,23 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, User
 from django.contrib.messages import get_messages
+from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
 from django.forms import HiddenInput
 from django.http.response import Http404
 from django.shortcuts import resolve_url
 from django.test import RequestFactory
 from django.urls import reverse
+from django.utils import timezone
 from faker import Faker
+from freezegun import freeze_time
 
 from anvil_consortium_manager import anvil_api
 from anvil_consortium_manager.models import (
     Account,
     AnVILProjectManagerAccess,
+    GroupAccountMembership,
+    WorkspaceGroupSharing,
 )
 from anvil_consortium_manager.tests.factories import (
     AccountFactory,
@@ -27,16 +32,36 @@ from anvil_consortium_manager.tests.factories import (
 )
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin, TestCase
 
+from ... import app_settings
 from .. import forms, models, tables, views
 from ..audit import base as base_audit
-from ..audit import managed_groups as managed_group_audit
+from ..audit.accounts import AccountAudit
+from ..audit.billing_projects import BillingProjectAudit
+from ..audit.managed_groups import (
+    ManagedGroupAudit,
+    ManagedGroupMembershipAudit,
+    ManagedGroupMembershipIgnoredResult,
+    ManagedGroupMembershipNotInAppResult,
+)
+from ..audit.workspaces import (
+    WorkspaceAudit,
+    WorkspaceSharingAudit,
+    WorkspaceSharingIgnoredResult,
+    WorkspaceSharingNotInAppResult,
+)
 from . import factories
 
 fake = Faker()
 
 
-class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the BillingProjectAudit view."""
+class AuditCacheClearTestMixin:
+    def tearDown(self):
+        super().tearDown()
+        caches[app_settings.AUDIT_CACHE].clear()
+
+
+class BillingProjectAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
+    """Tests for the BillingProjectRunAudit view."""
 
     def setUp(self):
         """Set up test class."""
@@ -50,7 +75,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:billing_projects:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:billing_projects:run", args=args)
 
     def get_api_url(self, billing_project_name):
         return self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name
@@ -62,7 +87,7 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.BillingProjectAudit.as_view()
+        return views.BillingProjectAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -99,15 +124,41 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_audit_verified(self):
-        """audit_verified is in the context data."""
+    def test_get_context_has_form(self):
+        """Context has the form."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+        self.assertIn("form", response.context_data)
 
-    def test_audit_verified_one_record(self):
+    def test_redirect_url(self):
+        """Redirects to the review view."""
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:billing_projects:review"))
+
+    def test_post_result_is_cached(self):
+        """audit_verified is in the context data."""
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, BillingProjectAudit)
+
+    def test_post_updates_existing_cache_result(self):
+        """audit_verified is in the context data."""
+        with freeze_time(timezone.now() - timezone.timedelta(days=1)):
+            cached_audit_result = BillingProjectAudit()
+            caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", cached_audit_result)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            self.client.force_login(self.user)
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        new_cached_audit_result = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertEqual(new_cached_audit_result.timestamp, current_timestamp)
+
+    def test_post_one_verified(self):
         """audit_verified with one verified record."""
         billing_project = BillingProjectFactory.create()
         api_url = self.get_api_url(billing_project.name)
@@ -118,20 +169,18 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response(),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_errors(self):
-        """audit_errors is in the context data."""
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
-
-    def test_audit_errors_one_record(self):
-        """audit_errors with one verified record."""
+    def test_post_errors(self):
+        """post with audit errors."""
         billing_project = BillingProjectFactory.create()
         api_url = self.get_api_url(billing_project.name)
         self.anvil_response_mock.add(
@@ -141,50 +190,63 @@ class BillingProjectAuditTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_not_in_app(self):
-        """audit_errors is in the context data."""
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
-
-    def test_audit_ok_is_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error(self):
         billing_project = BillingProjectFactory.create()
         api_url = self.get_api_url(billing_project.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url,
-            status=200,
+            status=500,
+            json={"message": "test error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], True)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results"))
+        # A message exists.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: test error", str(messages[0]))
 
-    def test_audit_ok_is_not_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error_does_not_update_cached_result(self):
+        """Existing cached result is not updated when there is an API error."""
+        # Set up previous cache.
+        previous_timestamp = timezone.now() - timezone.timedelta(minutes=2)
+        with freeze_time(previous_timestamp):
+            previous_cached_audit_result = BillingProjectAudit()
+            caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", previous_cached_audit_result)
         billing_project = BillingProjectFactory.create()
         api_url = self.get_api_url(billing_project.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url,
-            status=404,
-            json={"message": "other error"},
+            status=500,
+            json={"message": "test error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], False)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        new_cached_result = caches[app_settings.AUDIT_CACHE].get("billing_project_audit_results")
+        self.assertIsNotNone(new_cached_result)
+        self.assertEqual(new_cached_result.timestamp, previous_timestamp)
 
 
-class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the AccountAudit view."""
+class BillingProjectAuditReviewTest(AuditCacheClearTestMixin, TestCase):
+    """Tests for the BillingProjectReviewAudit view."""
 
     def setUp(self):
         """Set up test class."""
@@ -198,7 +260,180 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:accounts:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:billing_projects:review", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.BillingProjectAuditRun.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        audit_result = BillingProjectAudit()
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", audit_result)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_redirect_if_no_cached_result(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:billing_projects:run"))
+
+    def test_message_if_no_cached_result(self):
+        """A message is displayed when there is no cached result"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.BillingProjectAuditReview.error_no_cached_result, str(messages[0]))
+
+    def test_timestamp(self):
+        """Shows timestamp of cached audit."""
+        # Store a cached result so that the page loads.
+        timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(timestamp):
+            audit_results = BillingProjectAudit()
+            audit_results.timestamp = timezone.now()
+            caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_timestamp", response.context_data)
+        self.assertEqual(response.context_data["audit_timestamp"], timestamp)
+
+    def test_link_to_update_results(self):
+        """Includes a link to update the audit results."""
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", BillingProjectAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn(reverse("anvil_consortium_manager:auditor:billing_projects:run"), response.content.decode())
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", BillingProjectAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        billing_project = BillingProjectFactory.create()
+        audit_results = BillingProjectAudit()
+        audit_results.add_result(base_audit.ModelInstanceResult(billing_project))
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", BillingProjectAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        billing_project = BillingProjectFactory.create()
+        audit_results = BillingProjectAudit()
+        model_result = base_audit.ModelInstanceResult(billing_project)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", BillingProjectAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_errors is in the context data."""
+        audit_results = BillingProjectAudit()
+        not_in_app_result = base_audit.NotInAppResult("foo")
+        audit_results.add_result(not_in_app_result)
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", BillingProjectAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        billing_project = BillingProjectFactory.create()
+        audit_results = BillingProjectAudit()
+        model_result = base_audit.ModelInstanceResult(billing_project)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set("billing_project_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+
+class AccountAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
+    """Tests for the AccountRunAudit view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:accounts:run", args=args)
 
     def get_api_url(self, email):
         return self.api_client.sam_entry_point + "/api/users/v1/" + email
@@ -213,7 +448,7 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.AccountAudit.as_view()
+        return views.AccountAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -244,21 +479,41 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
-    def test_template(self):
-        """Template loads successfully."""
+    def test_get_context_has_form(self):
+        """Context has the form."""
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
-        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context_data)
 
-    def test_audit_verified(self):
+    def test_redirect_url(self):
+        """Redirects to the review view."""
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:accounts:review"))
+
+    def test_post_result_is_cached(self):
         """audit_verified is in the context data."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+        response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, AccountAudit)
 
-    def test_audit_verified_one_verified(self):
+    def test_post_updates_existing_cache_result(self):
+        """audit_verified is in the context data."""
+        with freeze_time(timezone.now() - timezone.timedelta(days=1)):
+            cached_audit_result = AccountAudit()
+            caches[app_settings.AUDIT_CACHE].set("account_audit_results", cached_audit_result)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            self.client.force_login(self.user)
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        new_cached_audit_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertEqual(new_cached_audit_result.timestamp, current_timestamp)
+
+    def test_post_one_verified(self):
         """audit_verified with one verified record."""
         account = AccountFactory.create()
         api_url = self.get_api_url(account.email)
@@ -269,20 +524,18 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response(account.email),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_errors(self):
-        """audit_errors is in the context data."""
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
-
-    def test_audit_errors_one_verified(self):
-        """audit_errors with one verified record."""
+    def test_post_errors(self):
+        """post with audit errors."""
         account = AccountFactory.create()
         api_url = self.get_api_url(account.email)
         self.anvil_response_mock.add(
@@ -292,50 +545,63 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
             json={"message": "other error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_not_in_app(self):
-        """audit_errors is in the context data."""
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
-
-    def test_audit_ok_is_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error(self):
         account = AccountFactory.create()
         api_url = self.get_api_url(account.email)
         self.anvil_response_mock.add(
             responses.GET,
             api_url,
-            status=200,
-            json=self.get_api_json_response(account.email),
+            status=500,
+            json={"message": "api error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], True)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get("account_audit_results"))
+        # A message exists.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
 
-    def test_audit_ok_is_not_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error_does_not_update_cached_result(self):
+        """Existing cached result is not updated when there is an API error."""
+        # Set up previous cache.
+        previous_timestamp = timezone.now() - timezone.timedelta(minutes=2)
+        with freeze_time(previous_timestamp):
+            previous_cached_audit_result = AccountAudit()
+            caches[app_settings.AUDIT_CACHE].set("account_audit_results", previous_cached_audit_result)
         account = AccountFactory.create()
         api_url = self.get_api_url(account.email)
         self.anvil_response_mock.add(
             responses.GET,
             api_url,
-            status=404,
-            json={"message": "other error"},
+            status=500,
+            json={"message": "test error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], False)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        new_cached_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(new_cached_result)
+        self.assertEqual(new_cached_result.timestamp, previous_timestamp)
 
 
-class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the ManagedGroupAudit view."""
+class AccountAuditReviewTest(AuditCacheClearTestMixin, TestCase):
+    """Tests for the AccountReviewAudit view."""
 
     def setUp(self):
         """Set up test class."""
@@ -349,7 +615,176 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:managed_groups:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:accounts:review", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.AccountAuditReview.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Cache results so we don't get redirected.
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", AccountAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_redirect_if_no_cached_result(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:accounts:run"))
+
+    def test_message_if_no_cached_result(self):
+        """A message is displayed when there is no cached result"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.AccountAuditReview.error_no_cached_result, str(messages[0]))
+
+    def test_timestamp(self):
+        """Shows timestamp of cached audit."""
+        # Store a cached result so that the page loads.
+        timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(timestamp):
+            audit_results = AccountAudit()
+            audit_results.timestamp = timezone.now()
+            caches[app_settings.AUDIT_CACHE].set("account_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_timestamp", response.context_data)
+        self.assertEqual(response.context_data["audit_timestamp"], timestamp)
+
+    def test_link_to_update_results(self):
+        """Includes a link to update the audit results."""
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", AccountAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn(reverse("anvil_consortium_manager:auditor:accounts:run"), response.content.decode())
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", AccountAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        account = AccountFactory.create()
+        audit_results = AccountAudit()
+        audit_results.add_result(base_audit.ModelInstanceResult(account))
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", AccountAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        account = AccountFactory.create()
+        audit_results = AccountAudit()
+        model_result = base_audit.ModelInstanceResult(account)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", AccountAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_errors is in the context data."""
+        audit_results = AccountAudit()
+        not_in_app_result = base_audit.NotInAppResult("foo")
+        audit_results.add_result(not_in_app_result)
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", AccountAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        audit_results = AccountAudit()
+        audit_results.add_result(base_audit.NotInAppResult("foo"))
+        caches[app_settings.AUDIT_CACHE].set("account_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+
+class ManagedGroupAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
+    """Tests for the ManagedGroupAuditRun view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:managed_groups:run", args=args)
 
     def get_api_groups_url(self):
         """Return the API url being called by the method."""
@@ -382,7 +817,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupAudit.as_view()
+        return views.ManagedGroupAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -392,13 +827,6 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        api_url = self.get_api_groups_url()
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url,
-            status=200,
-            json=[],
-        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
@@ -420,8 +848,14 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
-    def test_template(self):
-        """Template loads successfully."""
+    def test_get_context_has_form(self):
+        """Context has the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("form", response.context_data)
+
+    def test_redirect_url(self):
+        """Redirects to the review view."""
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -430,10 +864,10 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.get_url(), {})
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:managed_groups:review"))
 
-    def test_audit_verified(self):
+    def test_post_result_is_cached(self):
         """audit_verified is in the context data."""
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
@@ -443,12 +877,33 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+        response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, ManagedGroupAudit)
 
-    def test_audit_verified_one_record(self):
+    def test_post_updates_existing_cache_result(self):
+        """audit_verified is in the context data."""
+        with freeze_time(timezone.now() - timezone.timedelta(days=1)):
+            cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", cached_audit_result)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            self.client.force_login(self.user)
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        new_cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertEqual(new_cached_audit_result.timestamp, current_timestamp)
+
+    def test_post_one_verified(self):
         """audit_verified with one verified record."""
         group = ManagedGroupFactory.create()
         api_url = self.get_api_groups_url()
@@ -474,27 +929,18 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_errors(self):
-        """audit_errors is in the context data."""
-        api_url = self.get_api_groups_url()
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url,
-            status=200,
-            json=[],
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
-
-    def test_audit_errors_one_record(self):
-        """audit_errors with one error record."""
+    def test_post_errors(self):
+        """post with audit errors."""
         group = ManagedGroupFactory.create()
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
@@ -505,27 +951,17 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_group_json(group.name, "Member")],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_not_in_app(self):
-        """audit_not_in_app is in the context data."""
-        api_url = self.get_api_groups_url()
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url,
-            status=200,
-            json=[],
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
-
-    def test_audit_not_in_app_one_record(self):
-        """audit_not_in_app with one record not in app."""
+    def test_post_not_in_app(self):
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -534,12 +970,60 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_group_json("foo", "Admin")],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_ok_is_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error(self):
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=500,
+            json={"message": "api error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results"))
+        # A message exists.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
+
+    def test_api_error_does_not_update_cached_result(self):
+        """Existing cached result is not updated when there is an API error."""
+        # Set up previous cache.
+        previous_timestamp = timezone.now() - timezone.timedelta(minutes=2)
+        with freeze_time(previous_timestamp):
+            previous_cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", previous_cached_audit_result)
+        api_url = self.get_api_groups_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=500,
+            json={"message": "test error"},
+        )
+        self.client.force_login(self.user)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        new_cached_result = caches[app_settings.AUDIT_CACHE].get("managed_group_audit_results")
+        self.assertIsNotNone(new_cached_result)
+        self.assertEqual(new_cached_result.timestamp, previous_timestamp)
+
+    def test_caches_membership_audit_results(self):
+        """Membership audit results are cached."""
         group = ManagedGroupFactory.create()
         api_url = self.get_api_groups_url()
         self.anvil_response_mock.add(
@@ -564,44 +1048,205 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_membership_{}".format(group.pk))
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, ManagedGroupMembershipAudit)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
+
+
+class ManagedGroupAuditReviewTest(AuditCacheClearTestMixin, TestCase):
+    """Tests for the ManagedGroupAuditReview view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:managed_groups:review", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ManagedGroupAuditReview.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Cache results so we don't get redirected.
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", ManagedGroupAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_redirect_if_no_cached_result(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:managed_groups:run"))
+
+    def test_message_if_no_cached_result(self):
+        """A message is displayed when there is no cached result"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.ManagedGroupAuditReview.error_no_cached_result, str(messages[0]))
+
+    def test_timestamp(self):
+        """Shows timestamp of cached audit."""
+        # Store a cached result so that the page loads.
+        timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(timestamp):
+            audit_results = ManagedGroupAudit()
+            audit_results.timestamp = timezone.now()
+            caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_timestamp", response.context_data)
+        self.assertEqual(response.context_data["audit_timestamp"], timestamp)
+
+    def test_link_to_update_results(self):
+        """Includes a link to update the audit results."""
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", ManagedGroupAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn(reverse("anvil_consortium_manager:auditor:managed_groups:run"), response.content.decode())
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", ManagedGroupAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        group = ManagedGroupFactory.create()
+        audit_results = ManagedGroupAudit()
+        audit_results.add_result(base_audit.ModelInstanceResult(group))
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", ManagedGroupAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        group = ManagedGroupFactory.create()
+        audit_results = ManagedGroupAudit()
+        model_result = base_audit.ModelInstanceResult(group)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", ManagedGroupAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_errors is in the context data."""
+        audit_results = ManagedGroupAudit()
+        not_in_app_result = base_audit.NotInAppResult("foo")
+        audit_results.add_result(not_in_app_result)
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", ManagedGroupAudit())
+        self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("audit_ok", response.context_data)
         self.assertEqual(response.context_data["audit_ok"], True)
 
     def test_audit_ok_is_not_ok(self):
-        """audit_ok when audit_results.ok() is False."""
-        group = ManagedGroupFactory.create()
-        api_url = self.get_api_groups_url()
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url,
-            status=200,
-            # Error - we are not admin.
-            json=[self.get_api_group_json(group.name, "Member")],
-        )
+        """audit_ok when audit_results.ok() is True."""
+        audit_results = ManagedGroupAudit()
+        audit_results.add_result(base_audit.NotInAppResult("foo"))
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", audit_results)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("audit_ok", response.context_data)
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
-class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the ManagedGroupAudit view."""
+class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
+    """Tests for the ManagedGroupMembershipAuditRun view."""
 
     def setUp(self):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
+        # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
             Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.group = ManagedGroupFactory.create()
+        self.cache_key = "managed_group_membership_{}".format(self.group.pk)
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:by_group:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:by_group:run", args=args)
 
     def get_api_url_members(self, group_name):
         """Return the API url being called by the method."""
@@ -621,7 +1266,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.ManagedGroupMembershipAudit.as_view()
+        return views.ManagedGroupMembershipAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -631,22 +1276,9 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        api_url_members = self.get_api_url_members(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_members,
-            status=200,
-            json=self.get_api_json_response_members(emails=[]),
-        )
-        api_url_admins = self.get_api_url_admins(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[]),
-        )
+        group = ManagedGroupFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
+        response = self.client.get(self.get_url(group.name))
         self.assertEqual(response.status_code, 200)
 
     def test_access_with_limited_view_permission(self):
@@ -656,7 +1288,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         request = self.factory.get(self.get_url("foo"))
         request.user = user
         with self.assertRaises(PermissionDenied):
-            self.get_view()(request)
+            self.get_view()(request, slug="foo")
 
     def test_access_without_user_permission(self):
         """Raises permission denied if user has no permissions."""
@@ -666,8 +1298,22 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, slug="foo")
 
-    def test_template(self):
-        """Template loads successfully."""
+    def test_group_does_not_exist(self):
+        """Returns 404 if group does not exist."""
+        request = self.factory.get(self.get_url("foo"))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, slug="foo")
+
+    def test_get_context_has_form(self):
+        """Context has the form."""
+        group = ManagedGroupFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name))
+        self.assertIn("form", response.context_data)
+
+    def test_redirect_url(self):
+        """Redirects to the review view."""
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -683,38 +1329,15 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertEqual(response.status_code, 200)
-
-    def test_table_classes(self):
-        api_url_members = self.get_api_url_members(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_members,
-            status=200,
-            json=self.get_api_json_response_members(emails=[]),
-        )
-        api_url_admins = self.get_api_url_admins(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[]),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(
-            response.context_data["ignored_table"], managed_group_audit.ManagedGroupMembershipIgnoredTable
+        response = self.client.post(self.get_url(self.group.name), {})
+        self.assertRedirects(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review", args=[self.group.name]
+            ),
         )
 
-    def test_audit_verified(self):
+    def test_post_result_is_cached(self):
         """audit_verified is in the context data."""
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
@@ -731,14 +1354,44 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+        response = self.client.post(self.get_url(self.group.name), {})
+        self.assertEqual(response.status_code, 302)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, ManagedGroupMembershipAudit)
+        self.assertEqual(cached_audit_result.managed_group, self.group)
 
-    def test_audit_verified_one_record(self):
+    def test_post_updates_existing_cache_result(self):
+        """audit_verified is in the context data."""
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=200,
+            json=self.get_api_json_response_members(emails=[]),
+        )
+        api_url_admins = self.get_api_url_admins(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_admins,
+            status=200,
+            json=self.get_api_json_response_admins(emails=[]),
+        )
+        with freeze_time(timezone.now() - timezone.timedelta(days=1)):
+            cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, cached_audit_result)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            self.client.force_login(self.user)
+            response = self.client.post(self.get_url(self.group.name), {})
+        self.assertEqual(response.status_code, 302)
+        new_cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertEqual(new_cached_audit_result.timestamp, current_timestamp)
+
+    def test_post_one_verified(self):
         """audit_verified with one verified record."""
-        membership = GroupAccountMembershipFactory.create(group=self.group)
+        membership = GroupAccountMembershipFactory.create(group=self.group, role=GroupAccountMembership.MEMBER)
+        # Group membership API call.
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -754,12 +1407,19 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("verified_table", response.context_data)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+        response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_errors(self):
-        """audit_errors is in the context data."""
+    def test_post_errors(self):
+        """post with audit errors."""
+        GroupAccountMembershipFactory.create(group=self.group, role=GroupAccountMembership.MEMBER)
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -775,63 +1435,23 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+        response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_errors_one_record(self):
-        """audit_errors with one error record."""
-        membership = GroupAccountMembershipFactory.create(group=self.group)
+    def test_post_not_in_app(self):
         # Group membership API call.
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
             api_url_members,
             status=200,
-            json=self.get_api_json_response_members(emails=[]),
-        )
-        api_url_admins = self.get_api_url_admins(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[membership.account.email]),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("error_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 1)
-
-    def test_audit_not_in_app(self):
-        """audit_not_in_app is in the context data."""
-        api_url_members = self.get_api_url_members(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_members,
-            status=200,
-            json=self.get_api_json_response_members(emails=[]),
-        )
-        api_url_admins = self.get_api_url_admins(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[]),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
-
-    def test_audit_not_in_app_one_record(self):
-        """audit_not_in_app with one record not in app."""
-        api_url_members = self.get_api_url_members(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_members,
-            status=200,
             json=self.get_api_json_response_members(emails=["foo@bar.com"]),
         )
         api_url_admins = self.get_api_url_admins(self.group.name)
@@ -842,55 +1462,15 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
-
-    def test_audit_not_in_app_link_to_ignore(self):
-        """Link to ignore create view appears when a not_in_app result is found."""
-        api_url_members = self.get_api_url_members(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_members,
-            status=200,
-            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
-        )
-        api_url_admins = self.get_api_url_admins(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[]),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        expected_url = reverse(
-            "anvil_consortium_manager:auditor:managed_groups:membership:by_group:ignored:new",
-            args=[self.group.name, "foo@bar.com"],
-        )
-        self.assertIn(expected_url, response.content.decode("utf-8"))
-
-    def test_audit_ignored(self):
-        """ignored_table is in the context data."""
-        api_url_members = self.get_api_url_members(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_members,
-            status=200,
-            json=self.get_api_json_response_members(emails=[]),
-        )
-        api_url_admins = self.get_api_url_admins(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[]),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+        response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_audit_one_ignored_record(self):
         """ignored_table with one ignored record."""
@@ -910,10 +1490,15 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+        response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
     def test_audit_one_ignored_record_not_in_anvil(self):
         """The ignored record is not a group member in AnVIL."""
@@ -933,13 +1518,36 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response_admins(emails=[]),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+        response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
-    def test_audit_ok_is_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error_members_call(self):
+        api_url_members = self.get_api_url_members(self.group.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url_members,
+            status=500,
+            json={"message": "api error"},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(self.group.name), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get(self.cache_key))
+        # A message exists.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
+
+    def test_api_error_does_not_update_cached_result(self):
+        """Existing cached result is not updated when there is an API error."""
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -951,34 +1559,23 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(
             responses.GET,
             api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[]),
+            status=500,
+            json={"message": "test error"},
         )
+        # Set up previous cache.
+        previous_timestamp = timezone.now() - timezone.timedelta(minutes=2)
+        with freeze_time(previous_timestamp):
+            previous_cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, previous_cached_audit_result)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], True)
-
-    def test_audit_ok_is_not_ok(self):
-        """audit_ok when audit_results.ok() is False."""
-        api_url_members = self.get_api_url_members(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_members,
-            status=200,
-            json=self.get_api_json_response_members(emails=["foo@bar.com"]),
-        )
-        api_url_admins = self.get_api_url_admins(self.group.name)
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url_admins,
-            status=200,
-            json=self.get_api_json_response_admins(emails=[]),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.group.name))
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], False)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            response = self.client.post(self.get_url(self.group.name), {})
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        new_cached_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(new_cached_result)
+        self.assertEqual(new_cached_result.timestamp, previous_timestamp)
 
     def test_group_not_managed_by_app(self):
         """Redirects with a message when group is not managed by app."""
@@ -991,16 +1588,257 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
-            views.ManagedGroupMembershipAudit.message_not_managed_by_app,
+            views.ManagedGroupMembershipAuditRun.message_not_managed_by_app,
         )
 
-    def test_group_does_not_exist_in_app(self):
-        """Raises a 404 error with an invalid object pk."""
-        ManagedGroupFactory.create()
-        request = self.factory.get(self.get_url("foo"))
-        request.user = self.user
-        with self.assertRaises(Http404):
-            self.get_view()(request, slug="foo")
+
+class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
+    """Tests for the ManagedGroupAuditReview view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.group = ManagedGroupFactory.create()
+        self.cache_key = "managed_group_membership_{}".format(self.group.pk)
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:managed_groups:membership:by_group:review", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.ManagedGroupMembershipAuditReview.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url(self.group.name))
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Cache results so we don't get redirected.
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, ManagedGroupMembershipAudit(self.group))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url(self.group.name))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug=self.group.name)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url(self.group.name))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request, slug=self.group.name)
+
+    def test_redirect_if_no_cached_result(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertRedirects(
+            response,
+            reverse("anvil_consortium_manager:auditor:managed_groups:membership:by_group:run", args=[self.group.name]),
+        )
+
+    def test_message_if_no_cached_result(self):
+        """A message is displayed when there is no cached result"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name), follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.ManagedGroupMembershipAuditReview.error_no_cached_result, str(messages[0]))
+
+    def test_timestamp(self):
+        """Shows timestamp of cached audit."""
+        # Store a cached result so that the page loads.
+        timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(timestamp):
+            audit_results = ManagedGroupMembershipAudit(self.group)
+            audit_results.timestamp = timezone.now()
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("audit_timestamp", response.context_data)
+        self.assertEqual(response.context_data["audit_timestamp"], timestamp)
+
+    def test_link_to_update_results(self):
+        """Includes a link to update the audit results."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, ManagedGroupMembershipAudit(self.group))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn(
+            reverse("anvil_consortium_manager:auditor:managed_groups:membership:by_group:run", args=[self.group.name]),
+            response.content.decode(),
+        )
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, ManagedGroupMembershipAudit(self.group))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(base_audit.ModelInstanceResult(membership))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, ManagedGroupMembershipAudit(self.group))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        model_result = base_audit.ModelInstanceResult(membership)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, ManagedGroupMembershipAudit(self.group))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_errors is in the context data."""
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(
+            ManagedGroupMembershipNotInAppResult(
+                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.MEMBER
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_not_in_app_link_to_ignore(self):
+        """Link to ignore create view appears when a not_in_app result is found."""
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(
+            ManagedGroupMembershipNotInAppResult(
+                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.MEMBER
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:managed_groups:membership:by_group:ignored:new",
+            args=[self.group.name, "foo@bar.com"],
+        )
+        self.assertIn(expected_url, response.content.decode("utf-8"))
+
+    def test_audit_ignored(self):
+        """ignored_table is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, ManagedGroupMembershipAudit(self.group))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+
+    def test_audit_one_ignored_record_in_anvil(self):
+        """ignored_table with one ignored record."""
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(
+            ManagedGroupMembershipIgnoredResult(obj, record="foo", current_role=GroupAccountMembership.MEMBER)
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_one_ignored_record_not_in_anvil(self):
+        """The ignored record is not a group member in AnVIL."""
+        obj = factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(ManagedGroupMembershipIgnoredResult(obj, record=None))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, ManagedGroupMembershipAudit(self.group))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(
+            ManagedGroupMembershipNotInAppResult(
+                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.MEMBER
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
+
+    def test_group_not_managed_by_app(self):
+        """Redirects with a message when group is not managed by app."""
+        group = ManagedGroupFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name), follow=True)
+        self.assertRedirects(response, group.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]),
+            views.ManagedGroupMembershipAuditRun.message_not_managed_by_app,
+        )
 
 
 class IgnoredManagedGroupMembershipDetailTest(TestCase):
@@ -1919,8 +2757,8 @@ class IgnoredManagedGroupMembershipUpdateTest(TestCase):
         self.assertEqual(obj.note, "original note")
 
 
-class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the WorkspaceAudit view."""
+class WorkspaceAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
+    """Tests for the WorkspaceAuditRun view."""
 
     def setUp(self):
         """Set up test class."""
@@ -1934,7 +2772,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:workspaces:all", args=args)
+        return reverse("anvil_consortium_manager:auditor:workspaces:run", args=args)
 
     def get_api_url(self):
         return self.api_client.rawls_entry_point + "/api/workspaces"
@@ -1983,7 +2821,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceAudit.as_view()
+        return views.WorkspaceAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -1993,13 +2831,6 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        api_url = self.get_api_url()
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url,
-            status=200,
-            json=[],
-        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
@@ -2021,8 +2852,14 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
-    def test_template(self):
-        """Template loads successfully."""
+    def test_get_context_has_form(self):
+        """Context has the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("form", response.context_data)
+
+    def test_redirect_url(self):
+        """Redirects to the review view."""
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -2031,10 +2868,10 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.get_url(), {})
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:workspaces:review"))
 
-    def test_audit_verified(self):
+    def test_post_result_is_cached(self):
         """audit_verified is in the context data."""
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
@@ -2044,12 +2881,33 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+        response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, WorkspaceAudit)
 
-    def test_audit_verified_one_record(self):
+    def test_post_updates_existing_cache_result(self):
+        """audit_verified is in the context data."""
+        with freeze_time(timezone.now() - timezone.timedelta(days=1)):
+            cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", cached_audit_result)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            self.client.force_login(self.user)
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 302)
+        new_cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertEqual(new_cached_audit_result.timestamp, current_timestamp)
+
+    def test_post_one_verified(self):
         """audit_verified with one verified record."""
         workspace = WorkspaceFactory.create()
         api_url = self.get_api_url()
@@ -2076,27 +2934,18 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_bucket_options_response(),
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("verified_table", response.context_data)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_errors(self):
-        """audit_errors is in the context data."""
-        api_url = self.get_api_url()
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url,
-            status=200,
-            json=[],
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
-
-    def test_audit_errors_one_record(self):
-        """audit_errors with one error record."""
+    def test_post_errors(self):
+        """post with audit errors."""
         workspace = WorkspaceFactory.create()
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
@@ -2107,27 +2956,17 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("error_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_not_in_app(self):
-        """audit_not_in_app is in the context data."""
-        api_url = self.get_api_url()
-        self.anvil_response_mock.add(
-            responses.GET,
-            api_url,
-            status=200,
-            json=[],
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
-
-    def test_audit_not_in_app_one_record(self):
-        """audit_not_in_app with one record not in app."""
+    def test_post_not_in_app(self):
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
@@ -2136,59 +2975,281 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=[self.get_api_workspace_json("foo", "bar", "OWNER")],
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_ok_is_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error(self):
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
             api_url,
-            status=200,
-            json=[],
+            status=500,
+            json={"message": "api error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], True)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get("workspace_audit_results"))
+        # A message exists.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
 
-    def test_audit_ok_is_not_ok(self):
-        """audit_ok when audit_results.ok() is False."""
+    def test_api_error_does_not_update_cached_result(self):
+        """Existing cached result is not updated when there is an API error."""
+        # Set up previous cache.
+        previous_timestamp = timezone.now() - timezone.timedelta(minutes=2)
+        with freeze_time(previous_timestamp):
+            previous_cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", previous_cached_audit_result)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=500,
+            json={"message": "api error"},
+        )
+        self.client.force_login(self.user)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            response = self.client.post(self.get_url(), {})
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        new_cached_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(new_cached_result)
+        self.assertEqual(new_cached_result.timestamp, previous_timestamp)
+
+    def test_caches_sharing_audit_results(self):
+        """Membership audit results are cached."""
         workspace = WorkspaceFactory.create()
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
             responses.GET,
             api_url,
             status=200,
-            # Error - we are not admin.
-            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
         )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check workspace bucket options.
+        workspace_acl_url = self.get_api_bucket_options_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_bucket_options_response(),
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {})  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, WorkspaceSharingAudit)
+
+
+class WorkspaceAuditReviewTest(AuditCacheClearTestMixin, TestCase):
+    """Tests for the WorkspaceAuditReview view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:review", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceAuditReview.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, resolve_url(settings.LOGIN_URL) + "?next=" + self.get_url())
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Cache results so we don't get redirected.
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", WorkspaceAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url())
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url())
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(request)
+
+    def test_redirect_if_no_cached_result(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertRedirects(response, reverse("anvil_consortium_manager:auditor:workspaces:run"))
+
+    def test_message_if_no_cached_result(self):
+        """A message is displayed when there is no cached result"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.ManagedGroupAuditReview.error_no_cached_result, str(messages[0]))
+
+    def test_timestamp(self):
+        """Shows timestamp of cached audit."""
+        # Store a cached result so that the page loads.
+        timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(timestamp):
+            audit_results = WorkspaceAudit()
+            audit_results.timestamp = timezone.now()
+            caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_timestamp", response.context_data)
+        self.assertEqual(response.context_data["audit_timestamp"], timestamp)
+
+    def test_link_to_update_results(self):
+        """Includes a link to update the audit results."""
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", WorkspaceAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn(reverse("anvil_consortium_manager:auditor:workspaces:run"), response.content.decode())
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", WorkspaceAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        workspace = WorkspaceFactory.create()
+        audit_results = WorkspaceAudit()
+        audit_results.add_result(base_audit.ModelInstanceResult(workspace))
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", WorkspaceAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        workspace = WorkspaceFactory.create()
+        audit_results = WorkspaceAudit()
+        model_result = base_audit.ModelInstanceResult(workspace)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", WorkspaceAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_errors is in the context data."""
+        audit_results = WorkspaceAudit()
+        not_in_app_result = base_audit.NotInAppResult("foo")
+        audit_results.add_result(not_in_app_result)
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", WorkspaceAudit())
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        audit_results = WorkspaceAudit()
+        audit_results.add_result(base_audit.NotInAppResult("foo"))
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", audit_results)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
         self.assertIn("audit_ok", response.context_data)
         self.assertEqual(response.context_data["audit_ok"], False)
 
 
-class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
-    """Tests for the WorkspaceSharingAudit view."""
+class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
+    """Tests for the WorkspaceSharingAuditReview view."""
 
     def setUp(self):
         """Set up test class."""
         super().setUp()
         self.factory = RequestFactory()
-        # Create a user with both view and edit permission.
+        # Create a user with only view permission.
         self.user = User.objects.create_user(username="test", password="test")
         self.user.user_permissions.add(
             Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
+        self.workspace = WorkspaceFactory.create()
+        self.cache_key = "workspace_sharing_{}".format(self.workspace.pk)
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
         self.api_response = {"acl": {}}
         self.update_api_response(self.service_account_email, "OWNER", can_compute=True, can_share=True)
         # Create a workspace for use in tests.
-        self.workspace = WorkspaceFactory.create()
         self.api_url = (
             self.api_client.rawls_entry_point
             + "/api/workspaces/"
@@ -2197,10 +3258,6 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             + self.workspace.name
             + "/acl"
         )
-
-    def get_url(self, *args):
-        """Get the url for the view being tested."""
-        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:all", args=args)
 
     def update_api_response(self, email, access, can_compute=False, can_share=False):
         """Return a paired down json for a single ACL, including the service account."""
@@ -2215,9 +3272,13 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             }
         )
 
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run", args=args)
+
     def get_view(self):
         """Return the view being tested."""
-        return views.WorkspaceSharingAudit.as_view()
+        return views.WorkspaceSharingAuditRun.as_view()
 
     def test_view_redirect_not_logged_in(self):
         "View redirects to login view when user is not logged in."
@@ -2230,13 +3291,6 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
-        # Group membership API call.
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
         self.assertEqual(response.status_code, 200)
@@ -2258,8 +3312,33 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request, billing_project_slug="foo", workspace_slug="bar")
 
-    def test_template(self):
-        """Template loads successfully."""
+    def test_workspace_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid workspace slug."""
+        billing_project = BillingProjectFactory.create()
+        request = self.factory.get(self.get_url(billing_project.name, self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(
+                request,
+                billing_project_slug=billing_project.name,
+                workspace_slug=self.workspace.name,
+            )
+
+    def test_billing_project_does_not_exist_in_app(self):
+        """Raises a 404 error with an invalid billing project slug."""
+        request = self.factory.get(self.get_url("foo", self.workspace.name))
+        request.user = self.user
+        with self.assertRaises(Http404):
+            self.get_view()(request, billing_project_slug="foo", workspace_slug=self.workspace.name)
+
+    def test_get_context_has_form(self):
+        """Context has the form."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("form", response.context_data)
+
+    def test_redirect_url(self):
+        """Redirects to the review view."""
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -2267,12 +3346,17 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertRedirects(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
+                args=[self.workspace.billing_project.name, self.workspace.name],
+            ),
+        )
 
-    def test_audit_verified(self):
+    def test_post_result_is_cached(self):
         """audit_verified is in the context data."""
-        # Group membership API call.
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -2280,12 +3364,34 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("verified_table", response.context_data)
-        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+        response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertEqual(response.status_code, 302)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, WorkspaceSharingAudit)
+        self.assertEqual(cached_audit_result.workspace, self.workspace)
 
-    def test_audit_verified_one_record(self):
+    def test_post_updates_existing_cache_result(self):
+        """audit_verified is in the context data."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_url,
+            status=200,
+            json=self.api_response,
+        )
+        with freeze_time(timezone.now() - timezone.timedelta(days=1)):
+            cached_audit_result = WorkspaceSharingAudit(self.workspace)
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, cached_audit_result)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            self.client.force_login(self.user)
+            response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertEqual(response.status_code, 302)
+        new_cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertEqual(new_cached_audit_result.workspace, self.workspace)
+        self.assertEqual(new_cached_audit_result.timestamp, current_timestamp)
+
+    def test_post_one_verified(self):
         """audit_verified with one verified record."""
         access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
         self.update_api_response(access.group.email, "READER")
@@ -2297,28 +3403,21 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("verified_table", response.context_data)
-        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_errors(self):
-        """audit_errors is in the context data."""
-        # Group membership API call.
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("error_table", response.context_data)
-        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
-        self.assertEqual(len(response.context_data["error_table"].rows), 0)
-
-    def test_audit_errors_one_record(self):
-        """audit_errors with one error record."""
-        access = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+    def test_post_errors(self):
+        """post with audit errors."""
+        access = WorkspaceGroupSharingFactory.create(workspace=self.workspace, access=WorkspaceGroupSharing.READER)
         # Different access recorded.
         self.update_api_response(access.group.email, "WRITER")
         # Group membership API call.
@@ -2329,29 +3428,21 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("error_table", response.context_data)
-        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
-    def test_audit_not_in_app(self):
-        """audit_not_in_app is in the context data."""
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-            # Admin insetad of member.
-            # json=self.get_api_group_members_json_response(),
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
-
-    def test_audit_not_in_app_one_record(self):
-        """audit_not_in_app with one record not in app."""
+    def test_post_not_in_app(self):
         self.update_api_response("foo@bar.com", "READER")
+        # Group membership API call.
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
@@ -2359,40 +3450,17 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("not_in_app_table", response.context_data)
-        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
-
-    def test_audit_not_in_app_link_to_ignore(self):
-        """Link to ignore create view appears when a not_in_app result is found."""
-        self.update_api_response("foo@bar.com", "READER")
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        expected_url = reverse(
-            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:new",
-            args=[self.workspace.billing_project.name, self.workspace.name, "foo@bar.com"],
-        )
-        self.assertIn(expected_url, response.content.decode("utf-8"))
-
-    def test_audit_ignored(self):
-        """ignored_table is in the context data."""
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.api_url,
-            status=200,
-            json=self.api_response,
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 1)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 0)
 
     def test_audit_one_ignored_record(self):
         """ignored_table with one ignored record."""
@@ -2405,13 +3473,20 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
     def test_audit_one_ignored_record_not_in_anvil(self):
-        """The ignored record does not have the workspace shared with them in AnVIL."""
+        """The ignored record is not a group member in AnVIL."""
         factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
         self.anvil_response_mock.add(
             responses.GET,
@@ -2420,41 +3495,124 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
             json=self.api_response,
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("ignored_table", response.context_data)
-        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
-        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 302)
+        # Check cached result.
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(cached_audit_result)
+        self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_error_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_not_in_app_results()), 0)
+        self.assertEqual(len(cached_audit_result.get_ignored_results()), 1)
 
-    def test_audit_ok_is_ok(self):
-        """audit_ok when audit_results.ok() is True."""
+    def test_api_error_acl_call(self):
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
-            status=200,
-            json=self.api_response,
-            # Admin insetad of member.
-            # json=self.get_api_group_members_json_response(),
+            status=500,
+            json={"message": "api error"},
         )
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], True)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name), {}
+        )  # Runs successfully.
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        self.assertIsNone(caches[app_settings.AUDIT_CACHE].get(self.cache_key))
+        # A message exists.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual("AnVIL API Error: api error", str(messages[0]))
 
-    def test_audit_ok_is_not_ok(self):
-        """audit_ok when audit_results.ok() is False."""
-        self.update_api_response("foo@bar.com", "READER")
+    def test_api_error_does_not_update_cached_result(self):
+        """Existing cached result is not updated when there is an API error."""
         self.anvil_response_mock.add(
             responses.GET,
             self.api_url,
-            status=200,
-            json=self.api_response,
-            # Not in app
-            # json=self.get_api_group_members_json_response(members=["foo@bar.com"]),
+            status=500,
+            json={"message": "api error"},
         )
         self.client.force_login(self.user)
+        # Set up previous cache.
+        previous_timestamp = timezone.now() - timezone.timedelta(minutes=2)
+        with freeze_time(previous_timestamp):
+            previous_cached_audit_result = ManagedGroupAudit()
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, previous_cached_audit_result)
+        self.client.force_login(self.user)
+        current_timestamp = timezone.now()
+        with freeze_time(current_timestamp):
+            response = self.client.post(self.get_url(self.workspace.billing_project.name, self.workspace.name), {})
+        self.assertEqual(response.status_code, 200)
+        # No cached result exists.
+        new_cached_result = caches[app_settings.AUDIT_CACHE].get(self.cache_key)
+        self.assertIsNotNone(new_cached_result)
+        self.assertEqual(new_cached_result.timestamp, previous_timestamp)
+
+
+class WorkspaceSharingAuditReviewTest(AuditCacheClearTestMixin, TestCase):
+    """Tests for the ManagedGroupAuditReview view."""
+
+    def setUp(self):
+        """Set up test class."""
+        super().setUp()
+        self.factory = RequestFactory()
+        # Create a user with only view permission.
+        self.user = User.objects.create_user(username="test", password="test")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
+        )
+        self.workspace = WorkspaceFactory.create()
+        self.cache_key = "workspace_sharing_{}".format(self.workspace.pk)
+
+    def get_url(self, *args):
+        """Get the url for the view being tested."""
+        return reverse("anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review", args=args)
+
+    def get_view(self):
+        """Return the view being tested."""
+        return views.WorkspaceSharingAuditReview.as_view()
+
+    def test_view_redirect_not_logged_in(self):
+        "View redirects to login view when user is not logged in."
+        # Need a client for redirects.
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
-        self.assertIn("audit_ok", response.context_data)
-        self.assertEqual(response.context_data["audit_ok"], False)
+        self.assertRedirects(
+            response,
+            resolve_url(settings.LOGIN_URL)
+            + "?next="
+            + self.get_url(self.workspace.billing_project.name, self.workspace.name),
+        )
+
+    def test_status_code_with_user_permission(self):
+        """Returns successful response code."""
+        # Cache results so we don't get redirected.
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertEqual(response.status_code, 200)
+
+    def test_access_with_limited_view_permission(self):
+        """Raises permission denied if user has limited view permission."""
+        user = User.objects.create_user(username="test-limited", password="test-limited")
+        user.user_permissions.add(Permission.objects.get(codename=AnVILProjectManagerAccess.VIEW_PERMISSION_CODENAME))
+        request = self.factory.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        request.user = user
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request, billing_project_slug=self.workspace.billing_project.name, workspace_slug=self.workspace.name
+            )
+
+    def test_access_without_user_permission(self):
+        """Raises permission denied if user has no permissions."""
+        user_no_perms = User.objects.create_user(username="test-none", password="test-none")
+        request = self.factory.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        request.user = user_no_perms
+        with self.assertRaises(PermissionDenied):
+            self.get_view()(
+                request, billing_project_slug=self.workspace.billing_project.name, workspace_slug=self.workspace.name
+            )
 
     def test_workspace_does_not_exist_in_app(self):
         """Raises a 404 error with an invalid workspace slug."""
@@ -2474,6 +3632,214 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
         request.user = self.user
         with self.assertRaises(Http404):
             self.get_view()(request, billing_project_slug="foo", workspace_slug=self.workspace.name)
+
+    def test_redirect_if_no_cached_result(self):
+        """Returns successful response code."""
+        # Store a cached result so that the page loads.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertRedirects(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run",
+                args=[self.workspace.billing_project.name, self.workspace.name],
+            ),
+        )
+
+    def test_message_if_no_cached_result(self):
+        """A message is displayed when there is no cached result"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name), follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceSharingAuditReview.error_no_cached_result, str(messages[0]))
+
+    def test_timestamp(self):
+        """Shows timestamp of cached audit."""
+        # Store a cached result so that the page loads.
+        timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(timestamp):
+            audit_results = WorkspaceSharingAudit(self.workspace)
+            audit_results.timestamp = timezone.now()
+            caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_timestamp", response.context_data)
+        self.assertEqual(response.context_data["audit_timestamp"], timestamp)
+
+    def test_link_to_update_results(self):
+        """Includes a link to update the audit results."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn(
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:run",
+                args=[self.workspace.billing_project.name, self.workspace.name],
+            ),
+            response.content.decode(),
+        )
+
+    def test_audit_verified(self):
+        """audit_verified is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertIsInstance(response.context_data["verified_table"], base_audit.VerifiedTable)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 0)
+
+    def test_audit_verified_one_record(self):
+        """audit_verified with one verified record."""
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(base_audit.ModelInstanceResult(sharing))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("verified_table", response.context_data)
+        self.assertEqual(len(response.context_data["verified_table"].rows), 1)
+
+    def test_audit_errors(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertIsInstance(response.context_data["error_table"], base_audit.ErrorTable)
+        self.assertEqual(len(response.context_data["error_table"].rows), 0)
+
+    def test_audit_errors_one_record(self):
+        """audit_errors with one verified record."""
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        model_result = base_audit.ModelInstanceResult(sharing)
+        model_result.add_error("Foo")
+        audit_results.add_result(model_result)
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("error_table", response.context_data)
+        self.assertEqual(len(response.context_data["error_table"].rows), 1)
+
+    def test_audit_not_in_app(self):
+        """audit_errors is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 0)
+
+    def test_audit_not_in_app_one_record(self):
+        """audit_errors is in the context data."""
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingNotInAppResult(
+                "foo",
+                workspace=self.workspace,
+                email="foo@bar.com",
+                access=WorkspaceGroupSharing.READER,
+                can_compute=False,
+                can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("not_in_app_table", response.context_data)
+        self.assertIsInstance(response.context_data["not_in_app_table"], base_audit.NotInAppTable)
+        self.assertEqual(len(response.context_data["not_in_app_table"].rows), 1)
+
+    def test_audit_not_in_app_link_to_ignore(self):
+        """Link to ignore create view appears when a not_in_app result is found."""
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingNotInAppResult(
+                "foo",
+                workspace=self.workspace,
+                email="foo@bar.com",
+                access=WorkspaceGroupSharing.READER,
+                can_compute=False,
+                can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        expected_url = reverse(
+            "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:ignored:new",
+            args=[self.workspace.billing_project.name, self.workspace.name, "foo@bar.com"],
+        )
+        self.assertIn(expected_url, response.content.decode("utf-8"))
+
+    def test_audit_ignored(self):
+        """ignored_table is in the context data."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 0)
+
+    def test_audit_one_ignored_record_in_anvil(self):
+        """ignored_table with one ignored record."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingIgnoredResult(
+                obj,
+                record="foo",
+                current_access=WorkspaceGroupSharing.READER,
+                current_can_compute=False,
+                current_can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_one_ignored_record_not_in_anvil(self):
+        """The ignored record is not a group member in AnVIL."""
+        obj = factories.IgnoredWorkspaceSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(WorkspaceSharingIgnoredResult(obj, record=None))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("ignored_table", response.context_data)
+        self.assertIsInstance(response.context_data["ignored_table"], base_audit.IgnoredTable)
+        self.assertEqual(len(response.context_data["ignored_table"].rows), 1)
+
+    def test_audit_ok_is_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, WorkspaceSharingAudit(self.workspace))
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], True)
+
+    def test_audit_ok_is_not_ok(self):
+        """audit_ok when audit_results.ok() is True."""
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(
+            WorkspaceSharingNotInAppResult(
+                "foo",
+                workspace=self.workspace,
+                email="foo@bar.com",
+                access=WorkspaceGroupSharing.READER,
+                can_compute=False,
+                can_share=False,
+            )
+        )
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        self.assertIn("audit_ok", response.context_data)
+        self.assertEqual(response.context_data["audit_ok"], False)
 
 
 class IgnoredWorkspaceSharingDetailTest(TestCase):

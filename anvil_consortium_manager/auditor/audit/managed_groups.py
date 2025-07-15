@@ -20,7 +20,9 @@ class ManagedGroupAudit(base.AnVILAudit):
     ERROR_GROUP_MEMBERSHIP = "Group membership does not match in AnVIL"
     """Error when a ManagedGroup has a different record of membership in the app compared to on AnVIL."""
 
-    def run_audit(self):
+    cache_key = "managed_group_audit_results"
+
+    def audit(self, cache=False):
         """Run an audit on managed groups in the app."""
         # Check the list of groups.
         response = AnVILAPIClient().get_groups()
@@ -57,7 +59,7 @@ class ManagedGroupAudit(base.AnVILAudit):
                         model_instance_result.add_error(self.ERROR_DIFFERENT_ROLE)
                     else:
                         membership_audit = ManagedGroupMembershipAudit(group)
-                        membership_audit.run_audit()
+                        membership_audit.run_audit(cache=cache)
                         if not membership_audit.ok():
                             model_instance_result.add_error(self.ERROR_GROUP_MEMBERSHIP)
                 elif not group.is_managed_by_app and "admin" in group_roles:
@@ -157,7 +159,10 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
             raise AnVILNotGroupAdminError("group {} is not managed by app".format(managed_group.name))
         self.managed_group = managed_group
 
-    def run_audit(self):
+    def get_cache_key(self):
+        return f"managed_group_membership_{self.managed_group.pk}"
+
+    def run_audit(self, cache=False):
         """Run an audit on all membership of the managed group."""
         # Get the list of members on AnVIL.
         api_client = AnVILAPIClient()
@@ -265,3 +270,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
                     record, group=self.managed_group, email=member, role=GroupAccountMembership.MEMBER
                 )
             )
+
+        # Cache the results if requested.
+        if cache:
+            self.cache()

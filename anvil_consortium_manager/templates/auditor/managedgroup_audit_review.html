@@ -1,0 +1,19 @@
+{% extends "auditor/audit_review.html" %}
+{% block title %}Managed Group audit results{% endblock %}
+
+{% block main_header %}
+<h1>Managed Group audit results</h1>
+{% endblock main_header %}
+
+{% block audit_explanation %}
+{% include "auditor/snippets/managedgroup_audit_explanation.html" %}
+{% endblock audit_explanation %}
+
+{% block action_buttons %}
+<div>
+  <p>
+    <a class="btn btn-primary" href="{% url 'anvil_consortium_manager:auditor:managed_groups:run' %}">Update audit</a>
+  </p>
+
+</div>
+{% endblock action_buttons %}

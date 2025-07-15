@@ -9,7 +9,9 @@ class AccountAudit(AnVILAudit):
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     """Error when the Account does not exist in AnVIL."""
 
-    def run_audit(self):
+    cache_key = "account_audit_results"
+
+    def audit(self, cache=False):
         # Only checks active accounts.
         for account in Account.objects.active():
             model_instance_result = ModelInstanceResult(account)

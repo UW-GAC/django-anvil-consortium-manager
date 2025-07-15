@@ -52,11 +52,17 @@ class Command(BaseCommand):
             choices=["BillingProject", "Account", "ManagedGroup", "Workspace"],
             help="If specified, run audit on a subset of models. Otherwise, the audit will be run on all models.",
         )
+        parser.add_argument(
+            "--cache-results",
+            action="store_true",
+            help="Cache the results of the audit to enable faster reviewing in the app.",
+        )
 
     def _run_audit(self, audit_results, ignore_model=None, **options):
         """Run the audit for a specific model class."""
         email = options["email"]
         errors_only = options["errors_only"]
+        cache_results = options["cache_results"]
 
         # Track the number of ignored records.
         n_ignored = 0
@@ -65,43 +71,43 @@ class Command(BaseCommand):
         self.stdout.write("Running on {}... ".format(audit_name), ending="")
         try:
             # Assume the method is called anvil_audit.
-            audit_results.run_audit()
+            audit_results.run_audit(cache=cache_results)
         except AnVILAPIError:
             raise CommandError("API error.")
-        else:
-            if not audit_results.ok():
-                self.stdout.write(self.style.ERROR("problems found."))
-                self.stdout.write(pprint.pformat(audit_results.export(include_verified=False)))
-            else:
-                msg = "ok!"
-                if ignore_model:
-                    n_ignored = ignore_model.objects.all().count()
-                    if n_ignored:
-                        msg += " (ignoring {n_ignored} records)".format(n_ignored=n_ignored)
-                self.stdout.write(self.style.SUCCESS(msg))
 
-            if email and (not errors_only) or (errors_only and not audit_results.ok()):
-                # Set up the email message.
-                subject = "AnVIL audit {} -- {}".format(audit_name, "ok" if audit_results.ok() else "errors!")
-                exported_results = audit_results.export()
-                html_body = render_to_string(
-                    "auditor/email_audit_report.html",
-                    context={
-                        "model_name": audit_name,
-                        "audit_results": audit_results,
-                        "n_ignored": n_ignored,
-                        "errors_table": ErrorTableWithLink(audit_results.get_error_results()),
-                        "not_in_app_table": base_audit.NotInAppTable(audit_results.get_not_in_app_results()),
-                    },
-                )
-                send_mail(
-                    subject,
-                    pprint.pformat(exported_results),
-                    None,
-                    [email],
-                    fail_silently=False,
-                    html_message=html_body,
-                )
+        if not audit_results.ok():
+            self.stdout.write(self.style.ERROR("problems found."))
+            self.stdout.write(pprint.pformat(audit_results.export(include_verified=False)))
+        else:
+            msg = "ok!"
+            if ignore_model:
+                n_ignored = ignore_model.objects.all().count()
+                if n_ignored:
+                    msg += " (ignoring {n_ignored} records)".format(n_ignored=n_ignored)
+            self.stdout.write(self.style.SUCCESS(msg))
+
+        if email and (not errors_only) or (errors_only and not audit_results.ok()):
+            # Set up the email message.
+            subject = "AnVIL audit {} -- {}".format(audit_name, "ok" if audit_results.ok() else "errors!")
+            exported_results = audit_results.export()
+            html_body = render_to_string(
+                "auditor/email_audit_report.html",
+                context={
+                    "model_name": audit_name,
+                    "audit_results": audit_results,
+                    "n_ignored": n_ignored,
+                    "errors_table": ErrorTableWithLink(audit_results.get_error_results()),
+                    "not_in_app_table": base_audit.NotInAppTable(audit_results.get_not_in_app_results()),
+                },
+            )
+            send_mail(
+                subject,
+                pprint.pformat(exported_results),
+                None,
+                [email],
+                fail_silently=False,
+                html_message=html_body,
+            )
 
     def handle(self, *args, **options):
         if options["models"]:

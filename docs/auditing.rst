@@ -4,6 +4,9 @@ Auditing information in the app
 ===============================
 
 The :mod:`~anvil_consortium_manager.auditor` app provides functionality to audit information stored in the app against what is actually on AnVIL.
+It uses caching to speed up the audits, so that it does not have to make a request to AnVIL every time you review audit results.
+Note that the app does not automatically run audits, so you will need to run them manually via the provided views or set up a scheduled job to run the provided management command (see :ref:`run_anvil_audit`).
+
 
 Audit results classes
 ---------------------
@@ -67,8 +70,6 @@ Ignored records will be included in the audit results, but will not be considere
 Workspace auditing
 ~~~~~~~~~~~~~~~~~~
 
-
-
 The :class:`~anvil_consortium_manager.auditor.audit.workspaces.WorkspaceAudit` class can be used to audit all :class:`~anvil_consortium_manager.models.Workspace` model instances in the app. It runs the following checks:
 
     1. All :class:`~anvil_consortium_manager.models.Workspace` model instances in the app also exist on AnVIL.
@@ -88,30 +89,45 @@ Sharing for a workspace can be audited using the :class:`~anvil_consortium_manag
     5. No groups or accounts on AnVIL have access to the workspace that are not recorded in the app.
 
 
-
 Running audits
 --------------
 
 Auditing views
 ~~~~~~~~~~~~~~
 
-The app provides a number of views for auditing various models.
+The app provides a number of views to assist with auditing information in the app against AnVIL.
 
-    - :class:`~anvil_consortium_manager.models.BillingProject`: :class:`~anvil_consortium_manager.auditor.views.BillingProjectAudit` (accessible from default navbar)
-    - :class:`~anvil_consortium_manager.models.Account`: :class:`~anvil_consortium_manager.views.auditor.accounts.AccountAudit` (accessible from default navbar)
-    - :class:`~anvil_consortium_manager.models.ManagedGroup`: :class:`~anvil_consortium_manager.views.auditor.managed_groups.ManagedGroupAudit` (accessible from default navbar)
-    - :class:`~anvil_consortium_manager.models.Workspace`: :class:`~anvil_consortium_manager.views.auditor.workspaces.WorkspaceAudit` (accessible from default navbar)
+These views are accessible from the default navbar, and can be used to review audit results:
+
+    - :class:`~anvil_consortium_manager.auditor.views.BillingProjectAuditReview` (accessible from default navbar)
+    - :class:`~anvil_consortium_manager.views.auditor.accounts.AccountAuditReview` (accessible from default navbar)
+    - :class:`~anvil_consortium_manager.views.auditor.managed_groups.ManagedGroupAuditReview` (accessible from default navbar)
+    - :class:`~anvil_consortium_manager.views.auditor.workspaces.WorkspaceAuditReview` (accessible from default navbar)
+
+The following views are used to run and cache audits:
+
+    - :class:`~anvil_consortium_manager.auditor.views.BillingProjectAuditRun` (accessible from audit review page)
+    - :class:`~anvil_consortium_manager.views.auditor.accounts.AccountAuditRun` (accessible from audit review page)
+    - :class:`~anvil_consortium_manager.views.auditor.managed_groups.ManagedGroupAuditRun` (accessible from audit review page)
+    - :class:`~anvil_consortium_manager.views.auditor.workspaces.WorkspaceAuditRun` (accessible from audit review page)
 
 Workspaces and ManagedGroups have additional audit views that can audit the sharing and membership, respectively.
 
-- :class:`~anvil_consortium_manager.models.ManagedGroup` membership: :class:`~anvil_consortium_manager.auditor.views.ManagedGroupMembershipAudit` (accessible from Managed Group detail page)
-- :class:`~anvil_consortium_manager.models.Workspace` sharing: :class:`~anvil_consortium_manager.auditor.views.WorkspaceSharingAudit` (accessible from the Workspace detail page)
+- :class:`~anvil_consortium_manager.models.ManagedGroup` membership:
+
+    - Reviewing audits: :class:`~anvil_consortium_manager.auditor.views.ManagedGroupMembershipAuditReview` (accessible from Managed Group detail page)
+    - Running audits: :class:`~anvil_consortium_manager.auditor.views.ManagedGroupMembershipAuditRun` (accessible from the audit review page)
+- :class:`~anvil_consortium_manager.models.Workspace` sharing:
+
+    - Reviewing audits: :class:`~anvil_consortium_manager.auditor.views.WorkspaceSharingAuditReview` (accessible from the Workspace detail page)
+    - Running audits: :class:`~anvil_consortium_manager.auditor.views.WorkspaceSharingAuditRun` (accessible from the audit review page)
 
 
+.. _run_anvil_audit:
 Auditing via management command
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The app also provides a management command (``run_anvil_audit``) that can run audits and (optionally) send an email report.
+The app also provides a management command (``run_anvil_audit``) that can run audits, (optionally) cache results, and (optionally) send an email report.
 This command can be used to run audits on a regular schedule, e.g., weekly audits via a cron job.
 
 Here are some examples of calling this command:
@@ -126,6 +142,9 @@ Here are some examples of calling this command:
 
     # To audit just the BillingProject and Account models.
     python manage.py run_anvil_audit --models BillingProject Account
+
+    # To cache the results for later viewing.
+    python manage.py run_anvil_audit --cache
 
 More information can be found in the help for ``run_anvil_audit``.
 

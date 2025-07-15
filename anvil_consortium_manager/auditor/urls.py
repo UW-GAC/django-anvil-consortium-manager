@@ -7,14 +7,16 @@ app_name = "auditor"
 
 billing_project_patterns = (
     [
-        path("", views.BillingProjectAudit.as_view(), name="all"),
+        path("run/", views.BillingProjectAuditRun.as_view(), name="run"),
+        path("review/", views.BillingProjectAuditReview.as_view(), name="review"),
     ],
     "billing_projects",
 )
 
 account_patterns = (
     [
-        path("audit/", views.AccountAudit.as_view(), name="all"),
+        path("run/", views.AccountAuditRun.as_view(), name="run"),
+        path("review/", views.AccountAuditReview.as_view(), name="review"),
     ],
     "accounts",
 )
@@ -31,7 +33,8 @@ managed_group_membership_by_group_ignore_patterns = (
 
 managed_group_membership_by_group_patterns = (
     [
-        path("", views.ManagedGroupMembershipAudit.as_view(), name="all"),
+        path("run/", views.ManagedGroupMembershipAuditRun.as_view(), name="run"),
+        path("review/", views.ManagedGroupMembershipAuditReview.as_view(), name="review"),
         path("ignored/", include(managed_group_membership_by_group_ignore_patterns)),
     ],
     "by_group",
@@ -46,7 +49,8 @@ managed_group_membership_patterns = (
 
 managed_group_patterns = (
     [
-        path("audit/", views.ManagedGroupAudit.as_view(), name="all"),
+        path("run/", views.ManagedGroupAuditRun.as_view(), name="run"),
+        path("review/", views.ManagedGroupAuditReview.as_view(), name="review"),
         path("membership/", include(managed_group_membership_patterns)),
     ],
     "managed_groups",
@@ -64,7 +68,8 @@ workspace_sharing_by_group_ignore_patterns = (
 
 workspace_sharing_by_group_patterns = (
     [
-        path("", views.WorkspaceSharingAudit.as_view(), name="all"),
+        path("run/", views.WorkspaceSharingAuditRun.as_view(), name="run"),
+        path("review/", views.WorkspaceSharingAuditReview.as_view(), name="review"),
         path("ignored/", include(workspace_sharing_by_group_ignore_patterns)),
     ],
     "by_workspace",
@@ -79,7 +84,8 @@ workspace_sharing_patterns = (
 
 workspace_patterns = (
     [
-        path("", views.WorkspaceAudit.as_view(), name="all"),
+        path("run/", views.WorkspaceAuditRun.as_view(), name="run"),
+        path("review/", views.WorkspaceAuditReview.as_view(), name="review"),
         path("sharing/", include(workspace_sharing_patterns)),
     ],
     "workspaces",
