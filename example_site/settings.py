@@ -249,6 +249,5 @@ ANVIL_WORKSPACE_ADAPTERS = [
 # Account adapter.
 # ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"  # Default.
 
-# Specify the name of the cache to use for the audit cache.
-# You can change this to a different cache if desired.
-# ANVIL_AUDIT_CACHE = "default"
+# Specify the name of the cache set above.
+ANVIL_AUDIT_CACHE = "anvil_audit_cache"
