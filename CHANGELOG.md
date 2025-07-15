@@ -1,6 +1,6 @@
 # Change log
 
-## 0.31.1 (Devel)
+## 0.32.0 (2025-07-01)
 
 * Implement audit result caching. Users should set the `ANVIL_AUDIT_CACHE` setting and set an appropriate backend.
     * Audit views have been split into "run" and "review" views. The "run" view runs the audit and caches the results, while the "review" view displays the cached results.
