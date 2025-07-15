@@ -132,7 +132,9 @@ class AnVILAudit(ABC):
         try:
             max_entries = settings.CACHES[app_settings.AUDIT_CACHE]["OPTIONS"]["MAX_ENTRIES"]
         except KeyError:
-            max_entries = 300  # From documentation, the default is 300.
+            raise ImproperlyConfigured(
+                "The cache defined by `anvil_audit_cache` must have a MAX_ENTRIES option set in the settings file."
+            )
         if required_size > max_entries:
             msg = (
                 "The cache defined by `anvil_audit_cache` should have a maximum size of at least {} entries. "

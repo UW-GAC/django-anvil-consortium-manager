@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from django_tables2 import Table
@@ -769,7 +770,7 @@ class AnVILAuditTest(TestCase):
             },
         }
     )
-    def test_cache_size_warning_equal_size(self):
+    def test_cache_size_equal_size(self):
         """Cache size warning is logged when required cache size exceeds limit."""
         audit_results = TestAudit()
         # Create one billing project, one account, one group, and one workspace.
@@ -804,18 +805,42 @@ class AnVILAuditTest(TestCase):
         with self.assertLogs(base.logger.name, "WARNING") as cm:
             audit_results.run_audit(cache=True)
             self.assertIn("maximum size of at least 6 entries", cm.output[0])
+        with self.assertNoLogs(base.logger.name, "WARNING"):
+            # Run again to ensure that the warning is not logged again.
+            audit_results.run_audit(cache=False)
+
+    # @override_settings(
+    #     CACHES={
+    #         "default": {
+    #             "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+    #             "LOCATION": "anvil_audit_cache",
+    #             "OPTIONS": {"MAX_ENTRIES": 5},
+    #         },
+    #     }
+    # )
+    # def test_cache_size_no_warning_in_log_if_cache_is_false(self):
+    #     """No cache size warning is logged if cache is False."""
+    #     audit_results = TestAudit()
+    #     # Create one billing project, one account, one group, and one workspace.
+    #     # This requires a cache size of 4 (each model overall) + 2 (sharing and membership).
+    #     BillingProjectFactory.create()
+    #     AccountFactory.create()
+    #     ManagedGroupFactory.create()
+    #     WorkspaceFactory.create()
+    #     # No warning when we are not caching.
+    #     with self.assertNoLogs(base.logger.name, level="WARNING"):
+    #         audit_results.run_audit(cache=False)
 
     @override_settings(
         CACHES={
             "default": {
                 "BACKEND": "django.core.cache.backends.db.DatabaseCache",
                 "LOCATION": "anvil_audit_cache",
-                "OPTIONS": {"MAX_ENTRIES": 5},
             },
         }
     )
-    def test_cache_size_no_warning_in_log_if_cache_is_false(self):
-        """No cache size warning is logged if cache is False."""
+    def test_cache_size_max_options_not_set(self):
+        """Raises improperly configured when cache does not have MAX_ENTRIES set."""
         audit_results = TestAudit()
         # Create one billing project, one account, one group, and one workspace.
         # This requires a cache size of 4 (each model overall) + 2 (sharing and membership).
@@ -823,6 +848,34 @@ class AnVILAuditTest(TestCase):
         AccountFactory.create()
         ManagedGroupFactory.create()
         WorkspaceFactory.create()
-        # No warning when we are not caching.
-        with self.assertNoLogs(base.logger.name, level="WARNING"):
+        # Cache setting that is equal to the required number of entries.
+        with self.assertRaises(ImproperlyConfigured) as e:
+            audit_results.run_audit(cache=True)
+        self.assertIn("MAX_ENTRIES", str(e.exception))
+        with self.assertNoLogs(base.logger.name, "WARNING"):
+            # Run again to ensure that the warning is not logged again.
+            audit_results.run_audit(cache=False)
+
+    @override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            },
+        }
+    )
+    def test_cache_size_wrong_backend(self):
+        """Cache size warning is logged when required cache size exceeds limit."""
+        audit_results = TestAudit()
+        # Create one billing project, one account, one group, and one workspace.
+        # This requires a cache size of 4 (each model overall) + 2 (sharing and membership).
+        BillingProjectFactory.create()
+        AccountFactory.create()
+        ManagedGroupFactory.create()
+        WorkspaceFactory.create()
+        # Cache setting that is equal to the required number of entries.
+        with self.assertRaises(ImproperlyConfigured) as e:
+            audit_results.run_audit(cache=True)
+        self.assertIn("backend", str(e.exception))
+        with self.assertNoLogs(base.logger.name, "WARNING"):
+            # Run again to ensure that the warning is not logged again.
             audit_results.run_audit(cache=False)
