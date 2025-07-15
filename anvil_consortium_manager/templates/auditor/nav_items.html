@@ -5,25 +5,28 @@
     <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDarkDropdownMenuLink">
 
       <li>
-        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:billing_projects:review' %}">Audit Billing Projects</a>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:billing_projects:review' %}">Billing Project audit</a>
       </li>
 
       <li>
-        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:accounts:review' %}">Audit Accounts</a>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:accounts:review' %}">Account audit</a>
       </li>
 
       <li>
-        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:managed_groups:review' %}">Audit Managed Groups</a>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:managed_groups:review' %}">Managed Group audit</a>
       </li>
 
       <li>
-        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:workspaces:review' %}">Audit Workspaces</a>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:workspaces:review' %}">Workspaces audit</a>
       </li>
 
       <li><hr class="dropdown-divider"></li>
 
       <li>
         <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:ignored' %}">List ignored group memberships</a>
+      </li>
+      <li>
+        <a class="dropdown-item" href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:ignored' %}">List ignored workspace sharing memberships</a>
       </li>
 
     </ul>
