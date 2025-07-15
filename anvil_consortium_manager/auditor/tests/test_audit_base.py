@@ -1,14 +1,29 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from django_tables2 import Table
 from faker import Faker
 
-from anvil_consortium_manager.tests.factories import AccountFactory
+from anvil_consortium_manager.tests.factories import (
+    AccountFactory,
+    BillingProjectFactory,
+    ManagedGroupFactory,
+    WorkspaceFactory,
+)
 
 from ..audit import base
 from . import factories
 
 fake = Faker()
+
+
+class TestAudit(base.AnVILAudit):
+    TEST_ERROR_1 = "Test error 1"
+    TEST_ERROR_2 = "Test error 2"
+
+    cache_key = "test_audit_cache"
+
+    def audit(self, cache=False):
+        pass
 
 
 class ModelInstanceResultTest(TestCase):
@@ -176,11 +191,7 @@ class AnVILAuditTest(TestCase):
     def setUp(self):
         super().setUp()
 
-        class GenericAudit(base.AnVILAudit):
-            TEST_ERROR_1 = "Test error 1"
-            TEST_ERROR_2 = "Test error 2"
-
-        self.audit_results = GenericAudit()
+        self.audit_results = TestAudit()
         # It doesn't matter what model we use at this point, so just pick Account.
         self.model_factory = AccountFactory
 
@@ -232,8 +243,12 @@ class AnVILAuditTest(TestCase):
         self.assertTrue(self.audit_results.ok())
 
     def test_run_audit_not_implemented(self):
+        class CustomAudit(base.AnVILAudit):
+            pass
+
+        audit_results = CustomAudit()
         with self.assertRaises(NotImplementedError):
-            self.audit_results.run_audit()
+            audit_results.run_audit()
 
     def test_add_result_not_in_app(self):
         """Can add a NotInAppResult."""
@@ -737,5 +752,74 @@ class AnVILAuditTest(TestCase):
 
     def test_get_cache_key_not_set(self):
         """get_cache_key raises NotImplementedError if not set."""
+
+        class CustomAudit(base.AnVILAudit):
+            pass
+
+        audit_results = CustomAudit()
         with self.assertRaises(NotImplementedError):
-            self.audit_results.get_cache_key()
+            audit_results.get_cache_key()
+
+    @override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+                "OPTIONS": {"MAX_ENTRIES": 6},
+            },
+        }
+    )
+    def test_cache_size_warning_equal_size(self):
+        """Cache size warning is logged when required cache size exceeds limit."""
+        audit_results = TestAudit()
+        # Create one billing project, one account, one group, and one workspace.
+        # This requires a cache size of 4 (each model overall) + 2 (sharing and membership).
+        BillingProjectFactory.create()
+        AccountFactory.create()
+        ManagedGroupFactory.create()
+        WorkspaceFactory.create()
+        # Cache setting that is equal to the required number of entries.
+        with self.assertNoLogs(base.logger.name, level="WARNING"):
+            audit_results.run_audit(cache=True)
+
+    @override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+                "OPTIONS": {"MAX_ENTRIES": 5},
+            },
+        }
+    )
+    def test_cache_size_warning_too_small(self):
+        """Cache size warning is logged when required cache size exceeds limit."""
+        audit_results = TestAudit()
+        # Create one billing project, one account, one group, and one workspace.
+        # This requires a cache size of 4 (each model overall) + 2 (sharing and membership).
+        BillingProjectFactory.create()
+        AccountFactory.create()
+        ManagedGroupFactory.create()
+        WorkspaceFactory.create()
+        # Cache setting that is equal to the required number of entries.
+        with self.assertLogs(base.logger.name, "WARNING") as cm:
+            audit_results.run_audit(cache=True)
+            self.assertIn("maximum size of at least 6 entries", cm.output[0])
+
+    @override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+                "OPTIONS": {"MAX_ENTRIES": 5},
+            },
+        }
+    )
+    def test_cache_size_no_warning_in_log_if_cache_is_false(self):
+        """No cache size warning is logged if cache is False."""
+        audit_results = TestAudit()
+        # Create one billing project, one account, one group, and one workspace.
+        # This requires a cache size of 4 (each model overall) + 2 (sharing and membership).
+        BillingProjectFactory.create()
+        AccountFactory.create()
+        ManagedGroupFactory.create()
+        WorkspaceFactory.create()
+        # No warning when we are not caching.
+        with self.assertNoLogs(base.logger.name, level="WARNING"):
+            audit_results.run_audit(cache=False)

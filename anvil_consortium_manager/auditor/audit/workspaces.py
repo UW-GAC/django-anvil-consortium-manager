@@ -30,7 +30,7 @@ class WorkspaceAudit(base.AnVILAudit):
 
     cache_key = "workspace_audit_results"
 
-    def run_audit(self, cache=False):
+    def audit(self, cache=False):
         """Run an audit on Workspaces in the app."""
         # Check the list of workspaces.
         fields = [
@@ -95,10 +95,6 @@ class WorkspaceAudit(base.AnVILAudit):
         ]
         for workspace_name in not_in_app:
             self.add_result(base.NotInAppResult(workspace_name))
-
-        # Cache the results if requested.
-        if cache:
-            self.cache()
 
 
 class WorkspaceSharingNotInAppResult(base.NotInAppResult):

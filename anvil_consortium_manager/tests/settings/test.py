@@ -156,7 +156,6 @@ ANVIL_WORKSPACE_ADAPTERS = [
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": "test_anvil_audit_cache_table",
         "OPTIONS": {
             # This should be larger than the number of Workspaces + Groups + 4.
             "MAX_ENTRIES": 1000,  # Maximum number of entries in the cache.
@@ -164,3 +163,5 @@ CACHES = {
         "TIMEOUT": None,  # Cache entries never expire.
     }
 }
+
+ANVIL_AUDIT_CACHE = "default"
