@@ -53,6 +53,21 @@ class BillingProjectImportFormTest(TestCase):
         self.assertEqual(len(form.errors["name"]), 1)
         self.assertIn("not one of the available choices", form.errors["name"][0])
 
+    def test_duplicate_name_choice_case_insensitive(self):
+        """Form is invalid with a case insensitive name that already exists."""
+        factories.BillingProjectFactory.create(name="TEST-BILLING")
+        form_data = {
+            "name": "test-billing",
+        }
+        billing_project_choices = [("test-billing", "test-billing")]
+        form = self.form_class(billing_project_choices=billing_project_choices, data=form_data)
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("name", form.errors)
+        self.assertEqual(len(form.errors["name"]), 1)
+        self.assertIn("BillingProject with this Name already exists", form.errors["name"][0])
+
 
 class BillingProjectUpdateFormTest(TestCase):
     """Tests for the BillingProjectUpdateForm class."""
