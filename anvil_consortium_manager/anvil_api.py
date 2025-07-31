@@ -107,6 +107,17 @@ class AnVILAPIClient:
         url = self.rawls_entry_point + "/api/billing/v2/" + billing_project
         return self.auth_session.get(url, 200)
 
+    def get_billing_projects(self):
+        """Get a list of available billing projects.
+
+        Calls the Sam /api/billing/v2 GET method.
+
+        Returns:
+            requests.Response
+        """
+        url = self.rawls_entry_point + "/api/billing/v2"
+        return self.auth_session.get(url, 200)
+
     def get_groups(self):
         """Get a list of groups that the authenticated account is part of.
 

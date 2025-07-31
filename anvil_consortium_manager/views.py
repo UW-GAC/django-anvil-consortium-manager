@@ -76,6 +76,32 @@ class BillingProjectImport(auth.AnVILConsortiumManagerStaffEditRequired, Success
     template_name = "anvil_consortium_manager/billingproject_import.html"
     message_not_users_of_billing_project = "Not a user of requested billing project or it doesn't exist on AnVIL."
     success_message = "Successfully imported Billing Project from AnVIL."
+    message_error_fetching_billing_projects = "Unable to fetch billing projects from AnVIL."
+    message_no_available_billing_projects = "No unimported billing projects available for import from AnVIL."
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+
+        try:
+            all_billing_projects = AnVILAPIClient().get_billing_projects().json()
+
+            unimported_billing_project_names = []
+
+            for billing_project in all_billing_projects:
+                billing_project_name = billing_project["projectName"]
+                if not models.BillingProject.objects.filter(name__iexact=billing_project_name).exists():
+                    unimported_billing_project_names.append(billing_project_name)
+
+            if not unimported_billing_project_names:
+                messages.add_message(self.request, messages.INFO, self.message_no_available_billing_projects)
+
+            billing_project_choices = [(x, x) for x in sorted(unimported_billing_project_names)]
+            kwargs["billing_project_choices"] = billing_project_choices
+
+        except AnVILAPIError:
+            messages.add_message(self.request, messages.ERROR, self.message_error_fetching_billing_projects)
+
+        return kwargs
 
     def form_valid(self, form):
         """If the form is valid, check that we can access the BillingProject on AnVIL and save the associated model."""

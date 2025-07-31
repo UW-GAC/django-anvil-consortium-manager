@@ -365,6 +365,13 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
 
+    def get_billing_projects_api_url(self):
+        """Get the AnVIL API url that is called to get all billing projects"""
+        return self.api_client.rawls_entry_point + "/api/billing/v2"
+
+    def get_billing_projects_api_json_response(self):
+        return [{"projectName": "test-billing"}]
+
     def get_api_url(self, billing_project_name):
         """Get the AnVIL API url that is called by the anvil_exists method."""
         return self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name
@@ -391,6 +398,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_status_code_with_user_permission(self):
         """Returns successful response code."""
         self.client.force_login(self.user)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
         response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
 
@@ -427,6 +440,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_has_form_in_context(self):
         """Response includes a form."""
         self.client.force_login(self.user)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
         response = self.client.get(self.get_url())
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.BillingProjectImportForm)
@@ -436,6 +455,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         self.anvil_response_mock.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
         # Need a client for messages.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
@@ -453,6 +478,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         self.anvil_response_mock.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
         # Need a client for messages.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name, "note": "test note"})
@@ -465,11 +496,42 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         self.anvil_response_mock.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
+
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name}, follow=True)
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.BillingProjectImport.success_message, str(messages[0]))
+
+    def test_no_billing_projects_available(self):
+        """Response includes a success message if successful."""
+        billing_project_name = "test-billing"
+
+        self.anvil_response_mock.add(responses.GET, self.get_billing_projects_api_url(), status=200, json={})
+
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"name": billing_project_name}, follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.BillingProjectImport.message_no_available_billing_projects, str(messages[0]))
+
+    def test_billing_projects_call_failed(self):
+        """Response includes a success message if successful."""
+        billing_project_name = "test-billing"
+
+        self.anvil_response_mock.add(responses.GET, self.get_billing_projects_api_url(), status=500, json={})
+
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(), {"name": billing_project_name}, follow=True)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.BillingProjectImport.message_error_fetching_billing_projects, str(messages[0]))
 
     def test_redirects_to_new_object_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -477,6 +539,13 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         self.anvil_response_mock.add(responses.GET, url, status=200, json=self.get_api_json_response())
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
+
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
         new_object = models.BillingProject.objects.latest("pk")
@@ -484,30 +553,44 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create two billing projects with the same name."""
-        obj = factories.BillingProjectFactory.create()
+
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
+        obj = factories.BillingProjectFactory.create(name="test-billing")
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": obj.name})
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
-        self.assertIn("already exists", form.errors["name"][0])
+
+        self.assertIn("not one of the available choices", form.errors["name"][0])
         self.assertQuerySetEqual(
             models.BillingProject.objects.all(),
             models.BillingProject.objects.filter(pk=obj.pk),
         )
 
     def test_cannot_create_duplicate_object_case_insensitive(self):
-        """Cannot create two billing projects with the same name."""
-        obj = factories.BillingProjectFactory.create(name="project")
-        # No API calls should be made.
+        """Cannot create two billing projects with the same name case insensitive."""
+
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
+        obj = factories.BillingProjectFactory.create(name="TEST-BILLING")
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"name": "PROJECT"})
+        response = self.client.post(self.get_url(), {"name": "test-billing"})
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors.keys())
-        self.assertIn("already exists", form.errors["name"][0])
+        self.assertIn("not one of the available choices", form.errors["name"][0])
         self.assertQuerySetEqual(
             models.BillingProject.objects.all(),
             models.BillingProject.objects.filter(pk=obj.pk),
@@ -515,6 +598,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_invalid_input(self):
         """Posting invalid data does not create an object."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": ""})
         self.assertEqual(response.status_code, 200)
@@ -527,6 +616,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_post_blank_data(self):
         """Posting blank data does not create an object."""
         self.client.force_login(self.user)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
         response = self.client.post(self.get_url(), {})
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -540,6 +635,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing"
         url = self.get_api_url(billing_project_name)
         self.anvil_response_mock.add(responses.GET, url, status=404, json={"message": "other"})
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
+        )
         # Need a client to check messages.
         self.client.force_login(self.user)
         response = self.client.post(self.get_url(), {"name": billing_project_name})
@@ -569,6 +670,12 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
             self.get_api_url(billing_project_name),
             status=500,
             json={"message": "other error"},
+        )
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_projects_api_url(),
+            status=200,
+            json=self.get_billing_projects_api_json_response(),
         )
         # Need the client for messages.
         self.client.force_login(self.user)
@@ -662,6 +769,7 @@ class BillingProjectUpdateTest(TestCase):
         """Response includes a form."""
         instance = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
+
         response = self.client.get(self.get_url(instance.name))
         self.assertTrue("form" in response.context_data)
         self.assertIsInstance(response.context_data["form"], forms.BillingProjectUpdateForm)

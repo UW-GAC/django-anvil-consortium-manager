@@ -59,12 +59,18 @@ class FilterForm(forms.Form):
 class BillingProjectImportForm(forms.ModelForm):
     """Form to import a BillingProject from AnVIL"""
 
+    name = forms.ChoiceField(help_text="Select the billing project to import from AnVIL")
+
     class Meta:
         model = models.BillingProject
         fields = (
             "name",
             "note",
         )
+
+    def __init__(self, billing_project_choices=[], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].choices = [("", "---------")] + billing_project_choices
 
     def clean_name(self):
         value = self.cleaned_data["name"]
