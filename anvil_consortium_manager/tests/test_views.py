@@ -522,7 +522,7 @@ class BillingProjectImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(views.BillingProjectImport.message_no_available_billing_projects, str(messages[0]))
 
     def test_billing_projects_call_failed(self):
-        """Response includes a success message if successful."""
+        """Response includes a failure message if api call failed."""
         billing_project_name = "test-billing"
 
         self.anvil_response_mock.add(responses.GET, self.get_billing_projects_api_url(), status=500, json={})
