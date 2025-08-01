@@ -1,5 +1,10 @@
 # Change log
 
+## 0.32.1 (Devel)
+
+* Implement new `anvil_api` method `get_billing_projects` to get a list of billing projects for the user
+* Update `BillingProjectImport` to use the billing project list to provide a dropdown of choices available to import
+
 ## 0.32.0 (2025-07-01)
 
 * Implement audit result caching. Users should set the `ANVIL_AUDIT_CACHE` setting and set an appropriate backend.
