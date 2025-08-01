@@ -1,6 +1,6 @@
 # Change log
 
-## 0.32.1 (2025-07-31)
+## 0.32.1 (Devel)
 
 * Implement new `anvil_api` method `get_billing_projects` to get a list of billing projects for the user
 * Update `BillingProjectImport` to use the billing project list to provide a dropdown of choices available to import
