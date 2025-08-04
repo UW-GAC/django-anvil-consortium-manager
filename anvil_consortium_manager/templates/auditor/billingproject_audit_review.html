@@ -1,0 +1,22 @@
+{% extends "auditor/audit_review.html" %}
+{% block title %}Billing Project audit results{% endblock %}
+
+{% block main_header %}
+<h1>Billing Project audit results</h1>
+{% endblock main_header %}
+
+{% block audit_explanation %}
+{% include "auditor/snippets/billingproject_audit_explanation.html" %}
+{% endblock audit_explanation %}
+
+{% block not_in_app %}
+{% endblock not_in_app %}
+
+{% block action_buttons %}
+<div>
+  <p>
+    <a class="btn btn-primary" href="{% url 'anvil_consortium_manager:auditor:billing_projects:run' %}">Update audit</a>
+  </p>
+
+</div>
+{% endblock action_buttons %}

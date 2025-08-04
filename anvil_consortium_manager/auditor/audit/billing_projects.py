@@ -9,7 +9,9 @@ class BillingProjectAudit(AnVILAudit):
     ERROR_NOT_IN_ANVIL = "Not in AnVIL"
     """Error when a BillingProject in the app does not exist in AnVIL."""
 
-    def run_audit(self):
+    cache_key = "billing_project_audit_results"
+
+    def audit(self, cache=False):
         # Check that all billing projects exist.
         for billing_project in BillingProject.objects.filter(has_app_as_user=True).all():
             model_instance_result = ModelInstanceResult(billing_project)

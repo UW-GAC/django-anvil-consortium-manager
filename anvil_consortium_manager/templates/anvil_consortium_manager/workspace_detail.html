@@ -89,39 +89,54 @@
   {% endif %}
 {% endblock after_panel %}
 
+
+
 {% block action_buttons %}
-<p>
+
+<div class="p-1">
+
   {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
-    <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:all' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
+  <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
   {% endif %}
 
-  {% if show_edit_links %}
-    <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
-  </p>
+</div>
 
-  <p>
-    <div class="dropdown">
-      <a class="btn btn-warning dropdown-toggle" href="#" role="button" id="cloneWorkspaceMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
-        Clone workspace
-      </a>
+{% if show_edit_links %}
+<div class="p-1">
 
-      <ul class="dropdown-menu" aria-labelledby="cloneWorkspaceMenuLink">
+  <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
 
-        {% for workspace_adapter in registered_workspace_adapters %}
-          <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:clone' billing_project_slug=object.billing_project.name workspace_slug=object.name workspace_type=workspace_adapter.get_type %}">{{ workspace_adapter.get_name }}</a></li>
-        {% endfor %}
+  <div class="btn-group">
+    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      Update workspace
+    </button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:update:internal' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Internal ACM info</a></li>
+      <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:update:requester_pays' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Change requester pays status</a></li>
+    </ul>
+  </div>
 
-      </ul>
-    </div>
-  </p>
+  <div class="btn-group">
+    <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      Clone workspace
+    </button>
+    <ul class="dropdown-menu">
+      {% for workspace_adapter in registered_workspace_adapters %}
+      <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:clone' billing_project_slug=object.billing_project.name workspace_slug=object.name workspace_type=workspace_adapter.get_type %}">{{ workspace_adapter.get_name }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
 
-  <p>
-    <a href="{% url 'anvil_consortium_manager:workspaces:update' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
-    {% if not object.is_locked %}
-    <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-    {% endif %}
+<div class="p-1">
+  {% if not object.is_locked %}
+  <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
   {% endif %}
-  </p>
+
+</div>
+{% endif %}
+
+
 {% endblock action_buttons %}
 
 

@@ -17,6 +17,11 @@ class TestAppSettings(TestCase):
         ):
             app_settings.API_SERVICE_ACCOUNT_FILE
 
+    @override_settings(ANVIL_AUDIT_CACHE=None)
+    def test_anvil_audit_cache_none(self):
+        with self.assertRaisesMessage(ImproperlyConfigured, "ANVIL_AUDIT_CACHE is required in settings.py"):
+            app_settings.AUDIT_CACHE
+
     def test_workspace_adapters(self):
         # Using test settings.
         self.assertEqual(

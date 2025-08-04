@@ -1,6 +1,16 @@
+import logging
 from abc import ABC
 
 import django_tables2 as tables
+from django.conf import settings
+from django.core.cache import caches
+from django.core.cache.backends.db import DatabaseCache
+from django.core.exceptions import ImproperlyConfigured
+from django.utils import timezone
+
+from ... import app_settings, models
+
+logger = logging.getLogger(__name__)
 
 
 # Audit classes for individual model instances:
@@ -95,19 +105,80 @@ class AnVILAudit(ABC):
     error_table_class = ErrorTable
     not_in_app_table_class = NotInAppTable
     ignored_table_class = IgnoredTable
+    cache_key = None
 
     def __init__(self):
         self._model_instance_results = []
         self._not_in_app_results = []
         self._ignored_results = []
+        self.timestamp = timezone.now()
+
+    def _check_cache_type(self):
+        """Check that the cache setting is correctly set."""
+        # Check that there is a cache set.
+        cache = caches[app_settings.AUDIT_CACHE]
+        if not isinstance(cache, DatabaseCache):
+            raise ImproperlyConfigured(
+                "The cache defined by `anvil_audit_cache` must use the "
+                "django.core.cache.backends.db.DatabaseCache backend."
+            )
+
+    def _check_cache_size(self):
+        """Check that the cache size is high enough to store audit results."""
+        # First, check that the cache exists.
+        n_workspaces = models.Workspace.objects.count()
+        n_groups = models.ManagedGroup.objects.count()
+        required_size = 4 + n_workspaces + n_groups
+        try:
+            max_entries = settings.CACHES[app_settings.AUDIT_CACHE]["OPTIONS"]["MAX_ENTRIES"]
+        except KeyError:
+            raise ImproperlyConfigured(
+                "The cache defined by `anvil_audit_cache` must have a MAX_ENTRIES option set in the settings file."
+            )
+        if required_size > max_entries:
+            msg = (
+                "The cache defined by `anvil_audit_cache` should have a maximum size of at least {} entries. "
+                "Currently it is set to {}."
+            ).format(required_size, max_entries)
+            logger.error(msg)
+            # raise ImproperlyConfigured(
+            #     "The cache defined by `anvil_audit_cache` must have a "
+            #     "maximum size of at least {} entries. Currently it is set to {}.".format(required_size, max_entries)
+            # )
+
+    def get_cache_key(self):
+        if not self.cache_key:
+            raise NotImplementedError(
+                "%(cls)s is missing a cache key. Define %(cls)s.cache_name or override "
+                "%(cls)s.get_cache_key()." % {"cls": self.__class__.__name__}
+            )
+        return self.cache_key
+
+    def cache(self):
+        """Cache the audit results."""
+        self._check_cache_type()
+        self._check_cache_size()
+        logger.info("Caching audit results as {}".format(self.get_cache_key()))
+        cache_key = self.get_cache_key()
+        caches[app_settings.AUDIT_CACHE].set(cache_key, self)
 
     def ok(self):
         model_instances_ok = all([x.ok() for x in self._model_instance_results])
         not_in_app_ok = len(self._not_in_app_results) == 0
         return model_instances_ok and not_in_app_ok
 
-    def run_audit(self):
-        raise NotImplementedError("Define a run_audit method.")
+    def run_audit(self, cache=False):
+        """Run the audit and optionally cache the results."""
+        self.audit(cache=cache)
+        if cache:
+            self.cache()
+
+    def audit(self, cache=False):
+        """Run the audit.
+
+        This method should not handle caching the results. It may need to know whether caching was requested if it
+        is running sub-audits (e.g., workspace sharing for workspaces)."""
+        raise NotImplementedError("Define an `audit` method.")
 
     def add_result(self, result):
         if isinstance(result, NotInAppResult):

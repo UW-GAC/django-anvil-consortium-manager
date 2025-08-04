@@ -59,12 +59,18 @@ class FilterForm(forms.Form):
 class BillingProjectImportForm(forms.ModelForm):
     """Form to import a BillingProject from AnVIL"""
 
+    name = forms.ChoiceField(help_text="Select the billing project to import from AnVIL")
+
     class Meta:
         model = models.BillingProject
         fields = (
             "name",
             "note",
         )
+
+    def __init__(self, billing_project_choices=[], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].choices = [("", "---------")] + billing_project_choices
 
     def clean_name(self):
         value = self.cleaned_data["name"]
@@ -157,7 +163,6 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
             "billing_project",
             "name",
             "authorization_domains",
-            "is_requester_pays",
             "note",
         )
         widgets = {
@@ -194,6 +199,23 @@ class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):
                 # The workspace already exists - raise a Validation error.
                 raise ValidationError("Workspace with this Billing Project and Name already exists.")
         return self.cleaned_data
+
+
+class WorkspaceRequesterPaysForm(forms.ModelForm):
+    """Form to update the is_requester_pays field for a workspace."""
+
+    class Meta:
+        model = models.Workspace
+        fields = ("is_requester_pays",)
+        widgets = {
+            "is_requester_pays": forms.CheckboxInput(),
+        }
+        help_texts = {
+            "is_requester_pays": (
+                """If you change this box, the workspace's "requester pays" setting will be updated on AnVIL """
+                """when you save your changes."""
+            )
+        }
 
 
 class WorkspaceImportForm(forms.Form):

@@ -47,6 +47,14 @@ class AppSettings(object):
             "MANAGED_GROUP_ADAPTER", "anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter"
         )
 
+    @property
+    def AUDIT_CACHE(self):
+        """Name of the cache to use for audit caches. Default: "default"."""
+        x = self._setting("AUDIT_CACHE")
+        if not x:
+            raise ImproperlyConfigured("ANVIL_AUDIT_CACHE is required in settings.py")
+        return x
+
 
 _app_settings = AppSettings("ANVIL_")
 

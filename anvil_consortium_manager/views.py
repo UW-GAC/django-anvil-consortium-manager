@@ -76,6 +76,32 @@ class BillingProjectImport(auth.AnVILConsortiumManagerStaffEditRequired, Success
     template_name = "anvil_consortium_manager/billingproject_import.html"
     message_not_users_of_billing_project = "Not a user of requested billing project or it doesn't exist on AnVIL."
     success_message = "Successfully imported Billing Project from AnVIL."
+    message_error_fetching_billing_projects = "Unable to fetch billing projects from AnVIL."
+    message_no_available_billing_projects = "No unimported billing projects available for import from AnVIL."
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+
+        try:
+            all_billing_projects = AnVILAPIClient().get_billing_projects().json()
+
+            unimported_billing_project_names = []
+
+            for billing_project in all_billing_projects:
+                billing_project_name = billing_project["projectName"]
+                if not models.BillingProject.objects.filter(name__iexact=billing_project_name).exists():
+                    unimported_billing_project_names.append(billing_project_name)
+
+            if not unimported_billing_project_names:
+                messages.add_message(self.request, messages.INFO, self.message_no_available_billing_projects)
+
+            billing_project_choices = [(x, x) for x in sorted(unimported_billing_project_names)]
+            kwargs["billing_project_choices"] = billing_project_choices
+
+        except AnVILAPIError:
+            messages.add_message(self.request, messages.ERROR, self.message_error_fetching_billing_projects)
+
+        return kwargs
 
     def form_valid(self, form):
         """If the form is valid, check that we can access the BillingProject on AnVIL and save the associated model."""
@@ -1587,6 +1613,55 @@ class WorkspaceUpdate(
 
     def get_success_url(self):
         return self.object.get_absolute_url()
+
+
+class WorkspaceUpdateRequesterPays(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    SuccessMessageMixin,
+    UpdateView,
+):
+    """Deactivate an account and remove it from all groups on AnVIL."""
+
+    model = models.Workspace
+    form_class = forms.WorkspaceRequesterPaysForm
+    template_name = "anvil_consortium_manager/workspace_update_requester_pays.html"
+    message_api_error = "Error updating requester pays status on AnVIL. (AnVIL API Error: {})"
+    success_message = "Successfully updated requester pays status."
+
+    def get_object(self, queryset=None):
+        """Return the object the view is displaying."""
+
+        # Use a custom queryset if provided; this is required for subclasses
+        # like DateDetailView
+        if queryset is None:
+            queryset = self.get_queryset()
+        # Filter the queryset based on kwargs.
+        billing_project_slug = self.kwargs.get("billing_project_slug", None)
+        workspace_slug = self.kwargs.get("workspace_slug", None)
+        queryset = queryset.filter(billing_project__name=billing_project_slug, name=workspace_slug)
+        try:
+            # Get the single item from the filtered queryset
+            obj = queryset.get()
+        except queryset.model.DoesNotExist:
+            raise Http404(
+                _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
+            )
+        return obj
+
+    def form_valid(self, form):
+        if form.has_changed():
+            # Only make an API call if the form has changed data.
+            client = AnVILAPIClient()
+            try:
+                # Make an API call to AnVIL to update the requester pays status.
+                client.update_workspace_requester_pays(
+                    self.object.billing_project.name, self.object.name, form.cleaned_data["is_requester_pays"]
+                )
+            except AnVILAPIError as e:
+                msg = self.message_api_error.format(e)
+                messages.add_message(self.request, messages.ERROR, msg)
+                return self.render_to_response(self.get_context_data(form=form))
+        return super().form_valid(form)
 
 
 class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):

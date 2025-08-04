@@ -28,6 +28,8 @@ class WorkspaceAudit(base.AnVILAudit):
     ERROR_DIFFERENT_REQUESTER_PAYS = "Workspace bucket requester_pays status does not match on AnVIL"
     """Error when the workspace.is_locked status does not match the lock status on AnVIL."""
 
+    cache_key = "workspace_audit_results"
+
     def _check_workspace_ownership(self, workspace_details):
         """Check if the service account is an owner of the workspace.
 
@@ -52,7 +54,7 @@ class WorkspaceAudit(base.AnVILAudit):
         else:
             return False
 
-    def run_audit(self):
+    def audit(self, cache=False):
         """Run an audit on Workspaces in the app."""
         # Check the list of workspaces.
         fields = [
@@ -86,7 +88,7 @@ class WorkspaceAudit(base.AnVILAudit):
                 else:
                     # Since we're the owner, check workspace access.
                     sharing_audit = WorkspaceSharingAudit(workspace)
-                    sharing_audit.run_audit()
+                    sharing_audit.run_audit(cache=cache)
                     if not sharing_audit.ok():
                         model_instance_result.add_error(self.ERROR_WORKSPACE_SHARING)
                     # Check is_requester_pays status. Unfortunately we have to make a separate API call.
@@ -216,7 +218,10 @@ class WorkspaceSharingAudit(base.AnVILAudit):
         super().__init__(*args, **kwargs)
         self.workspace = workspace
 
-    def run_audit(self):
+    def get_cache_key(self):
+        return f"workspace_sharing_{self.workspace.pk}"
+
+    def run_audit(self, cache=False):
         """Run the audit for all workspace instances."""
         response = AnVILAPIClient().get_workspace_acl(self.workspace.billing_project.name, self.workspace.name)
         acl_in_anvil = {k.lower(): v for k, v in response.json()["acl"].items()}
@@ -285,3 +290,7 @@ class WorkspaceSharingAudit(base.AnVILAudit):
                     can_share=acl_in_anvil[key]["canShare"],
                 )
             )
+
+        # Cache the results if requested.
+        if cache:
+            self.cache()

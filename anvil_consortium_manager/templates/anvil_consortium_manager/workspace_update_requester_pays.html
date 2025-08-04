@@ -1,0 +1,39 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% load render_table from django_tables2 %}
+
+{% block title %}Update requester pays{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-12">
+
+
+      <h2>Update requester pays</h2>
+
+      <h2>{{ object }}</h2>
+
+      <p>
+        When a workspace is set to "requester pays", the user accessing data stored within the workspace is responsible for the costs associated data egress, rather than the billing project owner.
+      </p>
+      <p>
+        Are you sure you want to update requester pays status for <a href="{{ object.get_absolute_url }}">{{ object }}</a> on AnVIL?
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-success">Save</button>
+        <a href="{{ object.get_absolute_url }}" class="btn btn-secondary" role="button">Cancel</a>
+      </form>
+
+    </div>
+  </div>
+
+
+</div>
+{% endblock content %}
