@@ -668,7 +668,7 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure it's the group that was returned.
         models.ManagedGroup.objects.get(pk=group.pk)
 
-    def test_anvil_import_not_member_or_admin(self):
+    def test_anvil_import_not_member_or_admin_group_exists(self):
         group_name = "test-group"
         self.anvil_response_mock.add(
             responses.GET,
@@ -677,7 +677,42 @@ class ManagedGroupAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             # Specify a different group so that we're not part of the group being imported.
             json=api_factories.GetGroupsResponseFactory(n_groups=3).response,
         )
-        with self.assertRaises(exceptions.AnVILNotGroupMemberError):
+        # Response for group email query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group",
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json="foo@example.com",
+        )
+        group = models.ManagedGroup.anvil_import(group_name)
+        # Check values.
+        self.assertEqual(group.name, group_name)
+        self.assertEqual(group.email, "foo@example.com")
+        self.assertEqual(group.is_managed_by_app, False)
+        # Check that it was saved.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        # Make sure it's the group that was returned.
+        models.ManagedGroup.objects.get(pk=group.pk)
+
+    def test_anvil_import_not_member_or_admin_group_does_not_exist(self):
+        group_name = "test-group"
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            # Specify a different group so that we're not part of the group being imported.
+            json=api_factories.GetGroupsResponseFactory(n_groups=3).response,
+        )
+        # Response for group email query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group",
+            status=404,
+            # Assume we are not members since we didn't create the group ourselves.
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
             models.ManagedGroup.anvil_import(group_name)
         # Check that no group was saved.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
@@ -2321,7 +2356,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """Cannot import a workspace if we are not owners of it and the billing project doesn't exist in Django yet."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        # No billing project API calls.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2363,11 +2404,17 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Same billing project.
         self.assertEqual(models.BillingProject.objects.latest("pk"), billing_project)
 
-    def test_anvil_import_no_access_to_anvil_workspace(self):
+    def test_anvil_import_workspace_not_shared(self):
         """A workspace cannot be imported from AnVIL if we do not have access."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        # No API call for billing projects.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2379,7 +2426,14 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
                 + " does not exist or you do not have permission to use it"
             },
         )
-        with self.assertRaises(anvil_api.AnVILAPIError404):
+        # Call to check workspace list.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,  # successful response code.
+            json=[],
+        )
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError):
             models.Workspace.anvil_import(
                 billing_project_name,
                 workspace_name,
@@ -2389,33 +2443,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         # Check that no objects were saved.
         self.assertEqual(models.Workspace.objects.count(), 0)
         self.assertEqual(models.BillingProject.objects.count(), 0)
-
-    def test_anvil_import_no_access_to_anvil_workspace_billing_project_exist(self):
-        """A workspace cannot be imported from AnVIL if we do not have access but the BillingProject is in Django."""
-        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
-        workspace_name = "test-workspace"
-        # No API call for billing projects.
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.get_api_url(billing_project.name, workspace_name),
-            status=404,  # successful response code.
-            json={
-                "message": billing_project.name
-                + "/"
-                + workspace_name
-                + " does not exist or you do not have permission to use it"
-            },
-        )
-        with self.assertRaises(anvil_api.AnVILAPIError404):
-            models.Workspace.anvil_import(
-                billing_project.name,
-                workspace_name,
-                workspace_type=DefaultWorkspaceAdapter().get_type(),
-            )
-        # Check workspace values.
-        # Check that no objects were saved.
-        self.assertEqual(models.Workspace.objects.count(), 0)
-        self.assertEqual(models.BillingProject.objects.latest("pk"), billing_project)
 
     def test_anvil_import_workspace_exists_in_django_db(self):
         """Does not import a workspace if it already exists in Django."""
@@ -2435,6 +2462,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is an internal error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2455,6 +2489,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is some other error from the AnVIL API for the workspace call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         self.anvil_response_mock.add(
             responses.GET,
             self.get_api_url(billing_project_name, workspace_name),
@@ -2475,12 +2516,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is an internal error from the AnVIL API for the billing project call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.get_api_url(billing_project_name, workspace_name),
-            status=200,  # successful response code.
-            json=self.get_api_json_response(billing_project_name, workspace_name),
-        )
         # Error in billing project call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -2502,12 +2537,6 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         """No workspaces are created if there is another error from the AnVIL API for the billing project call."""
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.get_api_url(billing_project_name, workspace_name),
-            status=200,  # successful response code.
-            json=self.get_api_json_response(billing_project_name, workspace_name),
-        )
         # Error in billing project call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -2853,6 +2882,305 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(member_group, workspace.authorization_domains.all())
         self.assertIn(admin_group, workspace.authorization_domains.all())
 
+    def test_can_import_as_owner_but_no_access(self):
+        """Can import a workspace when we are an owner but not in the auth domain."""
+        billing_project = factories.BillingProjectFactory.create()
+        workspace_name = "test-workspace"
+        # No API call for billing projects.
+        # API call for workspace details.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=404,  # 404 - we can't call this without actually having access.
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Call to check workspace list - we will be listed as having "NO ACCESS"
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,  # successful response code.
+            json=[
+                {
+                    "accessLevel": "NO ACCESS",
+                    "owners": [],
+                    "workspace": {
+                        "authorizationDomain": [{"membersGroupName": "auth-group"}],
+                        "name": workspace_name,
+                        "namespace": billing_project.name,
+                        "isLocked": False,
+                    },
+                }
+            ],
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        # Response for group query to import auth domain.
+        # No records returned because we are not part of this group.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=[],
+        )
+        # Response for group email query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-group",
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json="foo@example.com",
+        )
+        # A workspace was created.
+        workspace = models.Workspace.anvil_import(
+            billing_project.name,
+            workspace_name,
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertEqual(workspace.name, workspace_name)
+        self.assertEqual(workspace.billing_project, billing_project)
+        # Make sure it's the workspace returned.
+        models.Workspace.objects.get(pk=workspace.pk)
+        # The authorization domain was imported.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        group = models.ManagedGroup.objects.latest("pk")
+        self.assertEqual(group.name, "auth-group")
+        self.assertEqual(group.is_managed_by_app, False)
+        self.assertEqual(group.email, "foo@example.com")
+        # The group was marked as an auth group of the workspace.
+        self.assertEqual(workspace.authorization_domains.count(), 1)
+        self.assertEqual(workspace.authorization_domains.get(), group)
+
+    def test_api_error_group_email(self):
+        """An API Error is raised when trying to retrieve the group email."""
+        billing_project_name = "test-bp"
+        workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Workspace details.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=404,  # 404 - we can't call this without actually having access.
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Call to check workspace list - we will be listed as having "NO ACCESS"
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,  # successful response code.
+            json=[
+                {
+                    "accessLevel": "NO ACCESS",
+                    "owners": [],
+                    "workspace": {
+                        "authorizationDomain": [{"membersGroupName": "auth-group"}],
+                        "name": workspace_name,
+                        "namespace": billing_project_name,
+                        "isLocked": False,
+                    },
+                }
+            ],
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        # Response for group query to import auth domain.
+        # No records returned because we are not part of this group.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=[],
+        )
+        # Response for group email query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/auth-group",
+            status=404,  # Error response.
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError404):
+            models.Workspace.anvil_import(
+                billing_project_name,
+                workspace_name,
+                workspace_type=DefaultWorkspaceAdapter().get_type(),
+            )
+        # No workspaces were created.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        # No billing projects were created.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        # No groups were created.
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
+
+    def test_anvil_import_no_access_not_owner(self):
+        """Cannot import a workspace when we are not an owner and not in the auth domain."""
+        billing_project_name = "test-bp"
+        workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=404,  # 404 - we can't call this without actually having access.
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        # Call to check workspace list - we will be listed as having "NO ACCESS"
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,  # successful response code.
+            json=[
+                {
+                    "accessLevel": "NO ACCESS",
+                    "owners": [],
+                    "workspace": {
+                        "authorizationDomain": [{"membersGroupName": "auth-group"}],
+                        "name": workspace_name,
+                        "namespace": billing_project_name,
+                        "isLocked": False,
+                    },
+                }
+            ],
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=404,  # workspace is not shared.
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError):
+            models.Workspace.anvil_import(
+                billing_project_name,
+                workspace_name,
+                workspace_type=DefaultWorkspaceAdapter().get_type(),
+            )
+        # No workspaces were created.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        # No billing projects were created.
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+        # No groups were created.
+        self.assertEqual(models.ManagedGroup.objects.count(), 0)
+
+    def test_anvil_import_reader(self):
+        """Cannot import a workspace when we are a reader."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=404,  # successful response code.
+            json={
+                "message": billing_project_name
+                + "/"
+                + workspace_name
+                + " does not exist or you do not have permission to use it"
+            },
+        )
+        # Call to check workspace list.
+        # We will be listed as a READER.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,  # successful response code.
+            json=[
+                {
+                    "accessLevel": "READER",
+                    "owners": [],
+                    "workspace": {
+                        "name": workspace_name,
+                        "namespace": billing_project_name,
+                    },
+                }
+            ],
+        )
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError):
+            models.Workspace.anvil_import(
+                billing_project_name,
+                workspace_name,
+                workspace_type=DefaultWorkspaceAdapter().get_type(),
+            )
+        # Check workspace values.
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
+    def test_anvil_import_writer(self):
+        """Cannot import a workspace when we are a writer."""
+        billing_project_name = "test-billing-project"
+        workspace_name = "test-workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project_name, workspace_name),
+            status=404,  # successful response code.
+            json={
+                "message": billing_project_name
+                + "/"
+                + workspace_name
+                + " does not exist or you do not have permission to use it"
+            },
+        )
+        # Call to check workspace list.
+        # We will be listed as a READER.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/workspaces",
+            status=200,  # successful response code.
+            json=[
+                {
+                    "accessLevel": "WRITER",
+                    "owners": [],
+                    "workspace": {
+                        "name": workspace_name,
+                        "namespace": billing_project_name,
+                    },
+                }
+            ],
+        )
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError):
+            models.Workspace.anvil_import(
+                billing_project_name,
+                workspace_name,
+                workspace_type=DefaultWorkspaceAdapter().get_type(),
+            )
+        # Check workspace values.
+        # Check that no objects were saved.
+        self.assertEqual(models.Workspace.objects.count(), 0)
+        self.assertEqual(models.BillingProject.objects.count(), 0)
+
     def test_api_internal_error_group_call(self):
         """Nothing is added when there is an API error on the /api/groups call."""
         billing_project_name = "test-billing-project"
@@ -2867,6 +3195,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
             workspace_url,
             status=200,  # successful response code.
             json=self.get_api_json_response(billing_project_name, workspace_name, auth_domains=["auth-group"]),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project_name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
         )
         # Response for group query.
         group_url = self.api_client.sam_entry_point + "/api/groups/v1"
@@ -3118,10 +3453,13 @@ class WorkspaceAnVILImportAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
         factories.ManagedGroupFactory.create()
-        # Response for billing project query.
-        billing_project_url = self.get_billing_project_api_url(billing_project_name)
-        self.anvil_response_mock.add(responses.GET, billing_project_url, status=200)  # successful response code.
-        # Response for workspace query.
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_billing_project_api_url(billing_project_name),
+            status=200,
+        )
+        # Response for workspace details.
         workspace_url = self.get_api_url(billing_project_name, workspace_name)
         self.anvil_response_mock.add(
             responses.GET,

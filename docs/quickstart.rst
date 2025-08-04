@@ -138,3 +138,12 @@ staff editors (with both ``anvil_consortium_manager_staff_view`` and ``anvil_con
 a group for users who are allowed to link their AnVIL account (with ``anvil_consortium_manager_account_link`` permission).
 Users can then be added to the appropriate group.
 Note that users with staff edit permission but not staff view permission will not be able to see lists or detail pages, so anyone granted edit permission should also be granted staff view permission.
+
+Set up bootstrap
+~~~~~~~~~~~~~~~~
+
+The templates and tables provided with the app assume that you are using
+[Bootstrap5](https://getbootstrap.com/docs/5.3/getting-started/introduction)
+and
+[Bootstrap icons](https://icons.getbootstrap.com/).
+Please ensure that you have included the JS and CSS for both Bootstrap and Bootstrap icons in your base template.

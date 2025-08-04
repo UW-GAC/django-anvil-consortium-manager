@@ -7,7 +7,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import mail_admins
 from django.db import transaction
-from django.db.models import ProtectedError, RestrictedError
+from django.db.models import ProtectedError, Q, RestrictedError
 from django.forms import Form, HiddenInput, inlineformset_factory
 from django.http import Http404, HttpResponseRedirect
 from django.template.loader import render_to_string
@@ -194,12 +194,47 @@ class AccountDetail(
             exclude=["account", "is_service_account"],
         )
 
-        workspace_sharing = models.WorkspaceGroupSharing.objects.filter(
-            workspace__in=self.object.get_accessible_workspaces(),
-            group__in=self.object.get_all_groups(),
-        ).order_by("workspace", "group")
+        all_account_groups = self.object.get_all_groups()
 
-        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingStaffTable(workspace_sharing)
+        # Get a list of all workspaces.
+        # For each workspace, check if it's accessible to the account.
+        # Put unknown workspaces into their own array.
+        accessible_workspaces = []
+        unknown_workspaces = []
+        for workspace in models.Workspace.objects.filter(
+            Q(workspacegroupsharing__group__in=all_account_groups)
+            | Q(workspacegroupsharing__group__is_managed_by_app=False)
+        ):
+            try:
+                if workspace.is_accessible_by_account(self.object, all_account_groups=all_account_groups):
+                    accessible_workspaces.append(workspace)
+                else:
+                    pass
+            # Determine why access is not known, and add fields to be used in the table later.
+            except exceptions.WorkspaceAccessSharingUnknownError:
+                # This means that the app can't determine workspace access due to sharing.
+                workspace.sharing_known = False
+                workspace.auth_domain_known = True
+                unknown_workspaces.append(workspace)
+            except exceptions.WorkspaceAccessAuthorizationDomainUnknownError:
+                # This means that the app can't determine workspace access due to auth domain membership.
+                workspace.sharing_known = True
+                workspace.auth_domain_known = False
+                unknown_workspaces.append(workspace)
+            except exceptions.WorkspaceAccessUnknownError:
+                workspace.sharing_known = False
+                workspace.auth_domain_known = False
+                unknown_workspaces.append(workspace)
+        # Accessible
+        accessible_sharing = models.WorkspaceGroupSharing.objects.filter(
+            workspace__in=accessible_workspaces,
+            group__in=all_account_groups,
+        ).order_by("workspace", "group")
+        context["accessible_workspace_table"] = tables.WorkspaceGroupSharingStaffTable(accessible_sharing)
+
+        # List of workspaces with unknown access.
+        # We do not show sharing records here because it is too confusing.
+        context["unknown_access_workspace_table"] = tables.WorkspaceAccessUnknownStaffTable(unknown_workspaces)
         return context
 
 
@@ -1042,9 +1077,19 @@ class WorkspaceDetail(
         # Add custom variables for this view.
         context["workspace_data_object"] = self.get_workspace_data_object()
         context["show_edit_links"] = has_edit_perms
-        context["has_access"] = hasattr(
-            self.request.user, "account"
-        ) and self.request.user.account.has_workspace_access(self.object)
+        context["has_authorization_domain_not_managed_by_app"] = self.object.authorization_domains.filter(
+            is_managed_by_app=False
+        ).exists()
+
+        try:
+            account = self.request.user.account
+            try:
+                has_access = self.object.is_accessible_by_account(account)
+            except exceptions.WorkspaceAccessUnknownError:
+                has_access = None
+        except models.Account.DoesNotExist:
+            has_access = False
+        context["has_access"] = has_access
         # Tables.
         table_class = tables.ManagedGroupStaffTable if has_staff_view_perms else tables.ManagedGroupUserTable
         context["authorization_domain_table"] = table_class(
@@ -1194,7 +1239,7 @@ class WorkspaceImport(
             workspaces = [
                 w["workspace"]["namespace"] + "/" + w["workspace"]["name"]
                 for w in all_workspaces
-                if (w["accessLevel"] == "OWNER")
+                if (w["accessLevel"] == "OWNER" or w["accessLevel"] == "NO ACCESS")
                 and not models.Workspace.objects.filter(
                     billing_project__name=w["workspace"]["namespace"],
                     name=w["workspace"]["name"],

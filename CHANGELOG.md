@@ -1,9 +1,16 @@
 # Change log
 
-## 0.32.1 (Devel)
+## 0.33.0 (Devel)
 
 * Implement new `anvil_api` method `get_billing_projects` to get a list of billing projects for the user
 * Update `BillingProjectImport` to use the billing project list to provide a dropdown of choices available to import
+* Allow the app to manage workspaces where it is an owner but does not have access (e.g., due to auth domain membership).
+* Rework methods for determining access to workspaces.
+    * Add `Workspace.has_account_in_authorization_domain()`, `Workspace.is_shared_with_account()`, `Workspace.is_accessible_by_account()` methods to determine access to a workspace for an account.
+    * Add `Workspace.has_group_in_authorization_domain()`, `Workspace.is_shared_with_group()` methods to determine access to a workspace for an group. Note that there is no corresponding check for overall group access.
+    * Remove old `Workspace` methods used for determining workspace access: `is_in_authorization_domain`, `is_shared`.
+    * Remove old `ManagedGroup` methods used for determining workspace access: `is_in_authorization_domain`, `is_shared`, `has_access`.
+    * Remove old `Account` methods used for determine workspace access: `get_accessible_workspaces`, `has_workspace_access`.
 
 ## 0.32.0 (2025-07-01)
 

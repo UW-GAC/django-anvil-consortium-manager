@@ -28,6 +28,7 @@ from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..tokens import account_verification_token
 from . import factories
+from .api_factories import ErrorResponseFactory
 from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
@@ -1538,6 +1539,119 @@ class AccountDetailTest(TestCase):
         table = response.context_data["accessible_workspace_table"]
         self.assertEqual(len(table.rows), 1)
         self.assertIn(sharing, table.data)
+
+    def test_accessible_workspaces_with_unknown_auth_domain_membership(self):
+        """Does not include workspaces where the auth_domain membership is unknown."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        table = response.context_data["accessible_workspace_table"]
+        self.assertEqual(len(table.rows), 0)
+
+    def test_accessible_workspaces_with_unknown_sharing(self):
+        """Does not include workspaces where the sharing is unknown."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        table = response.context_data["accessible_workspace_table"]
+        self.assertEqual(len(table.rows), 0)
+
+    def test_unknown_access_workspace_table(self):
+        """The unknown_access_workspace_table exists."""
+        obj = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.uuid))
+        self.assertIn("accessible_workspace_table", response.context_data)
+        self.assertIsInstance(
+            response.context_data["unknown_access_workspace_table"],
+            tables.WorkspaceStaffTable,
+        )
+
+    def test_unknown_access_workspace_none(self):
+        """the unknown_access_workspace_table has no records when there are no workspaces."""
+        account = factories.AccountFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
+
+    def test_unknown_access_workspace_one_unknown_sharing(self):
+        """One workspace is shown if it is shared with a group not managed by app."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, False)
+        self.assertEqual(record.auth_domain_known, True)
+
+    def test_unknown_access_workspace_one_unknown_auth_domain(self):
+        """One workspace is shown if it is shared but the auth domain is not managed by app."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create()
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, True)
+        self.assertEqual(record.auth_domain_known, False)
+
+    def test_unknown_access_workspace_one_unknown_sharing_and_auth_domain(self):
+        """One workspace is shown if has unknown sharing and unknown auth domain access."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, False)
+        self.assertEqual(record.auth_domain_known, False)
+
+    def test_unknown_access_workspace_unknown_sharing_not_in_auth_domain(self):
+        """Workspace does not appear in table if it is has unknown sharing but the user is not in the auth domain."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
+
+    def test_unknown_access_workspace_not_shared_unknown_auth_domain(self):
+        """Workspace does not appear in table if it is has unknown auth domain but is not shared."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace, group__is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
 
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
@@ -6917,7 +7031,7 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("has_access", response.context)
-        self.assertFalse(response.context["has_access"])
+        self.assertEqual(response.context["has_access"], False)
         self.assertContains(response, "No access to workspace")
 
     def test_access_badge_no_access(self):
@@ -6926,28 +7040,39 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("has_access", response.context)
-        self.assertFalse(response.context["has_access"])
+        self.assertEqual(response.context["has_access"], False)
         self.assertContains(response, "No access to workspace")
 
-    def test_access_badge_access(self):
-        obj = factories.DefaultWorkspaceDataFactory.create()
+    def test_access_badge_with_access(self):
         account = factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
         group = factories.ManagedGroupFactory.create()
         factories.GroupAccountMembershipFactory.create(group=group, account=account)
         factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("has_access", response.context)
-        self.assertTrue(response.context["has_access"])
+        self.assertEqual(response.context["has_access"], True)
         self.assertContains(response, "You have access to this workspace")
 
-    def test_anvil_link_with_access(self):
-        """Link to AnVIL appears on the page when the user has access."""
+    def test_access_badge_unknown_access(self):
+        factories.AccountFactory.create(user=self.user, verified=True)
         obj = factories.DefaultWorkspaceDataFactory.create()
-        account = factories.AccountFactory.create(user=self.user, verified=True)
-        group = factories.ManagedGroupFactory.create()
-        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("has_access", response.context)
+        self.assertIsNone(response.context["has_access"])
+        self.assertContains(response, "Unknown access to workspace")
+
+    def test_anvil_link_access(self):
+        """Link to AnVIL appears on the page when the user does has access."""
+        account = factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, "View on AnVIL")
@@ -6955,6 +7080,7 @@ class WorkspaceDetailTest(TestCase):
 
     def test_anvil_link_no_access(self):
         """Link to AnVIL does not appear on the page when the user does not have access."""
+        factories.AccountFactory.create(user=self.user, verified=True)
         obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
@@ -6966,6 +7092,17 @@ class WorkspaceDetailTest(TestCase):
         superuser = User.objects.create_superuser(username="test-superuser", password="test-superuser")
         obj = factories.DefaultWorkspaceDataFactory.create()
         self.client.force_login(superuser)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, obj.workspace.get_anvil_url())
+
+    def test_anvil_link_access_unknown(self):
+        """Link to AnVIL appears on the page when the user has unknown access."""
+        factories.AccountFactory.create(user=self.user, verified=True)
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        factories.WorkspaceGroupSharingFactory.create(workspace=obj.workspace, group=group)
+        self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, "View on AnVIL")
         self.assertContains(response, obj.workspace.get_anvil_url())
@@ -6999,6 +7136,19 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertContains(response, """<span class="badge">Extra workspace pill</span>""")
+
+    def test_two_auth_domains_one_not_managed_by_app(self):
+        """Response contains an alert if the workspace has an auth domain that is not managed by the app."""
+        workspace = factories.DefaultWorkspaceDataFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory.create(workspace=workspace.workspace)
+        factories.WorkspaceAuthorizationDomainFactory.create(
+            workspace=workspace.workspace, group__is_managed_by_app=False
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertIn("has_authorization_domain_not_managed_by_app", response.context)
+        self.assertTrue(response.context["has_authorization_domain_not_managed_by_app"])
+        self.assertContains(response, "authorization domain that is not managed by the app")
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -8186,8 +8336,8 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(formset.forms), 1)
         self.assertIsInstance(formset.forms[0], forms.DefaultWorkspaceDataForm)
 
-    def test_form_choices_no_available_workspaces(self):
-        """Choices are populated correctly with one available workspace."""
+    def test_form_choices_no_workspaces(self):
+        """Choices are populated correctly with no workspace."""
         self.anvil_response_mock.add(
             responses.GET,
             self.workspace_list_url,
@@ -8209,7 +8359,59 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
 
-    def test_form_choices_one_available_workspace(self):
+    def test_form_choices_one_workspace_reader(self):
+        """Workspaces with reader access are excluded."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("bp", "ws-reader", access="READER"),
+            ],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+        form_choices = response.context_data["form"].fields["workspace"].choices
+        # Choices are populated.
+        self.assertEqual(len(form_choices), 1)
+        self.assertFalse(("bp/ws-reader", "bp/ws-reader") in form_choices)
+        # A message is shown.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
+
+    def test_form_choices_one_workspace_writer(self):
+        """Workspaces with writer access are excluded."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[
+                self.get_api_json_response("bp", "ws-writer", access="WRITER"),
+            ],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        self.assertTrue("form" in response.context_data)
+        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
+        form_choices = response.context_data["form"].fields["workspace"].choices
+        # Choices are populated.
+        self.assertEqual(len(form_choices), 1)
+        self.assertFalse(("bp/ws-writer", "bp/ws-writer") in form_choices)
+        # A message is shown.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
+
+    def test_form_choices_one_workspace_owner(self):
         """Choices are populated correctly with one available workspace."""
         self.anvil_response_mock.add(
             responses.GET,
@@ -8230,7 +8432,28 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         # Second choice is the workspace.
         self.assertTrue(("bp-1/ws-1", "bp-1/ws-1") in workspace_choices)
 
-    def test_form_choices_two_available_workspaces(self):
+    def test_form_choices_one_workspace_no_access(self):
+        """Workspaces with NO ACCESS access are included."""
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response("bp-1", "ws-1", access="NO ACCESS")],
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace_type))
+        # Choices are populated correctly.
+        workspace_choices = response.context_data["form"].fields["workspace"].choices
+        self.assertEqual(len(workspace_choices), 2)
+        # The first choice is the empty string.
+        self.assertEqual("", workspace_choices[0][0])
+        # Second choice is the workspace.
+        self.assertTrue(("bp-1/ws-1", "bp-1/ws-1") in workspace_choices)
+
+    def test_form_choices_two_workspaces_owner(self):
         """Choices are populated correctly with two available workspaces."""
         self.anvil_response_mock.add(
             responses.GET,
@@ -8307,30 +8530,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceImport.message_no_available_workspaces, str(messages[0]))
-
-    def test_form_does_not_show_workspaces_not_owner(self):
-        """The form does not show workspaces where we aren't owners in the choices."""
-        self.anvil_response_mock.add(
-            responses.GET,
-            self.workspace_list_url,
-            match=[
-                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
-            ],
-            status=200,
-            json=[
-                self.get_api_json_response("bp", "ws-owner", access="OWNER"),
-                self.get_api_json_response("bp", "ws-reader", access="READER"),
-            ],
-        )
-        self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type))
-        self.assertTrue("form" in response.context_data)
-        self.assertIsInstance(response.context_data["form"], forms.WorkspaceImportForm)
-        form_choices = response.context_data["form"].fields["workspace"].choices
-        # Choices are populated.
-        self.assertEqual(len(form_choices), 2)
-        self.assertTrue(("bp/ws-owner", "bp/ws-owner") in form_choices)
-        self.assertFalse(("bp/ws-reader", "bp/ws-reader") in form_choices)
 
     def test_can_import_workspace_and_billing_project_as_user(self):
         """Can import a workspace from AnVIL when the billing project does not exist in Django and we are users."""
@@ -8999,6 +9198,13 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     def test_other_anvil_api_error(self):
         billing_project_name = "billing-project"
         workspace_name = "workspace"
+        # Response from checking the billing project.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.rawls_entry_point + "/api/billing/v2/" + billing_project_name,
+            status=200,
+        )
+        # Response for workspace details.
         # Available workspaces API call.
         self.anvil_response_mock.add(
             responses.GET,
@@ -9487,6 +9693,90 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
         self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "imported!")
+
+    def test_can_import_workspace_no_access_but_owner(self):
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        auth_domain_name = "auth-group"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            status=200,
+            json=[
+                self.get_api_json_response(
+                    billing_project.name,
+                    workspace_name,
+                    authorization_domains=[auth_domain_name],
+                    access="NO ACCESS",
+                )
+            ],
+        )
+        # API call for workspace details.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=404,  # 404 - we can't call this without actually having access.
+            json=ErrorResponseFactory().response,
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        # Response for group query to import auth domain.
+        # No records returned because we are not part of this group.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1",
+            status=200,
+            json=[],
+        )
+        # Response for group email query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.api_client.sam_entry_point + "/api/groups/v1/" + auth_domain_name,
+            status=200,
+            # Assume we are not members since we didn't create the group ourselves.
+            json="foo@example.com",
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        # History is added for the workspace.
+        self.assertEqual(new_workspace.history.count(), 1)
+        self.assertEqual(new_workspace.history.latest().history_type, "+")
+        # An authorization domain group was created.
+        self.assertEqual(models.ManagedGroup.objects.count(), 1)
+        group = models.ManagedGroup.objects.latest()
+        self.assertEqual(group.name, auth_domain_name)
+        self.assertEqual(group.is_managed_by_app, False)
+        # The workspace authorization domain relationship was created.
+        auth_domain = models.WorkspaceAuthorizationDomain.objects.latest("pk")
+        self.assertEqual(auth_domain.workspace, new_workspace)
+        self.assertEqual(auth_domain.group, group)
+        self.assertEqual(auth_domain.history.count(), 1)
+        self.assertEqual(auth_domain.history.latest().history_type, "+")
+        # History is added for the authorization domain.
+        self.assertEqual(models.WorkspaceAuthorizationDomain.history.count(), 1)
+        self.assertEqual(models.WorkspaceAuthorizationDomain.history.latest().history_type, "+")
 
 
 class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
