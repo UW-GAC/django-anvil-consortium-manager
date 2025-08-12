@@ -24,7 +24,7 @@ jobs:
     steps:
 
       # Check out the repository so that the action can access it
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
 
       - name: Set up Python
         uses: actions/setup-python@v5.4.0
