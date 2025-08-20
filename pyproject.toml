@@ -170,11 +170,11 @@ DBBACKEND = "sqlite3"
 DBNAME = ":memory:"
 [[tool.hatch.envs.test-sqlite.matrix]]
 python = ["3.10", "3.12"]
-django = ["4.2", "5.0"]
+django = ["4.2", "5.2"]
 [tool.hatch.envs.test-sqlite.overrides]
 matrix.django.extra-dependencies = [
     { value = "django ~= 4.2.0", if = ["4.2"] },
-    { value = "django ~= 5.0.0", if = ["5.0"] },
+    { value = "django ~= 5.2", if = ["5.2"] },
 ]
 
 [tool.hatch.envs.test-mysql]
@@ -186,11 +186,11 @@ extra-dependencies = [
 DBBACKEND = "mysql"
 [[tool.hatch.envs.test-mysql.matrix]]
 python = ["3.10", "3.12"]
-django = ["4.2", "5.0"]
+django = ["4.2", "5.2"]
 [tool.hatch.envs.test-mysql.overrides]
 matrix.django.extra-dependencies = [
     { value = "django ~= 4.2.0", if = ["4.2"] },
-    { value = "django ~= 5.0.0", if = ["5.0"] },
+    { value = "django ~= 5.2", if = ["5.2"] },
 ]
 
 
