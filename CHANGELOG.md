@@ -1,5 +1,9 @@
 # Change log
 
+## 0.34.0 (Devel)
+
+* Add support for Django 5.2.
+
 ## 0.33.0 (2025-08-04)
 
 * Implement new `anvil_api` method `get_billing_projects` to get a list of billing projects for the user
