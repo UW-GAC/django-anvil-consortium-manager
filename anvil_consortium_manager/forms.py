@@ -27,7 +27,7 @@ class Bootstrap5MediaFormMixin:
 class FilterForm(forms.Form):
     """Custom form to pass to Filters defined in filters.py.
 
-    This form displays the fields with floating fields in a single row.
+    This form displays the fields except radio buttons with floating fields in a single row.
     """
 
     def __init__(self, *args, **kwargs):
@@ -35,22 +35,40 @@ class FilterForm(forms.Form):
         self.helper = FormHelper(self)
         self.helper.form_class = "form-floating"
         self.helper.form_method = "get"
-        # Wrap all inputs in a FloatingField and Div with the correct class.
-        self.helper.all().wrap(FloatingField)
-        self.helper.all().wrap(layout.Div, css_class="col")
-        # Save the original layout so we can insert it into the form as desired.
-        tmp = self.helper.layout.copy()
+
+        layout_items = []
+        for field_name, field in self.fields.items():
+            # Radio buttons are not in floating fields
+            if isinstance(field.widget, forms.RadioSelect):
+                field.widget.attrs.update({"class": "form-check-input"})
+                layout_items.append(
+                    layout.Div(
+                        layout.Field(field_name),
+                        css_class="col",
+                    )
+                )
+
+            else:
+                layout_items.append(
+                    layout.Div(
+                        FloatingField(field_name),
+                        css_class="col",
+                    )
+                )
+
+        # Add a submit button with col-auto. This makes auto-sizes the column to just fit the submit button.
+        layout_items.append(
+            layout.Div(
+                # mb-3 to match what is done in FloatingField - this centers the button vertically.
+                layout.Submit("submit", "Filter", css_class="btn btn-secondary mb-3"),
+                css_class="col-auto",
+            )
+        )
+
         # Modify the layout to wrap everything in a row div.
-        # This is necessary because wrap_together does not include the Submit field, but we want it wrapped as well.
         self.helper.layout = layout.Layout(
             layout.Div(
-                *tmp,
-                # Add a submit button with col-auto. This makes auto-sizes the column to just fit the submit button.
-                layout.Div(
-                    # mb-3 to match what is done in FloatingField - this centers the button vertically.
-                    layout.Submit("submit", "Filter", css_class="btn btn-secondary mb-3"),
-                    css_class="col-auto",
-                ),
+                *layout_items,
                 css_class="row align-items-center",
             ),
         )
