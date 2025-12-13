@@ -5613,7 +5613,7 @@ class ManagedGroupListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
 
-    def test_view_with_filter_return_no_object(self):
+    def test_view_with_filter_name_return_no_object(self):
         factories.ManagedGroupFactory.create(name="group1")
         factories.ManagedGroupFactory.create(name="group2")
         self.client.force_login(self.user)
@@ -5622,7 +5622,7 @@ class ManagedGroupListTest(TestCase):
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 0)
 
-    def test_view_with_filter_returns_one_object_exact(self):
+    def test_view_with_filter_name_returns_one_object_exact(self):
         instance = factories.ManagedGroupFactory.create(name="group1")
         factories.ManagedGroupFactory.create(name="group2")
         self.client.force_login(self.user)
@@ -5632,7 +5632,7 @@ class ManagedGroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
         self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_one_object_case_insensitive(self):
+    def test_view_with_filter_name_returns_one_object_case_insensitive(self):
         instance = factories.ManagedGroupFactory.create(name="group1")
         factories.ManagedGroupFactory.create(name="group2")
         self.client.force_login(self.user)
@@ -5642,7 +5642,7 @@ class ManagedGroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
         self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_one_object_case_contains(self):
+    def test_view_with_filter_name_returns_one_object_case_contains(self):
         instance = factories.ManagedGroupFactory.create(name="group1")
         factories.ManagedGroupFactory.create(name="group2")
         self.client.force_login(self.user)
@@ -5652,11 +5652,55 @@ class ManagedGroupListTest(TestCase):
         self.assertEqual(len(response.context_data["table"].rows), 1)
         self.assertIn(instance, response.context_data["table"].data)
 
-    def test_view_with_filter_returns_mutiple_objects(self):
+    def test_view_with_filter_name_returns_mutiple_objects(self):
         factories.ManagedGroupFactory.create(name="group1")
         factories.ManagedGroupFactory.create(name="gRouP2")
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(), {"name__icontains": "Group"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_used_as_auth_domain_either(self):
+        group1 = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        workspace1 = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory(workspace=workspace1, group=group1)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"used_as_auth_domain": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 2)
+
+    def test_view_with_filter_used_as_auth_domain_no(self):
+        group1 = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        workspace1 = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory(workspace=workspace1, group=group1)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"used_as_auth_domain": "no"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_used_as_auth_domain_yes(self):
+        group1 = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="group2")
+        workspace1 = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory(workspace=workspace1, group=group1)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"used_as_auth_domain": "yes"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("table", response.context_data)
+        self.assertEqual(len(response.context_data["table"].rows), 1)
+
+    def test_view_with_filter_name_and_used_as_auth_domain(self):
+        group1 = factories.ManagedGroupFactory.create(name="group1")
+        factories.ManagedGroupFactory.create(name="gRouP2")
+        workspace1 = factories.WorkspaceFactory.create()
+        factories.WorkspaceAuthorizationDomainFactory(workspace=workspace1, group=group1)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), {"name__icontains": "Group", "used_as_auth_domain": ""})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 2)
