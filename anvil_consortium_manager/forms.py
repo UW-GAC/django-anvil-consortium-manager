@@ -2,7 +2,6 @@
 
 from crispy_bootstrap5.bootstrap5 import FloatingField
 from crispy_forms import layout
-from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
 from dal import autocomplete, forward
 from django import forms
@@ -44,7 +43,7 @@ class FilterForm(forms.Form):
                 field.widget.attrs.update({"class": "form-check-input"})
                 layout_items.append(
                     layout.Div(
-                        InlineRadios(field_name),
+                        layout.Field(field_name),
                         css_class="col",
                     )
                 )

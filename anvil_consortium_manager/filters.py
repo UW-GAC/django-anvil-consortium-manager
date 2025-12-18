@@ -25,15 +25,16 @@ class ManagedGroupListFilter(FilterSet):
     IS_AUTH_DOMAIN = "yes"
     NOT_AUTH_DOMAIN = "no"
     USED_AS_AUTH_DOMAIN_CHOICES = (
-        (IS_AUTH_DOMAIN, "Yes"),
-        (NOT_AUTH_DOMAIN, "No"),
+        (IS_AUTH_DOMAIN, "Only auth domains"),
+        (NOT_AUTH_DOMAIN, "No auth domains"),
     )
 
     used_as_auth_domain = ChoiceFilter(
         choices=USED_AS_AUTH_DOMAIN_CHOICES,
         method="filter_used_as_auth_domain",
-        label="Used as auth domain?",
-        empty_label="Either",
+        label="",
+        empty_label="All groups",
+        help_text="Filter on whether a group is used as an authorization domain.",
         widget=django_form.RadioSelect,
     )
 
