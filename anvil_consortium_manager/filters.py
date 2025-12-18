@@ -44,11 +44,10 @@ class ManagedGroupListFilter(FilterSet):
 
     def filter_used_as_auth_domain(self, queryset, name, value):
         if value == self.IS_AUTH_DOMAIN:
-            return queryset.filter(workspaceauthorizationdomain__isnull=False).distinct()
+            queryset = queryset.filter(workspaceauthorizationdomain__isnull=False).distinct()
         elif value == self.NOT_AUTH_DOMAIN:
-            return queryset.filter(workspaceauthorizationdomain__isnull=True)
-        else:
-            raise ValueError("Invalid value for used_as_auth_domain filter")  # pragma: no cover
+            queryset = queryset.filter(workspaceauthorizationdomain__isnull=True)
+        return queryset
 
 
 class WorkspaceListFilter(FilterSet):
