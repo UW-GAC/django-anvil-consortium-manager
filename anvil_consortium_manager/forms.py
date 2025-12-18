@@ -41,7 +41,7 @@ class FilterForm(forms.Form):
         for field_name, field in self.fields.items():
             # Radio buttons use inline radio layout.
             if isinstance(field.widget, forms.RadioSelect):
-                field.widget.attrs.update({"class": "form-check-input foo"})
+                field.widget.attrs.update({"class": "form-check-input"})
                 layout_items.append(
                     layout.Div(
                         InlineRadios(field_name),
