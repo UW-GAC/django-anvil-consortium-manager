@@ -26,6 +26,7 @@ from .. import __version__, filters, forms, models, tables, views
 from ..adapters.account import get_account_adapter
 from ..adapters.default import DefaultWorkspaceAdapter
 from ..adapters.workspace import workspace_adapter_registry
+from ..filters import ManagedGroupListFilter
 from ..tokens import account_verification_token
 from . import factories
 from .api_factories import ErrorResponseFactory
@@ -5678,7 +5679,7 @@ class ManagedGroupListTest(TestCase):
         workspace1 = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory(workspace=workspace1, group=group1)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"used_as_auth_domain": "no"})
+        response = self.client.get(self.get_url(), {"used_as_auth_domain": ManagedGroupListFilter.IS_AUTH_DOMAIN})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)
@@ -5689,7 +5690,7 @@ class ManagedGroupListTest(TestCase):
         workspace1 = factories.WorkspaceFactory.create()
         factories.WorkspaceAuthorizationDomainFactory(workspace=workspace1, group=group1)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"used_as_auth_domain": "yes"})
+        response = self.client.get(self.get_url(), {"used_as_auth_domain": ManagedGroupListFilter.NOT_AUTH_DOMAIN})
         self.assertEqual(response.status_code, 200)
         self.assertIn("table", response.context_data)
         self.assertEqual(len(response.context_data["table"].rows), 1)

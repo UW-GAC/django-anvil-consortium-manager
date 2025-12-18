@@ -19,17 +19,21 @@ class BillingProjectListFilter(FilterSet):
 
 
 class ManagedGroupListFilter(FilterSet):
+    """Filter for ManagedGroup list view."""
+
+    # Set up choices for the auth domain filter.
+    IS_AUTH_DOMAIN = "yes"
+    NOT_AUTH_DOMAIN = "no"
     USED_AS_AUTH_DOMAIN_CHOICES = (
-        ("", "Either"),
-        ("yes", "Yes"),
-        ("no", "No"),
+        (IS_AUTH_DOMAIN, "Yes"),
+        (NOT_AUTH_DOMAIN, "No"),
     )
 
     used_as_auth_domain = ChoiceFilter(
         choices=USED_AS_AUTH_DOMAIN_CHOICES,
         method="filter_used_as_auth_domain",
         label="Used as auth domain?",
-        empty_label=None,
+        empty_label="Either",
         widget=django_form.RadioSelect,
     )
 
@@ -39,13 +43,12 @@ class ManagedGroupListFilter(FilterSet):
         form = forms.FilterForm
 
     def filter_used_as_auth_domain(self, queryset, name, value):
-        if value == "yes":
+        if value == self.IS_AUTH_DOMAIN:
             return queryset.filter(workspaceauthorizationdomain__isnull=False).distinct()
-
-        if value == "no":
+        elif value == self.NOT_AUTH_DOMAIN:
             return queryset.filter(workspaceauthorizationdomain__isnull=True)
-
-        return queryset
+        else:
+            raise ValueError("Invalid value for used_as_auth_domain filter")
 
 
 class WorkspaceListFilter(FilterSet):
