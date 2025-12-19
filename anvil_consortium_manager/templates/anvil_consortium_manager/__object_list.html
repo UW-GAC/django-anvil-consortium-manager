@@ -1,0 +1,41 @@
+{% extends "anvil_consortium_manager/base.html" %}
+{% load static %}
+
+{% load render_table from django_tables2 %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+  <div class="row">
+    <div class="col-sm-12">
+
+      <h2>
+        {% block title %}{% endblock title %} {% block after_title %}{% endblock after_title %}
+      </h2>
+
+      {% if filter.form %}
+      <div class="accordion" id="accordionFilter">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button type="button" data-bs-toggle="collapse" data-bs-target="#collapseFilterOne" aria-expanded="true" aria-controls="collapseFilterOne">
+                    Filter records
+                </button>
+            </h2>
+            <div id="collapseFilterOne" class="accordion-collapse collapse show" data-bs-parent="#accordionFilter">
+                <div class="accordion-body">
+                    {% crispy filter.form %}
+                </div>
+            </div>
+        </div>
+      </div>
+
+      {% endif %}
+
+      {% render_table table %}
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock content %}
