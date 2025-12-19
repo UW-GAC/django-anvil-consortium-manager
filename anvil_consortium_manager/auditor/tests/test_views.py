@@ -50,14 +50,9 @@ from ..audit.workspaces import (
     WorkspaceSharingNotInAppResult,
 )
 from . import factories
+from .utils import AuditCacheClearTestMixin
 
 fake = Faker()
-
-
-class AuditCacheClearTestMixin:
-    def tearDown(self):
-        super().tearDown()
-        caches[app_settings.AUDIT_CACHE].clear()
 
 
 class BillingProjectAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
