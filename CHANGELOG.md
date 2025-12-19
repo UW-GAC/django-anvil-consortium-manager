@@ -3,6 +3,9 @@
 ## 0.34.0 (Devel)
 
 * Add support for Django 5.2.
+* Allow `ManagedGroups` to be filtered by whether or not they are used as an auth domain for a workspace
+* Add a base template for listing objects (`__object_list.html`)
+* Show filter form in list views in a collapsible accordion
 
 ## 0.33.0 (2025-08-04)
 
