@@ -14,14 +14,14 @@
       </h2>
 
       {% if filter.form %}
-      <div class="accordion" id="accordionExample">
+      <div class="accordion" id="accordionFilter">
         <div class="accordion-item">
             <h2 class="accordion-header">
-                <button class="accordion-button type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                <button class="accordion-button type="button" data-bs-toggle="collapse" data-bs-target="#collapseFilterOne" aria-expanded="true" aria-controls="collapseFilterOne">
                     Filter records
                 </button>
             </h2>
-            <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+            <div id="collapseFilterOne" class="accordion-collapse collapse show" data-bs-parent="#accordionFilter">
                 <div class="accordion-body">
                     {% crispy filter.form %}
                 </div>
