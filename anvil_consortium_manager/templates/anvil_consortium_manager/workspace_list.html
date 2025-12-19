@@ -1,27 +1,4 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/__object_list.html" %}
 {% load static %}
 
-{% load render_table from django_tables2 %}
-{% load crispy_forms_tags %}
-
 {% block title %}{{workspace_type_display_name}}s{% endblock %}
-
-{% block content %}
-
-  <div class="row">
-    <div class="col-sm-12">
-
-      <h2>{{workspace_type_display_name}}s</h2>
-
-      <div class="container pt-3">
-        {% crispy filter.form %}
-      </div>
-
-      {% render_table table %}
-
-    </div>
-  </div>
-
-</div>
-
-{% endblock content %}
