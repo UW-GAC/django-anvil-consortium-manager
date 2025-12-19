@@ -1,16 +1,21 @@
 import responses
+from django.core.cache import caches
 from django.test import TestCase
+from django.utils import timezone
 from faker import Faker
+from freezegun import freeze_time
 
 from anvil_consortium_manager.tests.factories import AccountFactory
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin
 
+from ... import app_settings
 from ..audit import accounts
+from .utils import AuditCacheClearTestMixin
 
 fake = Faker()
 
 
-class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
+class AccountAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
     """Tests for the Account.anvil_audit method."""
 
     def get_api_url(self, email):
@@ -173,3 +178,14 @@ class AccountAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+
+    def test_result_is_cached_if_requested(self):
+        """Audit result is cached if specified."""
+        cache_timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(cache_timestamp):
+            audit_results = accounts.AccountAudit()
+            audit_results.run_audit(cache=True)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("account_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, accounts.AccountAudit)
+        self.assertEqual(cached_audit_result.timestamp, cache_timestamp)
