@@ -1451,11 +1451,11 @@ class GroupGroupMembershipTest(TestCase):
 
     def test_history(self):
         """A simple history record is created when model is updated."""
-        obj = factories.GroupGroupMembershipFactory.create(role=GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=GroupGroupMembership.RoleChoices.MEMBER)
         # History was created.
         self.assertEqual(obj.history.count(), 1)
         # A new entry was created after update.
-        obj.role = GroupGroupMembership.ADMIN
+        obj.role = GroupGroupMembership.RoleChoices.ADMIN
         obj.save()
         self.assertEqual(obj.history.count(), 2)
         # An entry is created upon deletion.
@@ -1512,13 +1512,13 @@ class GroupGroupMembershipTest(TestCase):
         instance_1 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         instance_1.save()
         instance_2 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
@@ -1530,35 +1530,39 @@ class GroupGroupMembershipTest(TestCase):
         instance_1 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         instance_1.save()
         instance_2 = GroupGroupMembership(
             parent_group=parent_group,
             child_group=child_group,
-            role=GroupGroupMembership.ADMIN,
+            role=GroupGroupMembership.RoleChoices.ADMIN,
         )
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
     def test_cant_add_a_group_to_itself_member(self):
         group = factories.ManagedGroupFactory()
-        instance = GroupGroupMembership(parent_group=group, child_group=group, role=GroupGroupMembership.MEMBER)
+        instance = GroupGroupMembership(
+            parent_group=group, child_group=group, role=GroupGroupMembership.RoleChoices.MEMBER
+        )
         with self.assertRaises(ValidationError):
             instance.clean()
 
     def test_cant_add_a_group_to_itself_admin(self):
         group = factories.ManagedGroupFactory()
-        instance = GroupGroupMembership(parent_group=group, child_group=group, role=GroupGroupMembership.ADMIN)
+        instance = GroupGroupMembership(
+            parent_group=group, child_group=group, role=GroupGroupMembership.RoleChoices.ADMIN
+        )
         with self.assertRaisesRegex(ValidationError, "add a group to itself"):
             instance.clean()
 
     def test_circular_cant_add_parent_group_as_a_child(self):
-        obj = factories.GroupGroupMembershipFactory.create(role=GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=GroupGroupMembership.RoleChoices.MEMBER)
         instance = GroupGroupMembership(
             parent_group=obj.child_group,
             child_group=obj.parent_group,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         with self.assertRaisesRegex(ValidationError, "circular"):
             instance.clean()
@@ -1572,7 +1576,7 @@ class GroupGroupMembershipTest(TestCase):
         instance = GroupGroupMembership(
             parent_group=child,
             child_group=grandparent,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         with self.assertRaisesRegex(ValidationError, "circular"):
             instance.clean()
@@ -1588,7 +1592,7 @@ class GroupGroupMembershipTest(TestCase):
         instance = GroupGroupMembership(
             parent_group=child,
             child_group=grandparent,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         with self.assertRaisesRegex(ValidationError, "circular"):
             instance.clean()
@@ -1608,7 +1612,7 @@ class GroupAccountMembershipTest(TestCase):
         group = "test-group"
         account = factories.AccountFactory(email=email)
         group = factories.ManagedGroupFactory(name=group)
-        instance = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.MEMBER)
+        instance = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.RoleChoices.MEMBER)
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
         expected_string = "{email} as MEMBER in {group}".format(email=email, group=group)
@@ -1621,11 +1625,11 @@ class GroupAccountMembershipTest(TestCase):
 
     def test_history(self):
         """A simple history record is created when model is updated."""
-        obj = factories.GroupAccountMembershipFactory.create(role=GroupAccountMembership.MEMBER)
+        obj = factories.GroupAccountMembershipFactory.create(role=GroupAccountMembership.RoleChoices.MEMBER)
         # History was created.
         self.assertEqual(obj.history.count(), 1)
         # A new entry was created after update.
-        obj.role = GroupAccountMembership.ADMIN
+        obj.role = GroupAccountMembership.RoleChoices.ADMIN
         obj.save()
         self.assertEqual(obj.history.count(), 2)
         # An entry is created upon deletion.
@@ -1664,7 +1668,7 @@ class GroupAccountMembershipTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         # Add the account to the group.
         obj = factories.GroupAccountMembershipFactory.create(
-            account=account, group=group, role=GroupAccountMembership.MEMBER
+            account=account, group=group, role=GroupAccountMembership.RoleChoices.MEMBER
         )
         # Timestamp
         current_time = timezone.now()
@@ -1703,9 +1707,13 @@ class GroupAccountMembershipTest(TestCase):
         """Cannot have the same account in the same group with the same role twice."""
         account = factories.AccountFactory()
         group = factories.ManagedGroupFactory()
-        instance_1 = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.MEMBER)
+        instance_1 = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.RoleChoices.MEMBER
+        )
         instance_1.save()
-        instance_2 = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.MEMBER)
+        instance_2 = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.RoleChoices.MEMBER
+        )
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
@@ -1713,9 +1721,11 @@ class GroupAccountMembershipTest(TestCase):
         """Cannot have the same account in the same group with different roles twice."""
         account = factories.AccountFactory()
         group = factories.ManagedGroupFactory()
-        instance_1 = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.MEMBER)
+        instance_1 = GroupAccountMembership(
+            account=account, group=group, role=GroupAccountMembership.RoleChoices.MEMBER
+        )
         instance_1.save()
-        instance_2 = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.ADMIN)
+        instance_2 = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.RoleChoices.ADMIN)
         with self.assertRaises(IntegrityError):
             instance_2.save()
 
@@ -1919,7 +1929,7 @@ class WorkspaceMethodHasAccountInAuthorizationDomainsTest(TestCase):
         GroupAccountMembership.objects.create(
             account=account,
             group=auth_domain.group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.assertTrue(auth_domain.workspace.has_account_in_authorization_domain(account))
 
@@ -1938,7 +1948,7 @@ class WorkspaceMethodHasAccountInAuthorizationDomainsTest(TestCase):
         GroupAccountMembership.objects.create(
             account=account,
             group=auth_domains[0].group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.assertFalse(workspace.has_account_in_authorization_domain(account))
 
@@ -1950,12 +1960,12 @@ class WorkspaceMethodHasAccountInAuthorizationDomainsTest(TestCase):
         GroupAccountMembership.objects.create(
             account=account,
             group=auth_domains[0].group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         GroupAccountMembership.objects.create(
             account=account,
             group=auth_domains[1].group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.assertTrue(workspace.has_account_in_authorization_domain(account))
 
@@ -1982,7 +1992,7 @@ class WorkspaceMethodHasAccountInAuthorizationDomainsTest(TestCase):
         GroupAccountMembership.objects.create(
             account=account,
             group=auth_domain.group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         with self.assertRaises(exceptions.WorkspaceAccessAuthorizationDomainUnknownError):
             workspace.has_account_in_authorization_domain(account)
@@ -2065,7 +2075,7 @@ class WorkspaceMethodHasAccountInAuthorizationDomainsTest(TestCase):
         GroupAccountMembership.objects.create(
             account=account,
             group=auth_domain.group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         other_groups = factories.ManagedGroupFactory.create_batch(2)
         self.assertTrue(auth_domain.workspace.has_account_in_authorization_domain(account))
@@ -2107,7 +2117,7 @@ class WorkspaceMethodHasGroupInAuthorizationDomainsTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             child_group=group,
             parent_group=auth_domain.group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.assertTrue(auth_domain.workspace.has_group_in_authorization_domain(group))
 
@@ -2126,7 +2136,7 @@ class WorkspaceMethodHasGroupInAuthorizationDomainsTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             child_group=group,
             parent_group=auth_domains[0].group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.assertFalse(workspace.has_group_in_authorization_domain(group))
 
@@ -2138,12 +2148,12 @@ class WorkspaceMethodHasGroupInAuthorizationDomainsTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             child_group=group,
             parent_group=auth_domains[0].group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         factories.GroupGroupMembershipFactory.create(
             child_group=group,
             parent_group=auth_domains[1].group,
-            role=GroupAccountMembership.MEMBER,
+            role=GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.assertTrue(workspace.has_group_in_authorization_domain(group))
 
@@ -2170,7 +2180,7 @@ class WorkspaceMethodHasGroupInAuthorizationDomainsTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             child_group=group,
             parent_group=auth_domain.group,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         with self.assertRaises(exceptions.WorkspaceAccessAuthorizationDomainUnknownError):
             workspace.has_group_in_authorization_domain(group)
@@ -2250,7 +2260,7 @@ class WorkspaceMethodHasGroupInAuthorizationDomainsTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=auth_domain.group,
             child_group=group,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )
         other_groups = factories.ManagedGroupFactory.create_batch(2)
         self.assertTrue(auth_domain.workspace.has_group_in_authorization_domain(group))

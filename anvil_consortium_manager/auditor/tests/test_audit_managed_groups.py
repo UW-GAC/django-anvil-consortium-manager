@@ -1054,7 +1054,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_one_account_admin(self):
         """anvil_audit works correctly if this group has one account admin."""
         group = ManagedGroupFactory.create()
-        membership = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.ADMIN)
+        membership = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.RoleChoices.ADMIN)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1082,8 +1082,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_two_account_admin(self):
         """anvil_audit works correctly if this group has two account members."""
         group = ManagedGroupFactory.create()
-        membership_1 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.ADMIN)
-        membership_2 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.ADMIN)
+        membership_1 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.RoleChoices.ADMIN)
+        membership_2 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.RoleChoices.ADMIN)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1115,7 +1115,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_one_account_admin_not_in_anvil(self):
         """anvil_audit works correctly if this group has one account member not in anvil."""
         group = ManagedGroupFactory.create()
-        membership = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.ADMIN)
+        membership = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.RoleChoices.ADMIN)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1144,8 +1144,8 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_two_account_admins_not_in_anvil(self):
         """anvil_audit works correctly if this group has two account member not in anvil."""
         group = ManagedGroupFactory.create()
-        membership_1 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.ADMIN)
-        membership_2 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.ADMIN)
+        membership_1 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.RoleChoices.ADMIN)
+        membership_2 = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.RoleChoices.ADMIN)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1242,7 +1242,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
         membership = GroupAccountMembershipFactory.create(
             group=group,
             account__email="tEsT-aDmIn@example.com",
-            role=GroupAccountMembership.ADMIN,
+            role=GroupAccountMembership.RoleChoices.ADMIN,
         )
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -1271,7 +1271,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_account_different_role_member_in_app_admin_in_anvil(self):
         """anvil_audit works correctly if an account has a different role in AnVIL."""
         group = ManagedGroupFactory.create()
-        membership = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.MEMBER)
+        membership = GroupAccountMembershipFactory.create(group=group, role=GroupAccountMembership.RoleChoices.MEMBER)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1638,7 +1638,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_one_group_admin(self):
         """anvil_audit works correctly if this group has one group admin."""
         group = ManagedGroupFactory.create()
-        membership = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.ADMIN)
+        membership = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.RoleChoices.ADMIN)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1666,8 +1666,12 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_two_group_admin(self):
         """anvil_audit works correctly if this group has two group admin."""
         group = ManagedGroupFactory.create()
-        membership_1 = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.ADMIN)
-        membership_2 = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.ADMIN)
+        membership_1 = GroupGroupMembershipFactory.create(
+            parent_group=group, role=GroupGroupMembership.RoleChoices.ADMIN
+        )
+        membership_2 = GroupGroupMembershipFactory.create(
+            parent_group=group, role=GroupGroupMembership.RoleChoices.ADMIN
+        )
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1702,7 +1706,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_one_group_admin_not_in_anvil(self):
         """anvil_audit works correctly if this group has one group member not in anvil."""
         group = ManagedGroupFactory.create()
-        membership = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.ADMIN)
+        membership = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.RoleChoices.ADMIN)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1731,8 +1735,12 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_two_group_admins_not_in_anvil(self):
         """anvil_audit works correctly if this group has two group member not in anvil."""
         group = ManagedGroupFactory.create()
-        membership_1 = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.ADMIN)
-        membership_2 = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.ADMIN)
+        membership_1 = GroupGroupMembershipFactory.create(
+            parent_group=group, role=GroupGroupMembership.RoleChoices.ADMIN
+        )
+        membership_2 = GroupGroupMembershipFactory.create(
+            parent_group=group, role=GroupGroupMembership.RoleChoices.ADMIN
+        )
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1915,7 +1923,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
         membership = GroupGroupMembershipFactory.create(
             parent_group=group,
             child_group__name="tEsT-aDmIn",
-            role=GroupGroupMembership.ADMIN,
+            role=GroupGroupMembership.RoleChoices.ADMIN,
         )
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -1944,7 +1952,9 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
     def test_group_different_role_member_in_app_admin_in_anvil(self):
         """anvil_audit works correctly if an group has a different role in AnVIL."""
         group = ManagedGroupFactory.create()
-        membership = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.MEMBER)
+        membership = GroupGroupMembershipFactory.create(
+            parent_group=group, role=GroupGroupMembership.RoleChoices.MEMBER
+        )
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -2059,7 +2069,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
         membership = GroupGroupMembershipFactory.create(
             parent_group=group,
             child_group__email="foo@bar.com",
-            role=GroupGroupMembership.ADMIN,
+            role=GroupGroupMembership.RoleChoices.ADMIN,
         )
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
@@ -2088,7 +2098,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
 
     def test_group_is_both_admin_and_member(self):
         group = ManagedGroupFactory.create()
-        membership = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.ADMIN)
+        membership = GroupGroupMembershipFactory.create(parent_group=group, role=GroupGroupMembership.RoleChoices.ADMIN)
         api_url_members = self.get_api_url_members(group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -2187,7 +2197,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
         membership = GroupAccountMembershipFactory.create(
             group=group,
             account__status=Account.INACTIVE_STATUS,
-            role=GroupAccountMembership.ADMIN,
+            role=GroupAccountMembership.RoleChoices.ADMIN,
         )
         # The Account is not a member in AnVIL
         api_url_members = self.get_api_url_members(group.name)
@@ -2225,7 +2235,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
         membership = GroupAccountMembershipFactory.create(
             group=group,
             account__status=Account.INACTIVE_STATUS,
-            role=GroupAccountMembership.ADMIN,
+            role=GroupAccountMembership.RoleChoices.ADMIN,
         )
         # The Account is not a member in AnVIL
         api_url_members = self.get_api_url_members(group.name)

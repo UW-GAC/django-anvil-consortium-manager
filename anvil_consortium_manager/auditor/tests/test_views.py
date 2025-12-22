@@ -1385,7 +1385,9 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
 
     def test_post_one_verified(self):
         """audit_verified with one verified record."""
-        membership = GroupAccountMembershipFactory.create(group=self.group, role=GroupAccountMembership.MEMBER)
+        membership = GroupAccountMembershipFactory.create(
+            group=self.group, role=GroupAccountMembership.RoleChoices.MEMBER
+        )
         # Group membership API call.
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
@@ -1414,7 +1416,7 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
 
     def test_post_errors(self):
         """post with audit errors."""
-        GroupAccountMembershipFactory.create(group=self.group, role=GroupAccountMembership.MEMBER)
+        GroupAccountMembershipFactory.create(group=self.group, role=GroupAccountMembership.RoleChoices.MEMBER)
         api_url_members = self.get_api_url_members(self.group.name)
         self.anvil_response_mock.add(
             responses.GET,
@@ -1738,7 +1740,7 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         audit_results = ManagedGroupMembershipAudit(self.group)
         audit_results.add_result(
             ManagedGroupMembershipNotInAppResult(
-                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.MEMBER
+                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.RoleChoices.MEMBER
             )
         )
         caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
@@ -1753,7 +1755,7 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         audit_results = ManagedGroupMembershipAudit(self.group)
         audit_results.add_result(
             ManagedGroupMembershipNotInAppResult(
-                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.MEMBER
+                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.RoleChoices.MEMBER
             )
         )
         caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
@@ -1779,7 +1781,9 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         obj = factories.IgnoredManagedGroupMembershipFactory.create(group=self.group)
         audit_results = ManagedGroupMembershipAudit(self.group)
         audit_results.add_result(
-            ManagedGroupMembershipIgnoredResult(obj, record="foo", current_role=GroupAccountMembership.MEMBER)
+            ManagedGroupMembershipIgnoredResult(
+                obj, record="foo", current_role=GroupAccountMembership.RoleChoices.MEMBER
+            )
         )
         caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
         self.client.force_login(self.user)
@@ -1813,7 +1817,7 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         audit_results = ManagedGroupMembershipAudit(self.group)
         audit_results.add_result(
             ManagedGroupMembershipNotInAppResult(
-                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.MEMBER
+                "foo@bar.com", group=self.group, email="foo@bar.com", role=GroupAccountMembership.RoleChoices.MEMBER
             )
         )
         caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)

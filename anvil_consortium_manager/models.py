@@ -546,7 +546,7 @@ class ManagedGroup(TimeStampedModel):
                 membership = GroupGroupMembership(
                     parent_group=self,
                     child_group=child_group,
-                    role=GroupGroupMembership.ADMIN,
+                    role=GroupGroupMembership.RoleChoices.ADMIN,
                 )
                 membership.full_clean()
                 membership.save()
@@ -556,7 +556,9 @@ class ManagedGroup(TimeStampedModel):
             # Check accounts.
             try:
                 account = Account.objects.get(email=email)
-                membership = GroupAccountMembership(group=self, account=account, role=GroupAccountMembership.ADMIN)
+                membership = GroupAccountMembership(
+                    group=self, account=account, role=GroupAccountMembership.RoleChoices.ADMIN
+                )
                 membership.full_clean()
                 membership.save()
             except Account.DoesNotExist:
@@ -574,7 +576,7 @@ class ManagedGroup(TimeStampedModel):
                 membership = GroupGroupMembership(
                     parent_group=self,
                     child_group=child_group,
-                    role=GroupGroupMembership.MEMBER,
+                    role=GroupGroupMembership.RoleChoices.MEMBER,
                 )
                 membership.full_clean()
                 membership.save()
@@ -584,7 +586,9 @@ class ManagedGroup(TimeStampedModel):
             # Check accounts.
             try:
                 account = Account.objects.get(email=email)
-                membership = GroupAccountMembership(group=self, account=account, role=GroupAccountMembership.MEMBER)
+                membership = GroupAccountMembership(
+                    group=self, account=account, role=GroupAccountMembership.RoleChoices.MEMBER
+                )
                 membership.full_clean()
                 membership.save()
             except Account.DoesNotExist:
@@ -1076,20 +1080,24 @@ class WorkspaceAuthorizationDomain(TimeStampedModel):
         return "Auth domain {group} for {workspace}".format(group=self.group.name, workspace=self.workspace)
 
 
-class GroupGroupMembership(TimeStampedModel):
+class ManagedGroupMembershipRoleChoicesMixin(models.Model):
+    """Mixin to define role choices for ManagedGroupMembership."""
+
+    class RoleChoices(models.TextChoices):
+        MEMBER = "MEMBER", "Member"
+        ADMIN = "ADMIN", "Admin"
+
+    role = models.CharField(max_length=10, choices=RoleChoices.choices, default=RoleChoices.MEMBER)
+
+    class Meta:
+        abstract = True
+
+
+class GroupGroupMembership(TimeStampedModel, ManagedGroupMembershipRoleChoicesMixin):
     """A model to store which groups are in a group."""
-
-    MEMBER = "MEMBER"
-    ADMIN = "ADMIN"
-
-    ROLE_CHOICES = [
-        (MEMBER, "Member"),
-        (ADMIN, "Admin"),
-    ]
 
     parent_group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE, related_name="child_memberships")
     child_group = models.ForeignKey("ManagedGroup", on_delete=models.PROTECT, related_name="parent_memberships")
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
     history = HistoricalRecords()
 
     class Meta:
@@ -1145,23 +1153,14 @@ class GroupGroupMembership(TimeStampedModel):
         AnVILAPIClient().remove_user_from_group(self.parent_group.name, self.role.lower(), self.child_group.email)
 
 
-class GroupAccountMembership(TimeStampedModel):
+class GroupAccountMembership(TimeStampedModel, ManagedGroupMembershipRoleChoicesMixin):
     """A model to store which accounts are in a group."""
-
-    MEMBER = "MEMBER"
-    ADMIN = "ADMIN"
-
-    ROLE_CHOICES = [
-        (MEMBER, "Member"),
-        (ADMIN, "Admin"),
-    ]
 
     # When querying with as_of, HistoricForeignKey follows relationships at the same timepoint.
     # There is a (minor?) bug in the released v3.1.1 version:
     # https://github.com/jazzband/django-simple-history/issues/983
     account = HistoricForeignKey("Account", on_delete=models.CASCADE)
     group = models.ForeignKey("ManagedGroup", on_delete=models.CASCADE)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=MEMBER)
     history = HistoricalRecords()
 
     class Meta:

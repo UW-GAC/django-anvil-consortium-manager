@@ -149,10 +149,10 @@ class ManagedGroupGraphMixin:
                 # Ignore direction.
                 x1, y1 = self.graph_layout[v]
                 x0, y0 = self.graph_layout[u]
-                if e["role"] == models.GroupGroupMembership.MEMBER:
+                if e["role"] == models.GroupGroupMembership.RoleChoices.MEMBER:
                     edge_x = edge_x_member
                     edge_y = edge_y_member
-                elif e["role"] == models.GroupGroupMembership.ADMIN:
+                elif e["role"] == models.GroupGroupMembership.RoleChoices.ADMIN:
                     edge_x = edge_x_admin
                     edge_y = edge_y_admin
                     # Reverse order so arrows go from child to parent instead of parent to child.
