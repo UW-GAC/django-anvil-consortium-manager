@@ -591,6 +591,25 @@ class ManagedGroup(TimeStampedModel):
                 # This email is not associated with an Account in the app.
                 pass
 
+    def anvil_is_admin(self):
+        """Check if the app is an admin of this group on AnVIL.
+
+        Returns:
+            Boolean indicator of whether the app is an admin of this group on AnVIL.
+
+        Raises:
+            AnVILGroupNotFound: If the group is not found on AnVIL, either because it doesn't exist or the app is
+                not part of it.
+        """
+        response = AnVILAPIClient().get_groups()
+        this_group = [x["role"].lower() for x in response.json() if x["groupName"].lower() == self.name.lower()]
+        if len(this_group) == 0:
+            raise exceptions.AnVILGroupNotFound("Group {} not found on AnVIL.".format(self.name))
+        elif "admin" in this_group:
+            return True
+        else:
+            return False
+
 
 class Workspace(TimeStampedModel):
     """A model to store information about AnVIL workspaces."""

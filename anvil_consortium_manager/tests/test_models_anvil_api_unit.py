@@ -1448,6 +1448,76 @@ class ManagedGroupAnVILImportMembershipTest(AnVILAPIMockTestMixin, TestCase):
         models.ManagedGroup.objects.get(pk=group.pk)
 
 
+class ManagedGroupAnVILIsAdminTest(AnVILAPIMockTestMixin, TestCase):
+    def get_api_url(self):
+        """Return the API url being called by the method."""
+        return self.api_client.sam_entry_point + "/api/groups/v1"
+
+    def test_is_admin_true(self):
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(groupName=group.name),
+                ]
+            ).response,
+        )
+        self.assertTrue(group.anvil_is_admin())
+
+    def test_is_admin_false(self):
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsMemberFactory(groupName=group.name),
+                ]
+            ).response,
+        )
+        self.assertFalse(group.anvil_is_admin())
+
+    def test_is_admin_not_in_group(self):
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(response=[]).response,
+        )
+        with self.assertRaises(exceptions.AnVILGroupNotFound):
+            group.anvil_is_admin()
+
+    def test_is_admin_case_insensitive(self):
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True, name="TeSt-GrOuP")
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=200,  # successful response code.
+            json=api_factories.GetGroupsResponseFactory(
+                response=[
+                    api_factories.GroupDetailsAdminFactory(groupName="tEsT-gRoUp"),
+                ]
+            ).response,
+        )
+        self.assertTrue(group.anvil_is_admin())
+
+    def test_is_admin_api_error(self):
+        group = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(),
+            status=500,  # server error response code.
+            json=api_factories.ErrorResponseFactory().response,
+        )
+        with self.assertRaises(anvil_api.AnVILAPIError500):
+            group.anvil_is_admin()
+
+
 class WorkspaceAnVILAPIMockTest(AnVILAPIMockTestMixin, TestCase):
     def setUp(self, *args, **kwargs):
         super().setUp()
