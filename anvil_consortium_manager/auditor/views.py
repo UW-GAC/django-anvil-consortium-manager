@@ -158,6 +158,25 @@ class ManagedGroupMembershipAuditReview(
         # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get the audit results for the overall group.
+        managed_group_audit_alert = None
+        managed_group_audit_results = self.get_audit_results(cache_key="managed_group_audit_results")
+        try:
+            managed_group_audit_result = managed_group_audit_results.get_result_for_model_instance(self.object)
+        except AttributeError:
+            managed_group_audit_alert = "ManagedGroup audit has not been run."
+        except ValueError:
+            managed_group_audit_alert = "ManagedGroup audit results not found for this group."
+        else:
+            if not managed_group_audit_result.ok():
+                errors = managed_group_audit_result.errors.copy()
+                if len(errors.difference(set([managed_group_audit.ManagedGroupAudit.ERROR_GROUP_MEMBERSHIP]))) > 0:
+                    managed_group_audit_alert = "ManagedGroup audit has errors."
+        context["managed_group_audit_alert"] = managed_group_audit_alert
+        return context
+
 
 class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRequired, DetailView):
     """View to display the details of an models.IgnoredManagedGroupMembership."""

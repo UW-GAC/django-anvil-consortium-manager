@@ -1839,6 +1839,125 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
             views.ManagedGroupMembershipAuditRun.message_not_managed_by_app,
         )
 
+    def test_managed_group_audit_ok(self):
+        """No alert is shown when the overall managed group audit is ok."""
+        # Store an audit error for this group.
+        managed_group_audit = ManagedGroupAudit()
+        managed_group_audit.add_result(base_audit.ModelInstanceResult(self.group))
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", managed_group_audit)
+        # Store a cached membership audit that is ok.
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(base_audit.ModelInstanceResult(membership))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        # Check if the correct message is displayed.
+        self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIsNone(response.context_data["managed_group_audit_alert"])
+        self.assertNotIn("may be incorrect", response.content.decode())
+
+    def test_managed_group_audit_group_has_error(self):
+        """The cached membership audit is ok, but the ManagedGroup audit for this group has an error."""
+        # Store an audit error for this group.
+        managed_group_audit = ManagedGroupAudit()
+        group_result = base_audit.ModelInstanceResult(self.group)
+        group_result.add_error("Bar")
+        managed_group_audit.add_result(group_result)
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", managed_group_audit)
+        # Store a cached membership audit that is ok.
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(base_audit.ModelInstanceResult(membership))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        # Check if the correct message is displayed.
+        self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIn("ManagedGroup audit has errors", response.context_data["managed_group_audit_alert"])
+        self.assertIn(response.context_data["managed_group_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
+
+    def test_managed_group_audit_group_only_has_membership_error(self):
+        """The ManagedGroup audit for this group has an error only for membership."""
+        # Store an audit error for this group.
+        managed_group_audit = ManagedGroupAudit()
+        group_result = base_audit.ModelInstanceResult(self.group)
+        group_result.add_error(ManagedGroupAudit.ERROR_GROUP_MEMBERSHIP)
+        managed_group_audit.add_result(group_result)
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", managed_group_audit)
+        # Store a cached membership audit that is ok.
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        membership_result = base_audit.ModelInstanceResult(membership)
+        membership_result.add_error("Membership error")
+        audit_results.add_result(membership_result)
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        # Check if the correct message is displayed.
+        self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIsNone(response.context_data["managed_group_audit_alert"])
+        self.assertNotIn("may be incorrect", response.content.decode())
+
+    def test_managed_group_audit_group_has_membership_error_and_another_error(self):
+        """The ManagedGroup audit for this group has an error for membership and some other error."""
+        # Store an audit error for this group.
+        managed_group_audit = ManagedGroupAudit()
+        group_result = base_audit.ModelInstanceResult(self.group)
+        group_result.add_error(ManagedGroupAudit.ERROR_GROUP_MEMBERSHIP)
+        group_result.add_error("foo")
+        managed_group_audit.add_result(group_result)
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", managed_group_audit)
+        # Store a cached membership audit that is ok.
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        membership_result = base_audit.ModelInstanceResult(membership)
+        membership_result.add_error("Membership error")
+        audit_results.add_result(membership_result)
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        # Check if the correct message is displayed.
+        self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIn("ManagedGroup audit has errors", response.context_data["managed_group_audit_alert"])
+        self.assertIn(response.context_data["managed_group_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
+
+    def test_managed_group_audit_does_not_exist(self):
+        # Store an audit error for this group.
+        managed_group_audit = ManagedGroupAudit()
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", managed_group_audit)
+        # Store a cached membership audit that is ok.
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(base_audit.ModelInstanceResult(membership))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        # Check if the correct message is displayed.
+        self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIn(
+            "ManagedGroup audit results not found for this group", response.context_data["managed_group_audit_alert"]
+        )
+        self.assertIn(response.context_data["managed_group_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
+
+    def test_managed_group_audit_missing_group(self):
+        # No overall ManagedGroupAudit results are stored.
+        # Store a cached membership audit that is ok.
+        membership = GroupAccountMembershipFactory.create(group=self.group)
+        audit_results = ManagedGroupMembershipAudit(self.group)
+        audit_results.add_result(base_audit.ModelInstanceResult(membership))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.group.name))
+        # Check if the correct message is displayed.
+        self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIn("ManagedGroup audit has not been run", response.context_data["managed_group_audit_alert"])
+        self.assertIn(response.context_data["managed_group_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
+
 
 class IgnoredManagedGroupMembershipDetailTest(TestCase):
     """Tests for the IgnoredManagedGroupMembershipDetail view."""

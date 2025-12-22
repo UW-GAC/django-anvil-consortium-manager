@@ -6,6 +6,17 @@
   <h3>for <a href="{{ object.get_absolute_url }}">{{ object.name }}</a></h3>
 {% endblock main_header %}
 
+{% block audit_result_alert %}
+  {% if managed_group_audit_alert %}
+    <div class="alert alert-danger" role="alert">
+      <span class="fa-solid fa-triangle-exclamation mx-2"></span>
+      {{ managed_group_audit_alert }}
+      The Membership audit may be incorrect until this is resolved.
+    </div>
+  {% endif %}
+  {{block.super}}
+{% endblock audit_result_alert %}
+
 {% block audit_explanation %}
 {% include "auditor/snippets/managedgroup_membership_audit_explanation.html" %}
 {% endblock audit_explanation %}
