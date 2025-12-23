@@ -125,7 +125,7 @@ class GroupGroupMembershipFactory(DjangoModelFactory):
 
     parent_group = SubFactory(ManagedGroupFactory)
     child_group = SubFactory(ManagedGroupFactory)
-    role = models.GroupAccountMembership.MEMBER
+    role = models.GroupAccountMembership.RoleChoices.MEMBER
 
     class Meta:
         model = models.GroupGroupMembership
@@ -137,7 +137,7 @@ class GroupAccountMembershipFactory(DjangoModelFactory):
 
     account = SubFactory(AccountFactory)
     group = SubFactory(ManagedGroupFactory)
-    role = models.GroupAccountMembership.MEMBER
+    role = models.GroupAccountMembership.RoleChoices.MEMBER
 
     class Meta:
         model = models.GroupAccountMembership

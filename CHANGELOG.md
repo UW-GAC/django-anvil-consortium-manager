@@ -6,6 +6,7 @@
 * Allow `ManagedGroups` to be filtered by whether or not they are used as an auth domain for a workspace
 * Add a base template for listing objects (`__object_list.html`)
 * Show filter form in list views in a collapsible accordion
+* Show an alert on the `WorkspaceSharingAuditReview` and `ManagedGroupMembershipAuditReview` views if an error is found in the audit result for the workspace or group, respectively. Such errors could indicate that the sharing or membership audits could be incorrect.
 
 ## 0.33.0 (2025-08-04)
 

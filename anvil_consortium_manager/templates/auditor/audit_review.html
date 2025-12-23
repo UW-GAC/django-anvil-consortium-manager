@@ -12,6 +12,7 @@
 {% block main_header %}
 {% endblock main_header %}
 
+{% block audit_result_alert %}
 <div class="alert alert-{% if audit_ok %}success{% else %}danger{% endif %}" role="alert">
   <p>
     {% if audit_ok %}
@@ -24,6 +25,7 @@
     The audit was last run on <strong>{{audit_timestamp|localtime}}</strong> and may not reflect recent changes.
     Results can be updated by clicking on the "Update audit" button at the bottom of the page.
 </div>
+{% endblock audit_result_alert %}
 
 <div class="my-3 p-3 bg-light border rounded shadow-sm">
   {% block audit_explanation %}

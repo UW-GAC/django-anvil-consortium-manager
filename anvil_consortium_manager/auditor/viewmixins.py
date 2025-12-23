@@ -58,9 +58,11 @@ class AnVILAuditReviewMixin:
         print(self)
         return self.audit_result_not_found_redirect_url
 
-    def get_audit_results(self):
+    def get_audit_results(self, cache_key=None):
         cache = caches[app_settings.AUDIT_CACHE]
-        return cache.get(self.get_cache_key())
+        if cache_key is None:
+            cache_key = self.get_cache_key()
+        return cache.get(cache_key)
 
     def get(self, request, *args, **kwargs):
         audit_results = self.get_audit_results()

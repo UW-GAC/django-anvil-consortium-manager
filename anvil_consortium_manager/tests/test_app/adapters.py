@@ -144,5 +144,5 @@ class TestManagedGroupAfterAnVILCreateForeignKeyAdapter(TestManagedGroupAdapter)
         GroupGroupMembership.objects.create(
             parent_group=parent_group,
             child_group=managed_group,
-            role=GroupGroupMembership.MEMBER,
+            role=GroupGroupMembership.RoleChoices.MEMBER,
         )

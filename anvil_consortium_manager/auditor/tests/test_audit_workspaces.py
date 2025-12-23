@@ -1,6 +1,9 @@
 import responses
+from django.core.cache import caches
 from django.test import TestCase
+from django.utils import timezone
 from faker import Faker
+from freezegun import freeze_time
 
 from anvil_consortium_manager.models import WorkspaceGroupSharing
 from anvil_consortium_manager.tests.factories import (
@@ -10,13 +13,15 @@ from anvil_consortium_manager.tests.factories import (
 )
 from anvil_consortium_manager.tests.utils import AnVILAPIMockTestMixin
 
+from ... import app_settings
 from ..audit import workspaces as workspaces
 from . import factories
+from .utils import AuditCacheClearTestMixin
 
 fake = Faker()
 
 
-class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
+class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
     """Tests for the Workspace.anvil_audit method."""
 
     def get_api_url(self):
@@ -1420,8 +1425,108 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, TestCase):
         self.assertFalse(record_result.ok())
         self.assertEqual(record_result.errors, set([audit_results.ERROR_WORKSPACE_SHARING]))
 
+    def test_result_is_cached_if_requested(self):
+        """Audit result is cached if specified."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        cache_timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(cache_timestamp):
+            audit_results = workspaces.WorkspaceAudit()
+            audit_results.run_audit(cache=True)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, workspaces.WorkspaceAudit)
+        self.assertEqual(cached_audit_result.timestamp, cache_timestamp)
 
-class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, TestCase):
+    def test_result_is_not_cached_if_not_requested(self):
+        """Audit result is not cached if not specified."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        cache_timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(cache_timestamp):
+            audit_results = workspaces.WorkspaceAudit()
+            audit_results.run_audit(cache=False)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_audit_results")
+        self.assertIsNone(cached_audit_result)
+
+    def test_sharing_result_is_cached(self):
+        """Audit result for workspace sharing audit is cached if specified."""
+        workspace = WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check requester pays status.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_workspace_settings_url(workspace.billing_project.name, workspace.name),
+            status=200,
+            json=[],
+        )
+        cache_timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(cache_timestamp):
+            audit_results = workspaces.WorkspaceAudit()
+            audit_results.run_audit(cache=True)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        self.assertIsNotNone(cached_audit_result)
+        self.assertIsInstance(cached_audit_result, workspaces.WorkspaceSharingAudit)
+        self.assertEqual(cached_audit_result.timestamp, cache_timestamp)
+
+    def test_sharing_result_is_not_cached_if_not_requested(self):
+        """Audit result for workspace sharing audit is not cached if not requested."""
+        workspace = WorkspaceFactory.create()
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
+        )
+        # Response to check workspace access.
+        workspace_acl_url = self.get_api_workspace_acl_url(workspace.billing_project.name, workspace.name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            workspace_acl_url,
+            status=200,
+            json=self.get_api_workspace_acl_response(),
+        )
+        # Response to check requester pays status.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_workspace_settings_url(workspace.billing_project.name, workspace.name),
+            status=200,
+            json=[],
+        )
+        cache_timestamp = timezone.now() - timezone.timedelta(days=1)
+        with freeze_time(cache_timestamp):
+            audit_results = workspaces.WorkspaceAudit()
+            audit_results.run_audit(cache=False)
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        self.assertIsNone(cached_audit_result)
+
+
+class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
     """Tests for the WorkspaceSharingAudit class."""
 
     def setUp(self):

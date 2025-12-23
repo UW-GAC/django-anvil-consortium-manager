@@ -5424,7 +5424,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         membership = models.GroupGroupMembership.objects.latest("pk")
         self.assertEqual(membership.parent_group, parent_group)
         self.assertEqual(membership.child_group, new_object)
-        self.assertEqual(membership.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(membership.role, models.GroupGroupMembership.RoleChoices.MEMBER)
 
 
 class ManagedGroupUpdateTest(TestCase):
@@ -6296,7 +6296,7 @@ class ManagedGroupVisualizationTest(TestCase):
         factories.GroupGroupMembershipFactory.create(
             parent_group=parent_1,
             child_group=child,
-            role=models.GroupGroupMembership.ADMIN,
+            role=models.GroupGroupMembership.RoleChoices.ADMIN,
         )
         self.client.force_login(self.user)
         response = self.client.get(self.get_url())
@@ -12847,13 +12847,13 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.MEMBER)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -12870,7 +12870,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -12890,13 +12890,13 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.ADMIN)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -12911,21 +12911,21 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertRedirects(response, reverse("anvil_consortium_manager:group_group_membership:list"))
 
     def test_cannot_create_duplicate_object_with_same_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
                 "parent_group": obj.parent_group.pk,
                 "child_group": obj.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -12939,14 +12939,14 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object_with_different_role(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with a different role."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
             {
                 "parent_group": obj.parent_group.pk,
                 "child_group": obj.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -12959,7 +12959,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         self.assertEqual(
             models.GroupGroupMembership.objects.first().role,
-            models.GroupGroupMembership.MEMBER,
+            models.GroupGroupMembership.RoleChoices.MEMBER,
         )
 
     def test_can_add_two_groups_to_one_parent(self):
@@ -12975,7 +12975,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent.pk,
                 "child_group": group_2.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -12994,7 +12994,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group_2.pk,
                 "child_group": child.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -13009,7 +13009,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group.pk,
                 "child_group": group.pk + 1,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13028,7 +13028,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group.pk + 1,
                 "child_group": group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13128,7 +13128,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group.pk,
                 "child_group": group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13146,7 +13146,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group.pk,
                 "child_group": group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13168,7 +13168,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": child.pk,
                 "child_group": grandparent.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13187,7 +13187,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13216,7 +13216,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13245,7 +13245,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13274,7 +13274,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13303,7 +13303,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13332,7 +13332,7 @@ class GroupGroupMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": parent_group.pk,
                 "child_group": child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13454,13 +13454,13 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
         # History is added.
@@ -13477,7 +13477,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -13495,13 +13495,13 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.ADMIN)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -13513,7 +13513,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertRedirects(
@@ -13523,14 +13523,14 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name),
             {
                 "parent_group": obj.parent_group.pk,
                 "child_group": obj.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
             follow=True,
         )
@@ -13551,7 +13551,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": 100,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13576,7 +13576,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk + 1,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -13667,7 +13667,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.parent_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13690,7 +13690,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": child.pk,
                 "child_group": grandparent.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -13727,7 +13727,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -13755,7 +13755,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13783,7 +13783,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13811,7 +13811,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13839,7 +13839,7 @@ class GroupGroupMembershipCreateByParentTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -13961,13 +13961,13 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
         # History is added.
@@ -13984,7 +13984,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -14002,13 +14002,13 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.ADMIN)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -14020,7 +14020,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertRedirects(
@@ -14030,14 +14030,14 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.child_group.name),
             {
                 "parent_group": obj.parent_group.pk,
                 "child_group": obj.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
             follow=True,
         )
@@ -14058,7 +14058,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": 100,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14083,7 +14083,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk + 1,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -14174,7 +14174,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.child_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14197,7 +14197,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": child.pk,
                 "child_group": grandparent.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -14223,7 +14223,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14251,7 +14251,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14279,7 +14279,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14307,7 +14307,7 @@ class GroupGroupMembershipCreateByChildTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14442,13 +14442,13 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.MEMBER)
         self.assertEqual(new_object.parent_group, self.parent_group)
         self.assertEqual(new_object.child_group, self.child_group)
         # History is added.
@@ -14465,7 +14465,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -14486,13 +14486,13 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupGroupMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupGroupMembership)
-        self.assertEqual(new_object.role, models.GroupGroupMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupGroupMembership.RoleChoices.ADMIN)
 
     def test_redirects_to_detail(self):
         """After successfully creating an object, view redirects to the object's detail page."""
@@ -14504,7 +14504,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertRedirects(
@@ -14514,7 +14514,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
 
     def test_get_duplicate_object_redirect_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.parent_group.name, obj.child_group.name), follow=True)
         self.assertRedirects(response, obj.get_absolute_url())
@@ -14527,14 +14527,14 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
 
     def test_post_duplicate_object_redirect_cannot_create_duplicate_object(self):
         """Cannot create a second GroupGroupMembership object for the same parent and child with the same role."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(obj.parent_group.name, obj.child_group.name),
             {
                 "parent_group": obj.parent_group.pk,
                 "child_group": obj.child_group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
             follow=True,
         )
@@ -14561,7 +14561,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk + 1,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -14588,7 +14588,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk + 1,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -14684,7 +14684,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": group.pk,
                 "child_group": group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -14706,7 +14706,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": group.pk,
                 "child_group": group.pk,
-                "role": models.GroupGroupMembership.ADMIN,
+                "role": models.GroupGroupMembership.RoleChoices.ADMIN,
             },
             follow=True,
         )
@@ -14732,7 +14732,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": child.pk,
                 "child_group": grandparent.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -14771,7 +14771,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -14799,7 +14799,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14827,7 +14827,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14855,7 +14855,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -14883,7 +14883,7 @@ class GroupGroupMembershipCreateByParentChildTest(AnVILAPIMockTestMixin, TestCas
             {
                 "parent_group": self.parent_group.pk,
                 "child_group": self.child_group.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15060,7 +15060,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_view_deletes_object(self):
         """Posting submit to the form successfully deletes the object."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         api_url = self.get_api_url(obj.parent_group.name, obj.role.lower(), obj.child_group.email)
         self.anvil_response_mock.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
@@ -15073,7 +15073,7 @@ class GroupGroupMembershipDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_success_message(self):
         """Response includes a success message if successful."""
-        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.MEMBER)
+        obj = factories.GroupGroupMembershipFactory.create(role=models.GroupGroupMembership.RoleChoices.MEMBER)
         api_url = self.get_api_url(obj.parent_group.name, obj.role.lower(), obj.child_group.email)
         self.anvil_response_mock.add(responses.DELETE, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
@@ -15468,13 +15468,13 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.MEMBER)
         # History is added.
         self.assertEqual(new_object.history.count(), 1)
         self.assertEqual(new_object.history.latest().history_type, "+")
@@ -15491,7 +15491,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -15511,13 +15511,13 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.ADMIN)
 
     def test_redirects_to_list(self):
         """After successfully creating an object, view redirects to the model's list view."""
@@ -15532,7 +15532,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertRedirects(response, reverse("anvil_consortium_manager:group_account_membership:list"))
@@ -15542,7 +15542,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         obj = factories.GroupAccountMembershipFactory(
-            group=group, account=account, role=models.GroupAccountMembership.MEMBER
+            group=group, account=account, role=models.GroupAccountMembership.RoleChoices.MEMBER
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -15550,7 +15550,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15567,7 +15567,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create()
         account = factories.AccountFactory.create()
         obj = factories.GroupAccountMembershipFactory(
-            group=group, account=account, role=models.GroupAccountMembership.MEMBER
+            group=group, account=account, role=models.GroupAccountMembership.RoleChoices.MEMBER
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -15575,7 +15575,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15600,7 +15600,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group_2.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -15619,7 +15619,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account_2.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -15634,7 +15634,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": 1,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15653,7 +15653,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": 1,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15700,7 +15700,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
-            {"account": account.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"account": account.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -15715,7 +15715,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(),
-            {"group": group.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"group": group.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -15747,7 +15747,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15776,7 +15776,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15799,7 +15799,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15838,7 +15838,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15867,7 +15867,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15896,7 +15896,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -15925,7 +15925,7 @@ class GroupAccountMembershipCreateTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16054,13 +16054,13 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
 
@@ -16074,7 +16074,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -16092,13 +16092,13 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
 
@@ -16113,7 +16113,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
@@ -16124,7 +16124,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         obj = factories.GroupAccountMembershipFactory(
             group=self.group,
             account=self.account,
-            role=models.GroupAccountMembership.MEMBER,
+            role=models.GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -16132,7 +16132,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16144,7 +16144,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
         obj.refresh_from_db()
-        self.assertEqual(obj.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(obj.role, models.GroupAccountMembership.RoleChoices.MEMBER)
 
     def test_get_group_not_found(self):
         """Raises 404 if group in URL does not exist when posting data."""
@@ -16163,7 +16163,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk + 1,
                 "account": self.account,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -16182,7 +16182,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk + 1,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16228,7 +16228,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
-            {"account": self.account.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"account": self.account.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -16242,7 +16242,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name),
-            {"group": self.group.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"group": self.group.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -16290,7 +16290,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -16320,7 +16320,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16348,7 +16348,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16376,7 +16376,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16404,7 +16404,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16426,7 +16426,7 @@ class GroupAccountMembershipCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             {
                 "group": self.group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16555,13 +16555,13 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
 
@@ -16575,7 +16575,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -16593,13 +16593,13 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
 
@@ -16614,7 +16614,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
@@ -16625,7 +16625,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         obj = factories.GroupAccountMembershipFactory(
             group=self.group,
             account=self.account,
-            role=models.GroupAccountMembership.MEMBER,
+            role=models.GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -16633,7 +16633,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16645,7 +16645,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             models.GroupAccountMembership.objects.filter(pk=obj.pk),
         )
         obj.refresh_from_db()
-        self.assertEqual(obj.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(obj.role, models.GroupAccountMembership.RoleChoices.MEMBER)
 
     def test_get_account_not_found(self):
         """Raises 404 if group in URL does not exist when posting data."""
@@ -16666,7 +16666,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk + 1,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -16685,7 +16685,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk + 1,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16706,7 +16706,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16752,7 +16752,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
-            {"account": self.account.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"account": self.account.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -16766,7 +16766,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.account.uuid),
-            {"group": self.group.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"group": self.group.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -16804,7 +16804,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16832,7 +16832,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16860,7 +16860,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16888,7 +16888,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -16910,7 +16910,7 @@ class GroupAccountMembershipCreateByAccountTest(AnVILAPIMockTestMixin, TestCase)
             {
                 "group": self.group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -17049,13 +17049,13 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.MEMBER)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
 
@@ -17069,7 +17069,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
             follow=True,
         )
@@ -17087,13 +17087,13 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
         )
         self.assertEqual(response.status_code, 302)
         new_object = models.GroupAccountMembership.objects.latest("pk")
         self.assertIsInstance(new_object, models.GroupAccountMembership)
-        self.assertEqual(new_object.role, models.GroupAccountMembership.ADMIN)
+        self.assertEqual(new_object.role, models.GroupAccountMembership.RoleChoices.ADMIN)
         self.assertEqual(new_object.group, self.group)
         self.assertEqual(new_object.account, self.account)
 
@@ -17108,7 +17108,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         obj = models.GroupAccountMembership.objects.latest("pk")
@@ -17119,7 +17119,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         obj = factories.GroupAccountMembershipFactory.create(
             group=self.group,
             account=self.account,
-            role=models.GroupAccountMembership.MEMBER,
+            role=models.GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.client.force_login(self.user)
         response = self.client.get(
@@ -17142,7 +17142,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         obj = factories.GroupAccountMembershipFactory.create(
             group=self.group,
             account=self.account,
-            role=models.GroupAccountMembership.MEMBER,
+            role=models.GroupAccountMembership.RoleChoices.MEMBER,
         )
         self.client.force_login(self.user)
         response = self.client.post(
@@ -17150,7 +17150,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.ADMIN,
+                "role": models.GroupAccountMembership.RoleChoices.ADMIN,
             },
             follow=True,
         )
@@ -17158,7 +17158,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         # No new object was created.
         self.assertEqual(models.GroupAccountMembership.objects.count(), 1)
         obj.refresh_from_db()
-        self.assertEqual(obj.role, models.GroupAccountMembership.MEMBER)
+        self.assertEqual(obj.role, models.GroupAccountMembership.RoleChoices.MEMBER)
         # A message exists.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
@@ -17185,7 +17185,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk + 1,
                 "account": self.account,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -17217,7 +17217,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": uuid,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         request.user = self.user
@@ -17263,7 +17263,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
-            {"account": self.account.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"account": self.account.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -17277,7 +17277,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
         self.client.force_login(self.user)
         response = self.client.post(
             self.get_url(self.group.name, self.account.uuid),
-            {"group": self.group.pk, "role": models.GroupAccountMembership.MEMBER},
+            {"group": self.group.pk, "role": models.GroupAccountMembership.RoleChoices.MEMBER},
         )
         self.assertEqual(response.status_code, 200)
         form = response.context_data["form"]
@@ -17309,7 +17309,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": group.pk,
                 "account": self.account.pk,
-                "role": models.GroupAccountMembership.MEMBER,
+                "role": models.GroupAccountMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -17335,7 +17335,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -17363,7 +17363,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -17391,7 +17391,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -17419,7 +17419,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": self.account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -17441,7 +17441,7 @@ class GroupAccountMembershipCreateByGroupAccountTest(AnVILAPIMockTestMixin, Test
             {
                 "group": self.group.pk,
                 "account": account.pk,
-                "role": models.GroupGroupMembership.MEMBER,
+                "role": models.GroupGroupMembership.RoleChoices.MEMBER,
             },
         )
         self.assertEqual(response.status_code, 200)
