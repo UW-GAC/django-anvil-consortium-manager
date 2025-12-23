@@ -8,9 +8,12 @@ Unlike the other adapter classes above, you can specify any number of custom ada
 
 The default workspace adapter provided by the app is :class:`~anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter`.
 The default ``workspace_data_model`` specified in this adapter has no fields other than those provided by :class:`~anvil_consortium_manager.models.BaseWorkspaceData`.
-This section describes how to store additional information about a workspace by setting up a custom adapter.
+This section describes how to work with custom adapters for the :class:`~anvil_consortium_manager.models.Workspace` model and associated ``WorkspaceData`` models.
 
-First, you will need to define a new model with the additional fields.
+Defining a custom workspace adapter
+-----------------------------------
+
+First, you will need to define a new model with the additional fields to be tracked about each workspace (referred to as the ``WorkspaceData`` model).
 It must inherit from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`, which provides a one-to-one field called ``workspace`` to the :class:`~anvil_consortium_manager.models.Workspace` model.
 
 .. code-block:: python
@@ -99,19 +102,10 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
 
 Finally, to tell the app to use this adapter, set ``ANVIL_WORKSPACE_ADAPTERS`` in your settings file, e.g.: ``ANVIL_WORKSPACE_ADAPTERS = ["my_app.adapters.CustomWorkspaceAdapter"]``.
 
-To define multiple adapters for different types of workspaces, e.g.:
+Displaying custom information about each workspace
+--------------------------------------------------
 
-.. code-block:: python
-
-    ANVIL_WORKSPACE_ADAPTERS = [
-        "my_app.adapters.FirstWorkspaceAdapter",
-        "my_app.adapters.SecondWorkspaceAdapter",
-    ]
-
-as long as you have defined both ``FirstWorkspaceAdapter`` and ``SecondWorkspaceAdapter`` in your code.
-If you define multiple workspaces, the index page and the navbar that comes with the app will show links for each different type of workspace.
-
-If you would like to display information from the custom workspace data model in the :class:`~anvil_consortium_manager.views.WorkspaceDetail` view, you can include it in the ``workspace_data`` block of the ``workspace_detail.html`` template. For example:
+If you would like to display information from the custom workspace data model in the :class:`~anvil_consortium_manager.views.WorkspaceDetail` view, you can include it in the ``workspace_data`` block of the template for the ``workspace_detail_template_name`` file. For example:
 
 .. code-block:: html
 
@@ -124,6 +118,21 @@ If you would like to display information from the custom workspace data model in
     {% endblock workspace_data %}
 
 If custom content is not provided for the ``workspace_data`` block, a default set of information will be displayed: the billing project, the date added, and the date modified.
+
+Defining multiple workspace adapters
+------------------------------------
+
+If you would like to have different types of workspaces, with different information tracked and different behavior, you may define multiple workspace adapters.
+Assuming you have defined two workspace adapters in your `my_app.adapters` file, you can register both adapters in your settings file as follows:
+
+.. code-block:: python
+
+    ANVIL_WORKSPACE_ADAPTERS = [
+        "my_app.adapters.FirstWorkspaceAdapter",
+        "my_app.adapters.SecondWorkspaceAdapter",
+    ]
+
+If you register multiple workspaces, the index page and the navbar that comes with the app will show links for each different type of workspace.
 
 Customizing the :class:`~anvil_consortium_manager.models.Workspace` form
 ------------------------------------------------------------------------
