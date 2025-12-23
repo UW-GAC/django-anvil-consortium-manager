@@ -15,9 +15,17 @@ Welcome to django-anvil-consortium-manager's documentation!
    models
    views
    anvil_api
-   advanced
    auditing
    management_commands
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Advanced Usage
+
+   adapter_overview
+   account_adapter
+   managed_group_adapter
+   workspace_adapter
 
 .. toctree::
    :maxdepth: 3

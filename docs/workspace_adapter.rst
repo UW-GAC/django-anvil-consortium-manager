@@ -1,83 +1,19 @@
-.. _advanced:
-
-Advanced Usage
-==============
-
-.. _account_adapter:
-
-The account adapter
--------------------
-
-The app provides an adapter that you can use to customize behavior for Accounts.
-You can override this setting by specifying the ``ANVIL_ACCOUNT_ADAPTER`` setting in your ``settings.py`` file.
-By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultAccountAdapter`, e.g.,:
-
-.. code-block:: python
-
-        ANVIL_ACCOUNT_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultAccountAdapter"
-
-To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseAccountAdapter`
-and set the following attributes:
-
-- ``list_table_class``: an attribute set to the class of the table used to display accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.tables.AccountStaffTable`.
-- ``list_filterset_class``: an attribute set to the class of the table used to filter accounts in the :class:`~anvil_consortium_manager.views.AccountList` view. The default adapter uses :class:`anvil_consortium_manager.filters.AccountListFilter`. This must subclass ``FilterSet`` from `django-filter <https://django-filter.readthedocs.io/en/stable/>`_.
-
-The following attributes have defaults, but can be overridden:
-
-
-- ``account_link_email_subject``: Subject line for AnVIL account verification emails. (Default: ``"Verify your AnVIL account email"``)
-- ``account_link_email_template``: The path to account verification email template. (Default: ``anvil_consortium_manager/account_verification_email.html``)
-- ``account_link_verify_message``: Message to display after a user has successfully linked their AnVIL account. (Default: ``"Thank you for linking your AnVIL account."``)
-- ``account_link_redirect``: The URL to redirect to after a user has successfully linked their AnVIL account. (Default: ``settings.LOGIN_REDIRECT_URL``)
-- ``account_verification_notification_email``: Email address to send an email to after a user verifies an account. If ``None``, no email will be sent. (Default: ``None``)
-- ``account_verification_notification_template``: The path to the template for the account verification notification email. (Default: ``anvil_consortium_manager/account_verification_notification_email.html``)
-
-Optionally, you can override the following methods:
-
-- ``get_autocomplete_queryset(self, queryset, q)``: a method that allows the user to provide custom filtering for the autocomplete view. By default, this filters to Accounts whose email contains the case-insensitive search string in ``q``.
-- ``get_autocomplete_label(self, account)``: a method that allows the user to set the label for an account shown in forms using the autocomplete widget.
-- ``after_account_verification(self, account)``: a method to perform any custom actions after an account is successfully linked. If an exception is raised by this method, account linking will still continue and site admins will be notified via email.
-- ``get_account_verification_notification_context(self, account)``: a method to provide custom context data for the account verification notification email. This method is passed the ``account`` object and should return a dictionary of context data.
-- ``send_account_verification_notification_email(self, account)``: a method to send an email to the address specified in ``account_verification_notification_email``. By default, this method calls the ``get_account_verification_notification_context`` method to get the context data for the email and sends an email to the address specified by ``account_verification_notification_email`` (if set). If an exception is raised by this method, account linking will still continue and site admins will be notified via email.
-
-
-
-.. _managed_group_adapter:
-
-The Managed Group adapter
--------------------
-
-The app provides an adapter that you can use to customize behavior for Managed Groups.
-You can override this setting by specifying the ``ANVIL_MANAGED_GROUP_ADAPTER`` setting in your ``settings.py`` file.
-By default, the app uses :class:`~anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter`, e.g.,:
-
-.. code-block:: python
-
-        ANVIL_MANAGED_GROUP_ADAPTER = "anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter"
-
-
-To customize app behavior for accounts, you must subclass :class:`~anvil_consortium_manager.adapters.account.BaseManagedGroupAdapter`
-and set the following attributes:
-
-- ``list_table_class``: an attribute set to the class of the table used to display managed groups in the :class:`~anvil_consortium_manager.views.ManagedGroupList` view to users with StaffView permission. The default adapter uses :class:`anvil_consortium_manager.tables.ManagedGroupStaffTable`.
-
-Optionally, you can override the following methods:
-
-- ``after_anvil_create(self, managed_group)``: a method to perform any actions after creating the Managed Group on AnVIL via the :class:`~anvil_consortium_manager.views.ManagedGroupCreate` view.
-
 .. _workspace_adapter:
 
-The workspace adapter
----------------------
+Workspace adapters
+==================
 
 The app provides an adapter that you can use to provide extra, customized data about a workspace.
 Unlike the other adapter classes above, you can specify any number of custom adapters in your settings file.
 
 The default workspace adapter provided by the app is :class:`~anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter`.
 The default ``workspace_data_model`` specified in this adapter has no fields other than those provided by :class:`~anvil_consortium_manager.models.BaseWorkspaceData`.
-This section describes how to store additional information about a workspace by setting up a custom adapter.
+This section describes how to work with custom adapters for the :class:`~anvil_consortium_manager.models.Workspace` model and associated ``WorkspaceData`` models.
 
-First, you will need to define a new model with the additional fields.
+Defining a custom workspace adapter
+-----------------------------------
+
+First, you will need to define a new model with the additional fields to be tracked about each workspace (referred to as the ``WorkspaceData`` model).
 It must inherit from :class:`~anvil_consortium_manager.models.BaseWorkspaceData`, which provides a one-to-one field called ``workspace`` to the :class:`~anvil_consortium_manager.models.Workspace` model.
 
 .. code-block:: python
@@ -166,19 +102,10 @@ Here is example of the custom adapter for ``my_app`` with the model, form and ta
 
 Finally, to tell the app to use this adapter, set ``ANVIL_WORKSPACE_ADAPTERS`` in your settings file, e.g.: ``ANVIL_WORKSPACE_ADAPTERS = ["my_app.adapters.CustomWorkspaceAdapter"]``.
 
-To define multiple adapters for different types of workspaces, e.g.:
+Displaying custom information about each workspace
+--------------------------------------------------
 
-.. code-block:: python
-
-    ANVIL_WORKSPACE_ADAPTERS = [
-        "my_app.adapters.FirstWorkspaceAdapter",
-        "my_app.adapters.SecondWorkspaceAdapter",
-    ]
-
-as long as you have defined both ``FirstWorkspaceAdapter`` and ``SecondWorkspaceAdapter`` in your code.
-If you define multiple workspaces, the index page and the navbar that comes with the app will show links for each different type of workspace.
-
-If you would like to display information from the custom workspace data model in the :class:`~anvil_consortium_manager.views.WorkspaceDetail` view, you can include it in the ``workspace_data`` block of the ``workspace_detail.html`` template. For example:
+If you would like to display information from the custom workspace data model in the :class:`~anvil_consortium_manager.views.WorkspaceDetail` view, you can include it in the ``workspace_data`` block of the template for the ``workspace_detail_template_name`` file. For example:
 
 .. code-block:: html
 
@@ -192,8 +119,23 @@ If you would like to display information from the custom workspace data model in
 
 If custom content is not provided for the ``workspace_data`` block, a default set of information will be displayed: the billing project, the date added, and the date modified.
 
+Defining multiple workspace adapters
+------------------------------------
+
+If you would like to have different types of workspaces, with different information tracked and different behavior, you may define multiple workspace adapters.
+Assuming you have defined two workspace adapters in your `my_app.adapters` file, you can register both adapters in your settings file as follows:
+
+.. code-block:: python
+
+    ANVIL_WORKSPACE_ADAPTERS = [
+        "my_app.adapters.FirstWorkspaceAdapter",
+        "my_app.adapters.SecondWorkspaceAdapter",
+    ]
+
+If you register multiple workspaces, the index page and the navbar that comes with the app will show links for each different type of workspace.
+
 Customizing the :class:`~anvil_consortium_manager.models.Workspace` form
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------------------------------------------
 
 Most workspace adapters can set `workspace_data_form` to :class:`~anvil_consortium_manager.forms.WorkspaceForm`.
 This will use the default form provided by the app.
@@ -210,3 +152,23 @@ If you modify the form `Meta` class, make sure that it also subclasses `Workspac
 
         class Meta(WorkspaceForm.Meta):
             help_texts = {"note": "Custom help for note field."}
+
+Adapter mixins
+--------------
+
+The app provides several mixins that you can use to extend the behavior of your custom adapters.
+These mixins are located in the ``anvil_consortium_manager.adapters.mixins`` module.
+You can use these mixins by subclassing them along with the base adapter class when defining your custom adapter.
+For example, to use the ``WorkspaceSharingAdapterMixin`` in a custom workspace adapter, you would do the following:
+
+.. code-block:: python
+
+    from anvil_consortium_manager.adapters.mixins import WorkspaceSharingAdapterMixin
+    from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
+
+    class CustomWorkspaceAdapter(WorkspaceSharingAdapterMixin, BaseWorkspaceAdapter):
+        ...
+
+The available mixins are:
+
+- ``WorkspaceSharingAdapterMixin``: This mixin adds functionality for sharing workspaces. It requires you to define the ``share_permissions`` attribute, which should be a list of permissions to grant when sharing a workspace.
