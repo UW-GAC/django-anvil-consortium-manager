@@ -1874,6 +1874,7 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         response = self.client.get(self.get_url(self.group.name))
         # Check if the correct message is displayed.
         self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIsNotNone(response.context_data["managed_group_audit_alert"])
         self.assertIn("ManagedGroup audit has errors", response.context_data["managed_group_audit_alert"])
         self.assertIn(response.context_data["managed_group_audit_alert"], response.content.decode())
         self.assertIn("may be incorrect", response.content.decode())
@@ -1920,6 +1921,7 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         response = self.client.get(self.get_url(self.group.name))
         # Check if the correct message is displayed.
         self.assertIn("managed_group_audit_alert", response.context_data)
+        self.assertIsNotNone(response.context_data["managed_group_audit_alert"])
         self.assertIn("ManagedGroup audit has errors", response.context_data["managed_group_audit_alert"])
         self.assertIn(response.context_data["managed_group_audit_alert"], response.content.decode())
         self.assertIn("may be incorrect", response.content.decode())
@@ -1944,7 +1946,10 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         self.assertIn("may be incorrect", response.content.decode())
 
     def test_managed_group_audit_missing_group(self):
-        # No overall ManagedGroupAudit results are stored.
+        # Store a workspace audit that does not include this workspace.
+        managed_group_audit = ManagedGroupAudit()
+        managed_group_audit.add_result(base_audit.ModelInstanceResult(factories.ManagedGroupFactory.create()))
+        caches[app_settings.AUDIT_CACHE].set("managed_group_audit_results", managed_group_audit)
         # Store a cached membership audit that is ok.
         membership = GroupAccountMembershipFactory.create(group=self.group)
         audit_results = ManagedGroupMembershipAudit(self.group)
@@ -1954,7 +1959,8 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         response = self.client.get(self.get_url(self.group.name))
         # Check if the correct message is displayed.
         self.assertIn("managed_group_audit_alert", response.context_data)
-        self.assertIn("ManagedGroup audit has not been run", response.context_data["managed_group_audit_alert"])
+        self.assertIsNotNone(response.context_data["managed_group_audit_alert"])
+        self.assertIn("not found for this group", response.context_data["managed_group_audit_alert"])
         self.assertIn(response.context_data["managed_group_audit_alert"], response.content.decode())
         self.assertIn("may be incorrect", response.content.decode())
 
@@ -3953,6 +3959,130 @@ class WorkspaceSharingAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
         self.assertIn("audit_ok", response.context_data)
         self.assertEqual(response.context_data["audit_ok"], False)
+
+    def test_workspace_audit_ok(self):
+        """No alert is shown when the overall managed group audit is ok."""
+        # Store an audit error for this group.
+        workspace_audit = WorkspaceAudit()
+        workspace_audit.add_result(base_audit.ModelInstanceResult(self.workspace))
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", workspace_audit)
+        # Store a cached membership audit that is ok.
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(base_audit.ModelInstanceResult(sharing))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        # Check if the correct message is displayed.
+        self.assertIn("workspace_audit_alert", response.context_data)
+        self.assertIsNone(response.context_data["workspace_audit_alert"])
+        self.assertNotIn("may be incorrect", response.content.decode())
+
+    def test_workspace_audit_workspace_has_error(self):
+        """The cached sharing audit is ok, but the Workspace audit for this workspace has an error."""
+        # Store an audit error for this group.
+        workspace_audit = WorkspaceAudit()
+        workspace_result = base_audit.ModelInstanceResult(self.workspace)
+        workspace_result.add_error("Bar")
+        workspace_audit.add_result(workspace_result)
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", workspace_audit)
+        # Store a cached sharing audit that is ok.
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(base_audit.ModelInstanceResult(sharing))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        # Check if the correct message is displayed.
+        self.assertIn("workspace_audit_alert", response.context_data)
+        self.assertIsNotNone(response.context_data["workspace_audit_alert"])
+        self.assertIn("Workspace audit has errors", response.context_data["workspace_audit_alert"])
+        self.assertIn(response.context_data["workspace_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
+
+    def test_managed_group_audit_group_only_has_sharing_error(self):
+        """The cached sharing audit has an error, and the Workspace audit for this group has only a sharing error."""
+        # Store an audit error for this group.
+        workspace_audit = WorkspaceAudit()
+        workspace_result = base_audit.ModelInstanceResult(self.workspace)
+        workspace_result.add_error(WorkspaceAudit.ERROR_WORKSPACE_SHARING)
+        workspace_audit.add_result(workspace_result)
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", workspace_audit)
+        # Store a cached sharing audit that has an error.
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        sharing_result = base_audit.ModelInstanceResult(sharing)
+        sharing_result.add_error("Sharing error")
+        audit_results.add_result(sharing_result)
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        # Check if the correct message is displayed.
+        self.assertIn("workspace_audit_alert", response.context_data)
+        self.assertIsNone(response.context_data["workspace_audit_alert"])
+        self.assertNotIn("may be incorrect", response.content.decode())
+
+    def test_workspace_audit_workspace_has_sharing_error_and_another_error(self):
+        """The Workspace audit for this workspace has an error for sharing and some other error."""
+        # Store an audit error for this group.
+        workspace_audit = WorkspaceAudit()
+        workspace_result = base_audit.ModelInstanceResult(self.workspace)
+        workspace_result.add_error(WorkspaceAudit.ERROR_WORKSPACE_SHARING)
+        workspace_result.add_error("foo")
+        workspace_audit.add_result(workspace_result)
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", workspace_audit)
+        # Store a cached sharing audit that is ok.
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        sharing_result = base_audit.ModelInstanceResult(sharing)
+        sharing_result.add_error("Sharing error")
+        audit_results.add_result(sharing_result)
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        # Check if the correct message is displayed.
+        self.assertIn("workspace_audit_alert", response.context_data)
+        self.assertIsNotNone(response.context_data["workspace_audit_alert"])
+        self.assertIn("Workspace audit has errors", response.context_data["workspace_audit_alert"])
+        self.assertIn(response.context_data["workspace_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
+
+    def test_workspace_audit_does_not_exist(self):
+        """The cached sharing audit is ok, but there are no Workspace audit results stored."""
+        # No overall WorkspaceAudit results are stored.
+        # Store a cached sharing audit that is ok.
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(base_audit.ModelInstanceResult(sharing))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        # Check if the correct message is displayed.
+        self.assertIn("workspace_audit_alert", response.context_data)
+        self.assertIsNotNone(response.context_data["workspace_audit_alert"])
+        self.assertIn("Workspace audit has not been run", response.context_data["workspace_audit_alert"])
+        self.assertIn(response.context_data["workspace_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
+
+    def test_workspace_audit_missing_workspace(self):
+        """The cached sharing audit is ok, but there are no Workspace audit results for this workspace."""
+        # Store a workspace audit that does not include this workspace.
+        workspace_audit = WorkspaceAudit()
+        workspace_audit.add_result(base_audit.ModelInstanceResult(factories.WorkspaceFactory.create()))
+        caches[app_settings.AUDIT_CACHE].set("workspace_audit_results", workspace_audit)
+        # Store a cached sharing audit that is ok.
+        sharing = WorkspaceGroupSharingFactory.create(workspace=self.workspace)
+        audit_results = WorkspaceSharingAudit(self.workspace)
+        audit_results.add_result(base_audit.ModelInstanceResult(sharing))
+        caches[app_settings.AUDIT_CACHE].set(self.cache_key, audit_results)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
+        # Check if the correct message is displayed.
+        self.assertIn("workspace_audit_alert", response.context_data)
+        self.assertIsNotNone(response.context_data["workspace_audit_alert"])
+        self.assertIn("not found for this workspace", response.context_data["workspace_audit_alert"])
+        self.assertIn(response.context_data["workspace_audit_alert"], response.content.decode())
+        self.assertIn("may be incorrect", response.content.decode())
 
 
 class IgnoredWorkspaceSharingDetailTest(TestCase):

@@ -6,6 +6,17 @@
   <h3>for <a href="{{ object.get_absolute_url }}">{{ object.name }}</a></h3>
 {% endblock main_header %}
 
+{% block audit_result_alert %}
+  {% if workspace_audit_alert %}
+    <div class="alert alert-danger" role="alert">
+      <span class="fa-solid fa-triangle-exclamation mx-2"></span>
+      {{ workspace_audit_alert }}
+      The workspace sharing audit may be incorrect until this is resolved.
+    </div>
+  {% endif %}
+  {{block.super}}
+{% endblock audit_result_alert %}
+
 {% block audit_explanation %}
 {% include "auditor/snippets/workspace_sharing_audit_explanation.html" %}
 {% endblock audit_explanation %}

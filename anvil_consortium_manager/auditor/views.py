@@ -457,6 +457,25 @@ class WorkspaceSharingAuditReview(
         self.object = self.get_object()
         return super().get(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get the audit results for the overall workspace.
+        workspace_audit_alert = None
+        workspace_audit_results = self.get_audit_results(cache_key="workspace_audit_results")
+        try:
+            workspace_audit_result = workspace_audit_results.get_result_for_model_instance(self.object)
+        except AttributeError:
+            workspace_audit_alert = "Workspace audit has not been run."
+        except ValueError:
+            workspace_audit_alert = "Workspace audit results not found for this workspace."
+        else:
+            if not workspace_audit_result.ok():
+                errors = workspace_audit_result.errors.copy()
+                if len(errors.difference(set([workspace_audit.WorkspaceAudit.ERROR_WORKSPACE_SHARING]))) > 0:
+                    workspace_audit_alert = "Workspace audit has errors."
+        context["workspace_audit_alert"] = workspace_audit_alert
+        return context
+
 
 class IgnoredWorkspaceSharingCreate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView):
     """View to create a new models.IgnoredWorkspaceSharing."""
