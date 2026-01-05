@@ -68,10 +68,11 @@ class GroupGroupMembershipAdapterMixin:
         else:
             # If the existing sharing record exists, make sure it has the correct permissions.
             if membership.role != role:
+                membership.anvil_delete()
                 membership.role = role
-                # membership.full_clean()
+                membership.full_clean()
                 membership.save()
-                membership.anvil_create_or_update()
+                membership.anvil_create()
 
 
 @dataclass(frozen=True)
