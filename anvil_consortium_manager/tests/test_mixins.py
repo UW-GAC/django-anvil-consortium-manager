@@ -1,13 +1,167 @@
 from unittest.mock import patch
 
 import responses
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from .. import models
 from ..adapters import mixins
-from ..adapters.default import DefaultWorkspaceAdapter
+from ..adapters.default import DefaultManagedGroupAdapter, DefaultWorkspaceAdapter
 from . import factories
 from .utils import AnVILAPIMockTestMixin
+
+
+class GroupGroupMembershipAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
+    """Tests for GroupGroupMembershipAdapterMixin."""
+
+    def setUp(self):
+        super().setUp()
+
+        self.child_group = factories.ManagedGroupFactory.create()
+        self.role = mixins.GroupGroupMembershipRole(
+            child_group_name=self.child_group.name,
+            role=models.GroupGroupMembership.RoleChoices.MEMBER,
+        )
+
+        class TestAdapter(mixins.GroupGroupMembershipAdapterMixin, DefaultManagedGroupAdapter):
+            membership_roles = [self.role]
+
+        self.adapter = TestAdapter()
+
+    def test_no_roles_set(self):
+        class BadTestAdapter(mixins.GroupGroupMembershipAdapterMixin, DefaultManagedGroupAdapter):
+            pass
+
+        bad_adapter = BadTestAdapter()
+        with self.assertRaises(NotImplementedError):
+            bad_adapter.get_membership_roles()
+
+    def test_empty_list_roles(self):
+        class BadTestAdapter(mixins.GroupGroupMembershipAdapterMixin, DefaultManagedGroupAdapter):
+            membership_roles = []
+
+        bad_adapter = BadTestAdapter()
+        with self.assertRaises(ValueError):
+            bad_adapter.get_membership_roles()
+
+    def test_after_anvil_create_member(self):
+        """Test membership role with one specified member."""
+        group = factories.ManagedGroupFactory.create(name="foo")
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_client.sam_entry_point + "/api/groups/v1/foo/member/{email}".format(email=self.child_group.email),
+            status=204,
+        )
+
+        # Run the adapter method.
+        self.adapter.after_anvil_create(group)
+
+        # Check for WorkspaceGroupSharing.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.first()
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.child_group, self.child_group)
+        self.assertEqual(membership.role, models.GroupGroupMembership.RoleChoices.MEMBER)
+
+    def test_after_anvil_create_admin(self):
+        """Test membership role with one specified member."""
+        role = mixins.GroupGroupMembershipRole(
+            child_group_name=self.child_group.name,
+            role=models.GroupGroupMembership.RoleChoices.ADMIN,
+        )
+        group = factories.ManagedGroupFactory.create(name="foo")
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_client.sam_entry_point + "/api/groups/v1/foo/admin/{}".format(self.child_group.email),
+            status=204,
+        )
+
+        # Run the adapter method.
+        with patch.object(self.adapter, "membership_roles", [role]):
+            self.adapter.after_anvil_create(group)
+
+        # Check for WorkspaceGroupSharing.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.first()
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.child_group, self.child_group)
+        self.assertEqual(membership.role, role.role)
+
+    def test_after_anvil_create_child_group_does_not_exist(self):
+        role = mixins.GroupGroupMembershipRole(
+            child_group_name="non-existent-group",
+            role=models.GroupGroupMembership.RoleChoices.MEMBER,
+        )
+        group = factories.ManagedGroupFactory.create(name="foo")
+
+        # Run the adapter method.
+        with patch.object(self.adapter, "membership_roles", [role]):
+            self.adapter.after_anvil_create(group)
+
+        # Check for membership.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+
+    def test_after_anvil_create_multiple_roles(self):
+        """Test adding multiple group memberships."""
+        child_group_member = factories.ManagedGroupFactory.create()
+        child_group_admin = factories.ManagedGroupFactory.create()
+        role_member = mixins.GroupGroupMembershipRole(
+            child_group_name=child_group_member.name,
+            role=models.GroupGroupMembership.RoleChoices.MEMBER,
+        )
+        role_admin = mixins.GroupGroupMembershipRole(
+            child_group_name=child_group_admin.name,
+            role=models.GroupGroupMembership.RoleChoices.ADMIN,
+        )
+        group = factories.ManagedGroupFactory.create(name="foo")
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_client.sam_entry_point + "/api/groups/v1/foo/member/{}".format(child_group_member.email),
+            status=204,
+        )
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_client.sam_entry_point + "/api/groups/v1/foo/admin/{}".format(child_group_admin.email),
+            status=204,
+        )
+
+        # Run the adapter method.
+        with patch.object(self.adapter, "membership_roles", [role_member, role_admin]):
+            self.adapter.after_anvil_create(group)
+
+        # Check for WorkspaceGroupSharing.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 2)
+        membership = models.GroupGroupMembership.objects.get(child_group=child_group_member)
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.role, role_member.role)
+        membership = models.GroupGroupMembership.objects.get(child_group=child_group_admin)
+        self.assertEqual(membership.parent_group, group)
+        self.assertEqual(membership.role, role_admin.role)
+
+    def test_specified_membership_role_fails_validation(self):
+        """This would happen if a circular group membership is specified."""
+        parent_group = factories.ManagedGroupFactory.create(name="parent")
+        child_group = factories.ManagedGroupFactory.create(name="child")
+        # Create a membership that will make the specified role circular.
+        existing_membership = factories.GroupGroupMembershipFactory.create(
+            parent_group=child_group, child_group=parent_group
+        )
+
+        role = mixins.GroupGroupMembershipRole(
+            child_group_name=child_group.name,
+            role=models.GroupGroupMembership.RoleChoices.ADMIN,
+        )
+
+        class CircularTestAdapter(mixins.GroupGroupMembershipAdapterMixin, DefaultManagedGroupAdapter):
+            membership_roles = [role]
+
+        # Run the adapter method.
+        with self.assertRaisesRegex(ValidationError, "circular"):
+            CircularTestAdapter().after_anvil_create(parent_group)
+
+        # Check for WorkspaceGroupSharing.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        self.assertEqual(models.GroupGroupMembership.objects.first(), existing_membership)
 
 
 class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
