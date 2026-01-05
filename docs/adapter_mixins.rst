@@ -17,4 +17,4 @@ For example, to use the ``WorkspaceSharingAdapterMixin`` in a custom workspace a
 The available mixins are:
 
 - :class:`~anvil_consortium_manager.adapters.mixins.WorkspaceSharingAdapterMixin`: This mixin adds functionality for sharing workspaces. It requires you to define the ``share_permissions`` attribute, which should be a list of permissions to grant when sharing a workspace.
-- :class:`~anvil_conosrtium_manager.adapters.mixins.GroupGroupMembershipAdapterMixin`: This mixin adds functionality for adding group members. It requires you to define the ``membership_roles`` attribute, which should be a list of groups that should be added and the roles they should have.
+- :class:`~anvil_consortium_manager.adapters.mixins.GroupGroupMembershipAdapterMixin`: This mixin adds functionality for adding group members. It requires you to define the ``membership_roles`` attribute, which should be a list of groups that should be added and the roles they should have.

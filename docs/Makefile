@@ -21,7 +21,7 @@ livehtml:
 
 # Outputs rst files from django application code
 apidocs:
-	sphinx-apidoc -T -e -o $(SOURCEDIR)/api $(APP) $(APP)/tests $(APP)/migrations $(APP)/auditor/tests
+	sphinx-apidoc -T -e -o $(SOURCEDIR)/api $(APP) $(APP)/tests $(APP)/migrations $(APP)/auditor/tests $(APP)/auditor/migrations
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
