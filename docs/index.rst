@@ -26,6 +26,7 @@ Welcome to django-anvil-consortium-manager's documentation!
    account_adapter
    managed_group_adapter
    workspace_adapter
+   adapter_mixins
 
 .. toctree::
    :maxdepth: 3
