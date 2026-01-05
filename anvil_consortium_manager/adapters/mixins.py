@@ -136,12 +136,13 @@ class WorkspaceSharingAdapterMixin:
                 group=group,
             )
         except models.WorkspaceGroupSharing.DoesNotExist:
-            sharing = models.WorkspaceGroupSharing.objects.create(
+            sharing = models.WorkspaceGroupSharing(
                 workspace=workspace,
                 group=group,
                 access=access,
                 can_compute=can_compute,
             )
+            sharing.full_clean()
             sharing.save()
             sharing.anvil_create_or_update()
         else:
@@ -149,5 +150,6 @@ class WorkspaceSharingAdapterMixin:
             if sharing.can_compute != can_compute or sharing.access != access:
                 sharing.can_compute = can_compute
                 sharing.access = access
+                sharing.full_clean()
                 sharing.save()
                 sharing.anvil_create_or_update()

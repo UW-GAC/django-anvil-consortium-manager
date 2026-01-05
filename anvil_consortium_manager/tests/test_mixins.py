@@ -352,45 +352,6 @@ class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(sharing.access, permission.access)
         self.assertEqual(sharing.can_compute, permission.can_compute)
 
-    def test_after_anvil_create_owner_can_compute_false(self):
-        """Test sharing a workspace with a group with Owner access and can_compute=False."""
-        permission = mixins.WorkspaceSharingPermission(
-            group_name=self.group.name,
-            access=models.WorkspaceGroupSharing.OWNER,
-            can_compute=False,
-        )
-        workspace = factories.WorkspaceFactory.create(
-            billing_project__name="bar", name="foo", workspace_type=self.adapter.get_type()
-        )
-        # API response for workspace owner.
-        acls = [
-            {
-                "email": permission.group_name + "@firecloud.org",
-                "accessLevel": permission.access,
-                "canShare": False,
-                "canCompute": permission.can_compute,
-            }
-        ]
-        self.anvil_response_mock.add(
-            responses.PATCH,
-            self.api_client.rawls_entry_point + "/api/workspaces/bar/foo/acl?inviteUsersNotFound=false",
-            status=200,
-            match=[responses.matchers.json_params_matcher(acls)],
-            json={"invitesSent": {}, "usersNotFound": {}, "usersUpdated": acls},
-        )
-
-        # Run the adapter method.
-        with patch.object(self.adapter, "share_permissions", [permission]):
-            self.adapter.after_anvil_create(workspace)
-
-        # Check for WorkspaceGroupSharing.
-        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
-        sharing = models.WorkspaceGroupSharing.objects.first()
-        self.assertEqual(sharing.workspace, workspace)
-        self.assertEqual(sharing.group, self.group)
-        self.assertEqual(sharing.access, permission.access)
-        self.assertEqual(sharing.can_compute, permission.can_compute)
-
     def test_after_anvil_create_owner_can_compute_true(self):
         """Test sharing a workspace with a group with Owner access and can_compute=True."""
         permission = mixins.WorkspaceSharingPermission(
@@ -526,6 +487,16 @@ class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(sharing.group, group_reader)
         self.assertEqual(sharing.access, permission_reader.access)
         self.assertEqual(sharing.can_compute, permission_reader.can_compute)
+        sharing = models.WorkspaceGroupSharing.objects.get(group=group_writer)
+        self.assertEqual(sharing.workspace, workspace)
+        self.assertEqual(sharing.group, group_writer)
+        self.assertEqual(sharing.access, permission_writer.access)
+        self.assertEqual(sharing.can_compute, permission_writer.can_compute)
+        sharing = models.WorkspaceGroupSharing.objects.get(group=group_owner)
+        self.assertEqual(sharing.workspace, workspace)
+        self.assertEqual(sharing.group, group_owner)
+        self.assertEqual(sharing.access, permission_owner.access)
+        self.assertEqual(sharing.can_compute, permission_owner.can_compute)
 
     def test_after_anvil_import_reader_can_compute_false(self):
         workspace = factories.WorkspaceFactory.create(
@@ -602,45 +573,6 @@ class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
             group_name=self.group.name,
             access=models.WorkspaceGroupSharing.WRITER,
             can_compute=True,
-        )
-        workspace = factories.WorkspaceFactory.create(
-            billing_project__name="bar", name="foo", workspace_type=self.adapter.get_type()
-        )
-        # API response for workspace owner.
-        acls = [
-            {
-                "email": permission.group_name + "@firecloud.org",
-                "accessLevel": permission.access,
-                "canShare": False,
-                "canCompute": permission.can_compute,
-            }
-        ]
-        self.anvil_response_mock.add(
-            responses.PATCH,
-            self.api_client.rawls_entry_point + "/api/workspaces/bar/foo/acl?inviteUsersNotFound=false",
-            status=200,
-            match=[responses.matchers.json_params_matcher(acls)],
-            json={"invitesSent": {}, "usersNotFound": {}, "usersUpdated": acls},
-        )
-
-        # Run the adapter method.
-        with patch.object(self.adapter, "share_permissions", [permission]):
-            self.adapter.after_anvil_import(workspace)
-
-        # Check for WorkspaceGroupSharing.
-        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
-        sharing = models.WorkspaceGroupSharing.objects.first()
-        self.assertEqual(sharing.workspace, workspace)
-        self.assertEqual(sharing.group, self.group)
-        self.assertEqual(sharing.access, permission.access)
-        self.assertEqual(sharing.can_compute, permission.can_compute)
-
-    def test_after_anvil_import_owner_can_compute_false(self):
-        """Test sharing a workspace with a group with Owner access and can_compute=False."""
-        permission = mixins.WorkspaceSharingPermission(
-            group_name=self.group.name,
-            access=models.WorkspaceGroupSharing.OWNER,
-            can_compute=False,
         )
         workspace = factories.WorkspaceFactory.create(
             billing_project__name="bar", name="foo", workspace_type=self.adapter.get_type()
@@ -909,3 +841,25 @@ class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(sharing.group, group_reader)
         self.assertEqual(sharing.access, permission_reader.access)
         self.assertEqual(sharing.can_compute, permission_reader.can_compute)
+
+    def test_workspace_sharing_fails_validation(self):
+        # Workspace sharing object fails validation.
+        # This can happen if the access/can_compute combo specified in the permission fails validation.
+        permission = mixins.WorkspaceSharingPermission(
+            group_name=self.group.name,
+            access=models.WorkspaceGroupSharing.READER,
+            can_compute=True,
+        )
+        workspace = factories.WorkspaceFactory.create(
+            billing_project__name="bar", name="foo", workspace_type=self.adapter.get_type()
+        )
+
+        class ValidationTestAdapter(mixins.WorkspaceSharingAdapterMixin, DefaultWorkspaceAdapter):
+            share_permissions = [permission]
+
+        # Run the adapter method.
+        with self.assertRaisesRegex(ValidationError, "READERs cannot be granted compute privileges"):
+            ValidationTestAdapter().after_anvil_create(workspace)
+
+        # Check for WorkspaceGroupSharing.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
