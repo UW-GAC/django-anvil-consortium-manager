@@ -2,9 +2,11 @@ from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.managed_group import BaseManagedGroupAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
-from anvil_consortium_manager.models import GroupGroupMembership, ManagedGroup
+from anvil_consortium_manager.models import GroupGroupMembership, ManagedGroup, WorkspaceGroupSharing
 from anvil_consortium_manager.tables import WorkspaceStaffTable, WorkspaceUserTable
 
+from ...adapters import mixins as adapter_mixins
+from ...adapters.default import DefaultManagedGroupAdapter, DefaultWorkspaceAdapter
 from . import filters, forms, models, tables
 
 
@@ -41,6 +43,12 @@ class TestManagedGroupAdapter(BaseManagedGroupAdapter):
     """Test adapter for ManagedGroups."""
 
     list_table_class = tables.TestManagedGroupTable
+
+
+class TestManagedGroupWithMembershipAdapter(
+    adapter_mixins.GroupGroupMembershipAdapterMixin, DefaultManagedGroupAdapter
+):
+    membership_roles = []  # This will fail unless it's overridden.
 
 
 class TestAccountAdapter(BaseAccountAdapter):
@@ -146,3 +154,16 @@ class TestManagedGroupAfterAnVILCreateForeignKeyAdapter(TestManagedGroupAdapter)
             child_group=managed_group,
             role=GroupGroupMembership.RoleChoices.MEMBER,
         )
+
+
+class TestWorkspaceWithSharingAdapter(adapter_mixins.WorkspaceSharingAdapterMixin, DefaultWorkspaceAdapter):
+    """Test adapter using the WorkspaceSharingAdapterMixin."""
+
+    type = "test_sharing"
+    share_permissions = [
+        adapter_mixins.WorkspaceSharingPermission(
+            group_name="test-sharing-group",
+            access=WorkspaceGroupSharing.READER,
+            can_compute=False,
+        )
+    ]

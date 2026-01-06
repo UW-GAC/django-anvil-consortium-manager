@@ -23,8 +23,10 @@ from faker import Faker
 from freezegun import freeze_time
 
 from .. import __version__, filters, forms, models, tables, views
+from ..adapters import mixins as adapter_mixins
 from ..adapters.account import get_account_adapter
 from ..adapters.default import DefaultWorkspaceAdapter
+from ..adapters.managed_group import get_managed_group_adapter
 from ..adapters.workspace import workspace_adapter_registry
 from ..filters import ManagedGroupListFilter
 from ..tokens import account_verification_token
@@ -41,6 +43,7 @@ from .test_app.adapters import (
     TestBeforeWorkspaceCreateAdapter,
     TestForeignKeyWorkspaceAdapter,
     TestWorkspaceAdapter,
+    TestWorkspaceWithSharingAdapter,
 )
 from .test_app.factories import TestWorkspaceDataFactory
 from .test_app.filters import TestAccountListFilter
@@ -5426,6 +5429,126 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(membership.child_group, new_object)
         self.assertEqual(membership.role, models.GroupGroupMembership.RoleChoices.MEMBER)
 
+    def test_after_anvil_create_adapter_exception(self):
+        """One error message is added if after_anvil_create raises one error."""
+        # API call for group creation.
+        self.anvil_response_mock.add(responses.POST, self.get_api_url("test-group"), status=self.api_success_code)
+        # Call the view.
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter.after_anvil_create",
+            side_effect=Exception("Custom error"),
+        ):
+            response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 302)
+        # The new object was still created.
+        new_object = models.ManagedGroup.objects.latest("pk")
+        self.assertIsInstance(new_object, models.ManagedGroup)
+        self.assertEqual(new_object.name, "test-group")
+        self.assertEqual(new_object.email, "test-group@firecloud.org")
+        # No memberships were created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.ManagedGroupCreate.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.ManagedGroupCreate.success_message)
+        # Check the validation error message.
+        self.assertIn(views.ManagedGroupCreate.ADAPTER_ERROR_MESSAGE, messages[0])
+
+    def test_after_anvil_create_adapter_exception_logged(self):
+        """Exceptions raised in after_anvil_create are logged."""
+        # API call for group creation.
+        self.anvil_response_mock.add(responses.POST, self.get_api_url("test-group"), status=self.api_success_code)
+        # Call the view.
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultManagedGroupAdapter.after_anvil_create",
+            side_effect=Exception("Custom error"),
+        ), self.assertLogs(views.logger.name, "WARNING") as cm:
+            response = self.client.post(self.get_url(), {"name": "test-group"})
+            self.assertIn(views.ManagedGroupCreate.ADAPTER_ERROR_MESSAGE, cm.output[0])
+        self.assertEqual(response.status_code, 302)
+
+    @override_settings(
+        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupWithMembershipAdapter"
+    )
+    def test_group_group_membership_adapter_mixin(self):
+        """The GroupGroupMembershipAdapterMixin works correctly."""
+        # Create the child group to add via the mixin.
+        child_group = factories.ManagedGroupFactory.create(name="child-group")
+        role = adapter_mixins.GroupGroupMembershipRole(
+            child_group_name=child_group.name,
+            role=models.GroupGroupMembership.RoleChoices.MEMBER,
+        )
+        # API call for group creation.
+        self.anvil_response_mock.add(responses.POST, self.get_api_url("test-group"), status=self.api_success_code)
+        # API call for mixin to add membership.
+        self.anvil_response_mock.add(
+            responses.PUT,
+            self.api_client.sam_entry_point + "/api/groups/v1/test-group/member/{}".format(child_group.email),
+            status=204,
+        )
+        # Call the view.
+        self.client.force_login(self.user)
+        # Patch the adapter to have the correct memebership role.
+        adapter_class = get_managed_group_adapter()
+        with patch.object(adapter_class, "membership_roles", [role]):
+            response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 302)
+        new_object = models.ManagedGroup.objects.latest("pk")
+        self.assertIsInstance(new_object, models.ManagedGroup)
+        self.assertEqual(new_object.name, "test-group")
+        self.assertEqual(new_object.email, "test-group@firecloud.org")
+        # Check membership.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 1)
+        membership = models.GroupGroupMembership.objects.first()
+        self.assertEqual(membership.parent_group, new_object)
+        self.assertEqual(membership.child_group, child_group)
+        self.assertEqual(membership.role, models.GroupGroupMembership.RoleChoices.MEMBER)
+
+    @override_settings(
+        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupWithMembershipAdapter"
+    )
+    def test_group_group_membership_adapter_mixin_validation_error(self):
+        """A message is added if after_anvil_create has a validation error."""
+        # Create a membership that will cause a validation error in the adapter method by adding the group to itself.
+        role = adapter_mixins.GroupGroupMembershipRole(
+            child_group_name="test-group",
+            role=models.GroupGroupMembership.RoleChoices.MEMBER,
+        )
+        # API call for group creation.
+        self.anvil_response_mock.add(responses.POST, self.get_api_url("test-group"), status=self.api_success_code)
+        # No API call for mixin to add membership, because the validation error happens first.
+        # Call the view.
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        adapter_class = get_managed_group_adapter()
+        with patch.object(adapter_class, "membership_roles", [role]):
+            response = self.client.post(self.get_url(), {"name": "test-group"})
+        self.assertEqual(response.status_code, 302)
+        # The new object was still created.
+        new_object = models.ManagedGroup.objects.latest("pk")
+        self.assertIsInstance(new_object, models.ManagedGroup)
+        self.assertEqual(new_object.name, "test-group")
+        self.assertEqual(new_object.email, "test-group@firecloud.org")
+        # No memberships were created.
+        self.assertEqual(models.GroupGroupMembership.objects.count(), 0)
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.ManagedGroupCreate.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.ManagedGroupCreate.success_message)
+        # Check the validation error message.
+        self.assertIn("[ManagedGroupCreate]", messages[0])
+        self.assertIn(views.ManagedGroupCreate.ADAPTER_ERROR_MESSAGE, messages[0])
+
 
 class ManagedGroupUpdateTest(TestCase):
     def setUp(self):
@@ -8202,6 +8325,314 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # The test_field field was modified by the adapter.
         self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "FOO")
 
+    def test_before_anvil_create_adapter_exception(self):
+        """One error message is added if after_anvil_create raises one error."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.before_anvil_create",
+            side_effect=Exception("Custom error"),
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The object was still created.
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(
+            new_object.workspace_type,
+            DefaultWorkspaceAdapter().get_type(),
+        )
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceCreate.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceCreate.success_message)
+        # Check the validation error message.
+        self.assertIn(views.WorkspaceCreate.ADAPTER_ERROR_MESSAGE_BEFORE_ANVIL_CREATE, messages[0])
+
+    def test_before_anvil_create_adapter_exception_logged(self):
+        """Exceptions raised in after_anvil_create are logged."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.before_anvil_create",
+            side_effect=Exception("Custom error"),
+        ), self.assertLogs(views.logger.name, "WARNING") as cm:
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+            self.assertIn(views.WorkspaceCreate.ADAPTER_ERROR_MESSAGE_BEFORE_ANVIL_CREATE, cm.output[0])
+        self.assertEqual(response.status_code, 302)
+
+    def test_after_anvil_create_adapter_exception(self):
+        """One error message is added if after_anvil_create raises one error."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.after_anvil_create",
+            side_effect=Exception("Custom error"),
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The object was still created.
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(
+            new_object.workspace_type,
+            DefaultWorkspaceAdapter().get_type(),
+        )
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceCreate.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceCreate.success_message)
+        # Check the validation error message.
+        self.assertIn(views.WorkspaceCreate.ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE, messages[0])
+
+    def test_after_anvil_create_adapter_exception_logged(self):
+        """Exceptions raised in after_anvil_create are logged."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.after_anvil_create",
+            side_effect=Exception("Custom error"),
+        ), self.assertLogs(views.logger.name, "WARNING") as cm:
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+            self.assertIn(views.WorkspaceCreate.ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE, cm.output[0])
+        self.assertEqual(response.status_code, 302)
+
+    def test_workspace_sharing_adapter_mixin(self):
+        """The WorkspaceSharingAdapterMixin works correctly."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestWorkspaceWithSharingAdapter)
+        self.workspace_type = TestWorkspaceWithSharingAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        # Set up group sharing permission for adapter.
+        # Group name defined in the TestWorkspaceWithSharingAdapter.
+        group = factories.ManagedGroupFactory.create(name="test-sharing-group")
+        # API call for workspace creation.
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        print(self.workspace_type)
+        # API call to share with the group.
+        acls = [
+            {
+                "email": group.email,
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        self.anvil_response_mock.add(
+            responses.PATCH,
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",
+            status=200,
+            match=[responses.matchers.json_params_matcher(acls)],
+            json={"invitesSent": {}, "usersNotFound": {}, "usersUpdated": acls},
+        )
+        # Mock the after_anvil_create method and call the view.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(new_object.billing_project, billing_project)
+        self.assertEqual(
+            new_object.workspace_type,
+            TestWorkspaceWithSharingAdapter().get_type(),
+        )
+        # Check sharing.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        sharing = models.WorkspaceGroupSharing.objects.first()
+        self.assertEqual(sharing.workspace, new_object)
+        self.assertEqual(sharing.group, group)
+        self.assertEqual(sharing.access, models.WorkspaceGroupSharing.READER)
+        self.assertEqual(sharing.can_compute, False)
+
+    def test_workspace_sharing_adapter_mixin_validation_error(self):
+        """A message is added if after_anvil_create has a validation error."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestWorkspaceWithSharingAdapter)
+        self.workspace_type = TestWorkspaceWithSharingAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        # Set up group sharing permission for adapter.
+        permission = adapter_mixins.WorkspaceSharingPermission(
+            group_name="test-sharing-group",
+            access=models.WorkspaceGroupSharing.READER,
+            can_compute=True,  # This should cause a validation error.
+        )
+        # Group name defined in the TestWorkspaceWithSharingAdapter.
+        factories.ManagedGroupFactory.create(name="test-sharing-group")
+        # API call for workspace creation.
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # No API call to share with the group.
+        # Mock the after_anvil_create method and call the view.
+        self.client.force_login(self.user)
+        with patch.object(TestWorkspaceWithSharingAdapter, "share_permissions", [permission]):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The new object was still created.
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(new_object.billing_project, billing_project)
+        self.assertEqual(
+            new_object.workspace_type,
+            TestWorkspaceWithSharingAdapter().get_type(),
+        )
+        # No sharing objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceCreate.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceCreate.success_message)
+        # Check the validation error message.
+        self.assertIn(views.WorkspaceCreate.ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE, messages[0])
+
 
 class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the WorkspaceImport view."""
@@ -9835,6 +10266,268 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.WorkspaceAuthorizationDomain.history.count(), 1)
         self.assertEqual(models.WorkspaceAuthorizationDomain.history.latest().history_type, "+")
 
+    def test_after_anvil_import_adapter_exception(self):
+        """One error message is added if after_anvil_import raises one error."""
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        url = self.get_api_url(billing_project.name, workspace_name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        self.client.force_login(self.user)
+        # Mock the adapter's after_anvil_create method to fail.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.after_anvil_import",
+            side_effect=Exception("Custom error"),
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "workspace": billing_project.name + "/" + workspace_name,
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The object was still created.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceImport.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceImport.success_message)
+        # Check the validation error message.
+        self.assertIn(views.WorkspaceImport.ADAPTER_ERROR_MESSAGE, messages[0])
+
+    def test_after_anvil_create_adapter_exception_logged(self):
+        """Exceptions raised in after_anvil_create are logged."""
+        """One error message is added if after_anvil_import raises one error."""
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        url = self.get_api_url(billing_project.name, workspace_name)
+        self.anvil_response_mock.add(
+            responses.GET,
+            url,
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        self.client.force_login(self.user)
+        # Mock the adapter's after_anvil_create method to fail.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.after_anvil_import",
+            side_effect=Exception("Custom error"),
+        ), self.assertLogs(views.logger.name, "WARNING") as cm:
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "workspace": billing_project.name + "/" + workspace_name,
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+            self.assertGreater(len(cm.output), 0)
+            self.assertIn(views.WorkspaceImport.ADAPTER_ERROR_MESSAGE, cm.output[0])
+        self.assertEqual(response.status_code, 302)
+
+    def test_workspace_sharing_adapter_mixin(self):
+        """The WorkspaceSharingAdapterMixin works correctly."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestWorkspaceWithSharingAdapter)
+        self.workspace_type = TestWorkspaceWithSharingAdapter().get_type()
+        group = factories.ManagedGroupFactory.create(name="test-sharing-group")
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        # API call for this workspace's information.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        # API call to share with the group.
+        acls = [
+            {
+                "email": group.email,
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        self.anvil_response_mock.add(
+            responses.PATCH,
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/billing-project/workspace/acl?inviteUsersNotFound=false",
+            status=200,
+            match=[responses.matchers.json_params_matcher(acls)],
+            json={"invitesSent": {}, "usersNotFound": {}, "usersUpdated": acls},
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace_type),
+            {
+                "workspace": billing_project.name + "/" + workspace_name,
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Created a workspace.
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        new_workspace = models.Workspace.objects.latest("pk")
+        self.assertEqual(new_workspace.name, workspace_name)
+        # Check sharing.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        sharing = models.WorkspaceGroupSharing.objects.first()
+        self.assertEqual(sharing.workspace, new_workspace)
+        self.assertEqual(sharing.group, group)
+        self.assertEqual(sharing.access, models.WorkspaceGroupSharing.READER)
+        self.assertEqual(sharing.can_compute, False)
+
+    def test_workspace_sharing_adapter_mixin_validation_error(self):
+        """A message is added if after_anvil_import has a validation error."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestWorkspaceWithSharingAdapter)
+        self.workspace_type = TestWorkspaceWithSharingAdapter().get_type()
+        factories.ManagedGroupFactory.create(name="test-sharing-group")
+        # Set up group sharing permission for adapter.
+        permission = adapter_mixins.WorkspaceSharingPermission(
+            group_name="test-sharing-group",
+            access=models.WorkspaceGroupSharing.READER,
+            can_compute=True,  # This should cause a validation error.
+        )
+        billing_project = factories.BillingProjectFactory.create(name="billing-project")
+        workspace_name = "workspace"
+        # Available workspaces API call.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.workspace_list_url,
+            match=[
+                responses.matchers.query_param_matcher({"fields": "workspace.namespace,workspace.name,accessLevel"})
+            ],
+            status=200,
+            json=[self.get_api_json_response(billing_project.name, workspace_name)],
+        )
+        # API call for this workspace's information.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url(billing_project.name, workspace_name),
+            status=self.api_success_code,
+            json=self.get_api_json_response(billing_project.name, workspace_name),
+        )
+        # Response for ACL query.
+        self.anvil_response_mock.add(
+            responses.GET,
+            self.get_api_url_acl(billing_project.name, workspace_name),
+            status=200,  # successful response code.
+            json=self.api_json_response_acl,
+        )
+        # No API call to share with the group.
+        self.client.force_login(self.user)
+        with patch.object(TestWorkspaceWithSharingAdapter, "share_permissions", [permission]):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "workspace": billing_project.name + "/" + workspace_name,
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The new object was still created.
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(new_object.billing_project, billing_project)
+        self.assertEqual(
+            new_object.workspace_type,
+            TestWorkspaceWithSharingAdapter().get_type(),
+        )
+        # No sharing objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceImport.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceImport.success_message)
+        # Check the validation error message.
+        self.assertIn("[WorkspaceImport]", messages[0])
+        self.assertIn(views.WorkspaceImport.ADAPTER_ERROR_MESSAGE, messages[0])
+
 
 class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
     """Tests for the WorkspaceClone view."""
@@ -11099,6 +11792,345 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
         self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "FOO")
+
+    def test_before_anvil_create_adapter_exception(self):
+        """One error message is added if after_anvil_create raises one error."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.before_anvil_create",
+            side_effect=Exception("Custom error"),
+        ):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The object was still created.
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(
+            new_object.workspace_type,
+            DefaultWorkspaceAdapter().get_type(),
+        )
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceClone.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceClone.success_message)
+        # Check the validation error message.
+        self.assertIn(views.WorkspaceClone.ADAPTER_ERROR_MESSAGE_BEFORE_ANVIL_CREATE, messages[0])
+
+    def test_before_anvil_create_adapter_exception_logged(self):
+        """Exceptions raised in after_anvil_create are logged."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.before_anvil_create",
+            side_effect=Exception("Custom error"),
+        ), self.assertLogs(views.logger.name, "WARNING") as cm:
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+            self.assertIn(views.WorkspaceClone.ADAPTER_ERROR_MESSAGE_BEFORE_ANVIL_CREATE, cm.output[0])
+        self.assertEqual(response.status_code, 302)
+
+    def test_after_anvil_create_adapter_exception(self):
+        """One error message is added if after_anvil_create raises one error."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.after_anvil_create",
+            side_effect=Exception("Custom error"),
+        ):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The object was still created.
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(
+            new_object.workspace_type,
+            DefaultWorkspaceAdapter().get_type(),
+        )
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceClone.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceClone.success_message)
+        # Check the validation error message.
+        self.assertIn(views.WorkspaceClone.ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE, messages[0])
+
+    def test_after_anvil_create_adapter_exception_logged(self):
+        """Exceptions raised in after_anvil_create are logged."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # Patch the adapter to have the specified membership role.
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter.after_anvil_create",
+            side_effect=Exception("Custom error"),
+        ), self.assertLogs(views.logger.name, "WARNING") as cm:
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+            self.assertIn(views.WorkspaceClone.ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE, cm.output[0])
+        self.assertEqual(response.status_code, 302)
+
+    def test_workspace_sharing_adapter_mixin(self):
+        """The WorkspaceSharingAdapterMixin works correctly."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestWorkspaceWithSharingAdapter)
+        self.workspace_type = TestWorkspaceWithSharingAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        # Set up group sharing permission for adapter.
+        # Group name defined in the TestWorkspaceWithSharingAdapter.
+        group = factories.ManagedGroupFactory.create(name="test-sharing-group")
+        # API call for workspace creation.
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        print(self.workspace_type)
+        # API call to share with the group.
+        acls = [
+            {
+                "email": group.email,
+                "accessLevel": "READER",
+                "canShare": False,
+                "canCompute": False,
+            }
+        ]
+        self.anvil_response_mock.add(
+            responses.PATCH,
+            self.api_client.rawls_entry_point
+            + "/api/workspaces/test-billing-project/test-workspace/acl?inviteUsersNotFound=false",
+            status=200,
+            match=[responses.matchers.json_params_matcher(acls)],
+            json={"invitesSent": {}, "usersNotFound": {}, "usersUpdated": acls},
+        )
+        # Mock the after_anvil_create method and call the view.
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(new_object.billing_project, billing_project)
+        self.assertEqual(
+            new_object.workspace_type,
+            TestWorkspaceWithSharingAdapter().get_type(),
+        )
+        # Check sharing.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        sharing = models.WorkspaceGroupSharing.objects.first()
+        self.assertEqual(sharing.workspace, new_object)
+        self.assertEqual(sharing.group, group)
+        self.assertEqual(sharing.access, models.WorkspaceGroupSharing.READER)
+        self.assertEqual(sharing.can_compute, False)
+
+    def test_workspace_sharing_adapter_mixin_validation_error(self):
+        """A message is added if after_anvil_create has a validation error."""
+        # Overriding settings doesn't work, because appconfig.ready has already run and
+        # registered the default adapter. Instead, unregister the default and register the
+        # new adapter here.
+        workspace_adapter_registry.register(TestWorkspaceWithSharingAdapter)
+        self.workspace_type = TestWorkspaceWithSharingAdapter().get_type()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        # Set up group sharing permission for adapter.
+        permission = adapter_mixins.WorkspaceSharingPermission(
+            group_name="test-sharing-group",
+            access=models.WorkspaceGroupSharing.READER,
+            can_compute=True,  # This should cause a validation error.
+        )
+        # Group name defined in the TestWorkspaceWithSharingAdapter.
+        factories.ManagedGroupFactory.create(name="test-sharing-group")
+        # API call for workspace creation.
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        # No API call to share with the group.
+        # Mock the after_anvil_create method and call the view.
+        self.client.force_login(self.user)
+        with patch.object(TestWorkspaceWithSharingAdapter, "share_permissions", [permission]):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # The new object was still created.
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(new_object.billing_project, billing_project)
+        self.assertEqual(
+            new_object.workspace_type,
+            TestWorkspaceWithSharingAdapter().get_type(),
+        )
+        # No sharing objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # A message was added.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 2)
+        # Success message exists.
+        self.assertIn(views.WorkspaceClone.success_message, messages)
+        # Remove the success message.
+        messages.remove(views.WorkspaceClone.success_message)
+        # Check the validation error message.
+        self.assertIn("[WorkspaceClone]", messages[0])
+        self.assertIn(views.WorkspaceClone.ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE, messages[0])
 
 
 class WorkspaceUpdateTest(TestCase):

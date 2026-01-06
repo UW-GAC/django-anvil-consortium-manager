@@ -99,7 +99,6 @@ class WorkspaceSharingAdapterMixin:
 
     def get_share_permissions(self):
         """Validate and return the permissions to grant."""
-        print("get share permissions")
         if self.share_permissions is None:
             raise NotImplementedError(
                 "WorkspaceSharingAdapterMixin: You must define share_permissions"
