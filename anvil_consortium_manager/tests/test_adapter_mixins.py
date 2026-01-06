@@ -498,6 +498,28 @@ class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(sharing.access, permission_owner.access)
         self.assertEqual(sharing.can_compute, permission_owner.can_compute)
 
+    def test_after_anvil_create_workspace_sharing_fails_validation(self):
+        # Workspace sharing object fails validation.
+        # This can happen if the access/can_compute combo specified in the permission fails validation.
+        permission = mixins.WorkspaceSharingPermission(
+            group_name=self.group.name,
+            access=models.WorkspaceGroupSharing.READER,
+            can_compute=True,
+        )
+        workspace = factories.WorkspaceFactory.create(
+            billing_project__name="bar", name="foo", workspace_type=self.adapter.get_type()
+        )
+
+        class ValidationTestAdapter(mixins.WorkspaceSharingAdapterMixin, DefaultWorkspaceAdapter):
+            share_permissions = [permission]
+
+        # Run the adapter method.
+        with self.assertRaisesRegex(ValidationError, "READERs cannot be granted compute privileges"):
+            ValidationTestAdapter().after_anvil_create(workspace)
+
+        # Check for WorkspaceGroupSharing.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
     def test_after_anvil_import_reader_can_compute_false(self):
         workspace = factories.WorkspaceFactory.create(
             billing_project__name="bar", name="foo", workspace_type=self.adapter.get_type()
@@ -842,7 +864,7 @@ class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(sharing.access, permission_reader.access)
         self.assertEqual(sharing.can_compute, permission_reader.can_compute)
 
-    def test_workspace_sharing_fails_validation(self):
+    def test_after_anvil_import_workspace_sharing_fails_validation(self):
         # Workspace sharing object fails validation.
         # This can happen if the access/can_compute combo specified in the permission fails validation.
         permission = mixins.WorkspaceSharingPermission(
@@ -859,7 +881,35 @@ class WorkspaceSharingAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
 
         # Run the adapter method.
         with self.assertRaisesRegex(ValidationError, "READERs cannot be granted compute privileges"):
-            ValidationTestAdapter().after_anvil_create(workspace)
+            ValidationTestAdapter().after_anvil_import(workspace)
 
         # Check for WorkspaceGroupSharing.
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_after_anvil_import_sharing_exists_new_sharing_fails_validation(self):
+        """Workspace is already shared but the new sharing fails validation when updating."""
+        permission = mixins.WorkspaceSharingPermission(
+            group_name=self.group.name,
+            access=models.WorkspaceGroupSharing.READER,
+            can_compute=True,
+        )
+        workspace = factories.WorkspaceFactory.create(
+            billing_project__name="bar", name="foo", workspace_type=self.adapter.get_type()
+        )
+        sharing = factories.WorkspaceGroupSharingFactory.create(
+            workspace=workspace,
+            group=self.group,
+            access=models.WorkspaceGroupSharing.WRITER,
+            can_compute=False,
+        )
+
+        class ValidationTestAdapter(mixins.WorkspaceSharingAdapterMixin, DefaultWorkspaceAdapter):
+            share_permissions = [permission]
+
+        # Run the adapter method.
+        with self.assertRaisesRegex(ValidationError, "READERs cannot be granted compute privileges"):
+            ValidationTestAdapter().after_anvil_import(workspace)
+
+        # Check for WorkspaceGroupSharing.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        self.assertEqual(models.WorkspaceGroupSharing.objects.first(), sharing)
