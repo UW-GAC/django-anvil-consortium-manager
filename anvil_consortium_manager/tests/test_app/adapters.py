@@ -48,7 +48,12 @@ class TestManagedGroupAdapter(BaseManagedGroupAdapter):
 class TestManagedGroupWithMembershipAdapter(
     adapter_mixins.GroupGroupMembershipAdapterMixin, DefaultManagedGroupAdapter
 ):
-    membership_roles = []  # This will fail unless it's overridden.
+    membership_roles = [
+        adapter_mixins.GroupGroupMembershipRole(
+            child_group_name="test-member-group",
+            role=GroupGroupMembership.RoleChoices.MEMBER,
+        )
+    ]
 
 
 class TestAccountAdapter(BaseAccountAdapter):
