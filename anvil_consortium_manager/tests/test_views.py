@@ -8519,7 +8519,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         self.client.force_login(self.user)
-        print(self.workspace_type)
         # API call to share with the group.
         acls = [
             {
@@ -12008,7 +12007,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         self.client.force_login(self.user)
-        print(self.workspace_type)
         # API call to share with the group.
         acls = [
             {

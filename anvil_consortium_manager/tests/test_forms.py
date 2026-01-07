@@ -697,7 +697,6 @@ class WorkspaceCloneFormMixinTest(TestCase):
                 authorization_domains = self.cleaned_data.get("authorization_domains")
                 if authorization_domains:
                     for auth_domain in authorization_domains:
-                        print(auth_domain.name)
                         if auth_domain.name == "invalid-name":
                             raise forms.ValidationError("Test error")
 
