@@ -5481,11 +5481,6 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         """The GroupGroupMembershipAdapterMixin works correctly."""
         # Group name defined in the TestManagedGroupWithMembershipAdapter.
         child_group = factories.ManagedGroupFactory.create(name="test-member-group")
-        # child_group = factories.ManagedGroupFactory.create(name="child-group")
-        # role = adapter_mixins.GroupGroupMembershipRole(
-        #     child_group_name=child_group.name,
-        #     role=models.GroupGroupMembership.RoleChoices.MEMBER,
-        # )
         # API call for group creation.
         self.anvil_response_mock.add(responses.POST, self.get_api_url("test-group"), status=self.api_success_code)
         # API call for mixin to add membership.
@@ -5496,10 +5491,6 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         )
         # Call the view.
         self.client.force_login(self.user)
-        # Patch the adapter to have the correct memebership role.
-        # adapter_class = get_managed_group_adapter()
-        # with patch.object(adapter_class, "membership_roles", [role]):
-        #     response = self.client.post(self.get_url(), {"name": "test-group"})
         response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         new_object = models.ManagedGroup.objects.latest("pk")
