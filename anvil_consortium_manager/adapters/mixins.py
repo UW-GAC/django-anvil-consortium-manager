@@ -34,7 +34,6 @@ class GroupGroupMembershipAdapterMixin:
 
     def after_anvil_create(self, group):
         """Add specified group membership roles after group is created."""
-        pass
         super().after_anvil_create(group)
         self._add_group_members(group)
 
