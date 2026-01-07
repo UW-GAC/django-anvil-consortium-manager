@@ -8,6 +8,10 @@
 * Show filter form in list views in a collapsible accordion
 * Show an alert on the `WorkspaceSharingAuditReview` and `ManagedGroupMembershipAuditReview` views if an error is found in the audit result for the workspace or group, respectively. Such errors could indicate that the sharing or membership audits could be incorrect.
 * Add a new mixin for use with workspace adapters (`WorkspaceSharingAdapterMixin`) that will automatically share a workspace upon creation or import with a set of specified groups
+* Add a new mixin for use with managed group adapters (`GroupGroupMembershipAdapterMixin`) that will automatically add members to any Managed Group that is created
+* Update `ManagedGroupCreate`, `WorkspaceCreate`, `WorkspaceImport`, and `WorkspaceClone` views ot handle adapter exceptions:
+    -  log any exceptions in `before_anvil_create`, `after_anvil_create`, or `after_anvil_import` adapter methods
+    - show the user a message if an exception occurs
 * Break advanced docs into its own TOC and sub-section source documents
 
 ## 0.33.0 (2025-08-04)
