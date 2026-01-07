@@ -5394,32 +5394,53 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that no object is created.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
-    @override_settings(
-        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupAfterAnVILCreateAdapter"
-    )
     def test_post_custom_adapter_after_anvil_create(self):
         """The after_anvil_create method is run after a managed group is created."""
         # Create a group to add this group to
         api_url = self.get_api_url("test-group")
         self.anvil_response_mock.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"name": "test-group"})
+
+        # Function to use in mocking.
+        def after_anvil_create(*args, **kwargs):
+            # Change the name of the group to something else.
+            managed_group = args[0]
+            managed_group.name = "changed-name"
+            managed_group.save()
+
+        adapter_class = get_managed_group_adapter()
+        with patch.object(adapter_class, "after_anvil_create", side_effect=after_anvil_create):
+            response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         # Check that the name was changed by the adaapter.
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertEqual(new_object.name, "changed-name")
 
-    @override_settings(
-        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupAfterAnVILCreateForeignKeyAdapter"
-    )
     def test_post_custom_adapter_after_anvil_create_fk(self):
         """The view handles using the new group in a foreign key relationship correctly."""
-        # Create a group to add this group to.
+        # Create a group to add this group to
         parent_group = factories.ManagedGroupFactory.create(name="parent-group")
+        # Set up API response
         api_url = self.get_api_url("test-group")
         self.anvil_response_mock.add(responses.POST, api_url, status=self.api_success_code)
+
+        # Function to use in mocking.
+        def after_anvil_create(*args, **kwargs):
+            # Change the name of the group to something else.
+            print("in mock")
+            print(args)
+            managed_group = args[0]
+            parent_group = models.ManagedGroup.objects.get(name="parent-group")
+            models.GroupGroupMembership.objects.create(
+                parent_group=parent_group,
+                child_group=managed_group,
+                role=models.GroupGroupMembership.RoleChoices.MEMBER,
+            )
+
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"name": "test-group"})
+        adapter_class = get_managed_group_adapter()
+        with patch.object(adapter_class, "after_anvil_create", side_effect=after_anvil_create):
+            response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         new_object = models.ManagedGroup.objects.latest("pk")
         # Check that the membership was created.

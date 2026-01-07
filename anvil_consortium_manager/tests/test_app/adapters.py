@@ -2,7 +2,7 @@ from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.managed_group import BaseManagedGroupAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
-from anvil_consortium_manager.models import GroupGroupMembership, ManagedGroup, WorkspaceGroupSharing
+from anvil_consortium_manager.models import GroupGroupMembership, WorkspaceGroupSharing
 from anvil_consortium_manager.tables import WorkspaceStaffTable, WorkspaceUserTable
 
 from ...adapters import mixins as adapter_mixins
@@ -24,6 +24,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_detail_template_name = "test_workspace_detail.html"
     workspace_list_template_name = "test_workspace_list.html"
 
+    # TODO: can be mocked
     def get_autocomplete_queryset(self, queryset, q, forwarded={}):
         billing_project = forwarded.get("billing_project", None)
         if billing_project:
@@ -33,6 +34,7 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
             queryset = queryset.filter(workspace__name=q)
         return queryset
 
+    # TODO: can be mocked
     def get_extra_detail_context_data(self, workspace, request):
         extra_context = {}
         extra_context["extra_text"] = "Extra text"
@@ -45,6 +47,7 @@ class TestManagedGroupAdapter(BaseManagedGroupAdapter):
     list_table_class = tables.TestManagedGroupTable
 
 
+# Cannot easily be mocked due to inheritance.
 class TestManagedGroupWithMembershipAdapter(
     adapter_mixins.GroupGroupMembershipAdapterMixin, DefaultManagedGroupAdapter
 ):
@@ -56,6 +59,7 @@ class TestManagedGroupWithMembershipAdapter(
     ]
 
 
+# TODO: can be mocked
 class TestAccountAdapter(BaseAccountAdapter):
     """Test adapter for accounts."""
 
@@ -76,6 +80,7 @@ class TestAccountAdapter(BaseAccountAdapter):
         return "TEST {}".format(account.email)
 
 
+# TODO: can be mocked
 class TestAccountHookFailAdapter(TestAccountAdapter):
     account_link_verify_exception_log_msg = "TestAccountHookFailAdapter:after_account_verification:test_exception"
 
@@ -83,6 +88,7 @@ class TestAccountHookFailAdapter(TestAccountAdapter):
         raise Exception(self.account_link_verify_exception_log_msg)
 
 
+# TODO: can be mocked
 class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     """Adapter for TestForeignKeyWorkspace."""
 
@@ -98,6 +104,7 @@ class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_list_template_name = "workspace_list.html"
 
 
+# TODO: can be mocked
 class TestWorkspaceMethodsAdapter(BaseWorkspaceAdapter):
     """Adapter superclass for testing adapter methods."""
 
@@ -113,6 +120,7 @@ class TestWorkspaceMethodsAdapter(BaseWorkspaceAdapter):
     workspace_list_template_name = "workspace_list.html"
 
 
+# TODO: can be mocked
 class TestBeforeWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
     """Test adapter for workspaces with custom methods defined."""
 
@@ -122,6 +130,7 @@ class TestBeforeWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
         workspace.save()
 
 
+# TODO: can be mocked
 class TestAfterWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
     """Test adapter for workspaces with custom methods defined."""
 
@@ -131,6 +140,7 @@ class TestAfterWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
         workspace.testworkspacemethodsdata.save()
 
 
+# TODO: can be mocked
 class TestAfterWorkspaceImportAdapter(TestWorkspaceMethodsAdapter):
     """Test adapter for workspaces with custom methods defined."""
 
@@ -140,27 +150,7 @@ class TestAfterWorkspaceImportAdapter(TestWorkspaceMethodsAdapter):
         workspace.testworkspacemethodsdata.save()
 
 
-class TestManagedGroupAfterAnVILCreateAdapter(TestManagedGroupAdapter):
-    """Test adapter for workspaces with custom methods defined."""
-
-    def after_anvil_create(self, managed_group):
-        # Change the name of the group to something else.
-        managed_group.name = "changed-name"
-        managed_group.save()
-
-
-class TestManagedGroupAfterAnVILCreateForeignKeyAdapter(TestManagedGroupAdapter):
-    """Test adapter for workspaces with custom methods defined."""
-
-    def after_anvil_create(self, managed_group):
-        parent_group = ManagedGroup.objects.get(name="parent-group")
-        GroupGroupMembership.objects.create(
-            parent_group=parent_group,
-            child_group=managed_group,
-            role=GroupGroupMembership.RoleChoices.MEMBER,
-        )
-
-
+# TODO: cannot be mocked due to interitance
 class TestWorkspaceWithSharingAdapter(adapter_mixins.WorkspaceSharingAdapterMixin, DefaultWorkspaceAdapter):
     """Test adapter using the WorkspaceSharingAdapterMixin."""
 
