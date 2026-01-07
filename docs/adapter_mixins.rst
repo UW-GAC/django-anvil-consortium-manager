@@ -40,9 +40,9 @@ For example, to add automatic sharing to the default workspace adapter:
             ),
         ]
 
-The `example-group` :class:`~anvil_consortium_manager.models.ManagedGroup` will automatically be granted `READER` access (without compute permission) to `custom-workspace-with-sharing` workspaces that are created, imported, or cloned.
+The ``example-group`` :class:`~anvil_consortium_manager.models.ManagedGroup` will automatically be granted ``READER`` access (without compute permission) to `custom-workspace-with-sharing` workspaces that are created, imported, or cloned.
 If no groups with the name specified by ``group_name`` exist in the app, it will be ignored.
-If the `WorkspaceSharingPermission` raises an exception upon validation or in API calls to AnVIL via the
+If the ``WorkspaceSharingPermission`` raises an exception upon validation or in API calls to AnVIL via the
 :class:`~anvil_consortium_manager.views.WorkspaceCreate`,
 :class:`~anvil_consortium_manager.views.WorkspaceImport`,
 or :class:`~anvil_consortium_manager.views.WorkspaceClone` views,
@@ -71,9 +71,9 @@ For example, to create a custom Managed Group adapter using this mixin:
             ),
         ]
 
-The `example-group` :class:`~anvil_consortium_manager.models.ManagedGroup` will automatically be added as a `MEMBER` to any Managed Groups that are created.
+The ```example-group``` :class:`~anvil_consortium_manager.models.ManagedGroup` will automatically be added as a ``MEMBER`` to any Managed Groups that are created.
 If no groups with the name specified by ``child_group_name`` exist in the app, it will be ignored.
-If the `WorkspaceSharingPermission` raises an exception upon validation or in API calls to AnVIL via the
+If the ``WorkspaceSharingPermission`` raises an exception upon validation or in API calls to AnVIL via the
 :class:`~anvil_consortium_manager.views.WorkspaceCreate`,
 :class:`~anvil_consortium_manager.views.WorkspaceImport`,
 or :class:`~anvil_consortium_manager.views.WorkspaceClone` views,
