@@ -7417,6 +7417,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -8107,11 +8108,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -8123,11 +8119,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_creates_workspace_data(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -8171,11 +8162,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
@@ -8211,22 +8197,12 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_custom_workspace_form_class(self):
         """No workspace is created if custom workspace form is invalid."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertIsInstance(response.context_data["form"], app_forms.TestWorkspaceForm)
 
     def test_adapter_does_not_create_object_if_workspace_form_invalid(self):
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
@@ -8724,6 +8700,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -9853,11 +9830,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
@@ -9880,11 +9852,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_creates_workspace_data(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
@@ -9940,11 +9907,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
@@ -10620,6 +10582,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -11487,11 +11450,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(
@@ -11509,11 +11467,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_creates_workspace_data(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -11562,11 +11515,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
@@ -11606,8 +11554,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_custom_workspace_form_class(self):
         """Form uses the custom workspace form as a superclass."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(
@@ -11623,8 +11569,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_custom_workspace_form_with_error_in_workspace_form(self):
         """Form uses the custom workspace form as a superclass."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         billing_project = factories.BillingProjectFactory.create()
         self.workspace_type = "test"
         self.client.force_login(self.user)
@@ -12214,6 +12158,7 @@ class WorkspaceUpdateTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -12376,7 +12321,6 @@ class WorkspaceUpdateTest(TestCase):
     def test_can_update_workspace_data(self):
         """Can update workspace data when updating the workspace."""
         # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         workspace_data = app_models.TestWorkspaceData.objects.create(workspace=workspace, study_name="original name")
         # Need a client for messages.
@@ -12399,8 +12343,6 @@ class WorkspaceUpdateTest(TestCase):
         self.assertEqual(workspace_data.study_name, "updated name")
 
     def test_custom_adapter_workspace_data(self):
-        # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         app_models.TestWorkspaceData.objects.create(workspace=workspace, study_name="original name")
         # Need a client for messages.
@@ -12415,7 +12357,6 @@ class WorkspaceUpdateTest(TestCase):
     def test_no_updates_if_invalid_workspace_data_form(self):
         """Nothing is updated if workspace_data_form is invalid."""
         # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(
             workspace_type=TestWorkspaceAdapter().get_type(),
             note="original note",
@@ -12446,7 +12387,6 @@ class WorkspaceUpdateTest(TestCase):
     def test_custom_adapter_workspace_form(self):
         """Workspace form is subclass of the custom adapter form."""
         # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         app_models.TestWorkspaceData.objects.create(workspace=workspace, study_name="original name")
         # Need a client for messages.

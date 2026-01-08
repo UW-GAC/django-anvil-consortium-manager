@@ -151,6 +151,7 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap5.html"
 ANVIL_API_SERVICE_ACCOUNT_FILE = "foo"
 ANVIL_WORKSPACE_ADAPTERS = [
     "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+    "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter",
 ]
 
 CACHES = {

@@ -941,6 +941,11 @@ class WorkspaceAdapterRegistryTest(TestCase):
             {"adapter1": "Adapter 1", "adapter2": "Adapter 2"},
         )
 
+    @override_settings(
+        ANVIL_WORKSPACE_ADAPTERS=[
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+        ]
+    )
     def test_populate_from_settings_default(self):
         registry = WorkspaceAdapterRegistry()
         registry.populate_from_settings()
