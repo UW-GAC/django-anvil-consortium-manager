@@ -6506,6 +6506,7 @@ class WorkspaceLandingPageTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self):
@@ -6619,6 +6620,7 @@ class WorkspaceLandingPageTest(TestCase):
 
     def test_one_registered_workspace_in_context(self):
         """One registered workspace in context when only DefaultWorkspaceAdapter is registered"""
+        workspace_adapter_registry.unregister(TestWorkspaceAdapter)
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertIn("registered_workspace_adapters", response.context_data)
@@ -6626,7 +6628,6 @@ class WorkspaceLandingPageTest(TestCase):
 
     def test_two_registered_workspaces_in_context(self):
         """Two registered workspaces in context when two workspace adapters are registered"""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertIn("registered_workspace_adapters", response.context_data)
@@ -6651,6 +6652,7 @@ class WorkspaceDetailTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_view(self):
@@ -7096,11 +7098,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_render_custom_template_name(self):
         """Rendering a correct template when custom template name is specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
@@ -7119,8 +7116,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_context_workspace_type_display_name_custom_adapter(self):
         """workspace_type_display_name is present in context with a custom adapter."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
@@ -7133,8 +7128,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_context_workspace_with_extra_context(self):
         """workspace_type_display_name is present in context with a custom adapter."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         with patch(
@@ -7229,7 +7222,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_clone_links_with_two_registered_workspace_adapters(self):
         """Links to clone into each type of workspace appear when there are two registered workspace types."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
@@ -7364,11 +7356,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_template_block_extra_pills(self):
         """The extra_pills template block is shown on the detail page."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
@@ -12788,6 +12775,7 @@ class WorkspaceListTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -12867,7 +12855,6 @@ class WorkspaceListTest(TestCase):
 
     def test_only_shows_workspaces_of_any_type(self):
         """The table includes all workspaces regardless of type."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         test_workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         default_workspace = factories.WorkspaceFactory(workspace_type=DefaultWorkspaceAdapter().get_type())
         self.client.force_login(self.view_user)
@@ -12957,6 +12944,7 @@ class WorkspaceListByTypeTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -13041,11 +13029,6 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_adapter_table_class_staff_view(self):
         """Displays the correct table if specified in the adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -13054,11 +13037,6 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_adapter_table_class_view(self):
         """Displays the correct table if specified in the adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -13067,7 +13045,6 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_only_shows_workspaces_with_correct_type(self):
         """Only workspaces with the same workspace_type are shown in the table."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         default_type = DefaultWorkspaceAdapter().get_type()
         self.client.force_login(self.view_user)
@@ -13141,8 +13118,6 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertTemplateUsed(response, "anvil_consortium_manager/workspace_list.html")
 
     def test_view_with_custom_adapter_use_custom_workspace_list_template(self):
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -13172,6 +13147,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -13347,8 +13323,6 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_success_url(self):
         """Redirects to the expected page."""
-        # Register a new adapter.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         object = factories.WorkspaceFactory.create(workspace_type=TestWorkspaceAdapter().get_type())
         # Need to use the client instead of RequestFactory to check redirection url.
         api_url = self.get_api_url(object.billing_project.name, object.name)
@@ -13587,10 +13561,6 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.default_workspace_type = DefaultWorkspaceAdapter().get_type()
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
-
-    def tearDown(self):
-        workspace_adapter_registry.unregister(TestWorkspaceAdapter)
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
