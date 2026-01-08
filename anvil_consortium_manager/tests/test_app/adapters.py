@@ -23,22 +23,6 @@ class TestWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_detail_template_name = "test_workspace_detail.html"
     workspace_list_template_name = "test_workspace_list.html"
 
-    # TODO: can be mocked
-    def get_autocomplete_queryset(self, queryset, q, forwarded={}):
-        billing_project = forwarded.get("billing_project", None)
-        if billing_project:
-            queryset = queryset.filter(workspace__billing_project=billing_project)
-
-        if q:
-            queryset = queryset.filter(workspace__name=q)
-        return queryset
-
-    # TODO: can be mocked
-    def get_extra_detail_context_data(self, workspace, request):
-        extra_context = {}
-        extra_context["extra_text"] = "Extra text"
-        return extra_context
-
 
 class TestManagedGroupAdapter(BaseManagedGroupAdapter):
     """Test adapter for ManagedGroups."""

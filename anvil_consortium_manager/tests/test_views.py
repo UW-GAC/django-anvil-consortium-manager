@@ -7141,7 +7141,11 @@ class WorkspaceDetailTest(TestCase):
         workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(workspace.get_absolute_url())
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.get_extra_detail_context_data",
+            return_value={"extra_text": "Extra text"},
+        ):
+            response = self.client.get(workspace.get_absolute_url())
         self.assertIn("extra_text", response.context)
         self.assertEqual(response.context["extra_text"], "Extra text")
 
@@ -13703,7 +13707,19 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         # Workspace that should not match the custom autocomplete filtering.
         TestWorkspaceDataFactory.create(workspace__name="TEST-WORKSPACE")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(workspace_1.workspace.workspace_type), {"q": "TEST"})
+
+        def get_autocomplete_queryset(*args, **kwargs):
+            queryset = args[0]
+            q = args[1]
+            if q:
+                queryset = queryset.filter(workspace__name=q)
+            return queryset
+
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.get_autocomplete_queryset",
+            side_effect=get_autocomplete_queryset,
+        ):
+            response = self.client.get(self.get_url(workspace_1.workspace.workspace_type), {"q": "TEST"})
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace_1.pk)
@@ -13714,10 +13730,26 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         # Workspace that should not match the custom autocomplete filtering.
         TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(workspace.workspace.workspace_type),
-            {"forward": json.dumps({"billing_project": workspace.workspace.billing_project.pk})},
-        )
+
+        def get_autocomplete_queryset(*args, **kwargs):
+            queryset = args[0]
+            q = args[1]
+            forwarded = kwargs.get("forwarded", {})
+            billing_project = forwarded.get("billing_project", None)
+            if billing_project:
+                queryset = queryset.filter(workspace__billing_project=billing_project)
+            if q:
+                queryset = queryset.filter(workspace__name=q)
+            return queryset
+
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.get_autocomplete_queryset",
+            side_effect=get_autocomplete_queryset,
+        ):
+            response = self.client.get(
+                self.get_url(workspace.workspace.workspace_type),
+                {"forward": json.dumps({"billing_project": workspace.workspace.billing_project.pk})},
+            )
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace.pk)
