@@ -1,4 +1,3 @@
-from anvil_consortium_manager.adapters.account import BaseAccountAdapter
 from anvil_consortium_manager.adapters.managed_group import BaseManagedGroupAdapter
 from anvil_consortium_manager.adapters.workspace import BaseWorkspaceAdapter
 from anvil_consortium_manager.forms import WorkspaceForm
@@ -7,7 +6,7 @@ from anvil_consortium_manager.tables import WorkspaceStaffTable, WorkspaceUserTa
 
 from ...adapters import mixins as adapter_mixins
 from ...adapters.default import DefaultManagedGroupAdapter, DefaultWorkspaceAdapter
-from . import filters, forms, models, tables
+from . import forms, models, tables
 
 
 class TestWorkspaceAdapter(BaseWorkspaceAdapter):
@@ -57,35 +56,6 @@ class TestManagedGroupWithMembershipAdapter(
             role=GroupGroupMembership.RoleChoices.MEMBER,
         )
     ]
-
-
-# TODO: can be mocked
-class TestAccountAdapter(BaseAccountAdapter):
-    """Test adapter for accounts."""
-
-    list_table_class = tables.TestAccountStaffTable
-    list_filterset_class = filters.TestAccountListFilter
-    account_link_verify_message = "Test Thank you for linking your AnVIL account."
-    account_link_redirect = "test_login"
-    account_link_email_subject = "custom subject"
-    account_verification_notification_email = "test@example.com"
-    account_link_email_template = "test_account_verification_email.html"
-
-    def get_autocomplete_queryset(self, queryset, q):
-        if q:
-            queryset = queryset.filter(email__startswith=q)
-        return queryset
-
-    def get_autocomplete_label(self, account):
-        return "TEST {}".format(account.email)
-
-
-# TODO: can be mocked
-class TestAccountHookFailAdapter(TestAccountAdapter):
-    account_link_verify_exception_log_msg = "TestAccountHookFailAdapter:after_account_verification:test_exception"
-
-    def after_account_verification(self, user):
-        raise Exception(self.account_link_verify_exception_log_msg)
 
 
 # TODO: can be mocked

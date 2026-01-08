@@ -36,8 +36,6 @@ from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import (
-    TestAccountAdapter,
-    TestAccountHookFailAdapter,
     TestAfterWorkspaceCreateAdapter,
     TestAfterWorkspaceImportAdapter,
     TestBeforeWorkspaceCreateAdapter,
@@ -2206,7 +2204,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(), {"email": email})
         self.assertRedirects(response, reverse(settings.LOGIN_REDIRECT_URL))
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_redirect_custom(self):
         """View redirects to the correct URL."""
         email = "test@example.com"
@@ -2214,7 +2211,11 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"email": email})
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_link_redirect",
+            "test_login",
+        ):
+            response = self.client.post(self.get_url(), {"email": email})
         # import ipdb; ipdb.set_trace()
         self.assertRedirects(response, reverse("test_login"))
 
@@ -2243,7 +2244,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(url, mail.outbox[0].body)
 
     @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_email_is_sent_custom_subject(self):
         """An email is sent when the form is submitted correctly."""
         email = "test@example.com"
@@ -2251,7 +2251,11 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        self.client.post(self.get_url(), {"email": email})
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_link_email_subject",
+            "custom subject",
+        ):
+            self.client.post(self.get_url(), {"email": email})
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
@@ -2770,57 +2774,57 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             mock_verify_function.assert_called_once()
 
     @override_settings(
-        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountHookFailAdapter",
         ADMINS=[("Admin", "admin@example.com")],
     )
     def test_after_account_link_hook_fail_handled(self):
-        with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
-            email = "test@example.com"
-            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
-            token = account_verification_token.make_token(email_entry)
-            api_url = self.get_api_url(email)
-            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
-            # Need a client because messages are added.
-            self.client.force_login(self.user)
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        error_message = "TestAccountHookFailAdapter:after_account_verification:test_exception"
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.after_account_verification",
+            side_effect=Exception(error_message),
+        ), self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
             response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-            account_object = models.Account.objects.latest("pk")
-            # Assert success
-            self.assertEqual(response.status_code, 200)
-
             # Verify log contents contain message from adapter exception
-            self.assertIn(TestAccountHookFailAdapter.account_link_verify_exception_log_msg, log_context.output[0])
+            self.assertIn(error_message, log_context.output[0])
             # Verify log contents contain views log of exception caught
             self.assertIn(views.AccountLinkVerify.log_message_after_account_link_failed, log_context.output[0])
 
-            # Get the 2nd email from the outbox
-            self.assertEqual(len(mail.outbox), 2)
-            email = mail.outbox[0]
+        account_object = models.Account.objects.latest("pk")
+        # Assert success
+        self.assertEqual(response.status_code, 200)
 
-            # Verify the recipient
-            self.assertEqual(email.to, ["admin@example.com"])
+        # Error notification email
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
 
-            # Verify the subject. Note that when using mail_admins, django prefixes the subject with
-            # settings.EMAIL_SUBJECT_PREFIX
-            self.assertIn(
-                views.AccountLinkVerify.mail_subject_after_account_link_failed,
-                email.subject,
-            )
+        # Verify the recipient
+        self.assertEqual(email.to, ["admin@example.com"])
 
-            # Verify content in the email body
-            error_description_string = f"Exception: {TestAccountHookFailAdapter.account_link_verify_exception_log_msg}"
-            context = {
-                "account": account_object,
-                "email_entry": email_entry,
-                "error_description": error_description_string,
-                "hook": "after_account_verification",
-            }
-            expected_content = render_to_string(
-                views.AccountLinkVerify.mail_template_after_account_link_failed, context
-            )
+        # Verify the subject. Note that when using mail_admins, django prefixes the subject with
+        # settings.EMAIL_SUBJECT_PREFIX
+        self.assertIn(
+            views.AccountLinkVerify.mail_subject_after_account_link_failed,
+            email.subject,
+        )
 
-            self.assertEqual(email.body, expected_content)
+        # Verify content in the email body
+        error_description_string = f"Exception: {error_message}"
+        context = {
+            "account": account_object,
+            "email_entry": email_entry,
+            "error_description": error_description_string,
+            "hook": "after_account_verification",
+        }
+        expected_content = render_to_string(views.AccountLinkVerify.mail_template_after_account_link_failed, context)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
+        self.assertEqual(email.body, expected_content)
+
     def test_custom_redirect(self):
         """A user can successfully verify their email."""
         email = "test@example.com"
@@ -2830,7 +2834,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_link_redirect",
+            "test_login",
+        ):
+            response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, "/test_login/")
 
     def test_user_email_entry_does_not_exist(self):
@@ -3172,7 +3180,6 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_notification_email(self):
         """Notification email is sent if account_verification_notification_email set."""
         email = "test1@example.com"
@@ -3181,37 +3188,33 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         api_url = self.get_api_url(email)
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(email_entry.uuid, token))
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_verification_notification_email",
+            "test@example.com",
+        ):
+            response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
         # An email is sent.
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(len(mail.outbox[0].to), 1)
         self.assertIn("test@example.com", mail.outbox[0].to)
 
-    @override_settings(
-        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter",
-        ADMINS=[("Admin", "admin@example.com")],
-    )
-    @patch.object(
-        TestAccountAdapter,
-        "send_account_verification_notification_email",
-    )
-    def test_send_account_verification_notification_email_hook_fail_handled(self, mock):
+    @override_settings(ADMINS=[("Admin", "admin@example.com")])
+    def test_send_account_verification_notification_email_hook_fail_handled(self):
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        # Mock the error message, also need to assert logs in the with statement.
         error_message = "send_account_verification_notification_email:test_exception"
-        mock.side_effect = Exception(error_message)
-        with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
-            email = "test@example.com"
-            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
-            token = account_verification_token.make_token(email_entry)
-            api_url = self.get_api_url(email)
-            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
-            # Need a client because messages are added.
-            self.client.force_login(self.user)
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.send_account_verification_notification_email",
+            side_effect=Exception(error_message),
+        ), self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
             response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-            account_object = models.Account.objects.latest("pk")
-            # Assert success
-            self.assertEqual(response.status_code, 200)
-
             # Verify log contents contain message from adapter exception
             self.assertIn(error_message, log_context.output[0])
             # Verify log contents contain views log of exception caught
@@ -3219,34 +3222,37 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
                 views.AccountLinkVerify.log_message_send_account_verification_notification_email_failed,
                 log_context.output[0],
             )
+        account_object = models.Account.objects.latest("pk")
+        # Assert success
+        self.assertEqual(response.status_code, 200)
 
-            # Only one the error notification email was sent because the hook failed.
-            self.assertEqual(len(mail.outbox), 1)
-            email = mail.outbox[0]
+        # Only one the error notification email was sent because the hook failed.
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
 
-            # Verify the recipient
-            self.assertEqual(email.to, ["admin@example.com"])
+        # Verify the recipient
+        self.assertEqual(email.to, ["admin@example.com"])
 
-            # Verify the subject. Note that when using mail_admins, django prefixes the subject with
-            # settings.EMAIL_SUBJECT_PREFIX
-            self.assertIn(
-                views.AccountLinkVerify.mail_subject_send_account_verification_notification_email_failed,
-                email.subject,
-            )
+        # Verify the subject. Note that when using mail_admins, django prefixes the subject with
+        # settings.EMAIL_SUBJECT_PREFIX
+        self.assertIn(
+            views.AccountLinkVerify.mail_subject_send_account_verification_notification_email_failed,
+            email.subject,
+        )
 
-            # Verify content in the email body
-            error_description_string = f"Exception: {error_message}"
-            context = {
-                "account": account_object,
-                "email_entry": email_entry,
-                "error_description": error_description_string,
-                "hook": "send_account_verification_notification_email",
-            }
-            expected_content = render_to_string(
-                views.AccountLinkVerify.mail_template_send_account_verification_notification_email_failed, context
-            )
+        # Verify content in the email body
+        error_description_string = f"Exception: {error_message}"
+        context = {
+            "account": account_object,
+            "email_entry": email_entry,
+            "error_description": error_description_string,
+            "hook": "send_account_verification_notification_email",
+        }
+        expected_content = render_to_string(
+            views.AccountLinkVerify.mail_template_send_account_verification_notification_email_failed, context
+        )
 
-            self.assertEqual(email.body, expected_content)
+        self.assertEqual(email.body, expected_content)
 
 
 class AccountListTest(TestCase):
@@ -3414,11 +3420,17 @@ class AccountListTest(TestCase):
         self.assertIn(active_object, response.context_data["table"].data)
         self.assertIn(inactive_object, response.context_data["table"].data)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_table_class",
+            app_tables.TestAccountStaffTable,
+        ), patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_filterset_class",
+            TestAccountListFilter,
+        ):
+            response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
@@ -3596,11 +3608,17 @@ class AccountActiveListTest(TestCase):
         self.assertIn(active_object, response.context_data["table"].data)
         self.assertNotIn(inactive_object, response.context_data["table"].data)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_table_class",
+            app_tables.TestAccountStaffTable,
+        ), patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_filterset_class",
+            TestAccountListFilter,
+        ):
+            response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
@@ -3772,11 +3790,17 @@ class AccountInactiveListTest(TestCase):
         self.assertNotIn(active_object, response.context_data["table"].data)
         self.assertIn(inactive_object, response.context_data["table"].data)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_table_class",
+            app_tables.TestAccountStaffTable,
+        ), patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_filterset_class",
+            TestAccountListFilter,
+        ):
+            response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
@@ -4770,19 +4794,29 @@ class AccountAutocompleteTest(TestCase):
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 0)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter_queryset(self):
         """Filters queryset correctly if custom get_autocomplete_queryset is set in adapter."""
         account_1 = factories.AccountFactory.create(email="test@bar.com")
         account_2 = factories.AccountFactory.create(email="foo@test.com")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"q": "test"})
+
+        def get_autocomplete_queryset(*args, **kwargs):
+            queryset = args[0]
+            q = args[1]
+            if q:
+                queryset = queryset.filter(email__startswith=q)
+            return queryset
+
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.get_autocomplete_queryset",
+            side_effect=get_autocomplete_queryset,
+        ):
+            response = self.client.get(self.get_url(), {"q": "test"})
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 1)
         self.assertIn(account_1.pk, returned_ids)
         self.assertNotIn(account_2.pk, returned_ids)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter_labels(self):
         """Test view labels."""
         account = factories.AccountFactory.create(email="test@bar.com")
@@ -4791,8 +4825,17 @@ class AccountAutocompleteTest(TestCase):
         request.user = self.user
         view = views.AccountAutocomplete()
         view.setup(request)
-        self.assertEqual(view.get_result_label(account), "TEST test@bar.com")
-        self.assertEqual(view.get_selected_result_label(account), "TEST test@bar.com")
+
+        def get_autocomplete_label(*args, **kwargs):
+            account = args[0]
+            return "TEST {}".format(account.email)
+
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.get_autocomplete_label",
+            side_effect=get_autocomplete_label,
+        ):
+            self.assertEqual(view.get_result_label(account), "TEST test@bar.com")
+            self.assertEqual(view.get_selected_result_label(account), "TEST test@bar.com")
 
 
 class ManagedGroupDetailTest(TestCase):

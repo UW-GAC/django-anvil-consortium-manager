@@ -1,6 +1,7 @@
 import datetime
 import time
 from unittest import skip
+from unittest.mock import patch
 
 import networkx as nx
 from django.contrib.auth import get_user_model
@@ -8,7 +9,6 @@ from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import override_settings
 from django.utils import timezone
 from freezegun import freeze_time
 
@@ -186,11 +186,14 @@ class UserEmailEntryTest(TestCase):
     # regenerating the token. Use freezegun's freeze_time decorator to fix the time and avoid
     # this spurious failure.
     @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_send_verification_email_custom_subject(self):
         """Verification email is correct."""
         email_entry = factories.UserEmailEntryFactory.create()
-        email_entry.send_verification_email("www.test.com")
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_link_email_subject",
+            "custom subject",
+        ):
+            email_entry.send_verification_email("www.test.com")
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
