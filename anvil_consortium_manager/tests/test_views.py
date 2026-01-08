@@ -36,9 +36,6 @@ from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import (
-    TestAfterWorkspaceCreateAdapter,
-    TestAfterWorkspaceImportAdapter,
-    TestBeforeWorkspaceCreateAdapter,
     TestForeignKeyWorkspaceAdapter,
     TestWorkspaceAdapter,
     TestWorkspaceWithSharingAdapter,
@@ -8290,8 +8287,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
-        workspace_adapter_registry.register(TestBeforeWorkspaceCreateAdapter)
-        self.workspace_type = TestBeforeWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -8304,20 +8300,31 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.name = workspace.name + "-2"
+            workspace.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.before_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
@@ -8328,8 +8335,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
-        workspace_adapter_registry.register(TestAfterWorkspaceCreateAdapter)
-        self.workspace_type = TestAfterWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -8342,25 +8348,36 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.testworkspacedata.study_name = "create"
+            workspace.testworkspacedata.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.after_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
-        self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "FOO")
+        self.assertEqual(new_workspace.testworkspacedata.study_name, "create")
 
     def test_before_anvil_create_adapter_exception(self):
         """One error message is added if after_anvil_create raises one error."""
@@ -10153,12 +10170,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_after_anvil_import(self):
         """The after_anvil_create method is run after a workspace is imported."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestAfterWorkspaceImportAdapter)
-        self.workspace_type = TestAfterWorkspaceImportAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
@@ -10185,24 +10197,35 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project.name, workspace_name),
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.testworkspacedata.study_name = "import"
+            workspace.testworkspacedata.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "workspace": billing_project.name + "/" + workspace_name,
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.after_anvil_import",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "workspace": billing_project.name + "/" + workspace_name,
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
-        self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "imported!")
+        self.assertEqual(new_workspace.testworkspacedata.study_name, "import")
 
     def test_can_import_workspace_no_access_but_owner(self):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
@@ -11712,11 +11735,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_before_anvil_create(self):
         """The before_anvil_create method is run before a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestBeforeWorkspaceCreateAdapter)
-        self.workspace_type = TestBeforeWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -11730,24 +11749,35 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.name = workspace.name + "-2"
+            workspace.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(
-                self.workspace_to_clone.billing_project.name,
-                self.workspace_to_clone.name,
-                self.workspace_type,
-            ),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.before_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
@@ -11758,8 +11788,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         # Overriding settings doesn't work, because appconfig.ready has already run and
         # registered the default adapter. Instead, unregister the default and register the
         # new adapter here.
-        workspace_adapter_registry.register(TestAfterWorkspaceCreateAdapter)
-        self.workspace_type = TestAfterWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -11773,29 +11802,40 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.testworkspacedata.study_name = "create"
+            workspace.testworkspacedata.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(
-                self.workspace_to_clone.billing_project.name,
-                self.workspace_to_clone.name,
-                self.workspace_type,
-            ),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.after_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
-        self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "FOO")
+        self.assertEqual(new_workspace.testworkspacedata.study_name, "create")
 
     def test_before_anvil_create_adapter_exception(self):
         """One error message is added if after_anvil_create raises one error."""

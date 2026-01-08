@@ -58,52 +58,6 @@ class TestForeignKeyWorkspaceAdapter(BaseWorkspaceAdapter):
     workspace_list_template_name = "workspace_list.html"
 
 
-# TODO: can be mocked
-class TestWorkspaceMethodsAdapter(BaseWorkspaceAdapter):
-    """Adapter superclass for testing adapter methods."""
-
-    name = "workspace adapter methods testing"
-    type = "methods_tester"
-    description = "Workspace type for testing custom adapter methods method"
-    list_table_class_staff_view = WorkspaceStaffTable
-    list_table_class_view = WorkspaceUserTable
-    workspace_form_class = WorkspaceForm
-    workspace_data_model = models.TestWorkspaceMethodsData
-    workspace_data_form_class = forms.TestWorkspaceMethodsForm
-    workspace_detail_template_name = "workspace_detail.html"
-    workspace_list_template_name = "workspace_list.html"
-
-
-# TODO: can be mocked
-class TestBeforeWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
-    """Test adapter for workspaces with custom methods defined."""
-
-    def before_anvil_create(self, workspace):
-        # Append a -2 to the name of the workspace.
-        workspace.name = workspace.name + "-2"
-        workspace.save()
-
-
-# TODO: can be mocked
-class TestAfterWorkspaceCreateAdapter(TestWorkspaceMethodsAdapter):
-    """Test adapter for workspaces with custom methods defined."""
-
-    def after_anvil_create(self, workspace):
-        # Set the extra field to "FOO"
-        workspace.testworkspacemethodsdata.test_field = "FOO"
-        workspace.testworkspacemethodsdata.save()
-
-
-# TODO: can be mocked
-class TestAfterWorkspaceImportAdapter(TestWorkspaceMethodsAdapter):
-    """Test adapter for workspaces with custom methods defined."""
-
-    def after_anvil_import(self, workspace):
-        # Set the extra field.
-        workspace.testworkspacemethodsdata.test_field = "imported!"
-        workspace.testworkspacemethodsdata.save()
-
-
 # TODO: cannot be mocked due to interitance
 class TestWorkspaceWithSharingAdapter(adapter_mixins.WorkspaceSharingAdapterMixin, DefaultWorkspaceAdapter):
     """Test adapter using the WorkspaceSharingAdapterMixin."""
