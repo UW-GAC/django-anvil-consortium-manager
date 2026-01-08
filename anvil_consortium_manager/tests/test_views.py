@@ -13689,13 +13689,10 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
 
         def get_autocomplete_queryset(*args, **kwargs):
             queryset = args[0]
-            q = args[1]
             forwarded = kwargs.get("forwarded", {})
             billing_project = forwarded.get("billing_project", None)
             if billing_project:
                 queryset = queryset.filter(workspace__billing_project=billing_project)
-            if q:
-                queryset = queryset.filter(workspace__name=q)
             return queryset
 
         with patch(
