@@ -2769,9 +2769,7 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             # Verify hook called
             mock_verify_function.assert_called_once()
 
-    @override_settings(
-        ADMINS=[("Admin", "admin@example.com")],
-    )
+    @override_settings(ADMINS=[("Admin", "admin@example.com")])
     def test_after_account_link_hook_fail_handled(self):
         email = "test@example.com"
         email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
@@ -5466,8 +5464,6 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Function to use in mocking.
         def after_anvil_create(*args, **kwargs):
             # Change the name of the group to something else.
-            print("in mock")
-            print(args)
             managed_group = args[0]
             parent_group = models.ManagedGroup.objects.get(name="parent-group")
             models.GroupGroupMembership.objects.create(
@@ -8272,9 +8268,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_before_anvil_create(self):
         """The before_anvil_create method is run before a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -8320,9 +8313,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_after_anvil_create(self):
         """The after_anvil_create method is run after a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -11785,9 +11775,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_after_anvil_create(self):
         """The after_anvil_create method is run after a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {

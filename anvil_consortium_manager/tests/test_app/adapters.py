@@ -40,7 +40,7 @@ class TestManagedGroupWithMembershipAdapter(
     ]
 
 
-# TODO: cannot be mocked due to interitance
+# Cannot easily be mocked due to inheritance.
 class TestWorkspaceWithSharingAdapter(adapter_mixins.WorkspaceSharingAdapterMixin, DefaultWorkspaceAdapter):
     """Test adapter using the WorkspaceSharingAdapterMixin."""
 
