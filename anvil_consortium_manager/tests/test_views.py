@@ -1659,11 +1659,16 @@ class AccountDetailTest(TestCase):
             return "test_profile_{}".format(self.username)
 
         UserModel = get_user_model()
-        setattr(UserModel, "get_absolute_url", foo)
         user = UserModel.objects.create(username="testuser2", password="testpassword")
         account = factories.AccountFactory.create(verified=True, verified_email_entry__user=user)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(account.uuid))
+        with patch.object(
+            UserModel,
+            "get_absolute_url",
+            return_value="test_profile_{}".format(user.username),
+            create=True,
+        ):
+            response = self.client.get(self.get_url(account.uuid))
         self.assertInHTML(
             """<a href="test_profile_testuser2">testuser2</a>""",
             response.content.decode(),

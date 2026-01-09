@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import responses
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -2112,18 +2114,17 @@ class IgnoredManagedGroupMembershipDetailTest(TestCase):
 
     def test_detail_page_links_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the added_by user has a get_absolute_url method."""
-
-        # Dynamically set the get_absolute_url method. This is hacky...
-        def foo(self):
-            return "test_profile_{}".format(self.username)
-
         UserModel = get_user_model()
-        setattr(UserModel, "get_absolute_url", foo)
         user = UserModel.objects.create(username="testuser2", password="testpassword")
         obj = factories.IgnoredManagedGroupMembershipFactory.create(added_by=user)
         self.client.force_login(self.user)
-        response = self.client.get(obj.get_absolute_url())
-        delattr(UserModel, "get_absolute_url")
+        with patch.object(
+            UserModel,
+            "get_absolute_url",
+            return_value="test_profile_testuser2",
+            create=True,
+        ):
+            response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, "test_profile_testuser2")
 
 
@@ -4262,18 +4263,17 @@ class IgnoredWorkspaceSharingDetailTest(TestCase):
 
     def test_detail_page_links_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the added_by user has a get_absolute_url method."""
-
-        # Dynamically set the get_absolute_url method. This is hacky...
-        def foo(self):
-            return "test_profile_{}".format(self.username)
-
         UserModel = get_user_model()
-        setattr(UserModel, "get_absolute_url", foo)
         user = UserModel.objects.create(username="testuser2", password="testpassword")
         obj = factories.IgnoredWorkspaceSharingFactory.create(added_by=user)
         self.client.force_login(self.user)
-        response = self.client.get(obj.get_absolute_url())
-        delattr(UserModel, "get_absolute_url")
+        with patch.object(
+            UserModel,
+            "get_absolute_url",
+            return_value="test_profile_testuser2",
+            create=True,
+        ):
+            response = self.client.get(obj.get_absolute_url())
         self.assertContains(response, "test_profile_testuser2")
 
 

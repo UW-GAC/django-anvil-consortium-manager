@@ -34,8 +34,8 @@
   <dt class="col-sm-2">Status</dt> <dd class="col-sm-10">{{ object.get_status_display }}</dd>
   <dt class="col-sm-2">User</dt> <dd class="col-sm-10">
     {% if object.user and object.verified_email_entry %}
-      {% if object.verified_email_entry.user.get_absolute_url %}
-        <a href="{{ object.verified_email_entry.user.get_absolute_url }}">{{ object.verified_email_entry.user }}</a>
+      {% if user_detail_link %}
+        <a href="{{ user_detail_link }}">{{ object.verified_email_entry.user }}</a>
       {% else %}
         {{ object.verified_email_entry.user }}
       {% endif %}
