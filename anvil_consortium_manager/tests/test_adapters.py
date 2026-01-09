@@ -51,14 +51,17 @@ class AccountAdapterTestCase(TestCase):
     def test_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", tables.TestAccountStaffTable)
-        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestAccountStaffTable)
+        with patch.object(
+            TestAdapter,
+            "list_table_class",
+            tables.TestAccountStaffTable,
+        ):
+            self.assertEqual(TestAdapter().get_list_table_class(), tables.TestAccountStaffTable)
 
     def test_list_table_class_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "list_table_class", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class()
 
     def test_list_table_class_wrong_model(self):
@@ -70,8 +73,7 @@ class AccountAdapterTestCase(TestCase):
                 fields = ("name",)
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", TestTable)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "list_table_class", TestTable), self.assertRaises(ImproperlyConfigured) as e:
             TestAdapter().get_list_table_class()
         self.assertIn("anvil_consortium_manager.models.Account", str(e.exception))
 
@@ -82,21 +84,25 @@ class AccountAdapterTestCase(TestCase):
     def test_list_filterset_class_custom(self):
         """get_list_filterset_class returns the correct filter when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_filterset_class", filters.TestAccountListFilter)
-        self.assertEqual(TestAdapter().get_list_filterset_class(), filters.TestAccountListFilter)
+        with patch.object(
+            TestAdapter,
+            "list_filterset_class",
+            filters.TestAccountListFilter,
+        ):
+            self.assertEqual(TestAdapter().get_list_filterset_class(), filters.TestAccountListFilter)
 
     def test_list_filterset_class_none(self):
         """get_list_filterset_class raises ImproperlyConfigured when get_list_filterset_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_filterset_class", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "list_filterset_class", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_filterset_class()
 
     def test_list_filterset_class_different_model(self):
         """get_list_filterset_class raises ImproperlyConfigured when incorrect model is used."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_filterset_class", BillingProjectListFilter)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "list_filterset_class", BillingProjectListFilter), self.assertRaises(
+            ImproperlyConfigured
+        ):
             TestAdapter().get_list_filterset_class()
 
     def test_list_filterset_class_not_filterset(self):
@@ -106,8 +112,7 @@ class AccountAdapterTestCase(TestCase):
             pass
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_filterset_class", Foo)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "list_filterset_class", Foo), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_filterset_class()
 
     def test_list_filterset_class_wrong_model(self):
@@ -119,8 +124,9 @@ class AccountAdapterTestCase(TestCase):
                 fields = {"email": ["icontains"]}
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_filterset_class", TestFilterSet)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "list_filterset_class", TestFilterSet), self.assertRaises(
+            ImproperlyConfigured
+        ) as e:
             TestAdapter().get_list_filterset_class()
         self.assertIn("anvil_consortium_manager.models.Account", str(e.exception))
 
@@ -136,14 +142,16 @@ class AccountAdapterTestCase(TestCase):
     def test_get_autocomplete_queryset_custom(self):
         """get_autocomplete_queryset returns the correct queryset when using a custom adapter."""
 
-        def foo(self, queryset, q):
+        def foo(*args, **kwargs):
+            queryset = args[0]
+            q = args[1]
             return queryset.filter(email__startswith=q)
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "get_autocomplete_queryset", foo)
         account_1 = factories.AccountFactory.create(email="test@test.com")
         account_2 = factories.AccountFactory.create(email="foo@test.com")
-        qs = TestAdapter().get_autocomplete_queryset(Account.objects.all(), "test")
+        with patch.object(TestAdapter, "get_autocomplete_queryset", side_effect=foo):
+            qs = TestAdapter().get_autocomplete_queryset(Account.objects.all(), "test")
         self.assertEqual(qs.count(), 1)
         self.assertIn(account_1, qs)
         self.assertNotIn(account_2, qs)
@@ -158,12 +166,13 @@ class AccountAdapterTestCase(TestCase):
 
         account = factories.AccountFactory.create(verified=True, user__username="testuser")
 
-        def foo(self, account):
+        def foo(*args, **kwargs):
+            account = args[0]
             return account.user.username
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "get_autocomplete_label", foo)
-        self.assertEqual(TestAdapter().get_autocomplete_label(account), "testuser")
+        with patch.object(TestAdapter, "get_autocomplete_label", side_effect=foo):
+            self.assertEqual(TestAdapter().get_autocomplete_label(account), "testuser")
 
     def test_account_link_verify_message_default(self):
         """account_link_verify_message returns the correct message when using the default adapter."""
@@ -174,8 +183,12 @@ class AccountAdapterTestCase(TestCase):
     def test_account_link_verify_message_custom(self):
         """account_link_verify_message returns the correct message when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_link_verify_message", "Test Thank you.")
-        self.assertEqual(TestAdapter().account_link_verify_message, "Test Thank you.")
+        with patch.object(
+            TestAdapter,
+            "account_link_verify_message",
+            "Test Thank you.",
+        ):
+            self.assertEqual(TestAdapter().account_link_verify_message, "Test Thank you.")
 
     def test_account_link_redirect_default(self):
         """account_link_redirect returns the correct URL when suing the default adapter."""
@@ -185,8 +198,12 @@ class AccountAdapterTestCase(TestCase):
         """account_link_redirect returns the correct URL when using a custom adapter."""
         custom_redirect_url = "/test_login"
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_link_redirect", custom_redirect_url)
-        self.assertEqual(TestAdapter().account_link_redirect, custom_redirect_url)
+        with patch.object(
+            TestAdapter,
+            "account_link_redirect",
+            custom_redirect_url,
+        ):
+            self.assertEqual(TestAdapter().account_link_redirect, custom_redirect_url)
 
     def test_account_link_email_subject_default(self):
         """account_link_email_subject returns the correct subject when using the default adapter."""
@@ -196,8 +213,8 @@ class AccountAdapterTestCase(TestCase):
         """account_link_email_subject returns the correct subject when using a custom adapter."""
         custom_subject = "Test custom subject"
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_link_email_subject", custom_subject)
-        self.assertEqual(TestAdapter().account_link_email_subject, custom_subject)
+        with patch.object(TestAdapter, "account_link_email_subject", custom_subject):
+            self.assertEqual(TestAdapter().account_link_email_subject, custom_subject)
 
     def test_account_verification_notification_email_default(self):
         """account_verification_notification_email returns the correct email when using the default adapter."""
@@ -207,8 +224,8 @@ class AccountAdapterTestCase(TestCase):
         """account_verification_notification_email returns the correct email when using a custom adapter."""
         custom_email = "test@example.com"
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_verification_notification_email", custom_email)
-        self.assertEqual(TestAdapter().account_verification_notification_email, custom_email)
+        with patch.object(TestAdapter, "account_verification_notification_email", custom_email):
+            self.assertEqual(TestAdapter().account_verification_notification_email, custom_email)
 
     def test_account_link_email_template_default(self):
         """account_link_email_template returns the correct template when using the default adapter."""
@@ -221,8 +238,8 @@ class AccountAdapterTestCase(TestCase):
         """account_link_email_template returns the correct template when using a custom adapter."""
         custom_template = "custom_template.html"
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "account_link_email_template", custom_template)
-        self.assertEqual(TestAdapter().account_link_email_template, custom_template)
+        with patch.object(TestAdapter, "account_link_email_template", custom_template):
+            self.assertEqual(TestAdapter().account_link_email_template, custom_template)
 
     def test_after_account_verification(self):
         """after_account_verification when run with correct input."""
@@ -398,14 +415,13 @@ class ManagedGroupAdapterTest(TestCase):
     def test_list_table_class_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", tables.TestManagedGroupTable)
-        self.assertEqual(TestAdapter().get_list_table_class(), tables.TestManagedGroupTable)
+        with patch.object(TestAdapter, "list_table_class", tables.TestManagedGroupTable):
+            self.assertEqual(TestAdapter().get_list_table_class(), tables.TestManagedGroupTable)
 
     def test_list_table_class_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", None)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "list_table_class", None), self.assertRaises(ImproperlyConfigured) as e:
             TestAdapter().get_list_table_class()
         self.assertIn("Set `list_table_class`", str(e.exception))
 
@@ -418,8 +434,7 @@ class ManagedGroupAdapterTest(TestCase):
                 fields = ("email",)
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class", TestTable)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "list_table_class", TestTable), self.assertRaises(ImproperlyConfigured) as e:
             TestAdapter().get_list_table_class()
         self.assertIn("anvil_consortium_manager.models.ManagedGroup", str(e.exception))
 
@@ -451,14 +466,17 @@ class WorkspaceAdapterTest(TestCase):
     def test_list_table_class_staff_view_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class_staff_view", tables.TestWorkspaceDataStaffTable)
-        self.assertEqual(TestAdapter().get_list_table_class_staff_view(), tables.TestWorkspaceDataStaffTable)
+        with patch.object(
+            TestAdapter,
+            "list_table_class_staff_view",
+            tables.TestWorkspaceDataStaffTable,
+        ):
+            self.assertEqual(TestAdapter().get_list_table_class_staff_view(), tables.TestWorkspaceDataStaffTable)
 
     def test_list_table_class_staff_view_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class_staff_view", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "list_table_class_staff_view", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class_staff_view()
 
     def test_list_table_class_staff_view_wrong_model(self):
@@ -470,8 +488,9 @@ class WorkspaceAdapterTest(TestCase):
                 fields = ("email",)
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class_staff_view", TestTable)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "list_table_class_staff_view", TestTable), self.assertRaises(
+            ImproperlyConfigured
+        ) as e:
             TestAdapter().get_list_table_class_staff_view()
         self.assertIn("anvil_consortium_manager.models.Workspace", str(e.exception))
 
@@ -482,14 +501,17 @@ class WorkspaceAdapterTest(TestCase):
     def test_list_table_class_view_custom(self):
         """get_list_table_class returns the correct table when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class_view", tables.TestWorkspaceDataUserTable)
-        self.assertEqual(TestAdapter().get_list_table_class_view(), tables.TestWorkspaceDataUserTable)
+        with patch.object(
+            TestAdapter,
+            "list_table_class_view",
+            tables.TestWorkspaceDataUserTable,
+        ):
+            self.assertEqual(TestAdapter().get_list_table_class_view(), tables.TestWorkspaceDataUserTable)
 
     def test_list_table_class_view_none(self):
         """get_list_table_class raises ImproperlyConfigured when list_table_class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class_view", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "list_table_class_view", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_list_table_class_view()
 
     def test_list_table_class_view_wrong_model(self):
@@ -501,8 +523,9 @@ class WorkspaceAdapterTest(TestCase):
                 fields = ("email",)
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "list_table_class_view", TestTable)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "list_table_class_view", TestTable), self.assertRaises(
+            ImproperlyConfigured
+        ) as e:
             TestAdapter().get_list_table_class_view()
         self.assertIn("anvil_consortium_manager.models.Workspace", str(e.exception))
 
@@ -516,14 +539,13 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_form_class_custom(self):
         """get_workspace_form_class returns the correct form when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_form_class", forms.TestWorkspaceForm)
-        self.assertEqual(TestAdapter().get_workspace_form_class(), forms.TestWorkspaceForm)
+        with patch.object(TestAdapter, "workspace_form_class", forms.TestWorkspaceForm):
+            self.assertEqual(TestAdapter().get_workspace_form_class(), forms.TestWorkspaceForm)
 
     def test_get_workspace_form_class_none(self):
         """get_workspace_form_class raises exception if form class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_form_class", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "workspace_form_class", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_form_class()
 
     def test_get_workspace_form_class_wrong_model(self):
@@ -535,8 +557,7 @@ class WorkspaceAdapterTest(TestCase):
                 model = Account
                 fields = ("email",)
 
-        setattr(TestAdapter, "workspace_form_class", TestForm)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "workspace_form_class", TestForm), self.assertRaises(ImproperlyConfigured) as e:
             TestAdapter().get_workspace_form_class()
         self.assertIn("workspace_form_class Meta model", str(e.exception))
 
@@ -547,8 +568,7 @@ class WorkspaceAdapterTest(TestCase):
         class TestForm(Form):
             pass
 
-        setattr(TestAdapter, "workspace_form_class", TestForm)
-        with self.assertRaises(ImproperlyConfigured) as e:
+        with patch.object(TestAdapter, "workspace_form_class", TestForm), self.assertRaises(ImproperlyConfigured) as e:
             TestAdapter().get_workspace_form_class()
         self.assertIn("ModelForm", str(e.exception))
 
@@ -562,14 +582,13 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_data_form_class_custom(self):
         """get_workspace_data_form_class returns the correct form when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_data_form_class", forms.TestWorkspaceDataForm)
-        self.assertEqual(TestAdapter().get_workspace_data_form_class(), forms.TestWorkspaceDataForm)
+        with patch.object(TestAdapter, "workspace_data_form_class", forms.TestWorkspaceDataForm):
+            self.assertEqual(TestAdapter().get_workspace_data_form_class(), forms.TestWorkspaceDataForm)
 
     def test_get_workspace_data_form_class_none(self):
         """get_workspace_data_form_class raises exception if form class is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_data_form_class", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "workspace_data_form_class", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_form_class()
 
     def test_get_workspace_data_form_class_missing_workspace(self):
@@ -581,8 +600,9 @@ class WorkspaceAdapterTest(TestCase):
                 fields = ("study_name",)
 
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_data_form_class", TestFormClass)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "workspace_data_form_class", TestFormClass), self.assertRaises(
+            ImproperlyConfigured
+        ):
             TestAdapter().get_workspace_data_form_class()
 
     def test_get_workspace_data_model_default(self):
@@ -592,21 +612,19 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_data_model_custom(self):
         """get_workspace_data_model returns the correct model when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_data_model", models.TestWorkspaceData)
-        self.assertEqual(TestAdapter().get_workspace_data_model(), models.TestWorkspaceData)
+        with patch.object(TestAdapter, "workspace_data_model", models.TestWorkspaceData):
+            self.assertEqual(TestAdapter().get_workspace_data_model(), models.TestWorkspaceData)
 
     def test_get_workspace_data_model_subclass(self):
         """workspace_data_model must be a subclass of models.BaseWorkspaceData"""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_data_model", forms.TestWorkspaceDataForm)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "workspace_data_model", Account), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()
 
     def test_get_workspace_data_model_none(self):
         """get_workspace_data_model raises ImproperlyConfigured when workspace_data_model is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_data_model", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "workspace_data_model", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_data_model()
 
     def test_get_type_default(self):
@@ -619,14 +637,13 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_type_custom(self):
         """get_type returns the correct model when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "type", "test_adapter")
-        self.assertEqual(TestAdapter().get_type(), "test_adapter")
+        with patch.object(TestAdapter, "type", "test_adapter"):
+            self.assertEqual(TestAdapter().get_type(), "test_adapter")
 
     def test_get_type_none(self):
         """get_type raises ImproperlyConfigured when type is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "type", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "type", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_type()
 
     def test_get_name_default(self):
@@ -639,8 +656,8 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_name_custom(self):
         """get_name returns the correct model when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "name", "Test")
-        self.assertEqual(TestAdapter().get_name(), "Test")
+        with patch.object(TestAdapter, "name", "Test"):
+            self.assertEqual(TestAdapter().get_name(), "Test")
 
     def test_get_description_default(self):
         """get_description returns the correct string when using the default adapter."""
@@ -652,21 +669,19 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_description_custom(self):
         """get_description returns the correct model when using a custom adapter."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "name", "Test")
-        self.assertEqual(TestAdapter().get_description(), "test desc")
+        with patch.object(TestAdapter, "description", "test desc"):
+            self.assertEqual(TestAdapter().get_description(), "test desc")
 
     def test_get_description_none(self):
         """get_description raises ImproperlyConfigured when type is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "description", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "description", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_description()
 
     def test_get_name_none(self):
         """get_name raises ImproperlyConfigured when type is not set."""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "name", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "name", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_name()
 
     def test_get_workspace_detail_template_name_default(self):
@@ -679,17 +694,16 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_detail_template_name_custom(self):
         """get_workspace_detail_template_name returns the corret template when using a custom adapter"""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_detail_template_name", "foo")
-        self.assertEqual(
-            TestAdapter().get_workspace_detail_template_name(),
-            "foo",
-        )
+        with patch.object(TestAdapter, "workspace_detail_template_name", "foo"):
+            self.assertEqual(
+                TestAdapter().get_workspace_detail_template_name(),
+                "foo",
+            )
 
     def test_get_workspace_detail_template_name_none(self):
         """get_workspace_detail_template_name raises ImproperlyConfigured when it is not set"""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_detail_template_name", None)
-        with self.assertRaises(ImproperlyConfigured):
+        with patch.object(TestAdapter, "workspace_detail_template_name", None), self.assertRaises(ImproperlyConfigured):
             TestAdapter().get_workspace_detail_template_name()
 
     def test_get_workspace_list_template_name_default(self):
@@ -702,11 +716,11 @@ class WorkspaceAdapterTest(TestCase):
     def test_get_workspace_list_template_name_custom(self):
         """get_workspace_list_template_name returns the corret template when using a custom adapter"""
         TestAdapter = self.get_test_adapter()
-        setattr(TestAdapter, "workspace_list_template_name", "foo")
-        self.assertEqual(
-            TestAdapter().workspace_list_template_name,
-            "foo",
-        )
+        with patch.object(TestAdapter, "workspace_list_template_name", "foo"):
+            self.assertEqual(
+                TestAdapter().workspace_list_template_name,
+                "foo",
+            )
 
 
 class WorkspaceAdapterRegistryTest(TestCase):
