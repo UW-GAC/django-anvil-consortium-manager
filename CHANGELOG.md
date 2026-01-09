@@ -13,6 +13,7 @@
     -  log any exceptions in `before_anvil_create`, `after_anvil_create`, or `after_anvil_import` adapter methods
     - show the user a message if an exception occurs
 * Break advanced docs into its own TOC and sub-section source documents
+* Reduce the number of defined test adapters in favor of mocking in tests
 
 ## 0.33.0 (2025-08-04)
 
