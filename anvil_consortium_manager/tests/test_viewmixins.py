@@ -23,17 +23,20 @@ class RegisteredWorkspaceAdaptersMixinTest(TestCase):
 
     def tearDown(self):
         """Clean up after tests."""
+        super().tearDown()
         # Unregister all adapters.
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
-        super().tearDown()
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
 
     def get_view_class(self):
         return viewmixins.RegisteredWorkspaceAdaptersMixin
 
     def test_context_registered_workspace_adapters_with_one_type(self):
         """registered_workspace_adapters contains an instance of DefaultWorkspaceAdapter."""
+        # The test app has two, so we need to unregister one of them.
+        workspace_adapter_registry.unregister(TestWorkspaceAdapter)
         context = self.get_view_class()().get_context_data()
         self.assertIn("registered_workspace_adapters", context)
         workspace_types = context["registered_workspace_adapters"]
@@ -42,7 +45,6 @@ class RegisteredWorkspaceAdaptersMixinTest(TestCase):
 
     def test_context_registered_workspace_adapters_with_two_types(self):
         """registered_workspace_adapters contains an instance of a test adapter when it is registered."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         context = self.get_view_class()().get_context_data()
         self.assertIn("registered_workspace_adapters", context)
         workspace_types = context["registered_workspace_adapters"]

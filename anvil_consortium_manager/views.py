@@ -188,7 +188,10 @@ class AccountDetail(
         context["show_reactivate_button"] = context["is_inactive"]
         context["show_unlink_button"] = self.object.user is not None
         context["unlinked_users"] = self.object.unlinked_users.all()
-
+        try:
+            context["user_detail_link"] = self.object.user.get_absolute_url()
+        except AttributeError:
+            context["user_detail_link"] = None
         context["group_table"] = tables.GroupAccountMembershipStaffTable(
             self.object.groupaccountmembership_set.all(),
             exclude=["account", "is_service_account"],

@@ -200,6 +200,14 @@ class IgnoredManagedGroupMembershipDetail(auth.AnVILConsortiumManagerStaffViewRe
             )
         return obj
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        try:
+            context["user_detail_link"] = self.object.added_by.get_absolute_url()
+        except AttributeError:
+            context["user_detail_link"] = None
+        return context
+
 
 class IgnoredManagedGroupMembershipCreate(
     auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, CreateView
@@ -568,6 +576,14 @@ class IgnoredWorkspaceSharingDetail(auth.AnVILConsortiumManagerStaffViewRequired
                 _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        try:
+            context["user_detail_link"] = self.object.added_by.get_absolute_url()
+        except AttributeError:
+            context["user_detail_link"] = None
+        return context
 
 
 class IgnoredWorkspaceSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView):

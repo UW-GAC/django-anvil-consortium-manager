@@ -22,7 +22,12 @@ class TestAppSettings(TestCase):
         with self.assertRaisesMessage(ImproperlyConfigured, "ANVIL_AUDIT_CACHE is required in settings.py"):
             app_settings.AUDIT_CACHE
 
-    def test_workspace_adapters(self):
+    @override_settings(
+        ANVIL_WORKSPACE_ADAPTERS=[
+            "anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter",
+        ]
+    )
+    def test_workspace_adapters_one(self):
         # Using test settings.
         self.assertEqual(
             app_settings.WORKSPACE_ADAPTERS, ["anvil_consortium_manager.adapters.default.DefaultWorkspaceAdapter"]

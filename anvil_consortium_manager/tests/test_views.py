@@ -36,12 +36,6 @@ from .test_app import forms as app_forms
 from .test_app import models as app_models
 from .test_app import tables as app_tables
 from .test_app.adapters import (
-    TestAccountAdapter,
-    TestAccountHookFailAdapter,
-    TestAfterWorkspaceCreateAdapter,
-    TestAfterWorkspaceImportAdapter,
-    TestBeforeWorkspaceCreateAdapter,
-    TestForeignKeyWorkspaceAdapter,
     TestWorkspaceAdapter,
     TestWorkspaceWithSharingAdapter,
 )
@@ -1665,11 +1659,16 @@ class AccountDetailTest(TestCase):
             return "test_profile_{}".format(self.username)
 
         UserModel = get_user_model()
-        setattr(UserModel, "get_absolute_url", foo)
         user = UserModel.objects.create(username="testuser2", password="testpassword")
         account = factories.AccountFactory.create(verified=True, verified_email_entry__user=user)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(account.uuid))
+        with patch.object(
+            UserModel,
+            "get_absolute_url",
+            return_value="test_profile_{}".format(user.username),
+            create=True,
+        ):
+            response = self.client.get(self.get_url(account.uuid))
         self.assertInHTML(
             """<a href="test_profile_testuser2">testuser2</a>""",
             response.content.decode(),
@@ -2206,7 +2205,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         response = self.client.post(self.get_url(), {"email": email})
         self.assertRedirects(response, reverse(settings.LOGIN_REDIRECT_URL))
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_redirect_custom(self):
         """View redirects to the correct URL."""
         email = "test@example.com"
@@ -2214,7 +2212,11 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"email": email})
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_link_redirect",
+            "test_login",
+        ):
+            response = self.client.post(self.get_url(), {"email": email})
         # import ipdb; ipdb.set_trace()
         self.assertRedirects(response, reverse("test_login"))
 
@@ -2243,7 +2245,6 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(url, mail.outbox[0].body)
 
     @freeze_time("2022-11-22 03:12:34")
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_email_is_sent_custom_subject(self):
         """An email is sent when the form is submitted correctly."""
         email = "test@example.com"
@@ -2251,7 +2252,11 @@ class AccountLinkTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        self.client.post(self.get_url(), {"email": email})
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_link_email_subject",
+            "custom subject",
+        ):
+            self.client.post(self.get_url(), {"email": email})
         # One message has been sent.
         self.assertEqual(len(mail.outbox), 1)
         # The subject is correct.
@@ -2769,58 +2774,56 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
             # Verify hook called
             mock_verify_function.assert_called_once()
 
-    @override_settings(
-        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountHookFailAdapter",
-        ADMINS=[("Admin", "admin@example.com")],
-    )
+    @override_settings(ADMINS=[("Admin", "admin@example.com")])
     def test_after_account_link_hook_fail_handled(self):
-        with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
-            email = "test@example.com"
-            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
-            token = account_verification_token.make_token(email_entry)
-            api_url = self.get_api_url(email)
-            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
-            # Need a client because messages are added.
-            self.client.force_login(self.user)
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        error_message = "TestAccountHookFailAdapter:after_account_verification:test_exception"
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.after_account_verification",
+            side_effect=Exception(error_message),
+        ), self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
             response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-            account_object = models.Account.objects.latest("pk")
-            # Assert success
-            self.assertEqual(response.status_code, 200)
-
             # Verify log contents contain message from adapter exception
-            self.assertIn(TestAccountHookFailAdapter.account_link_verify_exception_log_msg, log_context.output[0])
+            self.assertIn(error_message, log_context.output[0])
             # Verify log contents contain views log of exception caught
             self.assertIn(views.AccountLinkVerify.log_message_after_account_link_failed, log_context.output[0])
 
-            # Get the 2nd email from the outbox
-            self.assertEqual(len(mail.outbox), 2)
-            email = mail.outbox[0]
+        account_object = models.Account.objects.latest("pk")
+        # Assert success
+        self.assertEqual(response.status_code, 200)
 
-            # Verify the recipient
-            self.assertEqual(email.to, ["admin@example.com"])
+        # Error notification email
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
 
-            # Verify the subject. Note that when using mail_admins, django prefixes the subject with
-            # settings.EMAIL_SUBJECT_PREFIX
-            self.assertIn(
-                views.AccountLinkVerify.mail_subject_after_account_link_failed,
-                email.subject,
-            )
+        # Verify the recipient
+        self.assertEqual(email.to, ["admin@example.com"])
 
-            # Verify content in the email body
-            error_description_string = f"Exception: {TestAccountHookFailAdapter.account_link_verify_exception_log_msg}"
-            context = {
-                "account": account_object,
-                "email_entry": email_entry,
-                "error_description": error_description_string,
-                "hook": "after_account_verification",
-            }
-            expected_content = render_to_string(
-                views.AccountLinkVerify.mail_template_after_account_link_failed, context
-            )
+        # Verify the subject. Note that when using mail_admins, django prefixes the subject with
+        # settings.EMAIL_SUBJECT_PREFIX
+        self.assertIn(
+            views.AccountLinkVerify.mail_subject_after_account_link_failed,
+            email.subject,
+        )
 
-            self.assertEqual(email.body, expected_content)
+        # Verify content in the email body
+        error_description_string = f"Exception: {error_message}"
+        context = {
+            "account": account_object,
+            "email_entry": email_entry,
+            "error_description": error_description_string,
+            "hook": "after_account_verification",
+        }
+        expected_content = render_to_string(views.AccountLinkVerify.mail_template_after_account_link_failed, context)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
+        self.assertEqual(email.body, expected_content)
+
     def test_custom_redirect(self):
         """A user can successfully verify their email."""
         email = "test@example.com"
@@ -2830,7 +2833,11 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         # Need a client because messages are added.
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_link_redirect",
+            "test_login",
+        ):
+            response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
         self.assertRedirects(response, "/test_login/")
 
     def test_user_email_entry_does_not_exist(self):
@@ -3172,7 +3179,6 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         # No email is sent.
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_notification_email(self):
         """Notification email is sent if account_verification_notification_email set."""
         email = "test1@example.com"
@@ -3181,37 +3187,33 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
         api_url = self.get_api_url(email)
         self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(email_entry.uuid, token))
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.account_verification_notification_email",
+            "test@example.com",
+        ):
+            response = self.client.get(self.get_url(email_entry.uuid, token))
         self.assertEqual(response.status_code, 302)
         # An email is sent.
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(len(mail.outbox[0].to), 1)
         self.assertIn("test@example.com", mail.outbox[0].to)
 
-    @override_settings(
-        ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter",
-        ADMINS=[("Admin", "admin@example.com")],
-    )
-    @patch.object(
-        TestAccountAdapter,
-        "send_account_verification_notification_email",
-    )
-    def test_send_account_verification_notification_email_hook_fail_handled(self, mock):
+    @override_settings(ADMINS=[("Admin", "admin@example.com")])
+    def test_send_account_verification_notification_email_hook_fail_handled(self):
+        email = "test@example.com"
+        email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
+        token = account_verification_token.make_token(email_entry)
+        api_url = self.get_api_url(email)
+        self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
+        # Need a client because messages are added.
+        self.client.force_login(self.user)
+        # Mock the error message, also need to assert logs in the with statement.
         error_message = "send_account_verification_notification_email:test_exception"
-        mock.side_effect = Exception(error_message)
-        with self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
-            email = "test@example.com"
-            email_entry = factories.UserEmailEntryFactory.create(user=self.user, email=email)
-            token = account_verification_token.make_token(email_entry)
-            api_url = self.get_api_url(email)
-            self.anvil_response_mock.add(responses.GET, api_url, status=200, json=self.get_api_json_response(email))
-            # Need a client because messages are added.
-            self.client.force_login(self.user)
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.send_account_verification_notification_email",
+            side_effect=Exception(error_message),
+        ), self.assertLogs("anvil_consortium_manager", level="ERROR") as log_context:
             response = self.client.get(self.get_url(email_entry.uuid, token), follow=True)
-            account_object = models.Account.objects.latest("pk")
-            # Assert success
-            self.assertEqual(response.status_code, 200)
-
             # Verify log contents contain message from adapter exception
             self.assertIn(error_message, log_context.output[0])
             # Verify log contents contain views log of exception caught
@@ -3219,34 +3221,37 @@ class AccountLinkVerifyTest(AnVILAPIMockTestMixin, TestCase):
                 views.AccountLinkVerify.log_message_send_account_verification_notification_email_failed,
                 log_context.output[0],
             )
+        account_object = models.Account.objects.latest("pk")
+        # Assert success
+        self.assertEqual(response.status_code, 200)
 
-            # Only one the error notification email was sent because the hook failed.
-            self.assertEqual(len(mail.outbox), 1)
-            email = mail.outbox[0]
+        # Only one the error notification email was sent because the hook failed.
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
 
-            # Verify the recipient
-            self.assertEqual(email.to, ["admin@example.com"])
+        # Verify the recipient
+        self.assertEqual(email.to, ["admin@example.com"])
 
-            # Verify the subject. Note that when using mail_admins, django prefixes the subject with
-            # settings.EMAIL_SUBJECT_PREFIX
-            self.assertIn(
-                views.AccountLinkVerify.mail_subject_send_account_verification_notification_email_failed,
-                email.subject,
-            )
+        # Verify the subject. Note that when using mail_admins, django prefixes the subject with
+        # settings.EMAIL_SUBJECT_PREFIX
+        self.assertIn(
+            views.AccountLinkVerify.mail_subject_send_account_verification_notification_email_failed,
+            email.subject,
+        )
 
-            # Verify content in the email body
-            error_description_string = f"Exception: {error_message}"
-            context = {
-                "account": account_object,
-                "email_entry": email_entry,
-                "error_description": error_description_string,
-                "hook": "send_account_verification_notification_email",
-            }
-            expected_content = render_to_string(
-                views.AccountLinkVerify.mail_template_send_account_verification_notification_email_failed, context
-            )
+        # Verify content in the email body
+        error_description_string = f"Exception: {error_message}"
+        context = {
+            "account": account_object,
+            "email_entry": email_entry,
+            "error_description": error_description_string,
+            "hook": "send_account_verification_notification_email",
+        }
+        expected_content = render_to_string(
+            views.AccountLinkVerify.mail_template_send_account_verification_notification_email_failed, context
+        )
 
-            self.assertEqual(email.body, expected_content)
+        self.assertEqual(email.body, expected_content)
 
 
 class AccountListTest(TestCase):
@@ -3414,11 +3419,17 @@ class AccountListTest(TestCase):
         self.assertIn(active_object, response.context_data["table"].data)
         self.assertIn(inactive_object, response.context_data["table"].data)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_table_class",
+            app_tables.TestAccountStaffTable,
+        ), patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_filterset_class",
+            TestAccountListFilter,
+        ):
+            response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
@@ -3596,11 +3607,17 @@ class AccountActiveListTest(TestCase):
         self.assertIn(active_object, response.context_data["table"].data)
         self.assertNotIn(inactive_object, response.context_data["table"].data)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_table_class",
+            app_tables.TestAccountStaffTable,
+        ), patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_filterset_class",
+            TestAccountListFilter,
+        ):
+            response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
@@ -3772,11 +3789,17 @@ class AccountInactiveListTest(TestCase):
         self.assertNotIn(active_object, response.context_data["table"].data)
         self.assertIn(inactive_object, response.context_data["table"].data)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter(self):
         """Displays the correct table if specified in the adapter."""
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url())
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_table_class",
+            app_tables.TestAccountStaffTable,
+        ), patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.list_filterset_class",
+            TestAccountListFilter,
+        ):
+            response = self.client.get(self.get_url())
         self.assertIn("table", response.context_data)
         self.assertIsInstance(response.context_data["table"], app_tables.TestAccountStaffTable)
         self.assertIsInstance(response.context_data["filter"], TestAccountListFilter)
@@ -4770,19 +4793,29 @@ class AccountAutocompleteTest(TestCase):
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 0)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter_queryset(self):
         """Filters queryset correctly if custom get_autocomplete_queryset is set in adapter."""
         account_1 = factories.AccountFactory.create(email="test@bar.com")
         account_2 = factories.AccountFactory.create(email="foo@test.com")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), {"q": "test"})
+
+        def get_autocomplete_queryset(*args, **kwargs):
+            queryset = args[0]
+            q = args[1]
+            if q:
+                queryset = queryset.filter(email__startswith=q)
+            return queryset
+
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.get_autocomplete_queryset",
+            side_effect=get_autocomplete_queryset,
+        ):
+            response = self.client.get(self.get_url(), {"q": "test"})
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 1)
         self.assertIn(account_1.pk, returned_ids)
         self.assertNotIn(account_2.pk, returned_ids)
 
-    @override_settings(ANVIL_ACCOUNT_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestAccountAdapter")
     def test_adapter_labels(self):
         """Test view labels."""
         account = factories.AccountFactory.create(email="test@bar.com")
@@ -4791,8 +4824,17 @@ class AccountAutocompleteTest(TestCase):
         request.user = self.user
         view = views.AccountAutocomplete()
         view.setup(request)
-        self.assertEqual(view.get_result_label(account), "TEST test@bar.com")
-        self.assertEqual(view.get_selected_result_label(account), "TEST test@bar.com")
+
+        def get_autocomplete_label(*args, **kwargs):
+            account = args[0]
+            return "TEST {}".format(account.email)
+
+        with patch(
+            "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.get_autocomplete_label",
+            side_effect=get_autocomplete_label,
+        ):
+            self.assertEqual(view.get_result_label(account), "TEST test@bar.com")
+            self.assertEqual(view.get_selected_result_label(account), "TEST test@bar.com")
 
 
 class ManagedGroupDetailTest(TestCase):
@@ -5394,32 +5436,51 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that no object is created.
         self.assertEqual(models.ManagedGroup.objects.count(), 0)
 
-    @override_settings(
-        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupAfterAnVILCreateAdapter"
-    )
     def test_post_custom_adapter_after_anvil_create(self):
         """The after_anvil_create method is run after a managed group is created."""
         # Create a group to add this group to
         api_url = self.get_api_url("test-group")
         self.anvil_response_mock.add(responses.POST, api_url, status=self.api_success_code)
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"name": "test-group"})
+
+        # Function to use in mocking.
+        def after_anvil_create(*args, **kwargs):
+            # Change the name of the group to something else.
+            managed_group = args[0]
+            managed_group.name = "changed-name"
+            managed_group.save()
+
+        adapter_class = get_managed_group_adapter()
+        with patch.object(adapter_class, "after_anvil_create", side_effect=after_anvil_create):
+            response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         # Check that the name was changed by the adaapter.
         new_object = models.ManagedGroup.objects.latest("pk")
         self.assertEqual(new_object.name, "changed-name")
 
-    @override_settings(
-        ANVIL_MANAGED_GROUP_ADAPTER="anvil_consortium_manager.tests.test_app.adapters.TestManagedGroupAfterAnVILCreateForeignKeyAdapter"
-    )
     def test_post_custom_adapter_after_anvil_create_fk(self):
         """The view handles using the new group in a foreign key relationship correctly."""
-        # Create a group to add this group to.
+        # Create a group to add this group to
         parent_group = factories.ManagedGroupFactory.create(name="parent-group")
+        # Set up API response
         api_url = self.get_api_url("test-group")
         self.anvil_response_mock.add(responses.POST, api_url, status=self.api_success_code)
+
+        # Function to use in mocking.
+        def after_anvil_create(*args, **kwargs):
+            # Change the name of the group to something else.
+            managed_group = args[0]
+            parent_group = models.ManagedGroup.objects.get(name="parent-group")
+            models.GroupGroupMembership.objects.create(
+                parent_group=parent_group,
+                child_group=managed_group,
+                role=models.GroupGroupMembership.RoleChoices.MEMBER,
+            )
+
         self.client.force_login(self.user)
-        response = self.client.post(self.get_url(), {"name": "test-group"})
+        adapter_class = get_managed_group_adapter()
+        with patch.object(adapter_class, "after_anvil_create", side_effect=after_anvil_create):
+            response = self.client.post(self.get_url(), {"name": "test-group"})
         self.assertEqual(response.status_code, 302)
         new_object = models.ManagedGroup.objects.latest("pk")
         # Check that the membership was created.
@@ -6446,6 +6507,7 @@ class WorkspaceLandingPageTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self):
@@ -6559,6 +6621,7 @@ class WorkspaceLandingPageTest(TestCase):
 
     def test_one_registered_workspace_in_context(self):
         """One registered workspace in context when only DefaultWorkspaceAdapter is registered"""
+        workspace_adapter_registry.unregister(TestWorkspaceAdapter)
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertIn("registered_workspace_adapters", response.context_data)
@@ -6566,7 +6629,6 @@ class WorkspaceLandingPageTest(TestCase):
 
     def test_two_registered_workspaces_in_context(self):
         """Two registered workspaces in context when two workspace adapters are registered"""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url())
         self.assertIn("registered_workspace_adapters", response.context_data)
@@ -6591,6 +6653,7 @@ class WorkspaceDetailTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_view(self):
@@ -7036,11 +7099,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_render_custom_template_name(self):
         """Rendering a correct template when custom template name is specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
@@ -7059,8 +7117,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_context_workspace_type_display_name_custom_adapter(self):
         """workspace_type_display_name is present in context with a custom adapter."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
@@ -7073,11 +7129,13 @@ class WorkspaceDetailTest(TestCase):
 
     def test_context_workspace_with_extra_context(self):
         """workspace_type_display_name is present in context with a custom adapter."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(workspace.get_absolute_url())
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.get_extra_detail_context_data",
+            return_value={"extra_text": "Extra text"},
+        ):
+            response = self.client.get(workspace.get_absolute_url())
         self.assertIn("extra_text", response.context)
         self.assertEqual(response.context["extra_text"], "Extra text")
 
@@ -7165,7 +7223,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_clone_links_with_two_registered_workspace_adapters(self):
         """Links to clone into each type of workspace appear when there are two registered workspace types."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         edit_user = User.objects.create_user(username="edit", password="test")
         edit_user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
@@ -7300,11 +7357,6 @@ class WorkspaceDetailTest(TestCase):
 
     def test_template_block_extra_pills(self):
         """The extra_pills template block is shown on the detail page."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
@@ -7349,6 +7401,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -8039,11 +8092,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -8055,11 +8103,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_creates_workspace_data(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -8103,11 +8146,6 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
@@ -8143,22 +8181,12 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_custom_workspace_form_class(self):
         """No workspace is created if custom workspace form is invalid."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertIsInstance(response.context_data["form"], app_forms.TestWorkspaceForm)
 
     def test_adapter_does_not_create_object_if_workspace_form_invalid(self):
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
@@ -8184,22 +8212,17 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(responses.calls), 0)
 
     def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
-        self.workspace_type = "test_fk"
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(self.workspace_type))
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ):
+            response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
 
     def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
-        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         other_workspace = factories.WorkspaceFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -8214,26 +8237,33 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-other_workspace": other_workspace.pk,
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ), patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_form_class",
+            app_forms.TestForeignKeyWorkspaceDataForm,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-other_workspace": other_workspace.pk,
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # workspace_type is set properly.
         self.assertEqual(
             new_workspace.workspace_type,
-            TestForeignKeyWorkspaceAdapter().get_type(),
+            TestWorkspaceAdapter().get_type(),
         )
         # Workspace data is added.
         self.assertEqual(app_models.TestForeignKeyWorkspaceData.objects.count(), 1)
@@ -8243,11 +8273,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_before_anvil_create(self):
         """The before_anvil_create method is run before a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestBeforeWorkspaceCreateAdapter)
-        self.workspace_type = TestBeforeWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -8260,20 +8286,31 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.name = workspace.name + "-2"
+            workspace.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.before_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
@@ -8281,11 +8318,7 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_after_anvil_create(self):
         """The after_anvil_create method is run after a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestAfterWorkspaceCreateAdapter)
-        self.workspace_type = TestAfterWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -8298,25 +8331,36 @@ class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.testworkspacedata.study_name = "create"
+            workspace.testworkspacedata.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.after_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
-        self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "FOO")
+        self.assertEqual(new_workspace.testworkspacedata.study_name, "create")
 
     def test_before_anvil_create_adapter_exception(self):
         """One error message is added if after_anvil_create raises one error."""
@@ -8656,6 +8700,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -9785,11 +9830,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project_name = "test-billing-project"
         workspace_name = "test-workspace"
@@ -9812,11 +9852,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_creates_workspace_data(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
@@ -9872,11 +9907,6 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
@@ -10041,11 +10071,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
     def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
-        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
@@ -10058,16 +10084,19 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=200,
             json=[self.get_api_json_response(billing_project.name, workspace_name)],
         )
-        self.client.force_login(self.user)
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ), patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_form_class",
+            app_forms.TestForeignKeyWorkspaceDataForm,
+        ):
+            self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace_type))
         self.assertEqual(response.status_code, 200)
 
     def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
-        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         other_workspace = factories.WorkspaceFactory.create()
@@ -10096,24 +10125,31 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             json=self.get_api_json_response(billing_project.name, workspace_name),
         )
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "workspace": billing_project.name + "/" + workspace_name,
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-other_workspace": other_workspace.pk,
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ), patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_form_class",
+            app_forms.TestForeignKeyWorkspaceDataForm,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "workspace": billing_project.name + "/" + workspace_name,
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-other_workspace": other_workspace.pk,
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         self.assertEqual(
             new_workspace.workspace_type,
-            TestForeignKeyWorkspaceAdapter().get_type(),
+            TestWorkspaceAdapter().get_type(),
         )
         # Workspace data is added.
         self.assertEqual(app_models.TestForeignKeyWorkspaceData.objects.count(), 1)
@@ -10123,12 +10159,7 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_after_anvil_import(self):
         """The after_anvil_create method is run after a workspace is imported."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestAfterWorkspaceImportAdapter)
-        self.workspace_type = TestAfterWorkspaceImportAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
         workspace_name = "workspace"
         # Available workspaces API call.
@@ -10155,24 +10186,35 @@ class WorkspaceImportTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             json=self.get_api_json_response(billing_project.name, workspace_name),
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.testworkspacedata.study_name = "import"
+            workspace.testworkspacedata.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace_type),
-            {
-                "workspace": billing_project.name + "/" + workspace_name,
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.after_anvil_import",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(self.workspace_type),
+                {
+                    "workspace": billing_project.name + "/" + workspace_name,
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
-        self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "imported!")
+        self.assertEqual(new_workspace.testworkspacedata.study_name, "import")
 
     def test_can_import_workspace_no_access_but_owner(self):
         billing_project = factories.BillingProjectFactory.create(name="billing-project")
@@ -10552,6 +10594,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -11419,11 +11462,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_includes_workspace_data_formset(self):
         """Response includes the workspace data formset if specified."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(
@@ -11441,11 +11479,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_creates_workspace_data(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -11494,11 +11527,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_does_not_create_objects_if_workspace_data_form_invalid(self):
         """Posting invalid data to the workspace_data_form form does not create a workspace when using an adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         billing_project = factories.BillingProjectFactory.create()
         self.client.force_login(self.user)
@@ -11538,8 +11566,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_custom_workspace_form_class(self):
         """Form uses the custom workspace form as a superclass."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = "test"
         self.client.force_login(self.user)
         response = self.client.get(
@@ -11555,8 +11581,6 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_custom_workspace_form_with_error_in_workspace_form(self):
         """Form uses the custom workspace form as a superclass."""
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         billing_project = factories.BillingProjectFactory.create()
         self.workspace_type = "test"
         self.client.force_login(self.user)
@@ -11630,28 +11654,27 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
 
     def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
-        self.workspace_type = "test_fk"
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(
-                self.workspace_to_clone.billing_project.name,
-                self.workspace_to_clone.name,
-                self.workspace_type,
-            ),
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ), patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_form_class",
+            app_forms.TestForeignKeyWorkspaceDataForm,
+        ):
+            response = self.client.get(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+            )
         self.assertEqual(response.status_code, 200)
 
     def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
-        self.workspace_type = TestForeignKeyWorkspaceAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         other_workspace = factories.WorkspaceFactory.create()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
@@ -11667,30 +11690,37 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             match=[responses.matchers.json_params_matcher(json_data)],
         )
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(
-                self.workspace_to_clone.billing_project.name,
-                self.workspace_to_clone.name,
-                self.workspace_type,
-            ),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-other_workspace": other_workspace.pk,
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ), patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_form_class",
+            app_forms.TestForeignKeyWorkspaceDataForm,
+        ):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-other_workspace": other_workspace.pk,
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # workspace_type is set properly.
         self.assertEqual(
             new_workspace.workspace_type,
-            TestForeignKeyWorkspaceAdapter().get_type(),
+            TestWorkspaceAdapter().get_type(),
         )
         # Workspace data is added.
         self.assertEqual(app_models.TestForeignKeyWorkspaceData.objects.count(), 1)
@@ -11700,11 +11730,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_before_anvil_create(self):
         """The before_anvil_create method is run before a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestBeforeWorkspaceCreateAdapter)
-        self.workspace_type = TestBeforeWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -11718,24 +11744,35 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.name = workspace.name + "-2"
+            workspace.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(
-                self.workspace_to_clone.billing_project.name,
-                self.workspace_to_clone.name,
-                self.workspace_type,
-            ),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.before_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
@@ -11743,11 +11780,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_post_custom_adapter_after_anvil_create(self):
         """The after_anvil_create method is run after a workspace is created."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestAfterWorkspaceCreateAdapter)
-        self.workspace_type = TestAfterWorkspaceCreateAdapter().get_type()
+        self.workspace_type = TestWorkspaceAdapter().get_type()
         billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
         json_data = {
             "namespace": "test-billing-project",
@@ -11761,29 +11794,40 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             status=self.api_success_code,
             match=[responses.matchers.json_params_matcher(json_data)],
         )
+
+        def side_effect(*args, **kwargs):
+            workspace = args[0]
+            # Set the extra field.
+            workspace.testworkspacedata.study_name = "create"
+            workspace.testworkspacedata.save()
+
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(
-                self.workspace_to_clone.billing_project.name,
-                self.workspace_to_clone.name,
-                self.workspace_type,
-            ),
-            {
-                "billing_project": billing_project.pk,
-                "name": "test-workspace",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 0,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-test_field": "my field value",
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.after_anvil_create",
+            side_effect=side_effect,
+        ):
+            response = self.client.post(
+                self.get_url(
+                    self.workspace_to_clone.billing_project.name,
+                    self.workspace_to_clone.name,
+                    self.workspace_type,
+                ),
+                {
+                    "billing_project": billing_project.pk,
+                    "name": "test-workspace",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 0,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-study_name": "my field value",
+                },
+            )
         self.assertEqual(response.status_code, 302)
         # The workspace is created.
         new_workspace = models.Workspace.objects.latest("pk")
         # The test_field field was modified by the adapter.
-        self.assertEqual(new_workspace.testworkspacemethodsdata.test_field, "FOO")
+        self.assertEqual(new_workspace.testworkspacedata.study_name, "create")
 
     def test_before_anvil_create_adapter_exception(self):
         """One error message is added if after_anvil_create raises one error."""
@@ -12146,6 +12190,7 @@ class WorkspaceUpdateTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -12308,7 +12353,6 @@ class WorkspaceUpdateTest(TestCase):
     def test_can_update_workspace_data(self):
         """Can update workspace data when updating the workspace."""
         # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         workspace_data = app_models.TestWorkspaceData.objects.create(workspace=workspace, study_name="original name")
         # Need a client for messages.
@@ -12331,8 +12375,6 @@ class WorkspaceUpdateTest(TestCase):
         self.assertEqual(workspace_data.study_name, "updated name")
 
     def test_custom_adapter_workspace_data(self):
-        # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         app_models.TestWorkspaceData.objects.create(workspace=workspace, study_name="original name")
         # Need a client for messages.
@@ -12347,7 +12389,6 @@ class WorkspaceUpdateTest(TestCase):
     def test_no_updates_if_invalid_workspace_data_form(self):
         """Nothing is updated if workspace_data_form is invalid."""
         # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(
             workspace_type=TestWorkspaceAdapter().get_type(),
             note="original note",
@@ -12378,7 +12419,6 @@ class WorkspaceUpdateTest(TestCase):
     def test_custom_adapter_workspace_form(self):
         """Workspace form is subclass of the custom adapter form."""
         # Note that we need to use the test adapter for this.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         app_models.TestWorkspaceData.objects.create(workspace=workspace, study_name="original name")
         # Need a client for messages.
@@ -12391,40 +12431,46 @@ class WorkspaceUpdateTest(TestCase):
         self.assertIn("note", form.fields)
 
     def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
         other_workspace = factories.WorkspaceFactory.create()
-        workspace = factories.WorkspaceFactory(workspace_type=TestForeignKeyWorkspaceAdapter().get_type())
-        app_models.TestForeignKeyWorkspaceData.objects.create(workspace=workspace, other_workspace=other_workspace)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name))
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ), patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_form_class",
+            app_forms.TestForeignKeyWorkspaceDataForm,
+        ):
+            workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
+            app_models.TestForeignKeyWorkspaceData.objects.create(workspace=workspace, other_workspace=other_workspace)
+            response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name))
         self.assertEqual(response.status_code, 200)
 
     def test_post_workspace_data_with_second_foreign_key_to_workspace(self):
         """Posting valid data to the form creates a workspace data object when using a custom adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.register(TestForeignKeyWorkspaceAdapter)
         other_workspace = factories.WorkspaceFactory.create()
-        workspace = factories.WorkspaceFactory(workspace_type=TestForeignKeyWorkspaceAdapter().get_type())
-        app_models.TestForeignKeyWorkspaceData.objects.create(workspace=workspace, other_workspace=other_workspace)
         self.client.force_login(self.user)
-        response = self.client.post(
-            self.get_url(self.workspace.billing_project.name, self.workspace.name),
-            {
-                "note": "Foo",
-                # Default workspace data for formset.
-                "workspacedata-TOTAL_FORMS": 1,
-                "workspacedata-INITIAL_FORMS": 1,
-                "workspacedata-MIN_NUM_FORMS": 1,
-                "workspacedata-MAX_NUM_FORMS": 1,
-                "workspacedata-0-id": self.workspace_data.pk,
-                "workspacedata-0-other_workspace": other_workspace,
-            },
-        )
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_model",
+            app_models.TestForeignKeyWorkspaceData,
+        ), patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.workspace_data_form_class",
+            app_forms.TestForeignKeyWorkspaceDataForm,
+        ):
+            workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
+            app_models.TestForeignKeyWorkspaceData.objects.create(workspace=workspace, other_workspace=other_workspace)
+            response = self.client.post(
+                self.get_url(self.workspace.billing_project.name, self.workspace.name),
+                {
+                    "note": "Foo",
+                    # Default workspace data for formset.
+                    "workspacedata-TOTAL_FORMS": 1,
+                    "workspacedata-INITIAL_FORMS": 1,
+                    "workspacedata-MIN_NUM_FORMS": 1,
+                    "workspacedata-MAX_NUM_FORMS": 1,
+                    "workspacedata-0-id": self.workspace_data.pk,
+                    "workspacedata-0-other_workspace": other_workspace,
+                },
+            )
         self.assertEqual(response.status_code, 302)
         self.workspace_data.refresh_from_db()
         self.workspace.refresh_from_db()
@@ -12721,6 +12767,7 @@ class WorkspaceListTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -12800,7 +12847,6 @@ class WorkspaceListTest(TestCase):
 
     def test_only_shows_workspaces_of_any_type(self):
         """The table includes all workspaces regardless of type."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         test_workspace = factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         default_workspace = factories.WorkspaceFactory(workspace_type=DefaultWorkspaceAdapter().get_type())
         self.client.force_login(self.view_user)
@@ -12890,6 +12936,7 @@ class WorkspaceListByTypeTest(TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -12974,11 +13021,6 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_adapter_table_class_staff_view(self):
         """Displays the correct table if specified in the adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         self.client.force_login(self.staff_view_user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -12987,11 +13029,6 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_adapter_table_class_view(self):
         """Displays the correct table if specified in the adapter."""
-        # Overriding settings doesn't work, because appconfig.ready has already run and
-        # registered the default adapter. Instead, unregister the default and register the
-        # new adapter here.
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -13000,7 +13037,6 @@ class WorkspaceListByTypeTest(TestCase):
 
     def test_only_shows_workspaces_with_correct_type(self):
         """Only workspaces with the same workspace_type are shown in the table."""
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         factories.WorkspaceFactory(workspace_type=TestWorkspaceAdapter().get_type())
         default_type = DefaultWorkspaceAdapter().get_type()
         self.client.force_login(self.view_user)
@@ -13074,8 +13110,6 @@ class WorkspaceListByTypeTest(TestCase):
         self.assertTemplateUsed(response, "anvil_consortium_manager/workspace_list.html")
 
     def test_view_with_custom_adapter_use_custom_workspace_list_template(self):
-        workspace_adapter_registry.unregister(DefaultWorkspaceAdapter)
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         self.workspace_type = TestWorkspaceAdapter().get_type()
         self.client.force_login(self.view_user)
         response = self.client.get(self.get_url(self.workspace_type))
@@ -13105,6 +13139,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         workspace_adapter_registry._registry = {}
         # Register the default adapter.
         workspace_adapter_registry.register(DefaultWorkspaceAdapter)
+        workspace_adapter_registry.register(TestWorkspaceAdapter)
         super().tearDown()
 
     def get_url(self, *args):
@@ -13280,8 +13315,6 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
 
     def test_adapter_success_url(self):
         """Redirects to the expected page."""
-        # Register a new adapter.
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
         object = factories.WorkspaceFactory.create(workspace_type=TestWorkspaceAdapter().get_type())
         # Need to use the client instead of RequestFactory to check redirection url.
         api_url = self.get_api_url(object.billing_project.name, object.name)
@@ -13520,10 +13553,6 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.default_workspace_type = DefaultWorkspaceAdapter().get_type()
-        workspace_adapter_registry.register(TestWorkspaceAdapter)
-
-    def tearDown(self):
-        workspace_adapter_registry.unregister(TestWorkspaceAdapter)
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -13639,7 +13668,19 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         # Workspace that should not match the custom autocomplete filtering.
         TestWorkspaceDataFactory.create(workspace__name="TEST-WORKSPACE")
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(workspace_1.workspace.workspace_type), {"q": "TEST"})
+
+        def get_autocomplete_queryset(*args, **kwargs):
+            queryset = args[0]
+            q = args[1]
+            if q:
+                queryset = queryset.filter(workspace__name=q)
+            return queryset
+
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.get_autocomplete_queryset",
+            side_effect=get_autocomplete_queryset,
+        ):
+            response = self.client.get(self.get_url(workspace_1.workspace.workspace_type), {"q": "TEST"})
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace_1.pk)
@@ -13650,10 +13691,23 @@ class WorkspaceAutocompleteByTypeTest(TestCase):
         # Workspace that should not match the custom autocomplete filtering.
         TestWorkspaceDataFactory.create()
         self.client.force_login(self.user)
-        response = self.client.get(
-            self.get_url(workspace.workspace.workspace_type),
-            {"forward": json.dumps({"billing_project": workspace.workspace.billing_project.pk})},
-        )
+
+        def get_autocomplete_queryset(*args, **kwargs):
+            queryset = args[0]
+            forwarded = kwargs.get("forwarded", {})
+            billing_project = forwarded.get("billing_project", None)
+            if billing_project:
+                queryset = queryset.filter(workspace__billing_project=billing_project)
+            return queryset
+
+        with patch(
+            "anvil_consortium_manager.tests.test_app.adapters.TestWorkspaceAdapter.get_autocomplete_queryset",
+            side_effect=get_autocomplete_queryset,
+        ):
+            response = self.client.get(
+                self.get_url(workspace.workspace.workspace_type),
+                {"forward": json.dumps({"billing_project": workspace.workspace.billing_project.pk})},
+            )
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace.pk)

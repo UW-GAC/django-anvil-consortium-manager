@@ -69,12 +69,13 @@ class AccountStaffTable(tables.Table):
 
     def render_user(self, record):
         """If user.get_absolute_url is defined, then include link to it. Otherwise, just show the user."""
-        if hasattr(record.user, "get_absolute_url"):
+        try:
+            record.user.get_absolute_url()
             link = """<a href="{url}">{link_text}</a>""".format(
                 link_text=str(record), url=record.user.get_absolute_url()
             )
             return mark_safe(link)
-        else:
+        except AttributeError:
             return str(record.user)
 
 

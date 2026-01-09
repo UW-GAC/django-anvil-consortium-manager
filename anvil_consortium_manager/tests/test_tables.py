@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -129,18 +131,18 @@ class AccountStaffTableTest(TestCase):
 
     def test_render_user_with_get_absolute_url(self):
         """Table renders a link to the user profile when the user has a get_absolute_url method."""
-
-        # Dynamically set the get_absolute_url method. This is hacky...
-        def foo(self):
-            return "test_profile_{}".format(self.username)
-
         UserModel = get_user_model()
-        setattr(UserModel, "get_absolute_url", foo)
         user = UserModel.objects.create(username="testuser", password="testpassword")
         self.model_factory.create(user=user)
         table = self.table_class(self.model.objects.all())
-        self.assertIn(str(user), table.rows[0].get_cell("user"))
-        self.assertIn("test_profile_testuser", table.rows[0].get_cell("user"))
+        with patch.object(
+            UserModel,
+            "get_absolute_url",
+            return_value="test_profile_testuser",
+            create=True,
+        ):
+            self.assertIn(str(user), table.rows[0].get_cell("user"))
+            self.assertIn("test_profile_testuser", table.rows[0].get_cell("user"))
 
 
 class ManagedGroupUserTableTest(TestCase):
