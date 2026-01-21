@@ -5,11 +5,21 @@
 from django.core.management.base import BaseCommand
 from django.db import connection, models
 
-from ...models import Account, UserEmailEntry
+from ...models import Account, HistoricalAccount, HistoricalUserEmailEntry, UserEmailEntry
 
 
 class Command(BaseCommand):
     help = "Converts UUID columns from char type to the native UUID type used in MariaDB 10.7+ and Django 5.0+."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--models",
+            nargs="*",
+            type=str,
+            choices=["Account", "HistoricalAccount", "HistoricalUserEmailEntry", "UserEmailEntry"],
+            help="If specified, run audit on a subset of models. Otherwise, the command will be run on Account, "
+            "HistoricalAccount, HistoricalUserEmailEntry, and UserEmailEntry.",
+        )
 
     def convert_field(self, model, field_name, null=False):
         if model._meta.get_field(field_name).model != model:  # pragma: no cover
@@ -30,5 +40,16 @@ class Command(BaseCommand):
             schema_editor.alter_field(model, old_field, new_field)
 
     def handle(self, **options):
-        self.convert_field(Account, "uuid")
-        self.convert_field(UserEmailEntry, "uuid")
+        if options["models"]:
+            models_to_convert = options["models"]
+        else:
+            models_to_convert = ["Account", "HistoricalAccount", "HistoricalUserEmailEntry", "UserEmailEntry"]
+
+        if "Account" in models_to_convert:
+            self.convert_field(Account, "uuid")
+        if "HistoricalAccount" in models_to_convert:
+            self.convert_field(HistoricalAccount, "uuid")
+        if "HistoricalUserEmailEntry" in models_to_convert:
+            self.convert_field(HistoricalUserEmailEntry, "uuid")
+        if "UserEmailEntry" in models_to_convert:
+            self.convert_field(UserEmailEntry, "uuid")

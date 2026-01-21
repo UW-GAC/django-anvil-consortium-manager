@@ -14,6 +14,7 @@
     - show the user a message if an exception occurs
 * Break advanced docs into its own TOC and sub-section source documents
 * Reduce the number of defined test adapters in favor of mocking in tests
+* Fix `convert_mariadb_uuid_fields` command to also convert historical models.
 
 ## 0.33.0 (2025-08-04)
 
