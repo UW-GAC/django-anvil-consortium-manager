@@ -1,6 +1,6 @@
 # Change log
 
-## 0.34.0 (Devel)
+## 0.34.0 (2026-12-21)
 
 * Add support for Django 5.2.
 * Allow `ManagedGroups` to be filtered by whether or not they are used as an auth domain for a workspace
