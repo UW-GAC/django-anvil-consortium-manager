@@ -2450,6 +2450,13 @@ class WorkspaceMethodIsSharedWithGroupTest(TestCase):
         group = factories.ManagedGroupFactory.create()
         self.assertFalse(workspace.is_shared_with_group(group))
 
+    def test_shared_directly_with_group(self):
+        """The workspace is shared directly with a group."""
+        workspace = factories.WorkspaceFactory.create()
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        self.assertTrue(workspace.is_shared_with_group(group))
+
     def test_shared_with_one_group_member(self):
         """The workspace is shared with a group and the account is a member of that group."""
         workspace = factories.WorkspaceFactory.create()

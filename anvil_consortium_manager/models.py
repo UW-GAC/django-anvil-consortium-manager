@@ -975,11 +975,14 @@ class Workspace(TimeStampedModel):
             raise ValueError("group must be an instance of `ManagedGroup`.")
         # Get the list of groups that the workspace is shared with.
         workspace_groups = ManagedGroup.objects.filter(workspacegroupsharing__workspace=self)
-        # Get the list of groups that the account is in.
+        # First check if it's shared directly - this is quick.
+        if group in workspace_groups:
+            return True
+        # Otherwise, check if it's shared with any of the parents. The below query can be slow.
         if not all_parent_groups:
             all_parent_groups = group.get_all_parents()
         # Check if any of the groups that the workspace is shared with are in the account's groups.
-        if len(set(workspace_groups).intersection(set(all_parent_groups))) > 0:
+        if len(set(workspace_groups).intersection(all_parent_groups)) > 0:
             return True
         else:
             if workspace_groups.filter(is_managed_by_app=False).exists():

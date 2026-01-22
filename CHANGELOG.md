@@ -1,6 +1,6 @@
 # Change log
 
-## 0.34.0 (Devel)
+## 0.34.0 (2026-12-21)
 
 * Add support for Django 5.2.
 * Allow `ManagedGroups` to be filtered by whether or not they are used as an auth domain for a workspace
@@ -15,6 +15,7 @@
 * Break advanced docs into its own TOC and sub-section source documents
 * Reduce the number of defined test adapters in favor of mocking in tests
 * Fix `convert_mariadb_uuid_fields` command to also convert historical models.
+* Bugfix: `Workspace.is_shared_with_group` did not correctly check if a workspace was shared directly with a group instead of one of its parents
 
 ## 0.33.0 (2025-08-04)
 
