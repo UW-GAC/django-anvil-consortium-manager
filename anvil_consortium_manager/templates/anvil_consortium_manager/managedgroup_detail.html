@@ -7,10 +7,8 @@
 {% block title %}Managed Group: {{ object.name }}{% endblock %}
 
 {% block pills %}
-  {% if object.is_managed_by_app %}
-    <span class="badge bg-success">Managed by app</span>
-  {% else %}
-    <span class="badge bg-secondary">Not managed by app</span>
+  {% if not object.is_managed_by_app %}
+    <span class="badge bg-secondary"><span class="fa-solid fa-users-slash me-2"></span>Not managed by app</span>
   {% endif %}
 {% endblock pills %}
 

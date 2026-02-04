@@ -7,6 +7,10 @@
 
 {% block pills %}
 
+  {% if not object.is_managed_by_app %}
+    <span class="badge bg-secondary"><span class="fa-solid fa-users-slash me-2"></span>Not managed by app</span>
+  {% endif %}
+
   {% if has_authorization_domain_not_managed_by_app %}
   <div class="alert alert-warning my-3" role="alert">
     This workspace has at least one authorization domain that is not managed by the app, so access cannot always be determined.
@@ -64,7 +68,7 @@
     </div>
   </div>
 
-  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view and object.is_managed_by_app %}
   <div class="my-3">
     <div class="accordion" id="accordionGroups">
       <div class="accordion-item">

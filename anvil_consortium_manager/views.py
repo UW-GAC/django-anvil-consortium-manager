@@ -1111,7 +1111,7 @@ class WorkspaceDetail(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
-        if has_staff_view_perms:
+        if has_staff_view_perms and self.object.is_managed_by_app:
             context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
                 self.object.workspacegroupsharing_set.all(), exclude="workspace"
             )

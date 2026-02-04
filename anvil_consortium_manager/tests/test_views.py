@@ -5223,27 +5223,25 @@ class ManagedGroupDetailTest(TestCase):
         self.assertIn("graph", response.context_data)
 
     def test_is_managed_by_app_true_pill(self):
-        """A pill is shown indiciating that the group is not managed by the app."""
+        """A pill is shown indicating that the group is not managed by the app."""
         obj = factories.ManagedGroupFactory.create(is_managed_by_app=True)
         # Only clients load the template.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Managed by app", response.content.decode())
         self.assertNotIn("Not managed by app", response.content.decode())
 
     def test_is_managed_by_app_false_pill(self):
-        """A pill is shown indiciating that the group is not managed by the app."""
+        """A pill is shown indicating that the group is not managed by the app."""
         obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Only clients load the template.
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
         self.assertIn("Not managed by app", response.content.decode())
-        self.assertNotIn("Managed by app", response.content.decode())
 
     def test_is_managed_by_app_false_tables(self):
-        """A pill is shown indiciating that the group is not managed by the app."""
+        """A pill is shown indicating that the group is not managed by the app."""
         obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Only clients load the template.
         self.client.force_login(self.user)
@@ -7407,6 +7405,31 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("has_authorization_domain_not_managed_by_app", response.context)
         self.assertTrue(response.context["has_authorization_domain_not_managed_by_app"])
         self.assertContains(response, "authorization domain that is not managed by the app")
+
+    def test_is_managed_by_app_true_pill(self):
+        """A pill is shown indicating that the workspace is not managed by the app."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_managed_by_app=True)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Not managed by app", response.content.decode())
+
+    def test_is_managed_by_app_false_pill(self):
+        """A pill is shown indicating that the workspace is not managed by the app."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Not managed by app", response.content.decode())
+
+    def test_is_managed_by_app_false_tables(self):
+        """A pill is shown indicating that the workspace is not managed by the app."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("authorization_domain_table", response.context_data)
+        self.assertNotIn("group_sharing_table", response.context_data)
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
