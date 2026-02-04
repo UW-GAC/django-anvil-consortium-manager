@@ -650,6 +650,10 @@ class Workspace(TimeStampedModel):
         help_text="Indicator of whether the workspace is set to requester pays.",
         default=False,
     )
+    is_managed_by_app = models.BooleanField(
+        help_text="Indicator of whether this workspace is managed by the app.",
+        default=True,
+    )
     history = HistoricalRecords()
 
     class Meta:
