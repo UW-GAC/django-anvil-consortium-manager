@@ -821,19 +821,20 @@ class ManagedGroupDetail(
                 "billing_project",
             ),
         )
-        context["workspace_table"] = tables.WorkspaceGroupSharingStaffTable(
-            self.object.workspacegroupsharing_set.all(), exclude="group"
-        )
-        context["account_table"] = tables.GroupAccountMembershipStaffTable(
-            self.object.groupaccountmembership_set.all(),
-            exclude="group",
-        )
-        context["group_table"] = tables.GroupGroupMembershipStaffTable(
-            self.object.child_memberships.all(), exclude="parent_group"
-        )
-        context["parent_table"] = tables.GroupGroupMembershipStaffTable(
-            self.object.parent_memberships.all(), exclude="child_group"
-        )
+        if self.object.is_managed_by_app:
+            context["workspace_table"] = tables.WorkspaceGroupSharingStaffTable(
+                self.object.workspacegroupsharing_set.all(), exclude="group"
+            )
+            context["account_table"] = tables.GroupAccountMembershipStaffTable(
+                self.object.groupaccountmembership_set.all(),
+                exclude="group",
+            )
+            context["group_table"] = tables.GroupGroupMembershipStaffTable(
+                self.object.child_memberships.all(), exclude="parent_group"
+            )
+            context["parent_table"] = tables.GroupGroupMembershipStaffTable(
+                self.object.parent_memberships.all(), exclude="child_group"
+            )
         edit_permission_codename = models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME
         context["show_edit_links"] = self.request.user.has_perm("anvil_consortium_manager." + edit_permission_codename)
         return context

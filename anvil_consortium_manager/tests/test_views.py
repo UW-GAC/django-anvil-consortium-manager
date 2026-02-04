@@ -4887,7 +4887,7 @@ class ManagedGroupDetailTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
-    def test_view_status_code_with_existing_object_not_managed(self):
+    def test_view_status_code_is_managed_by_app_false(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Only clients load the template.
@@ -5221,6 +5221,39 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
         self.assertIn("graph", response.context_data)
+
+    def test_is_managed_by_app_true_pill(self):
+        """A pill is shown indiciating that the group is not managed by the app."""
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.name))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Managed by app", response.content.decode())
+        self.assertNotIn("Not managed by app", response.content.decode())
+
+    def test_is_managed_by_app_false_pill(self):
+        """A pill is shown indiciating that the group is not managed by the app."""
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.name))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Not managed by app", response.content.decode())
+        self.assertNotIn("Managed by app", response.content.decode())
+
+    def test_is_managed_by_app_false_tables(self):
+        """A pill is shown indiciating that the group is not managed by the app."""
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.name))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("workspace_authorization_domain_table", response.context_data)
+        self.assertNotIn("workspace_table", response.context_data)
+        self.assertNotIn("account_table", response.context_data)
+        self.assertNotIn("group_table", response.context_data)
+        self.assertNotIn("parent_table", response.context_data)
 
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
