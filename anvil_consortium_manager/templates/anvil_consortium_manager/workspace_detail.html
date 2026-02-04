@@ -99,7 +99,7 @@
 
 <div class="p-1">
 
-  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view and object.is_managed_by_app %}
   <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
   {% endif %}
 
@@ -108,6 +108,7 @@
 {% if show_edit_links %}
 <div class="p-1">
 
+  {% if object.is_managed_by_app %}
   <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
 
   <div class="btn-group">
@@ -119,6 +120,9 @@
       <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:update:requester_pays' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Change requester pays status</a></li>
     </ul>
   </div>
+  {% else %}
+    <a href="{% url 'anvil_consortium_manager:workspaces:update:internal' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
+  {% endif %}
 
   <div class="btn-group">
     <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
@@ -132,14 +136,13 @@
   </div>
 </div>
 
+{% if object.is_managed_by_app and not object.is_locked%}
 <div class="p-1">
-  {% if not object.is_locked %}
   <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
-  {% endif %}
-
 </div>
 {% endif %}
 
+{% endif %}
 
 {% endblock action_buttons %}
 

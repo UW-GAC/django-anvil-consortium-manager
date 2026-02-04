@@ -5185,7 +5185,55 @@ class ManagedGroupDetailTest(TestCase):
         obj = factories.ManagedGroupFactory.create()
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("show_edit_links", response.context_data)
-        self.assertTrue(response.context_data["show_edit_links"])
+        # Share a workspace with the group
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:sharing:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add an account member
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add a group member
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:new",
+                kwargs={"parent_group_slug": obj.name},
+            ),
+        )
+        # Add to another group
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:add_to_group",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Review audit
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Update information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:update",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Delete on AnVIL
         self.assertContains(
             response,
             reverse(
@@ -5204,7 +5252,55 @@ class ManagedGroupDetailTest(TestCase):
         obj = factories.ManagedGroupFactory.create()
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("show_edit_links", response.context_data)
-        self.assertFalse(response.context_data["show_edit_links"])
+        # Share a workspace with the group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:sharing:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add an account member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add a group member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:new",
+                kwargs={"parent_group_slug": obj.name},
+            ),
+        )
+        # Add to another group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:add_to_group",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Review audit
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Update information
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:update",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Delete on AnVIL
         self.assertNotContains(
             response,
             reverse(
@@ -5252,6 +5348,72 @@ class ManagedGroupDetailTest(TestCase):
         self.assertNotIn("account_table", response.context_data)
         self.assertNotIn("group_table", response.context_data)
         self.assertNotIn("parent_table", response.context_data)
+
+    def test_is_managed_by_app_false_action_button_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        response = self.client.get(self.get_url(obj.name))
+        # Share a workspace with the group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:sharing:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add an account member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add a group member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:new",
+                kwargs={"parent_group_slug": obj.name},
+            ),
+        )
+        # Add to another group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:add_to_group",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Review audit
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Update information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:update",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Delete on AnVIL
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:delete",
+                kwargs={"slug": obj.name},
+            ),
+        )
 
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -7430,6 +7592,85 @@ class WorkspaceDetailTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("authorization_domain_table", response.context_data)
         self.assertNotIn("group_sharing_table", response.context_data)
+
+    def test_is_managed_by_app_false_action_button_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.DefaultWorkspaceDataFactory.create(workspace__is_managed_by_app=False)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        # Delete a workspace
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update internal information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:internal",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update on AnVIL
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:requester_pays",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Share with a group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Clone
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
+        # Audit review
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
