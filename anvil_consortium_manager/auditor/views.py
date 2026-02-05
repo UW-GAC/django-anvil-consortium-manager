@@ -381,7 +381,7 @@ class WorkspaceSharingAuditRun(
     slug_field = "name"
     audit_class = workspace_audit.WorkspaceSharingAudit
     template_name = "auditor/workspace_sharing_audit_run.html"
-    message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
+    message_not_managed_by_app = "Cannot audit sharing because workspace is not managed by this app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -415,6 +415,16 @@ class WorkspaceSharingAuditRun(
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -430,6 +440,7 @@ class WorkspaceSharingAuditReview(
     model = Workspace
     slug_field = "name"
     template_name = "auditor/workspace_sharing_audit_review.html"
+    message_not_managed_by_app = "Cannot audit sharing because workspace is not managed by this app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -463,6 +474,16 @@ class WorkspaceSharingAuditReview(
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.is_managed_by_app:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
