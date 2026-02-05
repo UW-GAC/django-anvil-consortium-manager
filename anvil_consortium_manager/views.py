@@ -1903,11 +1903,13 @@ class WorkspaceAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autoco
     Right now this only matches Workspace name, not billing project."""
 
     def get_queryset(self):
-        # Filter out unathorized users, or does the auth mixin do that?
         qs = models.Workspace.objects.filter().order_by("billing_project__name", "name")
+        only_managed_by_app = self.forwarded.get("only_managed_by_app", None)
 
         if self.q:
             qs = qs.filter(name__icontains=self.q)
+        if only_managed_by_app:
+            qs = qs.filter(is_managed_by_app=True)
 
         return qs
 

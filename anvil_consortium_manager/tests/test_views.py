@@ -13917,6 +13917,25 @@ class WorkspaceAutocompleteTest(TestCase):
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace.pk)
 
+    def test_returns_groups_not_managed_by_app_by_default(self):
+        """Queryset does return groups that are not managed by the app by default."""
+        object = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertEqual(returned_ids[0], object.pk)
+
+    def test_does_not_return_groups_not_managed_by_app_when_specified(self):
+        """Queryset does not return groups that are not managed by the app when specified."""
+        factories.WorkspaceFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(),
+            {"forward": json.dumps({"only_managed_by_app": True})},
+        )
+        self.assertEqual(json.loads(response.content.decode("utf-8"))["results"], [])
+
 
 class WorkspaceAutocompleteByTypeTest(TestCase):
     """Tests for the WorkspaceAutocompleteByType view."""
@@ -20256,8 +20275,40 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
-    def test_not_managed_by_app(self):
-        self.fail("write tests")
+    def test_get_workspace_not_managed_by_app(self):
+        """Workspace does not appear in the list of objects."""
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("form", response.context_data)
+        self.assertNotIn(workspace, response.context_data["form"].fields["workspace"].queryset)
+
+    def test_post_workspace_not_managed_by_app(self):
+        """Workspaces not managed by the app do not appear in the list of objects."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Form has errors.
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
+        # No objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
 
 class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase):
@@ -21700,8 +21751,41 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
-    def test_not_managed_by_app(self):
-        self.fail("write tests")
+    def test_get_workspace_not_managed_by_app(self):
+        """Workspace does not appear in the list of objects."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name))
+        self.assertIn("form", response.context_data)
+        self.assertNotIn(workspace, response.context_data["form"].fields["workspace"].queryset)
+
+    def test_post_workspace_not_managed_by_app(self):
+        """Workspaces not managed by the app do not appear in the list of objects."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Form has errors.
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
+        # No objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
 
 class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, TestCase):

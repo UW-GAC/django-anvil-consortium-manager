@@ -1030,3 +1030,19 @@ class WorkspaceGroupSharingFormTest(TestCase):
         self.assertIn("__all__", form.errors)
         self.assertEqual(len(form.errors["__all__"]), 1)
         self.assertIn("compute privileges", form.errors["__all__"][0])
+
+    def test_invalid_workspace_not_managed(self):
+        """Form is invalid when the workspace is not managed by the app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        form_data = {
+            "workspace": workspace,
+            "group": group,
+            "access": models.WorkspaceGroupSharing.READER,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
