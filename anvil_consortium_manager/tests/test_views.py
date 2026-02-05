@@ -20256,6 +20256,9 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
+    def test_not_managed_by_app(self):
+        self.fail("write tests")
+
 
 class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 200
@@ -20989,6 +20992,47 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
+    def test_not_managed_by_app(self):
+        self.fail("write tests")
+
+    def test_get_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(), follow=True)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingByWorkspaceCreate.message_not_managed_by_app, str(messages[0]))
+
+    def test_post_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # No records were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingByWorkspaceCreate.message_not_managed_by_app, str(messages[0]))
+
 
 class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 200
@@ -21658,6 +21702,9 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
+
+    def test_not_managed_by_app(self):
+        self.fail("write tests")
 
 
 class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, TestCase):
@@ -22443,6 +22490,9 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
+    def test_not_managed_by_app(self):
+        self.fail("write tests")
+
 
 class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 200
@@ -22901,6 +22951,9 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             "Updating access from workspace that doesn't exist for a group that doesn't exist returns a successful code."  # noqa
         )
 
+    def test_not_managed_by_app(self):
+        self.fail("write tests")
+
 
 class WorkspaceGroupSharingListTest(TestCase):
     def setUp(self):
@@ -23273,3 +23326,6 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "Removing access from workspace that doesn't exist for a group that doesn't exist returns a successful code."  # noqa
         )
+
+    def test_not_managed_by_app(self):
+        self.fail("write tests")
