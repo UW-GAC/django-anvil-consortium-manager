@@ -13782,6 +13782,46 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(views.WorkspaceDelete.message_workspace_locked, str(messages[0]))
 
+    def test_get_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__is_managed_by_app=False,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceDelete.message_not_managed_by_app,
+            str(messages[0]),
+        )
+
+    def test_post_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__is_managed_by_app=False,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(workspace.billing_project.name, workspace.name), {}, follow=True)
+        # Make sure the workspace still exists.
+        self.assertIn(workspace, models.Workspace.objects.all())
+        self.assertIn(workspace_data, models.DefaultWorkspaceData.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceDelete.message_not_managed_by_app, str(messages[0]))
+
 
 class WorkspaceAutocompleteTest(TestCase):
     def setUp(self):

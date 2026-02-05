@@ -1813,20 +1813,29 @@ class WorkspaceDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessa
     model = models.Workspace
     success_message = "Successfully deleted Workspace on AnVIL."
     message_could_not_delete_workspace_from_app = "Cannot delete workspace from app due to foreign key restrictions."
+    message_not_managed_by_app = "Cannot delete a workspace that is not managed by the app."
     message_workspace_locked = "Cannot delete workspace because it is locked."
+
+    def check_workspace(self, workspace):
+        """Check if the workspace can be updated on AnVIL by the app."""
+        if not workspace.is_managed_by_app:
+            messages.error(self.request, self.message_not_managed_by_app)
+            return False
+        if workspace.is_locked:
+            messages.error(self.request, self.message_workspace_locked)
+            return False
+        return True
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if self.object.is_locked:
-            messages.error(self.request, self.message_workspace_locked)
+        if not self.check_workspace(self.object):
             return HttpResponseRedirect(self.object.get_absolute_url())
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if self.object.is_locked:
-            messages.error(self.request, self.message_workspace_locked)
+        if not self.check_workspace(self.object):
             return HttpResponseRedirect(self.object.get_absolute_url())
         form = self.get_form()
         if form.is_valid():
