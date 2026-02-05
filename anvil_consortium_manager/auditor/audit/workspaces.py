@@ -1,6 +1,7 @@
 import django_tables2 as tables
 
 from anvil_consortium_manager.anvil_api import AnVILAPIClient, AnVILAPIError404
+from anvil_consortium_manager.exceptions import AnVILNotWorkspaceOwnerError
 from anvil_consortium_manager.models import Workspace
 
 from .. import models
@@ -15,6 +16,8 @@ class WorkspaceAudit(base.AnVILAudit):
 
     ERROR_NOT_OWNER_ON_ANVIL = "Not an owner on AnVIL"
     """Error when the service account running the app is not an owner of the Workspace on AnVIL."""
+    ERROR_IS_OWNER_ON_ANVIL = "Owner on AnVIL"
+    """Error when the service account running the app is unexpectedly an owner on AnVIL."""
 
     ERROR_DIFFERENT_AUTH_DOMAINS = "Has different auth domains on AnVIL"
     """Error when the Workspace has different auth domains in the app and on AnVIL."""
@@ -66,7 +69,8 @@ class WorkspaceAudit(base.AnVILAudit):
         ]
         response = AnVILAPIClient().list_workspaces(fields=",".join(fields))
         workspaces_on_anvil = response.json()
-        for workspace in Workspace.objects.all():
+        # First check workspaces not managed by the app.
+        for workspace in Workspace.objects.filter():
             model_instance_result = base.ModelInstanceResult(workspace)
             try:
                 i = next(
@@ -82,10 +86,18 @@ class WorkspaceAudit(base.AnVILAudit):
             else:
                 # Check role.
                 workspace_details = workspaces_on_anvil.pop(i)
-                if not self._check_workspace_ownership(workspace_details):
-                    # The service account is not an owner of the workspace.
+                if not workspace.is_managed_by_app and self._check_workspace_ownership(workspace_details):
+                    # The workspace is not managed by the app, but we are owners on AnVIL.
+                    model_instance_result.add_error(self.ERROR_IS_OWNER_ON_ANVIL)
+                elif workspace.is_managed_by_app and not self._check_workspace_ownership(workspace_details):
+                    # The workspace is managed by the app, but we are not owners on AnVIL.
                     model_instance_result.add_error(self.ERROR_NOT_OWNER_ON_ANVIL)
+                elif not workspace.is_managed_by_app and not self._check_workspace_ownership(workspace_details):
+                    # The workspace is not managed by the app and we are not owners.
+                    # No issues here.
+                    pass
                 else:
+                    # The workspace is managed by the app and we are owners - need to perform other checks.
                     # Since we're the owner, check workspace access.
                     sharing_audit = WorkspaceSharingAudit(workspace)
                     sharing_audit.run_audit(cache=cache)
@@ -216,6 +228,8 @@ class WorkspaceSharingAudit(base.AnVILAudit):
 
     def __init__(self, workspace, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not workspace.is_managed_by_app:
+            raise AnVILNotWorkspaceOwnerError("workspace {} is not managed by app".format(workspace))
         self.workspace = workspace
 
     def get_cache_key(self):
