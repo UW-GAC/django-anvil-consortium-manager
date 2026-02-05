@@ -13041,6 +13041,46 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         self.workspace.refresh_from_db()
         self.assertFalse(self.workspace.is_requester_pays)
 
+    def test_get_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__is_managed_by_app=False, workspace__is_requester_pays=False
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceUpdateRequesterPays.message_not_managed_by_app,
+            str(messages[0]),
+        )
+
+    def test_post_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__is_managed_by_app=False, workspace__is_requester_pays=False
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name),
+            {
+                "is_requester_pays": True,
+            },
+            follow=True,
+        )
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceUpdateRequesterPays.message_not_managed_by_app,
+            str(messages[0]),
+        )
+        workspace.refresh_from_db()
+        self.assertFalse(workspace.is_requester_pays)
+
 
 class WorkspaceListTest(TestCase):
     def setUp(self):

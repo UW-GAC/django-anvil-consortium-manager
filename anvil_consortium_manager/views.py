@@ -1696,6 +1696,7 @@ class WorkspaceUpdateRequesterPays(
     form_class = forms.WorkspaceRequesterPaysForm
     template_name = "anvil_consortium_manager/workspace_update_requester_pays.html"
     message_api_error = "Error updating requester pays status on AnVIL. (AnVIL API Error: {})"
+    message_not_managed_by_app = "Cannot update requester pays status for a workspace that is not managed by the app."
     success_message = "Successfully updated requester pays status."
 
     def get_object(self, queryset=None):
@@ -1732,6 +1733,25 @@ class WorkspaceUpdateRequesterPays(
                 messages.add_message(self.request, messages.ERROR, msg)
                 return self.render_to_response(self.get_context_data(form=form))
         return super().form_valid(form)
+
+    def check_workspace(self, workspace):
+        """Check if the workspace can be updated on AnVIL by the app."""
+        if not workspace.is_managed_by_app:
+            messages.error(self.request, self.message_not_managed_by_app)
+            return False
+        return True
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.check_workspace(self.object):
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.check_workspace(self.object):
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().post(request, *args, **kwargs)
 
 
 class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
