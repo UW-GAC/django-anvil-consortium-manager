@@ -20992,21 +20992,18 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
-    def test_not_managed_by_app(self):
-        self.fail("write tests")
-
     def test_get_is_managed_by_app_false(self):
         """View redirects with message if workspace is not managed by app."""
         workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
         factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
         self.client.force_login(self.user)
-        response = self.client.get(self.get_url(), follow=True)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
         # Redirects to detail page.
         self.assertRedirects(response, workspace.get_absolute_url())
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingByWorkspaceCreate.message_not_managed_by_app, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.message_not_managed_by_app, str(messages[0]))
 
     def test_post_is_managed_by_app_false(self):
         """View redirects with message if workspace is not managed by app."""
@@ -21015,7 +21012,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
         self.client.force_login(self.user)
         response = self.client.post(
-            self.get_url(),
+            self.get_url(workspace.billing_project.name, workspace.name),
             {
                 "group": group.pk,
                 "workspace": workspace.pk,
@@ -21031,7 +21028,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingByWorkspaceCreate.message_not_managed_by_app, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.message_not_managed_by_app, str(messages[0]))
 
 
 class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
@@ -22490,8 +22487,44 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
-    def test_not_managed_by_app(self):
-        self.fail("write tests")
+    def test_get_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.billing_project.name, workspace.name, self.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_not_managed_by_app, str(messages[0]))
+
+    def test_post_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        workspace = factories.WorkspaceFactory.create(is_managed_by_app=False)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name, self.group.name),
+            {
+                "group": self.group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # No records were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_not_managed_by_app, str(messages[0]))
 
 
 class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
@@ -22951,8 +22984,48 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             "Updating access from workspace that doesn't exist for a group that doesn't exist returns a successful code."  # noqa
         )
 
-    def test_not_managed_by_app(self):
-        self.fail("write tests")
+    def test_get_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(workspace__is_managed_by_app=False)
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.message_workspace_not_managed_by_app, str(messages[0]))
+
+    def test_post_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__is_managed_by_app=False,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name),
+            {
+                "group": obj.group.pk,
+                "workspace": obj.workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": True,
+            },
+            follow=True,
+        )
+        # Object was not updated.
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.message_workspace_not_managed_by_app, str(messages[0]))
 
 
 class WorkspaceGroupSharingListTest(TestCase):
@@ -23327,5 +23400,41 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
             "Removing access from workspace that doesn't exist for a group that doesn't exist returns a successful code."  # noqa
         )
 
-    def test_not_managed_by_app(self):
-        self.fail("write tests")
+    def test_get_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(workspace__is_managed_by_app=False)
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingDelete.message_workspace_not_managed_by_app, str(messages[0]))
+
+    def test_post_is_managed_by_app_false(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__is_managed_by_app=False,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name),
+            {"submit": ""},
+            follow=True,
+        )
+        # Object was not deleted.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingDelete.message_workspace_not_managed_by_app, str(messages[0]))

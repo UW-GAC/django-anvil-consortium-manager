@@ -2640,6 +2640,7 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
+    message_not_managed_by_app = "Cannot share this workspace because it is not managed by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2654,12 +2655,23 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
             raise Http404("Workspace not found.")
         return workspace
 
+    def check_workspace(self, workspace):
+        """Check if the workspace can be updated on AnVIL by the app."""
+        if not workspace.is_managed_by_app:
+            messages.error(self.request, self.message_not_managed_by_app)
+            return False
+        return True
+
     def get(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
+        if not self.check_workspace(self.workspace):
+            return HttpResponseRedirect(self.workspace.get_absolute_url())
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
+        if not self.check_workspace(self.workspace):
+            return HttpResponseRedirect(self.workspace.get_absolute_url())
         return super().post(request, *args, **kwargs)
 
     def get_initial(self):
@@ -2741,6 +2753,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
+    message_not_managed_by_app = "Cannot share this workspace because it is not managed by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2763,9 +2776,18 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
             raise Http404("Workspace or ManagedGroup not found.")
         return group
 
+    def check_workspace(self, workspace):
+        """Check if the workspace can be updated."""
+        if not workspace.is_managed_by_app:
+            messages.error(self.request, self.message_not_managed_by_app)
+            return False
+        return True
+
     def get(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
         self.group = self.get_group()
+        if not self.check_workspace(self.workspace):
+            return HttpResponseRedirect(self.workspace.get_absolute_url())
         try:
             obj = models.WorkspaceGroupSharing.objects.get(workspace=self.workspace, group=self.group)
             messages.error(self.request, self.message_already_exists)
@@ -2776,6 +2798,8 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     def post(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
         self.group = self.get_group()
+        if not self.check_workspace(self.workspace):
+            return HttpResponseRedirect(self.workspace.get_absolute_url())
         try:
             obj = models.WorkspaceGroupSharing.objects.get(workspace=self.workspace, group=self.group)
             messages.error(self.request, self.message_already_exists)
@@ -2815,6 +2839,9 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
         "can_compute",
     )
     template_name = "anvil_consortium_manager/workspacegroupsharing_update.html"
+    message_workspace_not_managed_by_app = (
+        "Cannot update this workspace sharing because the workspace is not managed by the app."
+    )
     success_message = "Successfully updated Workspace sharing."
     """Message to display when the WorkspaceGroupSharing object was successfully updated."""
 
@@ -2843,6 +2870,25 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
             )
         return obj
 
+    def check_workspace(self, workspace):
+        """Check if the workspace can be updated."""
+        if not workspace.is_managed_by_app:
+            messages.error(self.request, self.message_workspace_not_managed_by_app)
+            return False
+        return True
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.check_workspace(self.object.workspace):
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.check_workspace(self.object.workspace):
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
         # Create but don't save the new group.
@@ -2866,6 +2912,7 @@ class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerStaffViewRequired, Si
 class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
     model = models.WorkspaceGroupSharing
     success_message = "Successfully removed workspace sharing on AnVIL."
+    message_workspace_not_managed_by_app = "Cannot remove this record because the workspace is not managed by the app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -2891,6 +2938,25 @@ class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, 
                 _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
+
+    def check_workspace(self, workspace):
+        """Check if the workspace can be updated."""
+        if not workspace.is_managed_by_app:
+            messages.error(self.request, self.message_workspace_not_managed_by_app)
+            return False
+        return True
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.check_workspace(self.object.workspace):
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.check_workspace(self.object.workspace):
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        return super().post(request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_sharing:list")
