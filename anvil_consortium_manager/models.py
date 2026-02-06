@@ -654,6 +654,13 @@ class Workspace(TimeStampedModel):
         help_text="Indicator of whether this workspace is managed by the app.",
         default=True,
     )
+    is_accessible_by_app = models.BooleanField(
+        default=True,
+        help_text=(
+            "Indicator of whether this workspace can be accessed on AnVIL by the app. "
+            "False indicates deleted workspaces or workspaces where app access has been removed.",
+        ),
+    )
     history = HistoricalRecords()
 
     class Meta:

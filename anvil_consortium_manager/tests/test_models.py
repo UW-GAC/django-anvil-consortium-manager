@@ -1378,6 +1378,29 @@ class WorkspaceTest(TestCase):
         instance.refresh_from_db()
         self.assertFalse(instance.is_managed_by_app)
 
+    def test_is_accessible_by_app(self):
+        """Can set the is_accessible_by_app field."""
+        billing_project = factories.BillingProjectFactory.create()
+        instance = Workspace(
+            billing_project=billing_project,
+            name="workspace-1",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+        )
+        instance.full_clean()
+        instance.save()
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_accessible_by_app)
+        instance = Workspace(
+            billing_project=billing_project,
+            name="workspace-2",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            is_accessible_by_app=False,
+        )
+        instance.full_clean()
+        instance.save()
+        instance.refresh_from_db()
+        self.assertFalse(instance.is_accessible_by_app)
+
 
 class WorkspaceDataTest(TestCase):
     """Tests for the WorkspaceData models (default and base)."""
