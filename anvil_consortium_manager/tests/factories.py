@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from factory import Faker, LazyAttribute, SelfAttribute, Sequence, SubFactory, Trait
+from factory import Faker, LazyAttribute, Maybe, SelfAttribute, Sequence, SubFactory, Trait
 from factory.django import DjangoModelFactory
 
 from .. import models
@@ -92,6 +92,8 @@ class WorkspaceFactory(DjangoModelFactory):
     billing_project = SubFactory(BillingProjectFactory)
     name = Faker("slug")
     workspace_type = DefaultWorkspaceAdapter().get_type()
+    is_accessible_by_app = True
+    reason_inaccessible = Maybe("is_accessible_by_app", "", Faker("sentence"))
 
     class Meta:
         model = models.Workspace

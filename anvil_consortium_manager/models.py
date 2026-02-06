@@ -661,6 +661,11 @@ class Workspace(TimeStampedModel):
             "False indicates deleted workspaces or workspaces where app access has been removed.",
         ),
     )
+    reason_inaccessible = models.TextField(
+        blank=True,
+        help_text=("If the workspace is inaccessible by the app, a note about why."),
+        default="",
+    )
     history = HistoricalRecords()
 
     class Meta:
@@ -673,6 +678,14 @@ class Workspace(TimeStampedModel):
             registered_adapters = workspace_adapter_registry.get_registered_adapters()
             if self.workspace_type not in registered_adapters:
                 raise ValidationError({"workspace_type": "Value ``workspace_type`` is not a registered adapter type."})
+
+    def clean(self):
+        super().clean()
+        # Check consistency between is_accessible_by_app and reason_inaccessible.
+        if self.is_accessible_by_app and self.reason_inaccessible:
+            raise ValidationError("reason_inaccessible must be blank if is_accessible_by_app is True.")
+        elif not self.is_accessible_by_app and not self.reason_inaccessible:
+            raise ValidationError("reason_inaccessible cannot be blank if is_accessible_by_app is False.")
 
     def __str__(self):
         return "{billing_project}/{name}".format(billing_project=self.billing_project, name=self.name)

@@ -7682,11 +7682,16 @@ class WorkspaceDetailTest(TestCase):
 
     def test_is_accessible_by_app_false_alert(self):
         """A pill is shown indicating that the workspace is not managed by the app."""
-        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_accessible_by_app=False)
+        workspace = factories.DefaultWorkspaceDataFactory.create(
+            workspace__is_accessible_by_app=False,
+        )
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertEqual(response.status_code, 200)
-        self.assertIn("no longer has access to this workspace", response.content.decode())
+        self.assertIn(
+            "no longer has access to this workspace: {}".format(workspace.workspace.reason_inaccessible),
+            response.content.decode(),
+        )
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):

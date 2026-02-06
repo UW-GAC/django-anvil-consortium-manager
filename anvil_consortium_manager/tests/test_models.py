@@ -6,7 +6,7 @@ from unittest.mock import patch
 import networkx as nx
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.utils import timezone
@@ -1378,28 +1378,60 @@ class WorkspaceTest(TestCase):
         instance.refresh_from_db()
         self.assertFalse(instance.is_managed_by_app)
 
-    def test_is_accessible_by_app(self):
-        """Can set the is_accessible_by_app field."""
+    def test_is_accessible_by_app_reason_inaccessible(self):
+        """Validation on is_accessible_by_app and reason_inaccessible."""
         billing_project = factories.BillingProjectFactory.create()
+        # Correct.
         instance = Workspace(
             billing_project=billing_project,
             name="workspace-1",
             workspace_type=DefaultWorkspaceAdapter().get_type(),
+            is_accessible_by_app=True,
+            reason_inaccessible="",
         )
         instance.full_clean()
-        instance.save()
-        instance.refresh_from_db()
-        self.assertTrue(instance.is_accessible_by_app)
+        # Correct.
         instance = Workspace(
             billing_project=billing_project,
-            name="workspace-2",
+            name="workspace-1",
             workspace_type=DefaultWorkspaceAdapter().get_type(),
             is_accessible_by_app=False,
+            reason_inaccessible="Expected success",
         )
         instance.full_clean()
-        instance.save()
-        instance.refresh_from_db()
-        self.assertFalse(instance.is_accessible_by_app)
+        # Incorrect.
+        instance = Workspace(
+            billing_project=billing_project,
+            name="workspace-1",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            is_accessible_by_app=True,
+            reason_inaccessible="Expected failure",
+        )
+        with self.assertRaises(ValidationError) as e:
+            instance.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
+        self.assertIn(
+            "reason_inaccessible must be blank if is_accessible_by_app is True",
+            str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
+        )
+        instance = Workspace(
+            billing_project=billing_project,
+            name="workspace-1",
+            workspace_type=DefaultWorkspaceAdapter().get_type(),
+            is_accessible_by_app=False,
+            reason_inaccessible="",
+        )
+        with self.assertRaises(ValidationError) as e:
+            instance.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
+        self.assertIn(
+            "reason_inaccessible cannot be blank if is_accessible_by_app is False",
+            str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
+        )
 
 
 class WorkspaceDataTest(TestCase):
