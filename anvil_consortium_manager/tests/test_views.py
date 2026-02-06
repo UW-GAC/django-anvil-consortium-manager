@@ -7568,7 +7568,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertTrue(response.context["has_authorization_domain_not_managed_by_app"])
         self.assertContains(response, "authorization domain that is not managed by the app")
 
-    def test_is_managed_by_app_true_pill(self):
+    def test_is_managed_by_app_true_alert(self):
         """A pill is shown indicating that the workspace is not managed by the app."""
         workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_managed_by_app=True)
         self.client.force_login(self.user)
@@ -7576,7 +7576,7 @@ class WorkspaceDetailTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("is not managed by the app", response.content.decode())
 
-    def test_is_managed_by_app_false_pill(self):
+    def test_is_managed_by_app_false_alert(self):
         """A pill is shown indicating that the workspace is not managed by the app."""
         workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_managed_by_app=False)
         self.client.force_login(self.user)
@@ -7671,6 +7671,22 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+
+    def test_is_accessible_by_app_true_alert(self):
+        """A pill is shown indicating that the workspace is not managed by the app."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_accessible_by_app=True)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("no longer has access to this workspace", response.content.decode())
+
+    def test_is_accessible_by_app_false_alert(self):
+        """A pill is shown indicating that the workspace is not managed by the app."""
+        workspace = factories.DefaultWorkspaceDataFactory.create(workspace__is_accessible_by_app=False)
+        self.client.force_login(self.user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no longer has access to this workspace", response.content.decode())
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):

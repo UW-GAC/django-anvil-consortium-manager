@@ -13,6 +13,14 @@
     </div>
   {% endif %}
 
+    {% if not object.is_accessible_by_app %}
+    <div class="alert alert-secondary my-3" role="alert">
+      <span class="fa-solid fa-ban me-1"></span>
+      The app no longer has access to this workspace, which means that
+      it was either deleted on AnVIL or access was removed.
+    </div>
+  {% endif %}
+
   {% if has_authorization_domain_not_managed_by_app %}
   <div class="alert alert-warning my-3" role="alert">
     This workspace has at least one authorization domain that is not managed by the app, so access cannot always be determined.
