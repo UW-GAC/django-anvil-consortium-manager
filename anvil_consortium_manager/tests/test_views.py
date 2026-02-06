@@ -5325,7 +5325,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("Not managed by app", response.content.decode())
+        self.assertNotIn("is not managed by the app", response.content.decode())
 
     def test_is_managed_by_app_false_pill(self):
         """A pill is shown indicating that the group is not managed by the app."""
@@ -5334,7 +5334,7 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Not managed by app", response.content.decode())
+        self.assertIn("is not managed by the app", response.content.decode())
 
     def test_is_managed_by_app_false_tables(self):
         """A pill is shown indicating that the group is not managed by the app."""
@@ -7574,7 +7574,7 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("Not managed by app", response.content.decode())
+        self.assertNotIn("is not managed by the app", response.content.decode())
 
     def test_is_managed_by_app_false_pill(self):
         """A pill is shown indicating that the workspace is not managed by the app."""
@@ -7582,7 +7582,7 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Not managed by app", response.content.decode())
+        self.assertIn("is not managed by the app", response.content.decode())
 
     def test_is_managed_by_app_false_tables(self):
         """A pill is shown indicating that the workspace is not managed by the app."""
