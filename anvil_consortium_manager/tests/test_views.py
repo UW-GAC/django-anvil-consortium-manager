@@ -7688,9 +7688,86 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(workspace.get_absolute_url())
         self.assertEqual(response.status_code, 200)
-        self.assertIn(
-            "no longer has access to this workspace: {}".format(workspace.workspace.reason_inaccessible),
-            response.content.decode(),
+        self.assertIn("no longer has access to this workspace", response.content.decode())
+        (self.assertIn(workspace.workspace.reason_inaccessible, response.content.decode()),)
+
+    def test_is_accessible_by_app_false_action_button_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.DefaultWorkspaceDataFactory.create(workspace__is_accessible_by_app=False)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        # Delete a workspace
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update internal information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:internal",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update on AnVIL
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:requester_pays",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Share with a group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Clone
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
+        # Audit review
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
         )
 
 

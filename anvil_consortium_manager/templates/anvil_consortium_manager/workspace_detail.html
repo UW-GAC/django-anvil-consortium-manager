@@ -15,27 +15,35 @@
 
     {% if not object.is_accessible_by_app %}
     <div class="alert alert-secondary my-3" role="alert">
-      <span class="fa-solid fa-ban me-1"></span>
-      The app no longer has access to this workspace: {{ object.reason_inaccessible }}
+      <div class="container align-items-center d-flex">
+        <div class="">
+          <span class="fa-solid fa-ban me-1"></span>
+        </div>
+        <div class="p-2 flex-grow-1">
+            Information on this page may no longer be accurate because the app no longer has access to this workspace:
+            <strong>{{ object.reason_inaccessible }}</strong>
+        </div>
+      </div>
     </div>
+  {% else %}
+    {% if has_authorization_domain_not_managed_by_app %}
+    <div class="alert alert-warning my-3" role="alert">
+      This workspace has at least one authorization domain that is not managed by the app, so access cannot always be determined.
+    </div>
+    {% endif %}
+
+    {% include 'anvil_consortium_manager/snippets/workspace_is_locked_pill.html' %}
+
+    {% include 'anvil_consortium_manager/snippets/workspace_access_pill.html' %}
+
+    {% include 'anvil_consortium_manager/snippets/workspace_requester_pays_pill.html' %}
+
+    {% block extra_pills %}
+    {% endblock extra_pills %}
+
+    {% include 'anvil_consortium_manager/snippets/workspace_view_on_anvil_pill.html' %}
   {% endif %}
 
-  {% if has_authorization_domain_not_managed_by_app %}
-  <div class="alert alert-warning my-3" role="alert">
-    This workspace has at least one authorization domain that is not managed by the app, so access cannot always be determined.
-  </div>
-  {% endif %}
-
-  {% include 'anvil_consortium_manager/snippets/workspace_is_locked_pill.html' %}
-
-  {% include 'anvil_consortium_manager/snippets/workspace_access_pill.html' %}
-
-  {% include 'anvil_consortium_manager/snippets/workspace_requester_pays_pill.html' %}
-
-  {% block extra_pills %}
-  {% endblock extra_pills %}
-
-  {% include 'anvil_consortium_manager/snippets/workspace_view_on_anvil_pill.html' %}
 
 {% endblock pills %}
 
@@ -84,7 +92,7 @@
         <h2 class="accordion-header" id="headingGroupsOne">
           <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
             <span class="fa-solid fa-user-group mx-2"></span>
-            View groups that this workspace is shared with
+            View groups that this workspace is shared with {% if not object.has_app_as_owner %}(historical){% endif %}
             <span class="badge mx-2 bg-secondary pill"> {{ group_sharing_table.rows|length }}</span>
           </button>
         </h2>
@@ -108,7 +116,7 @@
 
 <div class="p-1">
 
-  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view and object.is_managed_by_app %}
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view and object.has_app_as_owner %}
   <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
   {% endif %}
 
@@ -117,7 +125,7 @@
 {% if show_edit_links %}
 <div class="p-1">
 
-  {% if object.is_managed_by_app %}
+  {% if object.has_app_as_owner %}
   <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
 
   <div class="btn-group">
@@ -133,19 +141,21 @@
     <a href="{% url 'anvil_consortium_manager:workspaces:update:internal' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
   {% endif %}
 
-  <div class="btn-group">
-    <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-      Clone workspace
-    </button>
-    <ul class="dropdown-menu">
-      {% for workspace_adapter in registered_workspace_adapters %}
-      <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:clone' billing_project_slug=object.billing_project.name workspace_slug=object.name workspace_type=workspace_adapter.get_type %}">{{ workspace_adapter.get_name }}</a></li>
-      {% endfor %}
-    </ul>
-  </div>
+  {% if object.is_accessible_by_app %}
+    <div class="btn-group">
+      <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        Clone workspace
+      </button>
+      <ul class="dropdown-menu">
+        {% for workspace_adapter in registered_workspace_adapters %}
+        <li><a class="dropdown-item" href="{% url 'anvil_consortium_manager:workspaces:clone' billing_project_slug=object.billing_project.name workspace_slug=object.name workspace_type=workspace_adapter.get_type %}">{{ workspace_adapter.get_name }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
 </div>
 
-{% if object.is_managed_by_app and not object.is_locked%}
+{% if object.has_app_as_owner and not object.is_locked %}
 <div class="p-1">
   <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </div>

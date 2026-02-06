@@ -1433,6 +1433,21 @@ class WorkspaceTest(TestCase):
             str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
         )
 
+    def test_has_app_as_owner(self):
+        workspace = factories.WorkspaceFactory.create()
+        workspace.is_accessible_by_app = True
+        workspace.is_managed_by_app = True
+        self.assertTrue(workspace.has_app_as_owner)
+        workspace.is_accessible_by_app = False
+        workspace.is_managed_by_app = True
+        self.assertFalse(workspace.has_app_as_owner)
+        workspace.is_accessible_by_app = True
+        workspace.is_managed_by_app = False
+        self.assertFalse(workspace.has_app_as_owner)
+        workspace.is_accessible_by_app = False
+        workspace.is_managed_by_app = False
+        self.assertFalse(workspace.has_app_as_owner)
+
 
 class WorkspaceDataTest(TestCase):
     """Tests for the WorkspaceData models (default and base)."""
