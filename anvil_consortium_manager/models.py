@@ -650,22 +650,27 @@ class Workspace(TimeStampedModel):
         help_text="Indicator of whether the workspace is set to requester pays.",
         default=False,
     )
-    is_managed_by_app = models.BooleanField(
-        help_text="Indicator of whether this workspace is managed by the app.",
-        default=True,
+
+    # Management/access fields.
+    class AppAccessChoices(models.TextChoices):
+        NO_ACCESS = "NO_ACCESS", "No access"
+        LIMITED = "LIMITED", "Limited access"
+        OWNER = "OWNER", "Owner"
+
+    # Fields to handle non-owner access levels.
+    app_access = models.CharField(
+        blank=False,
+        null=False,
+        max_length=20,
+        choices=AppAccessChoices.choices,
+        default=AppAccessChoices.OWNER,
     )
-    is_accessible_by_app = models.BooleanField(
-        default=True,
-        help_text=(
-            "Indicator of whether this workspace can be accessed on AnVIL by the app. "
-            "False indicates deleted workspaces or workspaces where app access has been removed.",
-        ),
-    )
-    reason_inaccessible = models.TextField(
+    app_access_reason = models.TextField(
         blank=True,
-        help_text=("If the workspace is inaccessible by the app, a note about why."),
+        help_text="Reason why the app is not an owner of this workspace, if applicable.",
         default="",
     )
+    # Model history.
     history = HistoricalRecords()
 
     class Meta:
@@ -681,11 +686,11 @@ class Workspace(TimeStampedModel):
 
     def clean(self):
         super().clean()
-        # Check consistency between is_accessible_by_app and reason_inaccessible.
-        if self.is_accessible_by_app and self.reason_inaccessible:
-            raise ValidationError("reason_inaccessible must be blank if is_accessible_by_app is True.")
-        elif not self.is_accessible_by_app and not self.reason_inaccessible:
-            raise ValidationError("reason_inaccessible cannot be blank if is_accessible_by_app is False.")
+        # Check consistency between app_access and app_access_reason.
+        if self.app_access == self.AppAccessChoices.OWNER and self.app_access_reason:
+            raise ValidationError("app_access_reason must be blank if app_access is OWNER.")
+        elif self.app_access != self.AppAccessChoices.OWNER and not self.app_access_reason:
+            raise ValidationError("app_access_reason cannot be blank if app_access is not OWNER.")
 
     def __str__(self):
         return "{billing_project}/{name}".format(billing_project=self.billing_project, name=self.name)

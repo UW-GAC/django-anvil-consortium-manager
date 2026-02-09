@@ -1111,7 +1111,7 @@ class WorkspaceDetail(
             self.object.authorization_domains.all(),
             exclude=["workspace", "number_groups", "number_accounts"],
         )
-        if has_staff_view_perms and self.object.is_managed_by_app:
+        if has_staff_view_perms:
             context["group_sharing_table"] = tables.WorkspaceGroupSharingStaffTable(
                 self.object.workspacegroupsharing_set.all(), exclude="workspace"
             )
@@ -1405,6 +1405,7 @@ class WorkspaceClone(
     template_name = "anvil_consortium_manager/workspace_clone.html"
     ADAPTER_ERROR_MESSAGE_BEFORE_ANVIL_CREATE = "[WorkspaceClone] before_anvil_create method failed"
     ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE = "[WorkspaceClone] after_anvil_create method failed"
+    message_no_access = "Cannot clone a workspace to which the app doesn't have access"
 
     def get_object(self, queryset=None):
         """Return the workspace to clone."""
@@ -1423,8 +1424,17 @@ class WorkspaceClone(
             )
         return obj
 
+    def check_workspace(self, workspace):
+        """Check if the workspace can be updated on AnVIL by the app."""
+        if workspace.app_access == models.Workspace.AppAccessChoices.NO_ACCESS:
+            messages.error(self.request, self.message_no_access)
+            return False
+        return True
+
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if not self.check_workspace(self.object):
+            return HttpResponseRedirect(self.object.get_absolute_url())
         return super().get(request, *args, **kwargs)
 
     def get_initial(self):
@@ -1491,6 +1501,9 @@ class WorkspaceClone(
         """
         self.adapter = self.get_adapter()
         self.object = self.get_object()
+        self.object = self.get_object()
+        if not self.check_workspace(self.object):
+            return HttpResponseRedirect(self.object.get_absolute_url())
         self.new_workspace = None
         form = self.get_form()
         # First, check if the workspace form is valid.
@@ -1696,7 +1709,7 @@ class WorkspaceUpdateRequesterPays(
     form_class = forms.WorkspaceRequesterPaysForm
     template_name = "anvil_consortium_manager/workspace_update_requester_pays.html"
     message_api_error = "Error updating requester pays status on AnVIL. (AnVIL API Error: {})"
-    message_not_managed_by_app = "Cannot update requester pays status for a workspace that is not managed by the app."
+    message_not_owner = "Cannot update requester pays status for a workspace where the app is not an owner."
     success_message = "Successfully updated requester pays status."
 
     def get_object(self, queryset=None):
@@ -1736,8 +1749,8 @@ class WorkspaceUpdateRequesterPays(
 
     def check_workspace(self, workspace):
         """Check if the workspace can be updated on AnVIL by the app."""
-        if not workspace.is_managed_by_app:
-            messages.error(self.request, self.message_not_managed_by_app)
+        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
+            messages.error(self.request, self.message_not_owner)
             return False
         return True
 
@@ -1813,13 +1826,13 @@ class WorkspaceDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessa
     model = models.Workspace
     success_message = "Successfully deleted Workspace on AnVIL."
     message_could_not_delete_workspace_from_app = "Cannot delete workspace from app due to foreign key restrictions."
-    message_not_managed_by_app = "Cannot delete a workspace that is not managed by the app."
+    message_not_owner = "Cannot delete a workspace where the app is not an owner."
     message_workspace_locked = "Cannot delete workspace because it is locked."
 
     def check_workspace(self, workspace):
         """Check if the workspace can be updated on AnVIL by the app."""
-        if not workspace.is_managed_by_app:
-            messages.error(self.request, self.message_not_managed_by_app)
+        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
+            messages.error(self.request, self.message_not_owner)
             return False
         if workspace.is_locked:
             messages.error(self.request, self.message_workspace_locked)
@@ -1904,12 +1917,12 @@ class WorkspaceAutocomplete(auth.AnVILConsortiumManagerStaffViewRequired, autoco
 
     def get_queryset(self):
         qs = models.Workspace.objects.filter().order_by("billing_project__name", "name")
-        only_managed_by_app = self.forwarded.get("only_managed_by_app", None)
+        app_access_values = self.forwarded.get("app_access_values", [])
 
         if self.q:
             qs = qs.filter(name__icontains=self.q)
-        if only_managed_by_app:
-            qs = qs.filter(is_managed_by_app=True)
+        if app_access_values:
+            qs = qs.filter(app_access__in=app_access_values)
 
         return qs
 
@@ -2642,7 +2655,7 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
-    message_not_managed_by_app = "Cannot share this workspace because it is not managed by the app."
+    message_not_owner = "Cannot share this workspace because it is not owned by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2659,8 +2672,8 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
 
     def check_workspace(self, workspace):
         """Check if the workspace can be updated on AnVIL by the app."""
-        if not workspace.is_managed_by_app:
-            messages.error(self.request, self.message_not_managed_by_app)
+        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
+            messages.error(self.request, self.message_not_owner)
             return False
         return True
 
@@ -2755,7 +2768,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
-    message_not_managed_by_app = "Cannot share this workspace because it is not managed by the app."
+    message_not_owner = "Cannot share this workspace because it is not owned by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2780,8 +2793,8 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
 
     def check_workspace(self, workspace):
         """Check if the workspace can be updated."""
-        if not workspace.is_managed_by_app:
-            messages.error(self.request, self.message_not_managed_by_app)
+        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
+            messages.error(self.request, self.message_not_owner)
             return False
         return True
 
@@ -2841,9 +2854,7 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
         "can_compute",
     )
     template_name = "anvil_consortium_manager/workspacegroupsharing_update.html"
-    message_workspace_not_managed_by_app = (
-        "Cannot update this workspace sharing because the workspace is not managed by the app."
-    )
+    message_not_owner = "Cannot update this workspace sharing because the workspace is not owned by the app."
     success_message = "Successfully updated Workspace sharing."
     """Message to display when the WorkspaceGroupSharing object was successfully updated."""
 
@@ -2874,8 +2885,8 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
 
     def check_workspace(self, workspace):
         """Check if the workspace can be updated."""
-        if not workspace.is_managed_by_app:
-            messages.error(self.request, self.message_workspace_not_managed_by_app)
+        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
+            messages.error(self.request, self.message_not_owner)
             return False
         return True
 
@@ -2914,7 +2925,7 @@ class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerStaffViewRequired, Si
 class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
     model = models.WorkspaceGroupSharing
     success_message = "Successfully removed workspace sharing on AnVIL."
-    message_workspace_not_managed_by_app = "Cannot remove this record because the workspace is not managed by the app."
+    message_not_owner = "Cannot remove this record because the workspace is not owned by the app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -2943,8 +2954,8 @@ class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, 
 
     def check_workspace(self, workspace):
         """Check if the workspace can be updated."""
-        if not workspace.is_managed_by_app:
-            messages.error(self.request, self.message_workspace_not_managed_by_app)
+        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
+            messages.error(self.request, self.message_not_owner)
             return False
         return True
 

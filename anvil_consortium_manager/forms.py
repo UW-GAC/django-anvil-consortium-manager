@@ -360,11 +360,11 @@ class WorkspaceGroupSharingForm(Bootstrap5MediaFormMixin, forms.ModelForm):
     """Form for the WorkspaceGroupSharing model."""
 
     workspace = forms.ModelChoiceField(
-        queryset=models.Workspace.objects.filter(is_managed_by_app=True),
+        queryset=models.Workspace.objects.filter(app_access=models.Workspace.AppAccessChoices.OWNER),
         widget=autocomplete.ModelSelect2(
             url="anvil_consortium_manager:workspaces:autocomplete",
             attrs={"data-theme": "bootstrap-5"},
-            forward=(forward.Const(True, "only_managed_by_app"),),
+            forward=(forward.Const([models.Workspace.AppAccessChoices.OWNER], "app_access_values"),),
         ),
         help_text=(
             "Select the workspace to share with the group. Only workspaces that are managed by this app are shown.",

@@ -1355,98 +1355,52 @@ class WorkspaceTest(TestCase):
             instance.clean_fields()
         self.assertIn("not a registered adapter type", str(e.exception))
 
-    def test_is_managed_by_app(self):
-        """Can set the is_managed_by_app field."""
-        billing_project = factories.BillingProjectFactory.create()
-        instance = Workspace(
-            billing_project=billing_project,
-            name="workspace-1",
-            workspace_type=DefaultWorkspaceAdapter().get_type(),
-        )
+    def test_app_access_app_access_reason(self):
+        instance = factories.WorkspaceFactory.create()
+        # Allowed.
+        instance.app_access = instance.AppAccessChoices.OWNER
+        instance.app_access_reason = ""
         instance.full_clean()
-        instance.save()
-        instance.refresh_from_db()
-        self.assertTrue(instance.is_managed_by_app)
-        instance = Workspace(
-            billing_project=billing_project,
-            name="workspace-2",
-            workspace_type=DefaultWorkspaceAdapter().get_type(),
-            is_managed_by_app=False,
-        )
+        instance.app_access = instance.AppAccessChoices.LIMITED
+        instance.app_access_reason = "Reason for limited access"
         instance.full_clean()
-        instance.save()
-        instance.refresh_from_db()
-        self.assertFalse(instance.is_managed_by_app)
-
-    def test_is_accessible_by_app_reason_inaccessible(self):
-        """Validation on is_accessible_by_app and reason_inaccessible."""
-        billing_project = factories.BillingProjectFactory.create()
-        # Correct.
-        instance = Workspace(
-            billing_project=billing_project,
-            name="workspace-1",
-            workspace_type=DefaultWorkspaceAdapter().get_type(),
-            is_accessible_by_app=True,
-            reason_inaccessible="",
-        )
+        instance.app_access = instance.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = "Reason for no access"
         instance.full_clean()
-        # Correct.
-        instance = Workspace(
-            billing_project=billing_project,
-            name="workspace-1",
-            workspace_type=DefaultWorkspaceAdapter().get_type(),
-            is_accessible_by_app=False,
-            reason_inaccessible="Expected success",
-        )
-        instance.full_clean()
-        # Incorrect.
-        instance = Workspace(
-            billing_project=billing_project,
-            name="workspace-1",
-            workspace_type=DefaultWorkspaceAdapter().get_type(),
-            is_accessible_by_app=True,
-            reason_inaccessible="Expected failure",
-        )
+        # Not allowed.
+        instance.app_access = instance.AppAccessChoices.OWNER
+        instance.app_access_reason = "Reason not allowed for owner access"
         with self.assertRaises(ValidationError) as e:
             instance.full_clean()
         self.assertEqual(len(e.exception.error_dict), 1)
         self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
         self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
         self.assertIn(
-            "reason_inaccessible must be blank if is_accessible_by_app is True",
+            "app_access_reason must be blank if app_access is OWNER",
             str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
         )
-        instance = Workspace(
-            billing_project=billing_project,
-            name="workspace-1",
-            workspace_type=DefaultWorkspaceAdapter().get_type(),
-            is_accessible_by_app=False,
-            reason_inaccessible="",
-        )
+        instance.app_access = instance.AppAccessChoices.LIMITED
+        instance.app_access_reason = ""
         with self.assertRaises(ValidationError) as e:
             instance.full_clean()
         self.assertEqual(len(e.exception.error_dict), 1)
         self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
         self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
         self.assertIn(
-            "reason_inaccessible cannot be blank if is_accessible_by_app is False",
+            "app_access_reason cannot be blank",
             str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
         )
-
-    def test_has_app_as_owner(self):
-        workspace = factories.WorkspaceFactory.create()
-        workspace.is_accessible_by_app = True
-        workspace.is_managed_by_app = True
-        self.assertTrue(workspace.has_app_as_owner)
-        workspace.is_accessible_by_app = False
-        workspace.is_managed_by_app = True
-        self.assertFalse(workspace.has_app_as_owner)
-        workspace.is_accessible_by_app = True
-        workspace.is_managed_by_app = False
-        self.assertFalse(workspace.has_app_as_owner)
-        workspace.is_accessible_by_app = False
-        workspace.is_managed_by_app = False
-        self.assertFalse(workspace.has_app_as_owner)
+        instance.app_access = instance.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = ""
+        with self.assertRaises(ValidationError) as e:
+            instance.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
+        self.assertIn(
+            "app_access_reason cannot be blank",
+            str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
+        )
 
 
 class WorkspaceDataTest(TestCase):

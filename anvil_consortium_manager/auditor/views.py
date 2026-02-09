@@ -416,7 +416,7 @@ class WorkspaceSharingAuditRun(
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         # Check if managed by the app.
-        if not self.object.is_managed_by_app:
+        if not self.object.app_access == self.object.AppAccessChoices.OWNER:
             messages.add_message(
                 self.request,
                 messages.ERROR,
@@ -429,6 +429,15 @@ class WorkspaceSharingAuditRun(
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        # Check if managed by the app.
+        if not self.object.app_access == self.object.AppAccessChoices.OWNER:
+            messages.add_message(
+                self.request,
+                messages.ERROR,
+                self.message_not_managed_by_app,
+            )
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.object.get_absolute_url())
         return super().post(request, *args, **kwargs)
 
 
@@ -475,7 +484,7 @@ class WorkspaceSharingAuditReview(
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         # Check if managed by the app.
-        if not self.object.is_managed_by_app:
+        if not self.object.app_access == self.object.AppAccessChoices.OWNER:
             messages.add_message(
                 self.request,
                 messages.ERROR,

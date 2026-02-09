@@ -21,6 +21,7 @@ from anvil_consortium_manager.models import (
     Account,
     AnVILProjectManagerAccess,
     GroupAccountMembership,
+    Workspace,
     WorkspaceGroupSharing,
 )
 from anvil_consortium_manager.tests.factories import (
@@ -3691,9 +3692,23 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
         self.assertIsNotNone(new_cached_result)
         self.assertEqual(new_cached_result.timestamp, previous_timestamp)
 
-    def test_is_managed_by_app_false(self):
+    def test_app_access_limited(self):
         """Redirects with a message when group is not managed by app."""
-        workspace = WorkspaceFactory.create(is_managed_by_app=False)
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]),
+            views.WorkspaceSharingAuditRun.message_not_managed_by_app,
+        )
+
+    def test_app_access_no_access(self):
+        """Redirects with a message when group is not managed by app."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
         DefaultWorkspaceDataFactory.create(workspace=workspace)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
@@ -4142,9 +4157,23 @@ class WorkspaceSharingAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         self.assertIn(response.context_data["workspace_audit_alert"], response.content.decode())
         self.assertIn("may be incorrect", response.content.decode())
 
-    def test_is_managed_by_app_false(self):
+    def test_app_access_limited(self):
         """Redirects with a message when group is not managed by app."""
-        workspace = WorkspaceFactory.create(is_managed_by_app=False)
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            str(messages[0]),
+            views.WorkspaceSharingAuditRun.message_not_managed_by_app,
+        )
+
+    def test_app_access_no_access(self):
+        """Redirects with a message when group is not managed by app."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
         DefaultWorkspaceDataFactory.create(workspace=workspace)
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)

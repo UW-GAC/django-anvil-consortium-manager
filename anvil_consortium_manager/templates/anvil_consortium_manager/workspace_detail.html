@@ -7,21 +7,21 @@
 
 {% block pills %}
 
-  {% if not object.is_managed_by_app %}
-    <div class="alert alert-secondary my-3" role="alert">
-      <span class="fa-solid fa-ban me-1"></span> This workspace is not managed by the app.
-    </div>
-  {% endif %}
-
-    {% if not object.is_accessible_by_app %}
+  {% if object.app_access != object.AppAccessChoices.OWNER %}
     <div class="alert alert-secondary my-3" role="alert">
       <div class="container align-items-center d-flex">
         <div class="">
           <span class="fa-solid fa-ban me-1"></span>
         </div>
         <div class="p-2 flex-grow-1">
-            Information on this page may no longer be accurate because the app no longer has access to this workspace:
-            <strong>{{ object.reason_inaccessible }}</strong>
+            Information on this page may no longer be accurate because the app
+            {% if object.app_access == object.AppAccessChoices.LIMITED %}
+              has limited access
+            {% else %}
+              no longer has access
+            {% endif %}
+             to this workspace:
+            <strong>{{ object.app_access_reason }}</strong>
         </div>
       </div>
     </div>
@@ -85,14 +85,14 @@
     </div>
   </div>
 
-  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view and object.is_managed_by_app %}
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view %}
   <div class="my-3">
     <div class="accordion" id="accordionGroups">
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingGroupsOne">
           <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroupsOne" aria-expanded="false" aria-controls="collapseGroupsOne">
             <span class="fa-solid fa-user-group mx-2"></span>
-            View groups that this workspace is shared with {% if not object.has_app_as_owner %}(historical){% endif %}
+            View groups that this workspace is shared with
             <span class="badge mx-2 bg-secondary pill"> {{ group_sharing_table.rows|length }}</span>
           </button>
         </h2>
@@ -116,7 +116,7 @@
 
 <div class="p-1">
 
-  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view and object.has_app_as_owner %}
+  {% if perms.anvil_consortium_manager.anvil_consortium_manager_staff_view and object.app_access == object.AppAccessChoices.OWNER %}
   <a href="{% url 'anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Audit sharing</a>
   {% endif %}
 
@@ -125,7 +125,7 @@
 {% if show_edit_links %}
 <div class="p-1">
 
-  {% if object.has_app_as_owner %}
+  {% if object.app_access == object.AppAccessChoices.OWNER %}
   <a href="{% url 'anvil_consortium_manager:workspaces:sharing:new' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-primary" role="button">Share with a group</a>
 
   <div class="btn-group">
@@ -141,7 +141,7 @@
     <a href="{% url 'anvil_consortium_manager:workspaces:update:internal' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
   {% endif %}
 
-  {% if object.is_accessible_by_app %}
+  {% if object.app_access != object.AppAccessChoices.NO_ACCESS %}
     <div class="btn-group">
       <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
         Clone workspace
@@ -155,7 +155,7 @@
   {% endif %}
 </div>
 
-{% if object.has_app_as_owner and not object.is_locked %}
+{% if object.app_access == object.AppAccessChoices.OWNER and not object.is_locked %}
 <div class="p-1">
   <a href="{% url 'anvil_consortium_manager:workspaces:delete' billing_project_slug=object.billing_project.name workspace_slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
 </div>
