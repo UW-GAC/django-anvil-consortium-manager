@@ -281,7 +281,11 @@ class WorkspaceCheckAccessMixin:
                     messages.ERROR,
                     workspace_access_error_message,
                 )
+        return x
+
+    def check_workspace_lock_status(self, workspace):
         # Check lock status.
+        x = True
         if self.workspace_unlocked and workspace.is_locked:
             x = False
             lock_error_message = self.get_lock_error_message(workspace)
@@ -292,6 +296,11 @@ class WorkspaceCheckAccessMixin:
                     self.get_lock_error_message(workspace),
                 )
         return x
+
+    def check_workspace(self, workspace):
+        access_ok = self.check_workspace_access(workspace)
+        lock_ok = self.check_workspace_lock_status(workspace)
+        return access_ok and lock_ok
 
     def get_workspace(self):
         return self.get_object()
@@ -307,14 +316,14 @@ class WorkspaceCheckAccessMixin:
 
     def get(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
-        if not self.check_workspace_access(self.workspace):
+        if not self.check_workspace(self.workspace):
             # Redirect to the object detail page.
             return HttpResponseRedirect(self.get_access_error_redirect_url())
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
-        if not self.check_workspace_access(self.workspace):
+        if not self.check_workspace(self.workspace):
             # Redirect to the object detail page with an error message.
             return HttpResponseRedirect(self.get_access_error_redirect_url())
         return super().post(request, *args, **kwargs)
