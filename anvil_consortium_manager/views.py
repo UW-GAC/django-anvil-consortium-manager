@@ -1426,13 +1426,6 @@ class WorkspaceClone(
             )
         return obj
 
-    def check_workspace(self, workspace):
-        """Check if the workspace can be updated on AnVIL by the app."""
-        if workspace.app_access == models.Workspace.AppAccessChoices.NO_ACCESS:
-            messages.error(self.request, self.message_no_access)
-            return False
-        return True
-
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         return super().get(request, *args, **kwargs)

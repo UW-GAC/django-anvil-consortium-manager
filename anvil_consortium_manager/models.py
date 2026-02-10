@@ -1066,11 +1066,6 @@ class Workspace(TimeStampedModel):
             in_auth_domain = self.has_account_in_authorization_domain(account, all_account_groups=all_account_groups)
             return in_auth_domain and is_shared
 
-    @property
-    def has_app_as_owner(self):
-        """Check if the app can make updates to the workspace on AnVIL."""
-        return self.is_managed_by_app and self.is_accessible_by_app
-
 
 class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""
