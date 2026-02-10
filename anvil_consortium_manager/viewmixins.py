@@ -260,13 +260,7 @@ class WorkspaceCheckAccessMixin:
     def check_workspace_access(self, workspace):
         workspace_access_level = self.get_workspace_access()
 
-        if workspace_access_level == workspace.AppAccessChoices.NO_ACCESS:
-            access_levels = [
-                workspace.AppAccessChoices.NO_ACCESS,
-                workspace.AppAccessChoices.LIMITED,
-                workspace.AppAccessChoices.OWNER,
-            ]
-        elif workspace_access_level == workspace.AppAccessChoices.LIMITED:
+        if workspace_access_level == workspace.AppAccessChoices.LIMITED:
             access_levels = [
                 workspace.AppAccessChoices.LIMITED,
                 workspace.AppAccessChoices.OWNER,
