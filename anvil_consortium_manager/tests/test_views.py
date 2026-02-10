@@ -12587,7 +12587,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceClone.message_no_access,
+            views.WorkspaceClone.workspace_access_error_message,
             str(messages[0]),
         )
 
@@ -12669,7 +12669,7 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceClone.message_no_access, str(messages[0]))
+        self.assertEqual(views.WorkspaceClone.workspace_access_error_message, str(messages[0]))
 
 
 class WorkspaceUpdateTest(TestCase):
@@ -13263,7 +13263,7 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceUpdateRequesterPays.message_not_owner,
+            views.WorkspaceUpdateRequesterPays.workspace_access_error_message,
             str(messages[0]),
         )
 
@@ -13282,7 +13282,7 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceUpdateRequesterPays.message_not_owner,
+            views.WorkspaceUpdateRequesterPays.workspace_access_error_message,
             str(messages[0]),
         )
 
@@ -13305,7 +13305,7 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceUpdateRequesterPays.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceUpdateRequesterPays.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_no_access(self):
         """View redirects with message if app has no access to workspace."""
@@ -13326,7 +13326,7 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceUpdateRequesterPays.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceUpdateRequesterPays.workspace_access_error_message, str(messages[0]))
 
 
 class WorkspaceListTest(TestCase):
@@ -14003,7 +14003,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceDelete.message_workspace_locked, str(messages[0]))
+        self.assertEqual(views.WorkspaceDelete.lock_error_message, str(messages[0]))
 
     def test_post_is_locked(self):
         """View redirects with a post request if the workspace is locked."""
@@ -14027,7 +14027,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceDelete.message_workspace_locked, str(messages[0]))
+        self.assertEqual(views.WorkspaceDelete.lock_error_message, str(messages[0]))
 
     def test_get_app_access_limited(self):
         """View redirects with message if app has limited access to workspace."""
@@ -14044,7 +14044,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceDelete.message_not_owner,
+            views.WorkspaceDelete.workspace_access_error_message,
             str(messages[0]),
         )
 
@@ -14063,7 +14063,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(
-            views.WorkspaceDelete.message_not_owner,
+            views.WorkspaceDelete.workspace_access_error_message,
             str(messages[0]),
         )
 
@@ -14086,7 +14086,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceDelete.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceDelete.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_no_access(self):
         """View redirects with message if app has no access to workspace."""
@@ -14107,7 +14107,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceDelete.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceDelete.workspace_access_error_message, str(messages[0]))
 
 
 class WorkspaceAutocompleteTest(TestCase):
@@ -21439,7 +21439,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
 
     def test_get_app_access_no_access(self):
         """View redirects with message if app has limited access to the workspace."""
@@ -21452,7 +21452,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_limited(self):
         """View redirects with message if workspace is not managed by app."""
@@ -21477,7 +21477,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_no_access(self):
         """View redirects with message if workspace is not managed by app."""
@@ -21502,7 +21502,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
 
 
 class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
@@ -23043,7 +23043,9 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_not_owner, str(messages[0]))
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
 
     def test_get_app_access_no_access(self):
         """View redirects with message if app has limited access to the workspace."""
@@ -23058,7 +23060,9 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_not_owner, str(messages[0]))
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
 
     def test_post_app_access_limited(self):
         """View redirects with message if workspace is not managed by app."""
@@ -23083,7 +23087,9 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_not_owner, str(messages[0]))
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
 
     def test_post_app_access_no_access(self):
         """View redirects with message if workspace is not managed by app."""
@@ -23108,7 +23114,9 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspaceGroup.message_not_owner, str(messages[0]))
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
 
 
 class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
@@ -23583,7 +23591,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingUpdate.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
 
     def test_get_app_access_no_access(self):
         """View redirects with message if app has limited access to the workspace."""
@@ -23601,7 +23609,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingUpdate.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_limited(self):
         """View redirects with message if workspace is not managed by app."""
@@ -23629,7 +23637,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingUpdate.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_no_access(self):
         """View redirects with message if workspace is not managed by app."""
@@ -23657,7 +23665,7 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingUpdate.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
 
 
 class WorkspaceGroupSharingListTest(TestCase):
@@ -24047,7 +24055,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingDelete.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))
 
     def test_get_app_access_no_access(self):
         """View redirects with message if app has limited access to the workspace."""
@@ -24065,7 +24073,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingDelete.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_limited(self):
         """View redirects with message if workspace is not managed by app."""
@@ -24089,7 +24097,7 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingDelete.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))
 
     def test_post_app_access_no_access(self):
         """View redirects with message if workspace is not managed by app."""
@@ -24113,4 +24121,4 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceGroupSharingDelete.message_not_owner, str(messages[0]))
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))

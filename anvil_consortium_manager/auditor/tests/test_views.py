@@ -1839,7 +1839,7 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
-            views.ManagedGroupMembershipAuditRun.message_not_managed_by_app,
+            views.ManagedGroupMembershipAuditReview.message_not_managed_by_app,
         )
 
     def test_managed_group_audit_ok(self):
@@ -3703,7 +3703,7 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
-            views.WorkspaceSharingAuditRun.message_not_managed_by_app,
+            views.WorkspaceSharingAuditRun.workspace_access_error_message,
         )
 
     def test_app_access_no_access(self):
@@ -3717,7 +3717,7 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
-            views.WorkspaceSharingAuditRun.message_not_managed_by_app,
+            views.WorkspaceSharingAuditRun.workspace_access_error_message,
         )
 
 
@@ -4168,7 +4168,7 @@ class WorkspaceSharingAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
-            views.WorkspaceSharingAuditRun.message_not_managed_by_app,
+            views.WorkspaceSharingAuditRun.workspace_access_error_message,
         )
 
     def test_app_access_no_access(self):
@@ -4182,7 +4182,7 @@ class WorkspaceSharingAuditReviewTest(AuditCacheClearTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(
             str(messages[0]),
-            views.WorkspaceSharingAuditRun.message_not_managed_by_app,
+            views.WorkspaceSharingAuditRun.workspace_access_error_message,
         )
 
 

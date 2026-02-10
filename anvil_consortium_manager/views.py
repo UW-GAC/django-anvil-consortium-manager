@@ -1396,6 +1396,7 @@ class WorkspaceImport(
 class WorkspaceClone(
     auth.AnVILConsortiumManagerStaffEditRequired,
     SuccessMessageMixin,
+    viewmixins.WorkspaceCheckAccessMixin,
     viewmixins.WorkspaceAdapterMixin,
     SingleObjectMixin,
     FormView,
@@ -1405,7 +1406,8 @@ class WorkspaceClone(
     template_name = "anvil_consortium_manager/workspace_clone.html"
     ADAPTER_ERROR_MESSAGE_BEFORE_ANVIL_CREATE = "[WorkspaceClone] before_anvil_create method failed"
     ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE = "[WorkspaceClone] after_anvil_create method failed"
-    message_no_access = "Cannot clone a workspace to which the app doesn't have access"
+    workspace_access = models.Workspace.AppAccessChoices.LIMITED
+    workspace_access_error_message = "Cannot clone a workspace to which the app doesn't have access"
 
     def get_object(self, queryset=None):
         """Return the workspace to clone."""
@@ -1433,9 +1435,26 @@ class WorkspaceClone(
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if not self.check_workspace(self.object):
-            return HttpResponseRedirect(self.object.get_absolute_url())
         return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests: instantiate the forms instances with the passed
+        POST variables and then check if they are valid.
+        """
+        self.adapter = self.get_adapter()
+        self.object = self.get_object()
+        if not self.check_workspace_access(self.object):
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        self.new_workspace = None
+        form = self.get_form()
+        # First, check if the workspace form is valid.
+        # If it is, we'll save the model and then check the workspace data formset in the post method.
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            workspace_data_formset = self.get_workspace_data_formset()
+            return self.forms_invalid(form, workspace_data_formset)
 
     def get_initial(self):
         """Add the authorization domains of the workspace to be cloned to the form."""
@@ -1493,26 +1512,6 @@ class WorkspaceClone(
         if "workspace_data_formset" not in kwargs:
             kwargs["workspace_data_formset"] = self.get_workspace_data_formset()
         return super().get_context_data(**kwargs)
-
-    def post(self, request, *args, **kwargs):
-        """
-        Handle POST requests: instantiate the forms instances with the passed
-        POST variables and then check if they are valid.
-        """
-        self.adapter = self.get_adapter()
-        self.object = self.get_object()
-        self.object = self.get_object()
-        if not self.check_workspace(self.object):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        self.new_workspace = None
-        form = self.get_form()
-        # First, check if the workspace form is valid.
-        # If it is, we'll save the model and then check the workspace data formset in the post method.
-        if form.is_valid():
-            return self.form_valid(form)
-        else:
-            workspace_data_formset = self.get_workspace_data_formset()
-            return self.forms_invalid(form, workspace_data_formset)
 
     def form_valid(self, form):
         """If the form(s) are valid, save the associated model(s) and create the workspace on AnVIL."""
@@ -1700,6 +1699,7 @@ class WorkspaceUpdate(
 
 class WorkspaceUpdateRequesterPays(
     auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.WorkspaceCheckAccessMixin,
     SuccessMessageMixin,
     UpdateView,
 ):
@@ -1709,7 +1709,10 @@ class WorkspaceUpdateRequesterPays(
     form_class = forms.WorkspaceRequesterPaysForm
     template_name = "anvil_consortium_manager/workspace_update_requester_pays.html"
     message_api_error = "Error updating requester pays status on AnVIL. (AnVIL API Error: {})"
-    message_not_owner = "Cannot update requester pays status for a workspace where the app is not an owner."
+    workspace_access_error_message = (
+        "Cannot update requester pays status for a workspace where the app is not an owner."
+    )
+    workspace_access = models.Workspace.AppAccessChoices.OWNER
     success_message = "Successfully updated requester pays status."
 
     def get_object(self, queryset=None):
@@ -1746,25 +1749,6 @@ class WorkspaceUpdateRequesterPays(
                 messages.add_message(self.request, messages.ERROR, msg)
                 return self.render_to_response(self.get_context_data(form=form))
         return super().form_valid(form)
-
-    def check_workspace(self, workspace):
-        """Check if the workspace can be updated on AnVIL by the app."""
-        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
-            messages.error(self.request, self.message_not_owner)
-            return False
-        return True
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        if not self.check_workspace(self.object):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        return super().get(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        if not self.check_workspace(self.object):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        return super().post(request, *args, **kwargs)
 
 
 class WorkspaceList(auth.AnVILConsortiumManagerViewRequired, SingleTableMixin, FilterView):
@@ -1822,43 +1806,22 @@ class WorkspaceListByType(
         return [self.adapter.workspace_list_template_name]
 
 
-class WorkspaceDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
+class WorkspaceDelete(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.WorkspaceCheckAccessMixin,
+    SuccessMessageMixin,
+    DeleteView,
+):
     model = models.Workspace
     success_message = "Successfully deleted Workspace on AnVIL."
     message_could_not_delete_workspace_from_app = "Cannot delete workspace from app due to foreign key restrictions."
-    message_not_owner = "Cannot delete a workspace where the app is not an owner."
-    message_workspace_locked = "Cannot delete workspace because it is locked."
-
-    def check_workspace(self, workspace):
-        """Check if the workspace can be updated on AnVIL by the app."""
-        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
-            messages.error(self.request, self.message_not_owner)
-            return False
-        if workspace.is_locked:
-            messages.error(self.request, self.message_workspace_locked)
-            return False
-        return True
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        if not self.check_workspace(self.object):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        context = self.get_context_data(object=self.object)
-        return self.render_to_response(context)
-
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        if not self.check_workspace(self.object):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        form = self.get_form()
-        if form.is_valid():
-            return self.form_valid(form)
-        else:
-            return self.form_invalid(form)
+    workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = True
+    workspace_access_error_message = "Cannot delete a workspace where the app is not an owner."
+    lock_error_message = "Cannot delete workspace because it is locked."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
-
         # Use a custom queryset if provided; this is required for subclasses
         # like DateDetailView
         if queryset is None:
@@ -2646,7 +2609,12 @@ class WorkspaceGroupSharingCreate(auth.AnVILConsortiumManagerStaffEditRequired, 
         return super().form_valid(form)
 
 
-class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
+class WorkspaceGroupSharingCreateByWorkspace(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.WorkspaceCheckAccessMixin,
+    SuccessMessageMixin,
+    CreateView,
+):
     """View to create a new WorkspaceGroupSharing object for the workspace specified in the url."""
 
     model = models.WorkspaceGroupSharing
@@ -2655,7 +2623,8 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
-    message_not_owner = "Cannot share this workspace because it is not owned by the app."
+    workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_access_error_message = "Cannot share this workspace because it is not owned by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2669,25 +2638,6 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
         except models.Workspace.DoesNotExist:
             raise Http404("Workspace not found.")
         return workspace
-
-    def check_workspace(self, workspace):
-        """Check if the workspace can be updated on AnVIL by the app."""
-        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
-            messages.error(self.request, self.message_not_owner)
-            return False
-        return True
-
-    def get(self, request, *args, **kwargs):
-        self.workspace = self.get_workspace()
-        if not self.check_workspace(self.workspace):
-            return HttpResponseRedirect(self.workspace.get_absolute_url())
-        return super().get(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        self.workspace = self.get_workspace()
-        if not self.check_workspace(self.workspace):
-            return HttpResponseRedirect(self.workspace.get_absolute_url())
-        return super().post(request, *args, **kwargs)
 
     def get_initial(self):
         initial = super().get_initial()
@@ -2708,8 +2658,29 @@ class WorkspaceGroupSharingCreateByWorkspace(WorkspaceGroupSharingCreate):
     def get_success_url(self):
         return self.object.get_absolute_url()
 
+    def form_valid(self, form):
+        """If the form is valid, save the associated model and create it on AnVIL."""
+        # Create but don't save the new group.
+        self.object = form.save(commit=False)
+        # Make an API call to AnVIL to create the group.
+        try:
+            self.object.anvil_create_or_update()
+        except exceptions.AnVILGroupNotFound:
+            messages.add_message(self.request, messages.ERROR, self.message_group_not_found)
+            return self.render_to_response(self.get_context_data(form=form))
+        except AnVILAPIError as e:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
+            return self.render_to_response(self.get_context_data(form=form))
+        # The object is saved by the super's form_valid method.
+        return super().form_valid(form)
 
-class WorkspaceGroupSharingCreateByGroup(WorkspaceGroupSharingCreate):
+
+class WorkspaceGroupSharingCreateByGroup(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    SuccessMessageMixin,
+    CreateView,
+):
     """View to create a new WorkspaceGroupSharing object for the group specified in the url."""
 
     model = models.WorkspaceGroupSharing
@@ -2758,8 +2729,30 @@ class WorkspaceGroupSharingCreateByGroup(WorkspaceGroupSharingCreate):
     def get_success_url(self):
         return self.object.get_absolute_url()
 
+    def form_valid(self, form):
+        """If the form is valid, save the associated model and create it on AnVIL."""
+        # Create but don't save the new group.
+        self.object = form.save(commit=False)
+        # Make an API call to AnVIL to create the group.
+        try:
+            self.object.anvil_create_or_update()
+        except exceptions.AnVILGroupNotFound:
+            messages.add_message(self.request, messages.ERROR, self.message_group_not_found)
+            return self.render_to_response(self.get_context_data(form=form))
+        except AnVILAPIError as e:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
+            return self.render_to_response(self.get_context_data(form=form))
+        # The object is saved by the super's form_valid method.
+        return super().form_valid(form)
 
-class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
+
+class WorkspaceGroupSharingCreateByWorkspaceGroup(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.WorkspaceCheckAccessMixin,
+    SuccessMessageMixin,
+    CreateView,
+):
     """View to create a new WorkspaceGroupSharing object for the workspace and group specified in the url."""
 
     model = models.WorkspaceGroupSharing
@@ -2768,7 +2761,8 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     success_message = "Successfully shared Workspace with Group."
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
-    message_not_owner = "Cannot share this workspace because it is not owned by the app."
+    workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_access_error_message = "Cannot share this workspace because it is not owned by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
 
@@ -2791,18 +2785,9 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
             raise Http404("Workspace or ManagedGroup not found.")
         return group
 
-    def check_workspace(self, workspace):
-        """Check if the workspace can be updated."""
-        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
-            messages.error(self.request, self.message_not_owner)
-            return False
-        return True
-
     def get(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
         self.group = self.get_group()
-        if not self.check_workspace(self.workspace):
-            return HttpResponseRedirect(self.workspace.get_absolute_url())
         try:
             obj = models.WorkspaceGroupSharing.objects.get(workspace=self.workspace, group=self.group)
             messages.error(self.request, self.message_already_exists)
@@ -2813,8 +2798,6 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     def post(self, request, *args, **kwargs):
         self.workspace = self.get_workspace()
         self.group = self.get_group()
-        if not self.check_workspace(self.workspace):
-            return HttpResponseRedirect(self.workspace.get_absolute_url())
         try:
             obj = models.WorkspaceGroupSharing.objects.get(workspace=self.workspace, group=self.group)
             messages.error(self.request, self.message_already_exists)
@@ -2844,8 +2827,30 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(WorkspaceGroupSharingCreate):
     def get_success_url(self):
         return self.object.get_absolute_url()
 
+    def form_valid(self, form):
+        """If the form is valid, save the associated model and create it on AnVIL."""
+        # Create but don't save the new group.
+        self.object = form.save(commit=False)
+        # Make an API call to AnVIL to create the group.
+        try:
+            self.object.anvil_create_or_update()
+        except exceptions.AnVILGroupNotFound:
+            messages.add_message(self.request, messages.ERROR, self.message_group_not_found)
+            return self.render_to_response(self.get_context_data(form=form))
+        except AnVILAPIError as e:
+            # If the API call failed, rerender the page with the responses and show a message.
+            messages.add_message(self.request, messages.ERROR, "AnVIL API Error: " + str(e))
+            return self.render_to_response(self.get_context_data(form=form))
+        # The object is saved by the super's form_valid method.
+        return super().form_valid(form)
 
-class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, UpdateView):
+
+class WorkspaceGroupSharingUpdate(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.WorkspaceCheckAccessMixin,
+    SuccessMessageMixin,
+    UpdateView,
+):
     """View to update a WorkspaceGroupSharing object and on AnVIL."""
 
     model = models.WorkspaceGroupSharing
@@ -2854,7 +2859,10 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
         "can_compute",
     )
     template_name = "anvil_consortium_manager/workspacegroupsharing_update.html"
-    message_not_owner = "Cannot update this workspace sharing because the workspace is not owned by the app."
+    workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_access_error_message = (
+        "Cannot update this workspace sharing because the workspace is not owned by the app."
+    )
     success_message = "Successfully updated Workspace sharing."
     """Message to display when the WorkspaceGroupSharing object was successfully updated."""
 
@@ -2883,24 +2891,19 @@ class WorkspaceGroupSharingUpdate(auth.AnVILConsortiumManagerStaffEditRequired, 
             )
         return obj
 
-    def check_workspace(self, workspace):
-        """Check if the workspace can be updated."""
-        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
-            messages.error(self.request, self.message_not_owner)
-            return False
-        return True
+    def get_workspace(self):
+        return self.object.workspace
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if not self.check_workspace(self.object.workspace):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        return super().get(request, *args, **kwargs)
+        return super().get(self, request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if not self.check_workspace(self.object.workspace):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        return super().post(request, *args, **kwargs)
+        return super().post(self, request, *args, **kwargs)
+
+    def get_access_error_redirect_url(self):
+        return self.object.get_absolute_url()
 
     def form_valid(self, form):
         """If the form is valid, save the associated model and create it on AnVIL."""
@@ -2922,10 +2925,16 @@ class WorkspaceGroupSharingList(auth.AnVILConsortiumManagerStaffViewRequired, Si
     table_class = tables.WorkspaceGroupSharingStaffTable
 
 
-class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, SuccessMessageMixin, DeleteView):
+class WorkspaceGroupSharingDelete(
+    auth.AnVILConsortiumManagerStaffEditRequired,
+    viewmixins.WorkspaceCheckAccessMixin,
+    SuccessMessageMixin,
+    DeleteView,
+):
     model = models.WorkspaceGroupSharing
     success_message = "Successfully removed workspace sharing on AnVIL."
-    message_not_owner = "Cannot remove this record because the workspace is not owned by the app."
+    workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_access_error_message = "Cannot remove this record because the workspace is not owned by the app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -2952,27 +2961,22 @@ class WorkspaceGroupSharingDelete(auth.AnVILConsortiumManagerStaffEditRequired, 
             )
         return obj
 
-    def check_workspace(self, workspace):
-        """Check if the workspace can be updated."""
-        if workspace.app_access != models.Workspace.AppAccessChoices.OWNER:
-            messages.error(self.request, self.message_not_owner)
-            return False
-        return True
+    def get_workspace(self):
+        return self.get_object().workspace
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if not self.check_workspace(self.object.workspace):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        return super().get(request, *args, **kwargs)
+        return super().get(self, request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        if not self.check_workspace(self.object.workspace):
-            return HttpResponseRedirect(self.object.get_absolute_url())
-        return super().post(request, *args, **kwargs)
+        return super().post(self, request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse("anvil_consortium_manager:workspace_group_sharing:list")
+
+    def get_access_error_redirect_url(self):
+        return self.object.get_absolute_url()
 
     def form_valid(self, form):
         """
