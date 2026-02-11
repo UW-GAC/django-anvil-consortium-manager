@@ -81,11 +81,11 @@ class WorkspaceCheckAccessMixinText(TestCase):
             self.view_class().get_workspace_access()
         self.assertIn("Invalid workspace access level: foo", str(e.exception))
         # workspace_access = None
-        with patch.object(viewmixins.WorkspaceCheckAccessMixin, "workspace_unlocked", None), self.assertRaises(
+        with patch.object(viewmixins.WorkspaceCheckAccessMixin, "workspace_access", None), self.assertRaises(
             ImproperlyConfigured
         ) as e:
-            self.mixin.get_workspace_unlocked()
-        self.assertIn("must set `workspace_unlocked` or override `get_workspace_unlocked`", str(e.exception))
+            self.mixin.get_workspace_access()
+        self.assertIn("must set `workspace_access` or override `get_workspace_access`", str(e.exception))
 
     def test_get_workspace_access_custom(self):
         with patch.object(viewmixins.WorkspaceCheckAccessMixin, "get_workspace_access", return_value="foo"):
