@@ -1,0 +1,17 @@
+<div class="alert alert-secondary my-3" role="alert">
+    <div class="container align-items-center d-flex">
+    <div class="">
+        <span class="fa-solid fa-ban me-1"></span>
+    </div>
+    <div class="p-2 flex-grow-1">
+        Information on this page may no longer be accurate because the app
+        {% if workspace.app_access == workspace.AppAccessChoices.LIMITED %}
+            has limited access
+        {% else %}
+            no longer has access
+        {% endif %}
+            to this workspace:
+        <strong>{{ workspace.app_access_reason }}</strong>
+    </div>
+    </div>
+</div>

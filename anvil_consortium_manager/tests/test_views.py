@@ -7581,7 +7581,8 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(workspace_data.workspace.get_absolute_url())
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("no longer has access to this workspace", response.content.decode())
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertNotIn("access to this workspace", response.content.decode())
         self.assertNotIn("alert", response.content.decode())
 
     def test_app_access_limited_alert(self):
@@ -7592,6 +7593,7 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.edit_user)
         response = self.client.get(workspace_data.workspace.get_absolute_url())
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
         self.assertIn("has limited access", response.content.decode())
         self.assertIn(workspace_data.workspace.app_access_reason, response.content.decode())
         self.assertIn("alert", response.content.decode())
@@ -7604,6 +7606,7 @@ class WorkspaceDetailTest(TestCase):
         self.client.force_login(self.edit_user)
         response = self.client.get(workspace_data.workspace.get_absolute_url())
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
         self.assertIn("no longer has access", response.content.decode())
         self.assertIn(workspace_data.workspace.app_access_reason, response.content.decode())
         self.assertIn("alert", response.content.decode())
@@ -19915,6 +19918,42 @@ class WorkspaceGroupSharingDetailTest(TestCase):
                 },
             ),
         )
+
+    def test_app_access_owner_no_alert(self):
+        """No alert is shown if the app has owner access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.OWNER
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("access to this workspace", response.content.decode())
+        self.assertNotIn("alert", response.content.decode())
+
+    def test_app_access_limited_alert(self):
+        """An alert is shown if the app has limited access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("has limited access", response.content.decode())
+        self.assertIn(obj.workspace.app_access_reason, response.content.decode())
+        self.assertIn("alert", response.content.decode())
+
+    def test_app_access_no_access_alert(self):
+        """An alert is shown if the app has no access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no longer has access", response.content.decode())
+        self.assertIn(obj.workspace.app_access_reason, response.content.decode())
+        self.assertIn("alert", response.content.decode())
 
 
 class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
