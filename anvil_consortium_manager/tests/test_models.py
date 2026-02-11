@@ -2959,3 +2959,17 @@ class WorkspaceMethodIsAccessibleByAccount(TestCase):
         self.assertTrue(workspace.is_accessible_by_account(account))
         other_groups = factories.ManagedGroupFactory.create_batch(2)
         self.assertFalse(workspace.is_accessible_by_account(account, all_account_groups=other_groups))
+
+    def test_app_access_limited(self):
+        workspace = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError) as e:
+            workspace.is_accessible_by_account(account)
+        self.assertIn("App does not have OWNER access to {}".format(workspace), str(e.exception))
+
+    def test_app_access_no_access(self):
+        workspace = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError) as e:
+            workspace.is_accessible_by_account(account)
+        self.assertIn("App does not have OWNER access to {}".format(workspace), str(e.exception))

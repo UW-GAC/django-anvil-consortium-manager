@@ -214,19 +214,28 @@ class AccountDetail(
                 else:
                     pass
             # Determine why access is not known, and add fields to be used in the table later.
+            except exceptions.AnVILNotWorkspaceOwnerError:
+                # This means that the app can't determine workspace access because the account is not the owner.
+                workspace.sharing_known = None
+                workspace.auth_domain_known = None
+                workspace.owned_by_app = False
+                unknown_workspaces.append(workspace)
             except exceptions.WorkspaceAccessSharingUnknownError:
                 # This means that the app can't determine workspace access due to sharing.
                 workspace.sharing_known = False
                 workspace.auth_domain_known = True
+                workspace.owned_by_app = True
                 unknown_workspaces.append(workspace)
             except exceptions.WorkspaceAccessAuthorizationDomainUnknownError:
                 # This means that the app can't determine workspace access due to auth domain membership.
                 workspace.sharing_known = True
                 workspace.auth_domain_known = False
+                workspace.owned_by_app = True
                 unknown_workspaces.append(workspace)
             except exceptions.WorkspaceAccessUnknownError:
                 workspace.sharing_known = False
                 workspace.auth_domain_known = False
+                workspace.owned_by_app = True
                 unknown_workspaces.append(workspace)
         # Accessible
         accessible_sharing = models.WorkspaceGroupSharing.objects.filter(

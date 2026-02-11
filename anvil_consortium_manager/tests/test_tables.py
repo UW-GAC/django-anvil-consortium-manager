@@ -288,15 +288,21 @@ class WorkspaceAccessUnknownStaffTableTest(TestCase):
         table = self.table_class([workspace])
         self.assertEqual(len(table.rows), 1)
 
-    def test_row_count_with_two_objects(self):
+    def test_row_count_with_multiple_objects(self):
         workspace_1 = factories.WorkspaceFactory.create()
+        workspace_1.owned_by_app = True
         workspace_1.sharing_unknown = True
-        workspace_1.auth_domain_unknown = True
+        workspace_1.auth_domain_unknown = False
         workspace_2 = factories.WorkspaceFactory.create()
+        workspace_2.owned_by_app = True
         workspace_2.sharing_unknown = False
         workspace_2.auth_domain_unknown = True
-        table = self.table_class([workspace_1, workspace_2])
-        self.assertEqual(len(table.rows), 2)
+        workspace_3 = factories.WorkspaceFactory.create()
+        workspace_3.owned_by_app = False
+        workspace_3.sharing_unknown = None
+        workspace_3.auth_domain_unknown = None
+        table = self.table_class([workspace_1, workspace_2, workspace_3])
+        self.assertEqual(len(table.rows), 3)
 
 
 class GroupGroupMembershipStaffTableTest(TestCase):

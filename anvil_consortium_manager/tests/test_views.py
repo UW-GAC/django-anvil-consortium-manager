@@ -1595,6 +1595,7 @@ class AccountDetailTest(TestCase):
         record = response.context_data["unknown_access_workspace_table"].data[0]
         self.assertEqual(record.sharing_known, False)
         self.assertEqual(record.auth_domain_known, True)
+        self.assertEqual(record.owned_by_app, True)
 
     def test_unknown_access_workspace_one_unknown_auth_domain(self):
         """One workspace is shown if it is shared but the auth domain is not managed by app."""
@@ -1612,6 +1613,7 @@ class AccountDetailTest(TestCase):
         record = response.context_data["unknown_access_workspace_table"].data[0]
         self.assertEqual(record.sharing_known, True)
         self.assertEqual(record.auth_domain_known, False)
+        self.assertEqual(record.owned_by_app, True)
 
     def test_unknown_access_workspace_one_unknown_sharing_and_auth_domain(self):
         """One workspace is shown if has unknown sharing and unknown auth domain access."""
@@ -1628,6 +1630,7 @@ class AccountDetailTest(TestCase):
         record = response.context_data["unknown_access_workspace_table"].data[0]
         self.assertEqual(record.sharing_known, False)
         self.assertEqual(record.auth_domain_known, False)
+        self.assertEqual(record.owned_by_app, True)
 
     def test_unknown_access_workspace_unknown_sharing_not_in_auth_domain(self):
         """Workspace does not appear in table if it is has unknown sharing but the user is not in the auth domain."""
@@ -1650,6 +1653,40 @@ class AccountDetailTest(TestCase):
         response = self.client.get(self.get_url(account.uuid))
         self.assertIn("unknown_access_workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
+
+    def test_unknown_access_workspace_app_access_limited(self):
+        """Workspace does not appear in table if it the app has limited access."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, None)
+        self.assertEqual(record.auth_domain_known, None)
+        self.assertEqual(record.owned_by_app, False)
+
+    def test_unknown_access_workspace_app_access_no_access(self):
+        """Workspace does not appear in table if it the app has no access."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, None)
+        self.assertEqual(record.auth_domain_known, None)
+        self.assertEqual(record.owned_by_app, False)
 
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""

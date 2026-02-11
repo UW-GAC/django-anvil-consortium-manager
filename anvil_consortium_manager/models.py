@@ -1039,6 +1039,9 @@ class Workspace(TimeStampedModel):
             raise ValueError("account must be an instance of `Account`.")
         if not all_account_groups:
             all_account_groups = account.get_all_groups()
+        # First, check if the app can even access the workspace. If not, raise an error.
+        if self.app_access != self.AppAccessChoices.OWNER:
+            raise exceptions.AnVILNotWorkspaceOwnerError("App does not have OWNER access to {}".format(self))
         # First check sharing, then check auth domain membership.
         try:
             is_shared = self.is_shared_with_account(account, all_account_groups=all_account_groups)
