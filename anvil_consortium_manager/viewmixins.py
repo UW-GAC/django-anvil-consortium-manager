@@ -243,21 +243,28 @@ class WorkspaceCheckAccessMixin:
     """Mixin to check if the workspace is accessible by the app before allowing access to a view."""
 
     workspace_access = None
-    workspace_unlocked = False
+    workspace_unlocked = None
     workspace_access_error_message = None
     lock_error_message = None
 
     def get_workspace_access(self):
         if self.workspace_access is None:
             raise ImproperlyConfigured("You must set `workspace_access` or override `get_workspace_access`.")
+        if self.workspace_access not in [
+            models.Workspace.AppAccessChoices.LIMITED,
+            models.Workspace.AppAccessChoices.OWNER,
+        ]:
+            raise ImproperlyConfigured("Invalid workspace access level: {}".format(self.workspace_access))
         return self.workspace_access
 
-    def get_workspace_locked(self):
+    def get_workspace_unlocked(self):
         if self.workspace_unlocked is None:
-            raise ImproperlyConfigured("You must set `workspace_unlocked` or override `get_workspace_locked`.")
+            raise ImproperlyConfigured("You must set `workspace_unlocked` or override `get_workspace_unlocked`.")
+        if self.workspace_unlocked not in [True, False]:
+            raise ImproperlyConfigured("Invalid workspace_unlocked value: {}".format(self.workspace_unlocked))
         return self.workspace_unlocked
 
-    def check_workspace_access(self, workspace):
+    def _check_workspace_access_ok(self, workspace):
         workspace_access_level = self.get_workspace_access()
 
         if workspace_access_level == workspace.AppAccessChoices.LIMITED:
@@ -270,7 +277,7 @@ class WorkspaceCheckAccessMixin:
                 workspace.AppAccessChoices.OWNER,
             ]
         else:
-            raise ValueError("Invalid minimum_access_level: {}".format(workspace_access_level))
+            raise ValueError("Invalid workspace access level: {}".format(workspace_access_level))
 
         x = workspace.app_access in access_levels
         if not x:
@@ -283,10 +290,14 @@ class WorkspaceCheckAccessMixin:
                 )
         return x
 
-    def check_workspace_lock_status(self, workspace):
+    def _check_workspace_lock_ok(self, workspace):
         # Check lock status.
+        workspace_unlocked = self.get_workspace_unlocked()
+        if workspace_unlocked not in [True, False]:
+            raise ValueError("Invalid workspace unlocked value: {}".format(workspace_unlocked))
+
         x = True
-        if self.workspace_unlocked and workspace.is_locked:
+        if workspace_unlocked and workspace.is_locked:
             x = False
             lock_error_message = self.get_lock_error_message(workspace)
             if lock_error_message:
@@ -298,8 +309,8 @@ class WorkspaceCheckAccessMixin:
         return x
 
     def check_workspace(self, workspace):
-        access_ok = self.check_workspace_access(workspace)
-        lock_ok = self.check_workspace_lock_status(workspace)
+        access_ok = self._check_workspace_access_ok(workspace)
+        lock_ok = self._check_workspace_lock_ok(workspace)
         return access_ok and lock_ok
 
     def get_workspace(self):

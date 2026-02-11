@@ -1408,6 +1408,7 @@ class WorkspaceClone(
     ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE = "[WorkspaceClone] after_anvil_create method failed"
     workspace_access = models.Workspace.AppAccessChoices.LIMITED
     workspace_access_error_message = "Cannot clone a workspace to which the app doesn't have access"
+    workspace_unlocked = False
 
     def get_object(self, queryset=None):
         """Return the workspace to clone."""
@@ -1437,7 +1438,7 @@ class WorkspaceClone(
         """
         self.adapter = self.get_adapter()
         self.object = self.get_object()
-        if not self.check_workspace_access(self.object):
+        if not self.check_workspace(self.object):
             return HttpResponseRedirect(self.object.get_absolute_url())
         self.new_workspace = None
         form = self.get_form()
@@ -1706,6 +1707,7 @@ class WorkspaceUpdateRequesterPays(
         "Cannot update requester pays status for a workspace where the app is not an owner."
     )
     workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
     success_message = "Successfully updated requester pays status."
 
     def get_object(self, queryset=None):
@@ -2617,6 +2619,7 @@ class WorkspaceGroupSharingCreateByWorkspace(
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
     workspace_access_error_message = "Cannot share this workspace because it is not owned by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
@@ -2755,6 +2758,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroup(
     """Message to display when the WorkspaceGroupSharing object was successfully created in the app and on AnVIL."""
 
     workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
     workspace_access_error_message = "Cannot share this workspace because it is not owned by the app."
     message_group_not_found = "Managed Group not found on AnVIL."
     """Message to display when the ManagedGroup was not found on AnVIL."""
@@ -2856,6 +2860,7 @@ class WorkspaceGroupSharingUpdate(
     workspace_access_error_message = (
         "Cannot update this workspace sharing because the workspace is not owned by the app."
     )
+    workspace_unlocked = False
     success_message = "Successfully updated Workspace sharing."
     """Message to display when the WorkspaceGroupSharing object was successfully updated."""
 
@@ -2927,6 +2932,7 @@ class WorkspaceGroupSharingDelete(
     model = models.WorkspaceGroupSharing
     success_message = "Successfully removed workspace sharing on AnVIL."
     workspace_access = models.Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
     workspace_access_error_message = "Cannot remove this record because the workspace is not owned by the app."
 
     def get_object(self, queryset=None):

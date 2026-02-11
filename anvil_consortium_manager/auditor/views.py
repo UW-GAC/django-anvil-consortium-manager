@@ -387,6 +387,7 @@ class WorkspaceSharingAuditRun(
     audit_class = workspace_audit.WorkspaceSharingAudit
     template_name = "auditor/workspace_sharing_audit_run.html"
     workspace_access = Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
     workspace_access_error_message = "Cannot audit sharing because workspace is not managed by this app."
 
     def get_object(self, queryset=None):
@@ -442,6 +443,7 @@ class WorkspaceSharingAuditReview(
     slug_field = "name"
     template_name = "auditor/workspace_sharing_audit_review.html"
     workspace_access = Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
     workspace_access_error_message = "Cannot audit sharing because workspace is not managed by this app."
 
     def get_object(self, queryset=None):
