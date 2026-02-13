@@ -1402,6 +1402,34 @@ class WorkspaceTest(TestCase):
             str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
         )
 
+    def test_property_is_owner(self):
+        instance = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.OWNER)
+        self.assertTrue(instance.is_owner)
+        # Limited access.
+        instance.app_access = Workspace.AppAccessChoices.LIMITED
+        instance.app_access_reason = "Reason for limited access"
+        instance.save()
+        self.assertFalse(instance.is_owner)
+        # No access
+        instance.app_access = Workspace.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = "Reason for no access"
+        instance.save()
+        self.assertFalse(instance.is_owner)
+
+    def test_property_has_access(self):
+        instance = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.OWNER)
+        self.assertTrue(instance.has_access)
+        # Limited access.
+        instance.app_access = Workspace.AppAccessChoices.LIMITED
+        instance.app_access_reason = "Reason for limited access"
+        instance.save()
+        self.assertTrue(instance.has_access)
+        # No access
+        instance.app_access = Workspace.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = "Reason for no access"
+        instance.save()
+        self.assertFalse(instance.has_access)
+
 
 class WorkspaceDataTest(TestCase):
     """Tests for the WorkspaceData models (default and base)."""

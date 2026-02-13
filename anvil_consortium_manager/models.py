@@ -1069,6 +1069,16 @@ class Workspace(TimeStampedModel):
             in_auth_domain = self.has_account_in_authorization_domain(account, all_account_groups=all_account_groups)
             return in_auth_domain and is_shared
 
+    @property
+    def is_owner(self):
+        """Check if the app is an owner of this workspace."""
+        return self.app_access == self.AppAccessChoices.OWNER
+
+    @property
+    def has_access(self):
+        """Check if the app has any access to this workspace."""
+        return self.app_access in [self.AppAccessChoices.OWNER, self.AppAccessChoices.LIMITED]
+
 
 class BaseWorkspaceData(models.Model):
     """Abstract base class to subclass when creating a custom WorkspaceData model."""
