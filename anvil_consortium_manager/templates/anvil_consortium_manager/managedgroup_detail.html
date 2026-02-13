@@ -68,7 +68,6 @@
   </div>
 </div>
 
-{% if object.is_managed_by_app %}
 
   <div class="my-3">
     <div class="accordion" id="accordionWorkspaceAccess">
@@ -113,6 +112,7 @@
         </div>
       </div>
 
+  {% if object.is_managed_by_app %}
 
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingMembersOne">
@@ -150,10 +150,10 @@
         </div>
       </div>
 
+  {% endif %}
     </div>
   </div>
 
-  {% endif %}
 
 {% endblock after_panel %}
 

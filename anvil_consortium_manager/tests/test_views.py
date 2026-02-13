@@ -5381,10 +5381,10 @@ class ManagedGroupDetailTest(TestCase):
         response = self.client.get(self.get_url(obj.name))
         self.assertEqual(response.status_code, 200)
         self.assertIn("workspace_authorization_domain_table", response.context_data)
-        self.assertNotIn("workspace_table", response.context_data)
+        self.assertIn("workspace_table", response.context_data)
         self.assertNotIn("account_table", response.context_data)
         self.assertNotIn("group_table", response.context_data)
-        self.assertNotIn("parent_table", response.context_data)
+        self.assertIn("parent_table", response.context_data)
 
     def test_is_managed_by_app_false_action_button_links(self):
         edit_user = User.objects.create_user(username="edit", password="test")
