@@ -19920,11 +19920,24 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         obj = factories.WorkspaceGroupSharingFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
+        # Delete
         self.assertTrue(response.context_data["show_edit_links"])
         self.assertContains(
             response,
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -19948,6 +19961,18 @@ class WorkspaceGroupSharingDetailTest(TestCase):
             response,
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -19991,6 +20016,82 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         self.assertIn("no longer has access", response.content.decode())
         self.assertIn(obj.workspace.app_access_reason, response.content.decode())
         self.assertIn("alert", response.content.decode())
+
+    def test_app_access_limited_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        # Delete
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+
+    def test_app_access_no_access_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS
+        )
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        # Delete
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
 
 
 class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):

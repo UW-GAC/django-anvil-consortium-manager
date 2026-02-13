@@ -24,7 +24,7 @@
 {% endblock after_panel %}
 
 {% block action_buttons %}
-  {% if show_edit_links %}
+  {% if show_edit_links and object.workspace.app_access == object.workspace.AppAccessChoices.OWNER %}
     <p>
       <a href="{% url 'anvil_consortium_manager:workspaces:sharing:update' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-secondary" role="button">Update</a>
       <a href="{% url 'anvil_consortium_manager:workspaces:sharing:delete' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
