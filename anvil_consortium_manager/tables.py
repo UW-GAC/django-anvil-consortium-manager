@@ -131,7 +131,7 @@ class WorkspaceStaffTable(tables.Table):
     name = tables.Column(linkify=True, verbose_name="Workspace")
     billing_project = tables.Column(linkify=True)
     workspace_type = tables.Column()
-    app_access = tables.Column(verbose_name="App access level")
+    is_owner = BooleanIconColumn(show_false_icon=True, verbose_name="Owner?", orderable=False)
     number_groups = tables.Column(
         verbose_name="Number of groups shared with",
         empty_values=(),
