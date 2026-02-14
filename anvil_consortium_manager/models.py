@@ -650,6 +650,27 @@ class Workspace(TimeStampedModel):
         help_text="Indicator of whether the workspace is set to requester pays.",
         default=False,
     )
+
+    # Management/access fields.
+    class AppAccessChoices(models.TextChoices):
+        NO_ACCESS = "NO_ACCESS", "No access"
+        LIMITED = "LIMITED", "Limited access"
+        OWNER = "OWNER", "Owner"
+
+    # Fields to handle non-owner access levels.
+    app_access = models.CharField(
+        blank=False,
+        null=False,
+        max_length=20,
+        choices=AppAccessChoices.choices,
+        default=AppAccessChoices.OWNER,
+    )
+    app_access_reason = models.TextField(
+        blank=True,
+        help_text="Reason why the app is not an owner of this workspace, if applicable.",
+        default="",
+    )
+    # Model history.
     history = HistoricalRecords()
 
     class Meta:
@@ -662,6 +683,14 @@ class Workspace(TimeStampedModel):
             registered_adapters = workspace_adapter_registry.get_registered_adapters()
             if self.workspace_type not in registered_adapters:
                 raise ValidationError({"workspace_type": "Value ``workspace_type`` is not a registered adapter type."})
+
+    def clean(self):
+        super().clean()
+        # Check consistency between app_access and app_access_reason.
+        if self.is_owner and self.app_access_reason:
+            raise ValidationError("app_access_reason must be blank if app_access is OWNER.")
+        elif not self.is_owner and not self.app_access_reason:
+            raise ValidationError("app_access_reason cannot be blank if app_access is not OWNER.")
 
     def __str__(self):
         return "{billing_project}/{name}".format(billing_project=self.billing_project, name=self.name)
@@ -1010,6 +1039,9 @@ class Workspace(TimeStampedModel):
             raise ValueError("account must be an instance of `Account`.")
         if not all_account_groups:
             all_account_groups = account.get_all_groups()
+        # First, check if the app can even access the workspace. If not, raise an error.
+        if not self.is_owner:
+            raise exceptions.AnVILNotWorkspaceOwnerError("App does not have OWNER access to {}".format(self))
         # First check sharing, then check auth domain membership.
         try:
             is_shared = self.is_shared_with_account(account, all_account_groups=all_account_groups)
@@ -1036,6 +1068,16 @@ class Workspace(TimeStampedModel):
             # Check auth domain membership. If it is unknown, this method raises the correct exception.
             in_auth_domain = self.has_account_in_authorization_domain(account, all_account_groups=all_account_groups)
             return in_auth_domain and is_shared
+
+    @property
+    def is_owner(self):
+        """Check if the app is an owner of this workspace."""
+        return self.app_access == self.AppAccessChoices.OWNER
+
+    @property
+    def has_access(self):
+        """Check if the app has any access to this workspace."""
+        return self.app_access in [self.AppAccessChoices.OWNER, self.AppAccessChoices.LIMITED]
 
 
 class BaseWorkspaceData(models.Model):

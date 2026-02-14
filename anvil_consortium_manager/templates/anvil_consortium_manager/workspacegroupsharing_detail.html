@@ -3,6 +3,12 @@
 
 {% block title %}Workspace group sharing: {{ object }}{% endblock %}
 
+{% block pills %}
+  {% if not object.workspace.is_owner %}
+    {% include 'anvil_consortium_manager/snippets/workspace_app_access_alert.html' with workspace=object.workspace %}
+  {% endif %}
+{% endblock pills %}
+
 {% block panel %}
 <dl class="row">
   <dt class="col-sm-2">Group</dt> <dd class="col-sm-10"><a href="{{object.group.get_absolute_url}}"> {{ object.group}} </a></dd>
@@ -18,7 +24,7 @@
 {% endblock after_panel %}
 
 {% block action_buttons %}
-  {% if show_edit_links %}
+  {% if show_edit_links and object.workspace.is_owner %}
     <p>
       <a href="{% url 'anvil_consortium_manager:workspaces:sharing:update' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-secondary" role="button">Update</a>
       <a href="{% url 'anvil_consortium_manager:workspaces:sharing:delete' billing_project_slug=object.workspace.billing_project.name workspace_slug=object.workspace.name group_slug=object.group.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>

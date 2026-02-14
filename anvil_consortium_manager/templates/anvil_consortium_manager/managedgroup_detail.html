@@ -7,10 +7,10 @@
 {% block title %}Managed Group: {{ object.name }}{% endblock %}
 
 {% block pills %}
-  {% if object.is_managed_by_app %}
-    <span class="badge bg-success">Managed by app</span>
-  {% else %}
-    <span class="badge bg-secondary">Not managed by app</span>
+  {% if not object.is_managed_by_app %}
+    <div class="alert alert-secondary my-3" role="alert">
+      <span class="fa-solid fa-ban me-1"></span> This group is not managed by the app.
+    </div>
   {% endif %}
 {% endblock pills %}
 
@@ -68,7 +68,6 @@
   </div>
 </div>
 
-{% if object.is_managed_by_app %}
 
   <div class="my-3">
     <div class="accordion" id="accordionWorkspaceAccess">
@@ -113,6 +112,7 @@
         </div>
       </div>
 
+  {% if object.is_managed_by_app %}
 
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingMembersOne">
@@ -150,18 +150,17 @@
         </div>
       </div>
 
+  {% endif %}
     </div>
   </div>
 
-  {% endif %}
 
 {% endblock after_panel %}
 
 
 {% block action_buttons %}
 
-{% if object.is_managed_by_app %}
-{% if show_edit_links %}
+{% if object.is_managed_by_app and show_edit_links %}
   <p>
     <a href="{% url 'anvil_consortium_manager:managed_groups:sharing:new' group_slug=object.name %}" class="btn btn-primary" role="button">Share a workspace with this group</a>
   </p>
@@ -173,15 +172,19 @@
   </p>
 {% endif %}
 
-<p>
-  <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:review' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
-</p>
+{% if object.is_managed_by_app %}
+  <p>
+    <a href="{% url 'anvil_consortium_manager:auditor:managed_groups:membership:by_group:review' slug=object.name %}" class="btn btn-secondary" role="button">Audit membership</a>
+  </p>
+{% endif %}
+
 {% if show_edit_links %}
   <p>
     <a href="{% url 'anvil_consortium_manager:managed_groups:update' slug=object.name %}" class="btn btn-secondary" role="button">Update</a>
-    <a href="{% url 'anvil_consortium_manager:managed_groups:delete' slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+    {% if object.is_managed_by_app %}
+      <a href="{% url 'anvil_consortium_manager:managed_groups:delete' slug=object.name %}" class="btn btn-danger" role="button">Delete on AnVIL</a>
+    {% endif %}
   </p>
-  {% endif %}
 {% endif %}
 
 {% endblock action_buttons %}

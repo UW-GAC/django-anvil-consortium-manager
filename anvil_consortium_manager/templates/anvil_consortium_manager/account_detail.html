@@ -132,10 +132,11 @@
               This table shows Workspaces that the Account may have access to, but the app cannot determine if they do.
               In the following cases, the app cannot determine access:
               <ul>
+                <li>The app is not an owner of the workspace</li>
                 <li>The Workspace is shared with a group that is not managed by this app</li>
                 <li>At least one of the Workspace's authorization domains is not managed by this app</li>
               </ul>
-              The "Is shared?" and "In auth domain?" columns display a red question mark when the app cannot determine access due to sharing or authorization domain membership, respectively.
+              The "Owned by app?", "Is shared?", and "In auth domain?" columns display a red question mark when the app cannot determine access due to ownership, sharing or authorization domain membership, respectively.
             </p>
             {% render_table unknown_access_workspace_table %}
           </div>

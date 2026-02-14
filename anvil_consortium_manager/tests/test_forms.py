@@ -1030,3 +1030,35 @@ class WorkspaceGroupSharingFormTest(TestCase):
         self.assertIn("__all__", form.errors)
         self.assertEqual(len(form.errors["__all__"]), 1)
         self.assertIn("compute privileges", form.errors["__all__"][0])
+
+    def test_invalid_workspace_app_access_limited(self):
+        """Form is invalid when the workspace has limited app access."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        form_data = {
+            "workspace": workspace,
+            "group": group,
+            "access": models.WorkspaceGroupSharing.READER,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
+
+    def test_invalid_workspace_app_access_no_access(self):
+        """Form is invalid when the workspace has no_access app access."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        form_data = {
+            "workspace": workspace,
+            "group": group,
+            "access": models.WorkspaceGroupSharing.READER,
+        }
+        form = self.form_class(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])

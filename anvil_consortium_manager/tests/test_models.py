@@ -6,7 +6,7 @@ from unittest.mock import patch
 import networkx as nx
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist, ValidationError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import IntegrityError
 from django.utils import timezone
@@ -1354,6 +1354,81 @@ class WorkspaceTest(TestCase):
         with self.assertRaises(ValidationError) as e:
             instance.clean_fields()
         self.assertIn("not a registered adapter type", str(e.exception))
+
+    def test_app_access_app_access_reason(self):
+        instance = factories.WorkspaceFactory.create()
+        # Allowed.
+        instance.app_access = instance.AppAccessChoices.OWNER
+        instance.app_access_reason = ""
+        instance.full_clean()
+        instance.app_access = instance.AppAccessChoices.LIMITED
+        instance.app_access_reason = "Reason for limited access"
+        instance.full_clean()
+        instance.app_access = instance.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = "Reason for no access"
+        instance.full_clean()
+        # Not allowed.
+        instance.app_access = instance.AppAccessChoices.OWNER
+        instance.app_access_reason = "Reason not allowed for owner access"
+        with self.assertRaises(ValidationError) as e:
+            instance.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
+        self.assertIn(
+            "app_access_reason must be blank if app_access is OWNER",
+            str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
+        )
+        instance.app_access = instance.AppAccessChoices.LIMITED
+        instance.app_access_reason = ""
+        with self.assertRaises(ValidationError) as e:
+            instance.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
+        self.assertIn(
+            "app_access_reason cannot be blank",
+            str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
+        )
+        instance.app_access = instance.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = ""
+        with self.assertRaises(ValidationError) as e:
+            instance.full_clean()
+        self.assertEqual(len(e.exception.error_dict), 1)
+        self.assertIn(NON_FIELD_ERRORS, e.exception.error_dict)
+        self.assertEqual(len(e.exception.error_dict[NON_FIELD_ERRORS]), 1)
+        self.assertIn(
+            "app_access_reason cannot be blank",
+            str(e.exception.error_dict[NON_FIELD_ERRORS][0]),
+        )
+
+    def test_property_is_owner(self):
+        instance = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.OWNER)
+        self.assertTrue(instance.is_owner)
+        # Limited access.
+        instance.app_access = Workspace.AppAccessChoices.LIMITED
+        instance.app_access_reason = "Reason for limited access"
+        instance.save()
+        self.assertFalse(instance.is_owner)
+        # No access
+        instance.app_access = Workspace.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = "Reason for no access"
+        instance.save()
+        self.assertFalse(instance.is_owner)
+
+    def test_property_has_access(self):
+        instance = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.OWNER)
+        self.assertTrue(instance.has_access)
+        # Limited access.
+        instance.app_access = Workspace.AppAccessChoices.LIMITED
+        instance.app_access_reason = "Reason for limited access"
+        instance.save()
+        self.assertTrue(instance.has_access)
+        # No access
+        instance.app_access = Workspace.AppAccessChoices.NO_ACCESS
+        instance.app_access_reason = "Reason for no access"
+        instance.save()
+        self.assertFalse(instance.has_access)
 
 
 class WorkspaceDataTest(TestCase):
@@ -2912,3 +2987,17 @@ class WorkspaceMethodIsAccessibleByAccount(TestCase):
         self.assertTrue(workspace.is_accessible_by_account(account))
         other_groups = factories.ManagedGroupFactory.create_batch(2)
         self.assertFalse(workspace.is_accessible_by_account(account, all_account_groups=other_groups))
+
+    def test_app_access_limited(self):
+        workspace = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError) as e:
+            workspace.is_accessible_by_account(account)
+        self.assertIn("App does not have OWNER access to {}".format(workspace), str(e.exception))
+
+    def test_app_access_no_access(self):
+        workspace = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
+        account = factories.AccountFactory.create()
+        with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError) as e:
+            workspace.is_accessible_by_account(account)
+        self.assertIn("App does not have OWNER access to {}".format(workspace), str(e.exception))

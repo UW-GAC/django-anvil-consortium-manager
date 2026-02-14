@@ -4,7 +4,9 @@ import networkx as nx
 import numpy as np
 import plotly
 import plotly.graph_objects as go
-from django.http import Http404
+from django.contrib import messages
+from django.core.exceptions import ImproperlyConfigured
+from django.http import Http404, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views.generic.base import ContextMixin
 from django.views.generic.detail import SingleObjectMixin
@@ -235,6 +237,101 @@ class SingleAccountMixin(SingleObjectMixin):
                 _("No %(verbose_name)s found matching the query") % {"verbose_name": queryset.model._meta.verbose_name}
             )
         return obj
+
+
+class WorkspaceCheckAccessMixin:
+    """Mixin to check if the workspace is accessible by the app before allowing access to a view."""
+
+    workspace_access = None
+    workspace_unlocked = None
+    workspace_access_error_message = None
+    lock_error_message = None
+
+    def get_workspace_access(self):
+        if self.workspace_access is None:
+            raise ImproperlyConfigured("You must set `workspace_access` or override `get_workspace_access`.")
+        if self.workspace_access not in [
+            models.Workspace.AppAccessChoices.LIMITED,
+            models.Workspace.AppAccessChoices.OWNER,
+        ]:
+            raise ImproperlyConfigured("Invalid workspace access level: {}".format(self.workspace_access))
+        return self.workspace_access
+
+    def get_workspace_unlocked(self):
+        if self.workspace_unlocked is None:
+            raise ImproperlyConfigured("You must set `workspace_unlocked` or override `get_workspace_unlocked`.")
+        if self.workspace_unlocked not in [True, False]:
+            raise ImproperlyConfigured("Invalid workspace_unlocked value: {}".format(self.workspace_unlocked))
+        return self.workspace_unlocked
+
+    def _check_workspace_access_ok(self, workspace):
+        workspace_access_level = self.get_workspace_access()
+
+        if workspace_access_level == workspace.AppAccessChoices.LIMITED:
+            x = workspace.has_access
+        elif workspace_access_level == workspace.AppAccessChoices.OWNER:
+            x = workspace.is_owner
+        else:
+            raise ValueError("Invalid workspace access level: {}".format(workspace_access_level))
+
+        if not x:
+            workspace_access_error_message = self.get_workspace_access_error_message(workspace)
+            if workspace_access_error_message:
+                messages.add_message(
+                    self.request,
+                    messages.ERROR,
+                    workspace_access_error_message,
+                )
+        return x
+
+    def _check_workspace_lock_ok(self, workspace):
+        # Check lock status.
+        workspace_unlocked = self.get_workspace_unlocked()
+        if workspace_unlocked not in [True, False]:
+            raise ValueError("Invalid workspace unlocked value: {}".format(workspace_unlocked))
+
+        x = True
+        if workspace_unlocked and workspace.is_locked:
+            x = False
+            lock_error_message = self.get_lock_error_message(workspace)
+            if lock_error_message:
+                messages.add_message(
+                    self.request,
+                    messages.ERROR,
+                    self.get_lock_error_message(workspace),
+                )
+        return x
+
+    def check_workspace(self, workspace):
+        access_ok = self._check_workspace_access_ok(workspace)
+        lock_ok = self._check_workspace_lock_ok(workspace)
+        return access_ok and lock_ok
+
+    def get_workspace(self):
+        return self.get_object()
+
+    def get_workspace_access_error_message(self, workspace):
+        return self.workspace_access_error_message
+
+    def get_lock_error_message(self, workspace):
+        return self.lock_error_message
+
+    def get_access_error_redirect_url(self):
+        return self.workspace.get_absolute_url()
+
+    def get(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        if not self.check_workspace(self.workspace):
+            # Redirect to the object detail page.
+            return HttpResponseRedirect(self.get_access_error_redirect_url())
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.workspace = self.get_workspace()
+        if not self.check_workspace(self.workspace):
+            # Redirect to the object detail page with an error message.
+            return HttpResponseRedirect(self.get_access_error_redirect_url())
+        return super().post(request, *args, **kwargs)
 
 
 class WorkspaceAdapterMixin:

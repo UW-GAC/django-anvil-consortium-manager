@@ -5,7 +5,8 @@ from django.utils import timezone
 from faker import Faker
 from freezegun import freeze_time
 
-from anvil_consortium_manager.models import WorkspaceGroupSharing
+from anvil_consortium_manager.exceptions import AnVILNotWorkspaceOwnerError
+from anvil_consortium_manager.models import Workspace, WorkspaceGroupSharing
 from anvil_consortium_manager.tests.factories import (
     WorkspaceAuthorizationDomainFactory,
     WorkspaceFactory,
@@ -1525,6 +1526,270 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
         self.assertIsNone(cached_audit_result)
 
+    def test_app_access_limited_reader_on_anvil(self):
+        """No audit errors when workspace is not managed by app and is writer on AnVIL."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertTrue(record_result.ok())
+
+    def test_app_access_limited_writer_on_anvil(self):
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "WRITER")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertTrue(record_result.ok())
+
+    def test_app_access_limited_owner_on_anvil(self):
+        """Audit error when workspace is not managed by app but is owner on AnVIL."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_IS_OWNER_ON_ANVIL]))
+
+    def test_app_access_limited_no_access_on_anvil(self):
+        """No audit errors when workspace is not managed by app and is writer on AnVIL."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_NOT_IN_ANVIL]))
+
+    def test_app_access_no_access_reader_on_anvil(self):
+        """No audit errors when workspace is not managed by app and is writer on AnVIL."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_IS_READER_ON_ANVIL]))
+
+    def test_app_access_no_access_writer_on_anvil(self):
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "WRITER")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_IS_WRITER_ON_ANVIL]))
+
+    def test_app_access_no_access_owner_on_anvil(self):
+        """Audit error when workspace is not managed by app but is owner on AnVIL."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "OWNER")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_IS_OWNER_ON_ANVIL]))
+
+    def test_app_access_no_access_no_access_on_anvil(self):
+        """No audit errors when workspace is not managed by app and is no access on AnVIL."""
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertTrue(record_result.ok())
+
+    def test_app_access_limited_no_sharing_audit_cached(self):
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "READER")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit(cache=True)
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertTrue(record_result.ok())
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        self.assertIsNone(cached_audit_result)
+
+    def test_app_access_no_access_no_sharing_audit_cached(self):
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json(workspace.billing_project.name, workspace.name, "NO_ACCESS")],
+        )
+        # No other API calls, since the workspace is not managed by the app.
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit(cache=True)
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(workspace)
+        self.assertTrue(record_result.ok())
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        self.assertIsNone(cached_audit_result)
+
+    def test_app_access_limited_one_auth_domain_ok(self):
+        """No errors when app_access is limited and there are no auth domain errors."""
+        auth_domain = WorkspaceAuthorizationDomainFactory.create(
+            workspace__app_access=Workspace.AppAccessChoices.LIMITED
+        )
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    auth_domain.workspace.billing_project.name,
+                    auth_domain.workspace.name,
+                    "READER",
+                    auth_domains=[auth_domain.group.name],
+                )
+            ],
+        )
+        # Run the audit
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 1)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
+        self.assertTrue(record_result.ok())
+
+    def test_app_access_limited_one_auth_domain_error(self):
+        """One error when app access is limited and there is one auth domain error."""
+        auth_domain = WorkspaceAuthorizationDomainFactory.create(
+            workspace__app_access=Workspace.AppAccessChoices.LIMITED
+        )
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[
+                self.get_api_workspace_json(
+                    auth_domain.workspace.billing_project.name,
+                    auth_domain.workspace.name,
+                    "READER",
+                    auth_domains=[],
+                )
+            ],
+        )
+        # Run the audit
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertFalse(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 1)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+        record_result = audit_results.get_result_for_model_instance(auth_domain.workspace)
+        self.assertFalse(record_result.ok())
+        self.assertEqual(record_result.errors, set([audit_results.ERROR_DIFFERENT_AUTH_DOMAINS]))
+
 
 class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCase):
     """Tests for the WorkspaceSharingAudit class."""
@@ -1558,7 +1823,7 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin,
             }
         )
 
-    def test_no_access(self):
+    def test_not_shared(self):
         """anvil_audit works correctly if this workspace is not shared with any groups."""
         self.anvil_response_mock.add(
             responses.GET,
@@ -1572,6 +1837,16 @@ class WorkspaceSharingAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin,
         self.assertEqual(len(audit_results.get_verified_results()), 0)
         self.assertEqual(len(audit_results.get_error_results()), 0)
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+
+    def test_app_access_no_access(self):
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
+        with self.assertRaises(AnVILNotWorkspaceOwnerError):
+            workspaces.WorkspaceSharingAudit(workspace)
+
+    def test_app_access_limited(self):
+        workspace = WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.LIMITED)
+        with self.assertRaises(AnVILNotWorkspaceOwnerError):
+            workspaces.WorkspaceSharingAudit(workspace)
 
     def test_one_reader(self):
         """anvil_audit works correctly if this group has one group member."""

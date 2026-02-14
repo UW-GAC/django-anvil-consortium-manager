@@ -1,18 +1,21 @@
+import factory
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from factory import Faker, LazyAttribute, SelfAttribute, Sequence, SubFactory, Trait
 from factory.django import DjangoModelFactory
+from faker import Faker
 
 from .. import models
 from ..adapters.default import DefaultWorkspaceAdapter
 
 User = get_user_model()
 
+fake = Faker()
+
 
 class BillingProjectFactory(DjangoModelFactory):
     """A factory for the BillingProject model."""
 
-    name = Faker("slug")
+    name = factory.Faker("slug")
     has_app_as_user = True
 
     class Meta:
@@ -23,7 +26,7 @@ class BillingProjectFactory(DjangoModelFactory):
 class UserFactory(DjangoModelFactory):
     """A factory to create a user."""
 
-    username = Sequence(lambda n: "testuser%d" % n)
+    username = factory.Sequence(lambda n: "testuser%d" % n)
     password = "password"
 
     class Meta:
@@ -34,29 +37,18 @@ class UserFactory(DjangoModelFactory):
 class UserEmailEntryFactory(DjangoModelFactory):
     """A factory for the UserEmailEntry model."""
 
-    email = Faker("email")
-    user = SubFactory(UserFactory)
-    date_verification_email_sent = Faker("date_time", tzinfo=timezone.get_current_timezone())
+    email = factory.Faker("email")
+    user = factory.SubFactory(UserFactory)
+    date_verification_email_sent = factory.Faker("date_time", tzinfo=timezone.get_current_timezone())
 
     class Meta:
         model = models.UserEmailEntry
-
-    # class Params:
-    #     verified = Trait(
-    #         date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
-    #         # Create an Account with the same user.
-    #         verified_account=SubFactory(
-    #             AccountFactory,
-    #             user=SelfAttribute("..user"),
-    #             email=SelfAttribute("..email"),
-    #         ),
-    #     )
 
 
 class AccountFactory(DjangoModelFactory):
     """A factory for the Account model."""
 
-    email = Faker("email")
+    email = factory.Faker("email")
     is_service_account = False
 
     class Meta:
@@ -64,13 +56,13 @@ class AccountFactory(DjangoModelFactory):
         django_get_or_create = ["email"]
 
     class Params:
-        verified = Trait(
-            user=SubFactory(UserFactory),
-            verified_email_entry=SubFactory(
+        verified = factory.Trait(
+            user=factory.SubFactory(UserFactory),
+            verified_email_entry=factory.SubFactory(
                 UserEmailEntryFactory,
-                email=SelfAttribute("..email"),
-                user=SelfAttribute("..user"),
-                date_verified=Faker("date_time", tzinfo=timezone.get_current_timezone()),
+                email=factory.SelfAttribute("..email"),
+                user=factory.SelfAttribute("..user"),
+                date_verified=factory.Faker("date_time", tzinfo=timezone.get_current_timezone()),
             ),
         )
 
@@ -78,8 +70,8 @@ class AccountFactory(DjangoModelFactory):
 class ManagedGroupFactory(DjangoModelFactory):
     """A factory for the ManagedGroup model."""
 
-    name = Faker("slug")
-    email = LazyAttribute(lambda o: o.name + "@firecloud.org")
+    name = factory.Faker("slug")
+    email = factory.LazyAttribute(lambda o: o.name + "@firecloud.org")
 
     class Meta:
         model = models.ManagedGroup
@@ -89,9 +81,17 @@ class ManagedGroupFactory(DjangoModelFactory):
 class WorkspaceFactory(DjangoModelFactory):
     """A factory for the Workspace model."""
 
-    billing_project = SubFactory(BillingProjectFactory)
-    name = Faker("slug")
+    billing_project = factory.SubFactory(BillingProjectFactory)
+    name = factory.Faker("slug")
     workspace_type = DefaultWorkspaceAdapter().get_type()
+    app_access = models.Workspace.AppAccessChoices.OWNER
+
+    @factory.lazy_attribute
+    def app_access_reason(self):
+        if self.app_access == models.Workspace.AppAccessChoices.OWNER:
+            return ""
+        else:
+            return fake.sentence()
 
     class Meta:
         model = models.Workspace
@@ -101,7 +101,7 @@ class WorkspaceFactory(DjangoModelFactory):
 class DefaultWorkspaceDataFactory(DjangoModelFactory):
     """A factory for the DefaultWorkspaceData model."""
 
-    workspace = SubFactory(WorkspaceFactory)
+    workspace = factory.SubFactory(WorkspaceFactory)
 
     class Meta:
         model = models.DefaultWorkspaceData
@@ -113,8 +113,8 @@ class DefaultWorkspaceDataFactory(DjangoModelFactory):
 class WorkspaceAuthorizationDomainFactory(DjangoModelFactory):
     """A factory for the WorkspaceAuthorizationDomain model."""
 
-    workspace = SubFactory(WorkspaceFactory)
-    group = SubFactory(ManagedGroupFactory)
+    workspace = factory.SubFactory(WorkspaceFactory)
+    group = factory.SubFactory(ManagedGroupFactory)
 
     class Meta:
         model = models.WorkspaceAuthorizationDomain
@@ -123,8 +123,8 @@ class WorkspaceAuthorizationDomainFactory(DjangoModelFactory):
 class GroupGroupMembershipFactory(DjangoModelFactory):
     """A factory for the GroupGroupMembership model."""
 
-    parent_group = SubFactory(ManagedGroupFactory)
-    child_group = SubFactory(ManagedGroupFactory)
+    parent_group = factory.SubFactory(ManagedGroupFactory)
+    child_group = factory.SubFactory(ManagedGroupFactory)
     role = models.GroupAccountMembership.RoleChoices.MEMBER
 
     class Meta:
@@ -135,8 +135,8 @@ class GroupGroupMembershipFactory(DjangoModelFactory):
 class GroupAccountMembershipFactory(DjangoModelFactory):
     """A factory for the Group model."""
 
-    account = SubFactory(AccountFactory)
-    group = SubFactory(ManagedGroupFactory)
+    account = factory.SubFactory(AccountFactory)
+    group = factory.SubFactory(ManagedGroupFactory)
     role = models.GroupAccountMembership.RoleChoices.MEMBER
 
     class Meta:
@@ -147,8 +147,8 @@ class GroupAccountMembershipFactory(DjangoModelFactory):
 class WorkspaceGroupSharingFactory(DjangoModelFactory):
     """A factory for the WorkspaceGroup model."""
 
-    workspace = SubFactory(WorkspaceFactory)
-    group = SubFactory(ManagedGroupFactory)
+    workspace = factory.SubFactory(WorkspaceFactory)
+    group = factory.SubFactory(ManagedGroupFactory)
     access = models.WorkspaceGroupSharing.READER
     can_compute = False
 

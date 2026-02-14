@@ -1595,6 +1595,7 @@ class AccountDetailTest(TestCase):
         record = response.context_data["unknown_access_workspace_table"].data[0]
         self.assertEqual(record.sharing_known, False)
         self.assertEqual(record.auth_domain_known, True)
+        self.assertEqual(record.owned_by_app, True)
 
     def test_unknown_access_workspace_one_unknown_auth_domain(self):
         """One workspace is shown if it is shared but the auth domain is not managed by app."""
@@ -1612,6 +1613,7 @@ class AccountDetailTest(TestCase):
         record = response.context_data["unknown_access_workspace_table"].data[0]
         self.assertEqual(record.sharing_known, True)
         self.assertEqual(record.auth_domain_known, False)
+        self.assertEqual(record.owned_by_app, True)
 
     def test_unknown_access_workspace_one_unknown_sharing_and_auth_domain(self):
         """One workspace is shown if has unknown sharing and unknown auth domain access."""
@@ -1628,6 +1630,7 @@ class AccountDetailTest(TestCase):
         record = response.context_data["unknown_access_workspace_table"].data[0]
         self.assertEqual(record.sharing_known, False)
         self.assertEqual(record.auth_domain_known, False)
+        self.assertEqual(record.owned_by_app, True)
 
     def test_unknown_access_workspace_unknown_sharing_not_in_auth_domain(self):
         """Workspace does not appear in table if it is has unknown sharing but the user is not in the auth domain."""
@@ -1650,6 +1653,40 @@ class AccountDetailTest(TestCase):
         response = self.client.get(self.get_url(account.uuid))
         self.assertIn("unknown_access_workspace_table", response.context_data)
         self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 0)
+
+    def test_unknown_access_workspace_app_access_limited(self):
+        """Workspace does not appear in table if it the app has limited access."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, None)
+        self.assertEqual(record.auth_domain_known, None)
+        self.assertEqual(record.owned_by_app, False)
+
+    def test_unknown_access_workspace_app_access_no_access(self):
+        """Workspace does not appear in table if it the app has no access."""
+        account = factories.AccountFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        group = factories.ManagedGroupFactory.create()
+        factories.WorkspaceGroupSharingFactory.create(workspace=workspace, group=group)
+        factories.GroupAccountMembershipFactory.create(group=group, account=account)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(account.uuid))
+        self.assertIn("unknown_access_workspace_table", response.context_data)
+        self.assertEqual(len(response.context_data["unknown_access_workspace_table"].rows), 1)
+        self.assertIn(workspace, response.context_data["unknown_access_workspace_table"].data)
+        record = response.context_data["unknown_access_workspace_table"].data[0]
+        self.assertEqual(record.sharing_known, None)
+        self.assertEqual(record.auth_domain_known, None)
+        self.assertEqual(record.owned_by_app, False)
 
     def test_render_with_user_get_absolute_url(self):
         """HTML includes a link to the user profile when the linked user has a get_absolute_url method."""
@@ -4887,7 +4924,7 @@ class ManagedGroupDetailTest(TestCase):
         with self.assertRaises(PermissionDenied):
             self.get_view()(request)
 
-    def test_view_status_code_with_existing_object_not_managed(self):
+    def test_view_status_code_is_managed_by_app_false(self):
         """Returns a successful status code for an existing object pk."""
         obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
         # Only clients load the template.
@@ -5185,7 +5222,55 @@ class ManagedGroupDetailTest(TestCase):
         obj = factories.ManagedGroupFactory.create()
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("show_edit_links", response.context_data)
-        self.assertTrue(response.context_data["show_edit_links"])
+        # Share a workspace with the group
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:sharing:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add an account member
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add a group member
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:new",
+                kwargs={"parent_group_slug": obj.name},
+            ),
+        )
+        # Add to another group
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:add_to_group",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Review audit
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Update information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:update",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Delete on AnVIL
         self.assertContains(
             response,
             reverse(
@@ -5204,7 +5289,55 @@ class ManagedGroupDetailTest(TestCase):
         obj = factories.ManagedGroupFactory.create()
         response = self.client.get(self.get_url(obj.name))
         self.assertIn("show_edit_links", response.context_data)
-        self.assertFalse(response.context_data["show_edit_links"])
+        # Share a workspace with the group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:sharing:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add an account member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add a group member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:new",
+                kwargs={"parent_group_slug": obj.name},
+            ),
+        )
+        # Add to another group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:add_to_group",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Review audit
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Update information
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:update",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Delete on AnVIL
         self.assertNotContains(
             response,
             reverse(
@@ -5221,6 +5354,103 @@ class ManagedGroupDetailTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(group.name))
         self.assertIn("graph", response.context_data)
+
+    def test_is_managed_by_app_true_pill(self):
+        """A pill is shown indicating that the group is not managed by the app."""
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=True)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.name))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("is not managed by the app", response.content.decode())
+
+    def test_is_managed_by_app_false_pill(self):
+        """A pill is shown indicating that the group is not managed by the app."""
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.name))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("is not managed by the app", response.content.decode())
+
+    def test_is_managed_by_app_false_tables(self):
+        """A pill is shown indicating that the group is not managed by the app."""
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        # Only clients load the template.
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(obj.name))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("workspace_authorization_domain_table", response.context_data)
+        self.assertIn("workspace_table", response.context_data)
+        self.assertNotIn("account_table", response.context_data)
+        self.assertNotIn("group_table", response.context_data)
+        self.assertIn("parent_table", response.context_data)
+
+    def test_is_managed_by_app_false_action_button_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        response = self.client.get(self.get_url(obj.name))
+        # Share a workspace with the group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:sharing:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add an account member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_accounts:new",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Add a group member
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:member_groups:new",
+                kwargs={"parent_group_slug": obj.name},
+            ),
+        )
+        # Add to another group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:add_to_group",
+                kwargs={"group_slug": obj.name},
+            ),
+        )
+        # Review audit
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:managed_groups:membership:by_group:review",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Update information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:update",
+                kwargs={"slug": obj.name},
+            ),
+        )
+        # Delete on AnVIL
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:managed_groups:delete",
+                kwargs={"slug": obj.name},
+            ),
+        )
 
 
 class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -6646,6 +6876,11 @@ class WorkspaceDetailTest(TestCase):
         self.user.user_permissions.add(
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
+        self.edit_user = User.objects.create_user(username="editor", password="test")
+        self.edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
 
     def tearDown(self):
         """Clean up after tests."""
@@ -7374,6 +7609,197 @@ class WorkspaceDetailTest(TestCase):
         self.assertIn("has_authorization_domain_not_managed_by_app", response.context)
         self.assertTrue(response.context["has_authorization_domain_not_managed_by_app"])
         self.assertContains(response, "authorization domain that is not managed by the app")
+
+    def test_app_access_owner_no_alert(self):
+        """No alert is shown if the app has owner access to the workspace."""
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.OWNER
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(workspace_data.workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertNotIn("access to this workspace", response.content.decode())
+        self.assertNotIn("alert", response.content.decode())
+
+    def test_app_access_limited_alert(self):
+        """An alert is shown if the app has limited access to the workspace."""
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        self.client.force_login(self.edit_user)
+        response = self.client.get(workspace_data.workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertIn("has limited access", response.content.decode())
+        self.assertIn(workspace_data.workspace.app_access_reason, response.content.decode())
+        self.assertIn("alert", response.content.decode())
+
+    def test_app_access_no_access_alert(self):
+        """An alert is shown if the app has no access to the workspace."""
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS
+        )
+        self.client.force_login(self.edit_user)
+        response = self.client.get(workspace_data.workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertIn("no longer has access", response.content.decode())
+        self.assertIn(workspace_data.workspace.app_access_reason, response.content.decode())
+        self.assertIn("alert", response.content.decode())
+
+    def test_app_access_no_access_links(self):
+        """Action buttons and links are correct when the app has no access to the workspace."""
+        self.client.force_login(self.edit_user)
+        obj = factories.DefaultWorkspaceDataFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS
+        )
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        # Delete a workspace
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update internal information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:internal",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update on AnVIL
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:requester_pays",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Share with a group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Clone
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
+        # Audit review
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+
+    def test_app_access_limited_links(self):
+        obj = factories.DefaultWorkspaceDataFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        self.client.force_login(self.edit_user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        self.assertTrue(response.context_data["show_edit_links"])
+        # Delete a workspace
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update internal information
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:internal",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Update on AnVIL
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:update:requester_pays",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Share with a group
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:new",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
+        # Clone
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:clone",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "workspace_type": "workspace",
+                },
+            ),
+        )
+        # Audit review
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:auditor:workspaces:sharing:by_workspace:review",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                },
+            ),
+        )
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
@@ -12167,6 +12593,124 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
         self.assertIn("[WorkspaceClone]", messages[0])
         self.assertIn(views.WorkspaceClone.ADAPTER_ERROR_MESSAGE_AFTER_ANVIL_CREATE, messages[0])
 
+    def test_get_app_access_limited(self):
+        """View redirects with message if app has limited access to workspace."""
+        self.workspace_to_clone.app_access = models.Workspace.AppAccessChoices.LIMITED
+        self.workspace_to_clone.app_access_reason = "foo"
+        self.workspace_to_clone.save()
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_app_access_no_access(self):
+        """View redirects with message if app has limited access to workspace."""
+        self.workspace_to_clone.app_access = models.Workspace.AppAccessChoices.NO_ACCESS
+        self.workspace_to_clone.app_access_reason = "foo"
+        self.workspace_to_clone.save()
+        self.client.force_login(self.user)
+        factories.DefaultWorkspaceDataFactory.create(workspace=self.workspace_to_clone)
+        response = self.client.get(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            follow=True,
+        )
+        self.assertRedirects(response, self.workspace_to_clone.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceClone.workspace_access_error_message,
+            str(messages[0]),
+        )
+
+    def test_post_app_access_limited(self):
+        """Can clone a workspace where the app has limited access."""
+        self.workspace_to_clone.app_access = models.Workspace.AppAccessChoices.LIMITED
+        self.workspace_to_clone.app_access_reason = "foo"
+        self.workspace_to_clone.save()
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        json_data = {
+            "namespace": "test-billing-project",
+            "name": "test-workspace",
+            "attributes": {},
+            "copyFilesWithPrefix": "notebooks",
+        }
+        self.anvil_response_mock.add(
+            responses.POST,
+            self.api_url,
+            status=self.api_success_code,
+            match=[responses.matchers.json_params_matcher(json_data)],
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        new_object = models.Workspace.objects.latest("pk")
+        self.assertIsInstance(new_object, models.Workspace)
+        self.assertEqual(
+            new_object.workspace_type,
+            DefaultWorkspaceAdapter().get_type(),
+        )
+        # History is added.
+        self.assertEqual(new_object.history.count(), 1)
+        self.assertEqual(new_object.history.latest().history_type, "+")
+
+    def test_post_app_access_no_access(self):
+        """View redirects with message if app has no access to workspace."""
+        self.workspace_to_clone.app_access = models.Workspace.AppAccessChoices.NO_ACCESS
+        self.workspace_to_clone.app_access_reason = "foo"
+        self.workspace_to_clone.save()
+        factories.DefaultWorkspaceDataFactory.create(workspace=self.workspace_to_clone)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(
+                self.workspace_to_clone.billing_project.name,
+                self.workspace_to_clone.name,
+                self.workspace_type,
+            ),
+            {
+                "billing_project": self.workspace_to_clone.billing_project.pk,
+                "name": "test-workspace",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 0,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+            },
+            follow=True,
+        )
+        # No new workspace was created
+        self.assertEqual(models.Workspace.objects.count(), 1)
+        self.assertIn(self.workspace_to_clone, models.Workspace.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, self.workspace_to_clone.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceClone.workspace_access_error_message, str(messages[0]))
+
 
 class WorkspaceUpdateTest(TestCase):
     def setUp(self):
@@ -12743,6 +13287,86 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         # Make sure that no object is created.
         self.workspace.refresh_from_db()
         self.assertFalse(self.workspace.is_requester_pays)
+
+    def test_get_app_access_limited(self):
+        """View redirects with message if app has limited access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceUpdateRequesterPays.workspace_access_error_message,
+            str(messages[0]),
+        )
+
+    def test_get_app_no_access_limited(self):
+        """View redirects with message if app has limited access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceUpdateRequesterPays.workspace_access_error_message,
+            str(messages[0]),
+        )
+
+    def test_post_app_access_limited(self):
+        """View redirects with message if app has limited access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(workspace.billing_project.name, workspace.name), {}, follow=True)
+        # Make sure the workspace still exists.
+        self.assertIn(workspace, models.Workspace.objects.all())
+        self.assertIn(workspace_data, models.DefaultWorkspaceData.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceUpdateRequesterPays.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_no_access(self):
+        """View redirects with message if app has no access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(workspace.billing_project.name, workspace.name), {}, follow=True)
+        # Make sure the workspace still exists.
+        self.assertIn(workspace, models.Workspace.objects.all())
+        self.assertIn(workspace_data, models.DefaultWorkspaceData.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceUpdateRequesterPays.workspace_access_error_message, str(messages[0]))
 
 
 class WorkspaceListTest(TestCase):
@@ -13419,7 +14043,7 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceDelete.message_workspace_locked, str(messages[0]))
+        self.assertEqual(views.WorkspaceDelete.lock_error_message, str(messages[0]))
 
     def test_post_is_locked(self):
         """View redirects with a post request if the workspace is locked."""
@@ -13443,7 +14067,87 @@ class WorkspaceDeleteTest(AnVILAPIMockTestMixin, TestCase):
         # With a message.
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertEqual(len(messages), 1)
-        self.assertEqual(views.WorkspaceDelete.message_workspace_locked, str(messages[0]))
+        self.assertEqual(views.WorkspaceDelete.lock_error_message, str(messages[0]))
+
+    def test_get_app_access_limited(self):
+        """View redirects with message if app has limited access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceDelete.workspace_access_error_message,
+            str(messages[0]),
+        )
+
+    def test_get_app_no_access_limited(self):
+        """View redirects with message if app has limited access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        self.assertRedirects(response, workspace.get_absolute_url())
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceDelete.workspace_access_error_message,
+            str(messages[0]),
+        )
+
+    def test_post_app_access_limited(self):
+        """View redirects with message if app has limited access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(workspace.billing_project.name, workspace.name), {}, follow=True)
+        # Make sure the workspace still exists.
+        self.assertIn(workspace, models.Workspace.objects.all())
+        self.assertIn(workspace_data, models.DefaultWorkspaceData.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceDelete.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_no_access(self):
+        """View redirects with message if app has no access to workspace."""
+        billing_project = factories.BillingProjectFactory.create(name="test-billing-project")
+        workspace_data = factories.DefaultWorkspaceDataFactory.create(
+            workspace__billing_project=billing_project,
+            workspace__name="test-workspace",
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+        )
+        workspace = workspace_data.workspace
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(workspace.billing_project.name, workspace.name), {}, follow=True)
+        # Make sure the workspace still exists.
+        self.assertIn(workspace, models.Workspace.objects.all())
+        self.assertIn(workspace_data, models.DefaultWorkspaceData.objects.all())
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceDelete.workspace_access_error_message, str(messages[0]))
 
 
 class WorkspaceAutocompleteTest(TestCase):
@@ -13539,6 +14243,88 @@ class WorkspaceAutocompleteTest(TestCase):
         returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
         self.assertEqual(len(returned_ids), 1)
         self.assertEqual(returned_ids[0], workspace.pk)
+
+    def test_app_access_default(self):
+        """Queryset returns all types of app_access by default."""
+        object_owner = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.OWNER)
+        object_limited = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        object_no_access = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
+        self.assertEqual(len(returned_ids), 3)
+        self.assertIn(object_owner.pk, returned_ids)
+        self.assertIn(object_limited.pk, returned_ids)
+        self.assertIn(object_no_access.pk, returned_ids)
+
+    def test_app_access_only_owner(self):
+        object_owner = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.OWNER)
+        object_limited = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        object_no_access = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(),
+            {"forward": json.dumps({"app_access_values": [models.Workspace.AppAccessChoices.OWNER]})},
+        )
+        returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertIn(object_owner.pk, returned_ids)
+        self.assertNotIn(object_limited.pk, returned_ids)
+        self.assertNotIn(object_no_access.pk, returned_ids)
+
+    def test_app_access_only_limited(self):
+        object_owner = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.OWNER)
+        object_limited = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        object_no_access = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(),
+            {"forward": json.dumps({"app_access_values": [models.Workspace.AppAccessChoices.LIMITED]})},
+        )
+        returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertNotIn(object_owner.pk, returned_ids)
+        self.assertIn(object_limited.pk, returned_ids)
+        self.assertNotIn(object_no_access.pk, returned_ids)
+
+    def test_app_access_only_no_access(self):
+        object_owner = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.OWNER)
+        object_limited = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        object_no_access = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(),
+            {"forward": json.dumps({"app_access_values": [models.Workspace.AppAccessChoices.NO_ACCESS]})},
+        )
+        returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
+        self.assertEqual(len(returned_ids), 1)
+        self.assertNotIn(object_owner.pk, returned_ids)
+        self.assertNotIn(object_limited.pk, returned_ids)
+        self.assertIn(object_no_access.pk, returned_ids)
+
+    def test_app_access_multiple(self):
+        object_owner = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.OWNER)
+        object_limited = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        object_no_access = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(),
+            {
+                "forward": json.dumps(
+                    {
+                        "app_access_values": [
+                            models.Workspace.AppAccessChoices.OWNER,
+                            models.Workspace.AppAccessChoices.LIMITED,
+                        ]
+                    }
+                )
+            },
+        )
+        returned_ids = [int(x["id"]) for x in json.loads(response.content.decode("utf-8"))["results"]]
+        self.assertEqual(len(returned_ids), 2)
+        self.assertIn(object_owner.pk, returned_ids)
+        self.assertIn(object_limited.pk, returned_ids)
+        self.assertNotIn(object_no_access.pk, returned_ids)
 
 
 class WorkspaceAutocompleteByTypeTest(TestCase):
@@ -19134,11 +19920,24 @@ class WorkspaceGroupSharingDetailTest(TestCase):
         obj = factories.WorkspaceGroupSharingFactory.create()
         response = self.client.get(obj.get_absolute_url())
         self.assertIn("show_edit_links", response.context_data)
+        # Delete
         self.assertTrue(response.context_data["show_edit_links"])
         self.assertContains(
             response,
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -19162,6 +19961,130 @@ class WorkspaceGroupSharingDetailTest(TestCase):
             response,
             reverse(
                 "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+
+    def test_app_access_owner_no_alert(self):
+        """No alert is shown if the app has owner access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.OWNER
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("access to this workspace", response.content.decode())
+        self.assertNotIn("alert", response.content.decode())
+
+    def test_app_access_limited_alert(self):
+        """An alert is shown if the app has limited access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("has limited access", response.content.decode())
+        self.assertIn(obj.workspace.app_access_reason, response.content.decode())
+        self.assertIn("alert", response.content.decode())
+
+    def test_app_access_no_access_alert(self):
+        """An alert is shown if the app has no access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no longer has access", response.content.decode())
+        self.assertIn(obj.workspace.app_access_reason, response.content.decode())
+        self.assertIn("alert", response.content.decode())
+
+    def test_app_access_limited_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        # Delete
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+
+    def test_app_access_no_access_links(self):
+        edit_user = User.objects.create_user(username="edit", password="test")
+        edit_user.user_permissions.add(
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME),
+            Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME),
+        )
+        self.client.force_login(edit_user)
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS
+        )
+        response = self.client.get(obj.get_absolute_url())
+        self.assertIn("show_edit_links", response.context_data)
+        # Delete
+        self.assertTrue(response.context_data["show_edit_links"])
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:delete",
+                kwargs={
+                    "billing_project_slug": obj.workspace.billing_project.name,
+                    "workspace_slug": obj.workspace.name,
+                    "group_slug": obj.group.name,
+                },
+            ),
+        )
+        # Update
+        self.assertNotContains(
+            response,
+            reverse(
+                "anvil_consortium_manager:workspaces:sharing:update",
                 kwargs={
                     "billing_project_slug": obj.workspace.billing_project.name,
                     "workspace_slug": obj.workspace.name,
@@ -19878,6 +20801,76 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
+
+    def test_get_workspace_app_access_no_access(self):
+        """Workspace does not appear in the list of objects."""
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("form", response.context_data)
+        self.assertNotIn(workspace, response.context_data["form"].fields["workspace"].queryset)
+
+    def test_get_workspace_app_access_limited(self):
+        """Workspace does not appear in the list of objects."""
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url())
+        self.assertIn("form", response.context_data)
+        self.assertNotIn(workspace, response.context_data["form"].fields["workspace"].queryset)
+
+    def test_post_workspace_app_access_no_access(self):
+        """Form error for no access workspaces."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Form has errors.
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
+        # No objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_post_workspace_app_access_limited(self):
+        """Form error for limited workspaces."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Form has errors.
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
+        # No objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
 
 class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase):
@@ -20612,6 +21605,82 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
+    def test_get_app_access_limited(self):
+        """View redirects with message if app has limited access to the workspace."""
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
+
+    def test_get_app_access_no_access(self):
+        """View redirects with message if app has limited access to the workspace."""
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(workspace.billing_project.name, workspace.name), follow=True)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_limited(self):
+        """View redirects with message if workspace is not managed by app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # No records were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_no_access(self):
+        """View redirects with message if workspace is not managed by app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # No records were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingCreateByWorkspace.workspace_access_error_message, str(messages[0]))
+
 
 class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 200
@@ -21281,6 +22350,78 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
+
+    def test_get_workspace_app_access_no_access(self):
+        """Workspace does not appear in the list of objects."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name))
+        self.assertIn("form", response.context_data)
+        self.assertNotIn(workspace, response.context_data["form"].fields["workspace"].queryset)
+
+    def test_get_workspace_app_access_limited(self):
+        """Workspace does not appear in the list of objects."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(group.name))
+        self.assertIn("form", response.context_data)
+        self.assertNotIn(workspace, response.context_data["form"].fields["workspace"].queryset)
+
+    def test_post_workspace_app_access_no_access(self):
+        """Form error for no access workspaces."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Form has errors.
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
+        # No objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+
+    def test_post_workspace_app_access_limited(self):
+        """Form error for limited workspaces."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(group.name),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        # Form has errors.
+        self.assertIn("form", response.context_data)
+        form = response.context_data["form"]
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 1)
+        self.assertIn("workspace", form.errors)
+        self.assertEqual(len(form.errors["workspace"]), 1)
+        self.assertIn("valid choice", form.errors["workspace"][0])
+        # No objects were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
 
 
 class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, TestCase):
@@ -22066,6 +23207,94 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
             "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
         )
 
+    def test_get_app_access_limited(self):
+        """View redirects with message if app has limited access to the workspace."""
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.billing_project.name, workspace.name, self.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
+
+    def test_get_app_access_no_access(self):
+        """View redirects with message if app has limited access to the workspace."""
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(workspace.billing_project.name, workspace.name, self.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
+
+    def test_post_app_access_limited(self):
+        """View redirects with message if workspace is not managed by app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.LIMITED)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name, self.group.name),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # No records were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
+
+    def test_post_app_access_no_access(self):
+        """View redirects with message if workspace is not managed by app."""
+        group = factories.ManagedGroupFactory.create()
+        workspace = factories.WorkspaceFactory.create(app_access=models.Workspace.AppAccessChoices.NO_ACCESS)
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(workspace.billing_project.name, workspace.name, self.group.name),
+            {
+                "group": group.pk,
+                "workspace": workspace.pk,
+                "access": models.WorkspaceGroupSharing.READER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # No records were created.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 0)
+        # Redirects to detail page.
+        self.assertRedirects(response, workspace.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(
+            views.WorkspaceGroupSharingCreateByWorkspaceGroup.workspace_access_error_message, str(messages[0])
+        )
+
 
 class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
     api_success_code = 200
@@ -22524,6 +23753,97 @@ class WorkspaceGroupSharingUpdateTest(AnVILAPIMockTestMixin, TestCase):
             "Updating access from workspace that doesn't exist for a group that doesn't exist returns a successful code."  # noqa
         )
 
+    def test_get_app_access_limited(self):
+        """View redirects with message if app has limited access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
+
+    def test_get_app_access_no_access(self):
+        """View redirects with message if app has limited access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_limited(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name),
+            {
+                "group": obj.group.pk,
+                "workspace": obj.workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # Object was not updated.
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_no_access(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name),
+            {
+                "group": obj.group.pk,
+                "workspace": obj.workspace.pk,
+                "access": models.WorkspaceGroupSharing.WRITER,
+                "can_compute": False,
+            },
+            follow=True,
+        )
+        # Object was not updated.
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingUpdate.workspace_access_error_message, str(messages[0]))
+
 
 class WorkspaceGroupSharingListTest(TestCase):
     def setUp(self):
@@ -22896,3 +24216,86 @@ class WorkspaceGroupSharingDeleteTest(AnVILAPIMockTestMixin, TestCase):
         self.fail(
             "Removing access from workspace that doesn't exist for a group that doesn't exist returns a successful code."  # noqa
         )
+
+    def test_get_app_access_limited(self):
+        """View redirects with message if app has limited access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))
+
+    def test_get_app_access_no_access(self):
+        """View redirects with message if app has limited access to the workspace."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.get(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name), follow=True
+        )
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_limited(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.LIMITED,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name),
+            {"submit": ""},
+            follow=True,
+        )
+        # Object was not deleted.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))
+
+    def test_post_app_access_no_access(self):
+        """View redirects with message if workspace is not managed by app."""
+        obj = factories.WorkspaceGroupSharingFactory.create(
+            workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+            access=models.WorkspaceGroupSharing.READER,
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=obj.workspace)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(obj.workspace.billing_project.name, obj.workspace.name, obj.group.name),
+            {"submit": ""},
+            follow=True,
+        )
+        # Object was not deleted.
+        self.assertEqual(models.WorkspaceGroupSharing.objects.count(), 1)
+        obj.refresh_from_db()
+        self.assertEqual(obj.access, models.WorkspaceGroupSharing.READER)
+        # Redirects to detail page.
+        self.assertRedirects(response, obj.get_absolute_url())
+        # With a message.
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(views.WorkspaceGroupSharingDelete.workspace_access_error_message, str(messages[0]))

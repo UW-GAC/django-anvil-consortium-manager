@@ -12,6 +12,7 @@ from django_tables2.views import SingleTableMixin
 from anvil_consortium_manager import auth
 from anvil_consortium_manager.models import ManagedGroup, Workspace
 
+from ..viewmixins import WorkspaceCheckAccessMixin
 from . import filters, forms, models, tables, viewmixins
 from .audit import accounts as account_audit
 from .audit import billing_projects as billing_project_audit
@@ -373,7 +374,11 @@ class WorkspaceAuditReview(
 
 
 class WorkspaceSharingAuditRun(
-    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditRunMixin, SingleObjectMixin, FormView
+    auth.AnVILConsortiumManagerStaffViewRequired,
+    WorkspaceCheckAccessMixin,
+    viewmixins.AnVILAuditRunMixin,
+    SingleObjectMixin,
+    FormView,
 ):
     """View to display the results of a ManagedGroup audit."""
 
@@ -381,7 +386,9 @@ class WorkspaceSharingAuditRun(
     slug_field = "name"
     audit_class = workspace_audit.WorkspaceSharingAudit
     template_name = "auditor/workspace_sharing_audit_run.html"
-    message_not_managed_by_app = "Cannot audit membership because group is not managed by this app."
+    workspace_access = Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
+    workspace_access_error_message = "Cannot audit sharing because workspace is not managed by this app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""
@@ -415,6 +422,7 @@ class WorkspaceSharingAuditRun(
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
+        # Otherwise, return the response.
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -423,13 +431,20 @@ class WorkspaceSharingAuditRun(
 
 
 class WorkspaceSharingAuditReview(
-    auth.AnVILConsortiumManagerStaffViewRequired, viewmixins.AnVILAuditReviewMixin, SingleObjectMixin, TemplateView
+    auth.AnVILConsortiumManagerStaffViewRequired,
+    WorkspaceCheckAccessMixin,
+    viewmixins.AnVILAuditReviewMixin,
+    SingleObjectMixin,
+    TemplateView,
 ):
     """View to review the results of a WorkspaceSharingAudit."""
 
     model = Workspace
     slug_field = "name"
     template_name = "auditor/workspace_sharing_audit_review.html"
+    workspace_access = Workspace.AppAccessChoices.OWNER
+    workspace_unlocked = False
+    workspace_access_error_message = "Cannot audit sharing because workspace is not managed by this app."
 
     def get_object(self, queryset=None):
         """Return the object the view is displaying."""

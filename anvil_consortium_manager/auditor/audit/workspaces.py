@@ -1,6 +1,7 @@
 import django_tables2 as tables
 
 from anvil_consortium_manager.anvil_api import AnVILAPIClient, AnVILAPIError404
+from anvil_consortium_manager.exceptions import AnVILNotWorkspaceOwnerError
 from anvil_consortium_manager.models import Workspace
 
 from .. import models
@@ -10,11 +11,14 @@ from . import base
 class WorkspaceAudit(base.AnVILAudit):
     """Class to runs an audit for Workspace instances."""
 
-    ERROR_NOT_IN_ANVIL = "Not in AnVIL"
+    ERROR_NOT_IN_ANVIL = "No access or not in AnVIL"
     """Error when a Workspace in the app does not exist on AnVIL."""
 
     ERROR_NOT_OWNER_ON_ANVIL = "Not an owner on AnVIL"
     """Error when the service account running the app is not an owner of the Workspace on AnVIL."""
+    ERROR_IS_OWNER_ON_ANVIL = "Owner on AnVIL"
+    ERROR_IS_READER_ON_ANVIL = "Reader on AnVIL"
+    ERROR_IS_WRITER_ON_ANVIL = "Writer on AnVIL"
 
     ERROR_DIFFERENT_AUTH_DOMAINS = "Has different auth domains on AnVIL"
     """Error when the Workspace has different auth domains in the app and on AnVIL."""
@@ -30,7 +34,7 @@ class WorkspaceAudit(base.AnVILAudit):
 
     cache_key = "workspace_audit_results"
 
-    def _check_workspace_ownership(self, workspace_details):
+    def _check_workspace_ownership_on_anvil(self, workspace_details):
         """Check if the service account is an owner of the workspace.
 
         Args:
@@ -66,9 +70,10 @@ class WorkspaceAudit(base.AnVILAudit):
         ]
         response = AnVILAPIClient().list_workspaces(fields=",".join(fields))
         workspaces_on_anvil = response.json()
-        for workspace in Workspace.objects.all():
+        for workspace in Workspace.objects.filter():
             model_instance_result = base.ModelInstanceResult(workspace)
             try:
+                # Check if the workspace exists in the list of workspaces from AnVIL.
                 i = next(
                     idx
                     for idx, x in enumerate(workspaces_on_anvil)
@@ -78,14 +83,47 @@ class WorkspaceAudit(base.AnVILAudit):
                     )
                 )
             except StopIteration:
-                model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
+                # The workspace is not in the list of workspaces on AnVIL.
+                # This means that either the app thinks this workspace ahs NO_ACCESS access, or there is an audit error.
+                if workspace.has_access:
+                    model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
+                next
             else:
-                # Check role.
+                # Get information about the workspace from AnVIL.
                 workspace_details = workspaces_on_anvil.pop(i)
-                if not self._check_workspace_ownership(workspace_details):
-                    # The service account is not an owner of the workspace.
+
+                # Check auth domains.
+                auth_domains_on_anvil = [
+                    x["membersGroupName"] for x in workspace_details["workspace"]["authorizationDomain"]
+                ]
+                auth_domains_in_app = workspace.authorization_domains.all().values_list("name", flat=True)
+                if set(auth_domains_on_anvil) != set(auth_domains_in_app):
+                    model_instance_result.add_error(self.ERROR_DIFFERENT_AUTH_DOMAINS)
+                # Check lock status.
+                if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
+                    model_instance_result.add_error(self.ERROR_DIFFERENT_LOCK)
+
+                # Check role - these are more complicated.
+                if not workspace.has_access:
+                    # Report access level of workspace
+                    if workspace_details["accessLevel"] == "OWNER":
+                        model_instance_result.add_error(self.ERROR_IS_OWNER_ON_ANVIL)
+                    elif workspace_details["accessLevel"] == "READER":
+                        model_instance_result.add_error(self.ERROR_IS_READER_ON_ANVIL)
+                    elif workspace_details["accessLevel"] == "WRITER":
+                        model_instance_result.add_error(self.ERROR_IS_WRITER_ON_ANVIL)
+                elif not workspace.is_owner and self._check_workspace_ownership_on_anvil(workspace_details):
+                    # The workspace is not managed by the app, but we are owners on AnVIL.
+                    model_instance_result.add_error(self.ERROR_IS_OWNER_ON_ANVIL)
+                elif workspace.is_owner and not self._check_workspace_ownership_on_anvil(workspace_details):
+                    # The workspace is managed by the app, but we are not owners on AnVIL.
                     model_instance_result.add_error(self.ERROR_NOT_OWNER_ON_ANVIL)
+                elif workspace.has_access and not self._check_workspace_ownership_on_anvil(workspace_details):
+                    # The app only has limited access to the workspace and is not an owner on AnVIL.
+                    # No issues here.
+                    pass
                 else:
+                    # The workspace is managed by the app and we are owners - need to perform other checks.
                     # Since we're the owner, check workspace access.
                     sharing_audit = WorkspaceSharingAudit(workspace)
                     sharing_audit.run_audit(cache=cache)
@@ -104,22 +142,11 @@ class WorkspaceAudit(base.AnVILAudit):
                     if workspace.is_requester_pays != is_requester_pays_on_anvil:
                         model_instance_result.add_error(self.ERROR_DIFFERENT_REQUESTER_PAYS)
 
-                # Check auth domains.
-                auth_domains_on_anvil = [
-                    x["membersGroupName"] for x in workspace_details["workspace"]["authorizationDomain"]
-                ]
-                auth_domains_in_app = workspace.authorization_domains.all().values_list("name", flat=True)
-                if set(auth_domains_on_anvil) != set(auth_domains_in_app):
-                    model_instance_result.add_error(self.ERROR_DIFFERENT_AUTH_DOMAINS)
-                # Check lock status.
-                if workspace.is_locked != workspace_details["workspace"]["isLocked"]:
-                    model_instance_result.add_error(self.ERROR_DIFFERENT_LOCK)
-
             self.add_result(model_instance_result)
 
         # Check for remaining workspaces on AnVIL where we are OWNER.
         for workspace_details in workspaces_on_anvil:
-            if self._check_workspace_ownership(workspace_details):
+            if self._check_workspace_ownership_on_anvil(workspace_details):
                 # The service account is an owner of the workspace.
                 workspace_name = "{}/{}".format(
                     workspace_details["workspace"]["namespace"], workspace_details["workspace"]["name"]
@@ -216,6 +243,8 @@ class WorkspaceSharingAudit(base.AnVILAudit):
 
     def __init__(self, workspace, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not workspace.is_owner:
+            raise AnVILNotWorkspaceOwnerError("workspace {} is not managed by app".format(workspace))
         self.workspace = workspace
 
     def get_cache_key(self):
