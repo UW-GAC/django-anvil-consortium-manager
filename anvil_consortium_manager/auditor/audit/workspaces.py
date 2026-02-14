@@ -85,7 +85,7 @@ class WorkspaceAudit(base.AnVILAudit):
             except StopIteration:
                 # The workspace is not in the list of workspaces on AnVIL.
                 # This means that either the app thinks this workspace ahs NO_ACCESS access, or there is an audit error.
-                if workspace.app_access != Workspace.AppAccessChoices.NO_ACCESS:
+                if workspace.has_access:
                     model_instance_result.add_error(self.ERROR_NOT_IN_ANVIL)
                 next
             else:
@@ -104,7 +104,7 @@ class WorkspaceAudit(base.AnVILAudit):
                     model_instance_result.add_error(self.ERROR_DIFFERENT_LOCK)
 
                 # Check role - these are more complicated.
-                if workspace.app_access == workspace.AppAccessChoices.NO_ACCESS:
+                if not workspace.has_access:
                     # Report access level of workspace
                     if workspace_details["accessLevel"] == "OWNER":
                         model_instance_result.add_error(self.ERROR_IS_OWNER_ON_ANVIL)
@@ -112,22 +112,13 @@ class WorkspaceAudit(base.AnVILAudit):
                         model_instance_result.add_error(self.ERROR_IS_READER_ON_ANVIL)
                     elif workspace_details["accessLevel"] == "WRITER":
                         model_instance_result.add_error(self.ERROR_IS_WRITER_ON_ANVIL)
-                elif (
-                    not workspace.app_access == workspace.AppAccessChoices.OWNER
-                    and self._check_workspace_ownership_on_anvil(workspace_details)
-                ):
+                elif not workspace.is_owner and self._check_workspace_ownership_on_anvil(workspace_details):
                     # The workspace is not managed by the app, but we are owners on AnVIL.
                     model_instance_result.add_error(self.ERROR_IS_OWNER_ON_ANVIL)
-                elif (
-                    workspace.app_access == workspace.AppAccessChoices.OWNER
-                    and not self._check_workspace_ownership_on_anvil(workspace_details)
-                ):
+                elif workspace.is_owner and not self._check_workspace_ownership_on_anvil(workspace_details):
                     # The workspace is managed by the app, but we are not owners on AnVIL.
                     model_instance_result.add_error(self.ERROR_NOT_OWNER_ON_ANVIL)
-                elif (
-                    workspace.app_access == workspace.AppAccessChoices.LIMITED
-                    and not self._check_workspace_ownership_on_anvil(workspace_details)
-                ):
+                elif workspace.has_access and not self._check_workspace_ownership_on_anvil(workspace_details):
                     # The app only has limited access to the workspace and is not an owner on AnVIL.
                     # No issues here.
                     pass
@@ -252,7 +243,7 @@ class WorkspaceSharingAudit(base.AnVILAudit):
 
     def __init__(self, workspace, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not workspace.app_access == workspace.AppAccessChoices.OWNER:
+        if not workspace.is_owner:
             raise AnVILNotWorkspaceOwnerError("workspace {} is not managed by app".format(workspace))
         self.workspace = workspace
 

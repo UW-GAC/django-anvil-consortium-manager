@@ -687,9 +687,9 @@ class Workspace(TimeStampedModel):
     def clean(self):
         super().clean()
         # Check consistency between app_access and app_access_reason.
-        if self.app_access == self.AppAccessChoices.OWNER and self.app_access_reason:
+        if self.is_owner and self.app_access_reason:
             raise ValidationError("app_access_reason must be blank if app_access is OWNER.")
-        elif self.app_access != self.AppAccessChoices.OWNER and not self.app_access_reason:
+        elif not self.is_owner and not self.app_access_reason:
             raise ValidationError("app_access_reason cannot be blank if app_access is not OWNER.")
 
     def __str__(self):
@@ -1040,7 +1040,7 @@ class Workspace(TimeStampedModel):
         if not all_account_groups:
             all_account_groups = account.get_all_groups()
         # First, check if the app can even access the workspace. If not, raise an error.
-        if self.app_access != self.AppAccessChoices.OWNER:
+        if not self.is_owner:
             raise exceptions.AnVILNotWorkspaceOwnerError("App does not have OWNER access to {}".format(self))
         # First check sharing, then check auth domain membership.
         try:

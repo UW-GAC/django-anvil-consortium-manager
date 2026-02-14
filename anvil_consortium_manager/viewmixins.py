@@ -268,18 +268,12 @@ class WorkspaceCheckAccessMixin:
         workspace_access_level = self.get_workspace_access()
 
         if workspace_access_level == workspace.AppAccessChoices.LIMITED:
-            access_levels = [
-                workspace.AppAccessChoices.LIMITED,
-                workspace.AppAccessChoices.OWNER,
-            ]
+            x = workspace.has_access
         elif workspace_access_level == workspace.AppAccessChoices.OWNER:
-            access_levels = [
-                workspace.AppAccessChoices.OWNER,
-            ]
+            x = workspace.is_owner
         else:
             raise ValueError("Invalid workspace access level: {}".format(workspace_access_level))
 
-        x = workspace.app_access in access_levels
         if not x:
             workspace_access_error_message = self.get_workspace_access_error_message(workspace)
             if workspace_access_error_message:

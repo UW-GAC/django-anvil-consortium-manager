@@ -5,7 +5,7 @@
     </div>
     <div class="p-2 flex-grow-1">
         Information on this page may no longer be accurate because the app
-        {% if workspace.app_access == workspace.AppAccessChoices.LIMITED %}
+        {% if workspace.has_access %}
             has limited access
         {% else %}
             no longer has access
