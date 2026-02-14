@@ -1,5 +1,13 @@
 # Change log
 
+## 0.35.0 (Devel)
+
+* Allow for workspaces that either are not accessible by the app, or where the app is not the owner
+    - Add a new field to the `Workspace` model, app_access
+    - Show alerts on appropriate detail views when the app does not have owner access
+    - Update audits to check that access on AnVIL matches `app_access`, and operate accordingly
+
+
 ## 0.34.0 (2026-12-21)
 
 * Add support for Django 5.2.
