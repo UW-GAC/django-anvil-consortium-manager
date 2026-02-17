@@ -1,6 +1,6 @@
 # Change log
 
-## 0.35.0 (Devel)
+## 0.35.0 (2026-02-17)
 
 * Allow for workspaces that either are not accessible by the app, or where the app is not the owner
     - Add a new field to the `Workspace` model, app_access
