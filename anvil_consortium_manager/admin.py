@@ -68,11 +68,12 @@ class ManagedGroupAdmin(SimpleHistoryAdmin):
 class WorkspaceAdmin(SimpleHistoryAdmin):
     """Admin class for the Workspace model."""
 
-    list_display = ("__str__", "billing_project", "is_locked")
+    list_display = ("__str__", "billing_project", "is_locked", "app_access")
     list_filter = (
         "workspace_type",
         "billing_project",
         "is_locked",
+        "app_access",
     )
     search_fields = ("name",)
 
