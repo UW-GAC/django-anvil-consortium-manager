@@ -1,5 +1,9 @@
 # Change log
 
+## Devel
+
+* Bugfix: Catch and handle 403 response returned by `anvil_spi.get_workspace_acl` API call when checking for workspace ownership. This can occur when the app has a workspace shared with its service account, but the service account is not in the auth domain.
+
 ## 0.35.0 (2026-02-17)
 
 * Allow for workspaces that either are not accessible by the app, or where the app is not the owner
