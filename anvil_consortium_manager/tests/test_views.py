@@ -5924,6 +5924,16 @@ class ManagedGroupUpdateTest(TestCase):
         instance.refresh_from_db()
         self.assertEqual(instance.note, "new note")
 
+    def test_can_modify_is_managed_by_app(self):
+        """Can set the is_managed_by_app field when creating a billing project."""
+        instance = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(instance.name), {"is_managed_by_app": True})
+        self.assertEqual(response.status_code, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.is_managed_by_app, True)
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         instance = factories.ManagedGroupFactory.create()

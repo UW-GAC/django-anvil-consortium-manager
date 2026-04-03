@@ -169,7 +169,10 @@ class ManagedGroupUpdateForm(forms.ModelForm):
 
     class Meta:
         model = models.ManagedGroup
-        fields = ("note",)
+        fields = (
+            "note",
+            "is_managed_by_app",
+        )
 
 
 class WorkspaceForm(Bootstrap5MediaFormMixin, forms.ModelForm):

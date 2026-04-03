@@ -307,6 +307,12 @@ class ManagedGroupUpdateFormTest(TestCase):
         form = self.form_class(data=form_data)
         self.assertTrue(form.is_valid())
 
+    def test_form_is_managed_by_app(self):
+        """Form is valid with the is_managed_by_app field."""
+        form_data = {"is_managed_by_app": True}
+        form = self.form_class(data=form_data)
+        self.assertTrue(form.is_valid())
+
 
 class WorkspaceFormTest(TestCase):
     """Tests for the WorkspaceForm class."""
