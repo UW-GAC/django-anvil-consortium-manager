@@ -680,7 +680,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         record_result = audit_results.get_not_in_app_results()[0]
         self.assertEqual(record_result.record, "test-bp/test-ws")
 
-    def test_anvil_audit_one_workspace_missing_in_app_no_access_not_owner(self):
+    def test_anvil_audit_one_workspace_missing_in_app_no_access_not_owner_404(self):
         """Audit reports no issues for a workspace where the access level is NO ACCESS and the app is not an owner."""
         api_url = self.get_api_url()
         self.anvil_response_mock.add(
@@ -692,6 +692,25 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         # Response to check workspace access - it is a 404 bc it is not shared with us.
         workspace_acl_url = self.get_api_workspace_acl_url("test-bp", "test-ws")
         self.anvil_response_mock.add(responses.GET, workspace_acl_url, status=404, json={"message": "error"})
+        audit_results = workspaces.WorkspaceAudit()
+        audit_results.run_audit()
+        self.assertTrue(audit_results.ok())
+        self.assertEqual(len(audit_results.get_verified_results()), 0)
+        self.assertEqual(len(audit_results.get_error_results()), 0)
+        self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
+
+    def test_anvil_audit_one_workspace_missing_in_app_no_access_not_owner_403(self):
+        """Audit reports no issues for a workspace where the access level is NO ACCESS and the app is not an owner."""
+        api_url = self.get_api_url()
+        self.anvil_response_mock.add(
+            responses.GET,
+            api_url,
+            status=200,
+            json=[self.get_api_workspace_json("test-bp", "test-ws", "NO ACCESS")],
+        )
+        # Response to check workspace access with 403 response code
+        workspace_acl_url = self.get_api_workspace_acl_url("test-bp", "test-ws")
+        self.anvil_response_mock.add(responses.GET, workspace_acl_url, status=403, json={"message": "error"})
         audit_results = workspaces.WorkspaceAudit()
         audit_results.run_audit()
         self.assertTrue(audit_results.ok())

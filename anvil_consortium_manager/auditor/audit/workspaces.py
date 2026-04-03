@@ -1,6 +1,6 @@
 import django_tables2 as tables
 
-from anvil_consortium_manager.anvil_api import AnVILAPIClient, AnVILAPIError404
+from anvil_consortium_manager.anvil_api import AnVILAPIClient, AnVILAPIError403, AnVILAPIError404
 from anvil_consortium_manager.exceptions import AnVILNotWorkspaceOwnerError
 from anvil_consortium_manager.models import Workspace
 
@@ -49,7 +49,7 @@ class WorkspaceAudit(base.AnVILAudit):
                     workspace_details["workspace"]["namespace"],
                     workspace_details["workspace"]["name"],
                 )
-            except AnVILAPIError404:
+            except (AnVILAPIError403, AnVILAPIError404):
                 # We don't have permission to check the ACL, so we are not an owner.
                 return False
             else:
