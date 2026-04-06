@@ -1,8 +1,9 @@
 # Change log
 
-## Devel
+## 0.35.1 (2026-04-06)
 
 * Bugfix: Catch and handle 403 response returned by `anvil_spi.get_workspace_acl` API call when checking for workspace ownership. This can occur when the app has a workspace shared with its service account, but the service account is not in the auth domain.
+* Allow the user to update `app_access` and `app_access_reason` via the WorkspaceUpdate form
 
 ## 0.35.0 (2026-02-17)
 
@@ -10,7 +11,6 @@
     - Add a new field to the `Workspace` model, app_access
     - Show alerts on appropriate detail views when the app does not have owner access
     - Update audits to check that access on AnVIL matches `app_access`, and operate accordingly
-* Allow the user to update `app_access` and `app_access_reason` via the WorkspaceUpdate form
 
 
 ## 0.34.0 (2026-12-21)
