@@ -10,6 +10,7 @@
     - Add a new field to the `Workspace` model, app_access
     - Show alerts on appropriate detail views when the app does not have owner access
     - Update audits to check that access on AnVIL matches `app_access`, and operate accordingly
+* Allow the user to update `app_access` and `app_access_reason` via the WorkspaceUpdate form
 
 
 ## 0.34.0 (2026-12-21)

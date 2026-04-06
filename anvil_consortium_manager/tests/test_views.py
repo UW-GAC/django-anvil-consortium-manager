@@ -5924,6 +5924,16 @@ class ManagedGroupUpdateTest(TestCase):
         instance.refresh_from_db()
         self.assertEqual(instance.note, "new note")
 
+    def test_can_modify_is_managed_by_app(self):
+        """Can set the is_managed_by_app field when creating a billing project."""
+        instance = factories.ManagedGroupFactory.create(is_managed_by_app=False)
+        # Need a client for messages.
+        self.client.force_login(self.user)
+        response = self.client.post(self.get_url(instance.name), {"is_managed_by_app": True})
+        self.assertEqual(response.status_code, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.is_managed_by_app, True)
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         instance = factories.ManagedGroupFactory.create()
@@ -12817,8 +12827,13 @@ class WorkspaceUpdateTest(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
         form = response.context_data.get("form")
-        self.assertEqual(len(form.fields), 1)  # is_locked
+        self.assertEqual(len(form.fields), 3)  # note, app_access, app_access_reason
+        self.assertNotIn("billing_project", form.fields)
+        self.assertNotIn("name", form.fields)
+        self.assertNotIn("authorization_domains", form.fields)
         self.assertIn("note", form.fields)
+        self.assertIn("app_access", form.fields)
+        self.assertIn("app_access_reason", form.fields)
 
     def test_has_formset_in_context(self):
         """Response includes a formset for the workspace_data model."""
@@ -12837,6 +12852,8 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name),
             {
                 "note": "new note",
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -12852,6 +12869,31 @@ class WorkspaceUpdateTest(TestCase):
         self.workspace.refresh_from_db()
         self.assertEqual(self.workspace.note, "new note")
 
+    def test_can_modify_app_access(self):
+        """Can set the note when creating a billing project."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            self.get_url(self.workspace.billing_project.name, self.workspace.name),
+            {
+                "note": self.workspace.note,
+                "app_access": models.Workspace.AppAccessChoices.LIMITED,
+                "app_access_reason": "new reason",
+                # Default workspace data for formset.
+                "workspacedata-TOTAL_FORMS": 1,
+                "workspacedata-INITIAL_FORMS": 1,
+                "workspacedata-MIN_NUM_FORMS": 1,
+                "workspacedata-MAX_NUM_FORMS": 1,
+                "workspacedata-0-id": self.workspace_data.pk,
+                "workspacedata-0-workspace": self.workspace.pk,
+                "workspacedata-0-study_name": "updated name",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.workspace_data.refresh_from_db()
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.workspace.app_access, models.Workspace.AppAccessChoices.LIMITED)
+        self.assertEqual(self.workspace.app_access_reason, "new reason")
+
     def test_success_message(self):
         """Response includes a success message if successful."""
         self.client.force_login(self.user)
@@ -12859,6 +12901,8 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name),
             {
                 "note": "new note",
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -12882,6 +12926,8 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name),
             {
                 "note": "new note",
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -12904,6 +12950,8 @@ class WorkspaceUpdateTest(TestCase):
         response = self.client.post(
             self.get_url(workspace.billing_project.name, workspace.name),
             {
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -12971,8 +13019,10 @@ class WorkspaceUpdateTest(TestCase):
         self.assertTrue("form" in response.context_data)
         form = response.context_data["form"]
         self.assertIsInstance(form, TestWorkspaceAdapter().get_workspace_form_class())
-        self.assertEqual(len(form.fields), 1)  # is_locked
+        self.assertEqual(len(form.fields), 3)  # note, app_access, app_access_reason
         self.assertIn("note", form.fields)
+        self.assertIn("app_access", form.fields)
+        self.assertIn("app_access_reason", form.fields)
 
     def test_get_workspace_data_with_second_foreign_key_to_workspace(self):
         other_workspace = factories.WorkspaceFactory.create()
@@ -13006,6 +13056,8 @@ class WorkspaceUpdateTest(TestCase):
                 self.get_url(self.workspace.billing_project.name, self.workspace.name),
                 {
                     "note": "Foo",
+                    "app_access": self.workspace.app_access,
+                    "app_access_reason": self.workspace.app_access_reason,
                     # Default workspace data for formset.
                     "workspacedata-TOTAL_FORMS": 1,
                     "workspacedata-INITIAL_FORMS": 1,
