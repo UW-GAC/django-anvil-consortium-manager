@@ -12852,6 +12852,8 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name),
             {
                 "note": "new note",
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -12873,6 +12875,7 @@ class WorkspaceUpdateTest(TestCase):
         response = self.client.post(
             self.get_url(self.workspace.billing_project.name, self.workspace.name),
             {
+                "note": self.workspace.note,
                 "app_access": models.Workspace.AppAccessChoices.LIMITED,
                 "app_access_reason": "new reason",
                 # Default workspace data for formset.
@@ -12898,6 +12901,8 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name),
             {
                 "note": "new note",
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -12921,6 +12926,8 @@ class WorkspaceUpdateTest(TestCase):
             self.get_url(self.workspace.billing_project.name, self.workspace.name),
             {
                 "note": "new note",
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -12943,6 +12950,8 @@ class WorkspaceUpdateTest(TestCase):
         response = self.client.post(
             self.get_url(workspace.billing_project.name, workspace.name),
             {
+                "app_access": self.workspace.app_access,
+                "app_access_reason": self.workspace.app_access_reason,
                 # Default workspace data for formset.
                 "workspacedata-TOTAL_FORMS": 1,
                 "workspacedata-INITIAL_FORMS": 1,
@@ -13047,6 +13056,8 @@ class WorkspaceUpdateTest(TestCase):
                 self.get_url(self.workspace.billing_project.name, self.workspace.name),
                 {
                     "note": "Foo",
+                    "app_access": self.workspace.app_access,
+                    "app_access_reason": self.workspace.app_access_reason,
                     # Default workspace data for formset.
                     "workspacedata-TOTAL_FORMS": 1,
                     "workspacedata-INITIAL_FORMS": 1,
