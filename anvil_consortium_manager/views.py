@@ -1600,11 +1600,14 @@ class WorkspaceUpdate(
 
         class WorkspaceUpdateForm(form_class):
             class Meta(form_class.Meta):
+                # Exclude fields that shouldn't be updated after workspace creation.
                 exclude = (
                     "billing_project",
                     "name",
                     "authorization_domains",
                 )
+                # Include fields that can be updated after workspace creation, even if they are not in the default form.
+                fields = form_class.Meta.fields + ("app_access", "app_access_reason")
 
         return WorkspaceUpdateForm
 
