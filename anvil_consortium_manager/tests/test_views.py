@@ -7665,6 +7665,7 @@ class WorkspaceDetailTest(TestCase):
             workspace__app_access=models.Workspace.AppAccessChoices.NO_ACCESS
         )
         response = self.client.get(obj.get_absolute_url())
+        # Edit links
         self.assertIn("show_edit_links", response.context_data)
         self.assertTrue(response.context_data["show_edit_links"])
         # Delete a workspace
@@ -7810,6 +7811,34 @@ class WorkspaceDetailTest(TestCase):
                 },
             ),
         )
+
+    def test_app_access_no_access_linked_account(self):
+        # Create an AnVIL account linked to the user.
+        factories.AccountFactory.create(user=self.edit_user, verified=True)
+        workspace = factories.WorkspaceFactory.create(
+            app_access=models.Workspace.AppAccessChoices.NO_ACCESS,
+            app_access_reason="test",
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.edit_user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, workspace.get_anvil_url())
+
+    def test_app_access_limited_access_linked_account(self):
+        # Create an AnVIL account linked to the user.
+        factories.AccountFactory.create(user=self.edit_user, verified=True)
+        workspace = factories.WorkspaceFactory.create(
+            app_access=models.Workspace.AppAccessChoices.LIMITED,
+            app_access_reason="test",
+        )
+        factories.DefaultWorkspaceDataFactory.create(workspace=workspace)
+        self.client.force_login(self.edit_user)
+        response = self.client.get(workspace.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "View on AnVIL")
+        self.assertContains(response, workspace.get_anvil_url())
 
 
 class WorkspaceCreateTest(AnVILAPIMockTestMixin, TestCase):
