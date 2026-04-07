@@ -1109,7 +1109,7 @@ class WorkspaceDetail(
             account = self.request.user.account
             try:
                 has_access = self.object.is_accessible_by_account(account)
-            except exceptions.WorkspaceAccessUnknownError:
+            except (exceptions.WorkspaceAccessUnknownError, exceptions.AnVILNotWorkspaceOwnerError):
                 has_access = None
         except models.Account.DoesNotExist:
             has_access = False
