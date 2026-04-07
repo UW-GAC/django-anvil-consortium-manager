@@ -1,6 +1,6 @@
 # Change log
 
-## 0.35.2 (Devel)
+## 0.35.2 (2026-04-07)
 
 * Bugfix: Allow the `WorkspaceDetail` page to properly load in the case when the app is not the owner of the workspace and the user has a linked account.
 
