@@ -1,5 +1,9 @@
 # Change log
 
+## 0.35.2 (Devel)
+
+* Bugfix: Allow the `WorkspaceDetail` page to properly load in the case when the app is not the owner of the workspace and the user has a linked account.
+
 ## 0.35.1 (2026-04-06)
 
 * Bugfix: Catch and handle 403 response returned by `anvil_spi.get_workspace_acl` API call when checking for workspace ownership. This can occur when the app has a workspace shared with its service account, but the service account is not in the auth domain.
