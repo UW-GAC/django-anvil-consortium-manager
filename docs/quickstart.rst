@@ -106,7 +106,7 @@ These settings are set to default values automatically, but can be changed by th
 * ``ANVIL_ACCOUNT_LINK_EMAIL_SUBJECT``: Subject of the email when a user links their account (default: "AnVIL Account Verification")
 * ``ANVIL_ACCOUNT_LINK_REDIRECT_URL``: URL to redirect to after linking an account (default: ``settings.LOGIN_REDIRECT_URL``)
 * ``ANVIL_ACCOUNT_ADAPTER``: Adapter to use for Accounts (default: ``"anvil_consortium_manager.adapters.default.DefaultAccountAdapter"``). See the :ref:`account_adapter` section for more information about customizing behavior for accounts.
-
+* ``ANVIL_CHECK_AUDIT_CACHE_ON_LOGIN``: On staff user login, check audit caches for errors or missingness and report to user with django messages. (default: False)
 
 Post-installation
 ~~~~~~~~~~~~~~~~~
