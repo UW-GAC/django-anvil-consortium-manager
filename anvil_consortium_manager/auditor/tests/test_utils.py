@@ -20,7 +20,7 @@ INVALID_AUDITS = [AuditCheckConfig(AccountAudit, "BAD_URL_NAME")]
 
 
 # We enable the checking of the audit cache for just these tests
-# otherwise they happen on all test logins and
+# otherwise the audit check happens on all tests that login a user.
 @override_settings(ANVIL_CHECK_AUDIT_CACHE_ON_LOGIN=True)
 class CheckAnvilAuditStatusTest(AuditCacheClearTestMixin, TestCase):
     """Tests for the check_cached_anvil_audit utility."""
@@ -70,16 +70,11 @@ class CheckAnvilAuditStatusTest(AuditCacheClearTestMixin, TestCase):
         messages = [m.message for m in get_messages(request)]
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]).count("No cached audit results found for"), 4)
-        # self.assertEqual("No cached audit results found for", str(messages[0]))
 
     def test_bad_messages_framework_logs(self):
         """Verify the check_cached_anvil_audits function reports all instances of missing cached audit results"""
         factory = RequestFactory()
         request = factory.get("/")
-
-        # Due to the bare request the RequestFactory creates
-        # we use a self-contained messages storage system
-        # request._messages = CookieStorage(request)
 
         # Directly fire Django's user_logged_in signal
         with self.assertLogs("anvil_consortium_manager.auditor.utils", level="ERROR") as log_context:
@@ -128,8 +123,9 @@ class CheckAnvilAuditStatusTest(AuditCacheClearTestMixin, TestCase):
         audit_results.add_result(model_instance_result)
         audit_results.cache()
 
-        # Directly fire Django's user_logged_in signal
-        user_logged_in.send(sender=self.staff_user.__class__, request=request, user=self.staff_user)
+        # Directly fire Django's user_logged_in signal, expect no error logs
+        with self.assertNoLogs("anvil_consortium_manager.auditor.utils", level="ERROR"):
+            user_logged_in.send(sender=self.staff_user.__class__, request=request, user=self.staff_user)
         # cached audit is okay, no messages expected
         messages = [m.message for m in get_messages(request)]
         self.assertEqual(len(messages), 0)
