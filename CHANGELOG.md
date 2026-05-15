@@ -1,5 +1,10 @@
 # Change log
 
+## 0.36.0 (2026-05-15)
+
+* Add support for a check of cached anvil audit status on staff login. If audits results missing or not okay - alert staff user via django message.
+    - Feature is disabled by default, enable for your site via ANVIL_CHECK_AUDIT_CACHE_ON_LOGIN
+
 ## 0.35.2 (2026-04-07)
 
 * Bugfix: Allow the `WorkspaceDetail` page to properly load in the case when the app is not the owner of the workspace and the user has a linked account.
