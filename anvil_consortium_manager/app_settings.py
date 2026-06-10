@@ -57,7 +57,7 @@ class AppSettings(object):
 
     @property
     def CHECK_AUDIT_CACHE_ON_LOGIN(self):
-        x = self._setting("CHECK_AUDIT_CACHE_ON_LOGIN", True)
+        x = self._setting("CHECK_AUDIT_CACHE_ON_LOGIN", False)
         return x
 
 

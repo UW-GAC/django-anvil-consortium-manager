@@ -1,21 +1,28 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.contrib.auth.signals import user_logged_in
 from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import CookieStorage
 from django.test import Client, RequestFactory, TestCase, override_settings
 
-from anvil_consortium_manager.tests.factories import AccountFactory
+from anvil_consortium_manager.models import AnVILProjectManagerAccess
+from anvil_consortium_manager.tests.factories import AccountFactory, BillingProjectFactory
 
 from ..audit.accounts import AccountAudit
 from ..audit.base import ModelInstanceResult
+from ..audit.billing_projects import BillingProjectAudit
 from ..utils import AuditCheckConfig
 from .utils import AuditCacheClearTestMixin
 
 User = get_user_model()
 
-TEST_AUDITS = [AuditCheckConfig(AccountAudit, "anvil_consortium_manager:auditor:accounts:review")]
+TEST_AUDITS_ONE = [AuditCheckConfig(AccountAudit, "anvil_consortium_manager:auditor:accounts:review")]
+TEST_AUDITS_TWO = [
+    AuditCheckConfig(AccountAudit, "anvil_consortium_manager:auditor:accounts:review"),
+    AuditCheckConfig(BillingProjectAudit, "anvil_consortium_manager:auditor:billing_projects:review"),
+]
 INVALID_AUDITS = [AuditCheckConfig(AccountAudit, "BAD_URL_NAME")]
 
 
@@ -33,7 +40,9 @@ class CheckAnvilAuditStatusTest(AuditCacheClearTestMixin, TestCase):
         self.staff_user = User.objects.create_user(
             username="teststaffuser",
             password="securepassword345",
-            is_staff=True,
+        )
+        self.staff_user.user_permissions.add(
+            Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
 
     @patch("anvil_consortium_manager.auditor.signals.check_cached_anvil_audits")
@@ -71,6 +80,30 @@ class CheckAnvilAuditStatusTest(AuditCacheClearTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]).count("No cached audit results found for"), 4)
 
+    @patch("anvil_consortium_manager.auditor.utils.AUDITS_TO_CHECK", TEST_AUDITS_TWO)
+    def test_one_audit_missing_from_cache(self):
+        """When one audit is missing and others are okay, expect one message about missing cache"""
+        factory = RequestFactory()
+        request = factory.get("/")
+
+        # Due to the bare request the RequestFactory creates
+        # we use a self-contained messages storage system
+        request._messages = CookieStorage(request)
+
+        # Create a non-okay audit result and cache it.
+        audit_results = AccountAudit()
+        model_instance_result = ModelInstanceResult(AccountFactory())
+        audit_results.add_result(model_instance_result)
+        audit_results.cache()
+
+        # Directly fire Django's user_logged_in signal
+        user_logged_in.send(sender=self.staff_user.__class__, request=request, user=self.staff_user)
+
+        # Expect one missing cached audit result
+        messages = [m.message for m in get_messages(request)]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]).count("No cached audit results found for"), 1)
+
     def test_bad_messages_framework_logs(self):
         """Verify the check_cached_anvil_audits function reports all instances of missing cached audit results"""
         factory = RequestFactory()
@@ -83,7 +116,7 @@ class CheckAnvilAuditStatusTest(AuditCacheClearTestMixin, TestCase):
         self.assertEqual(len(log_context.output), 1)
         self.assertIn("[check_cached_anvil_audits] Could not notify", log_context.output[0])
 
-    @patch("anvil_consortium_manager.auditor.utils.AUDITS_TO_CHECK", TEST_AUDITS)
+    @patch("anvil_consortium_manager.auditor.utils.AUDITS_TO_CHECK", TEST_AUDITS_ONE)
     def test_cached_audit_not_okay(self):
         """Verify the check_cached_anvil_audits function reports when an audit is not ok"""
         factory = RequestFactory()
@@ -107,7 +140,39 @@ class CheckAnvilAuditStatusTest(AuditCacheClearTestMixin, TestCase):
         self.assertEqual(len(messages), 1)
         self.assertIn("Audit AccountAudit contains errors", str(messages[0]))
 
-    @patch("anvil_consortium_manager.auditor.utils.AUDITS_TO_CHECK", TEST_AUDITS)
+    @patch("anvil_consortium_manager.auditor.utils.AUDITS_TO_CHECK", TEST_AUDITS_TWO)
+    def test_all_cached_audits_not_okay(self):
+        """Verify the check_cached_anvil_audits function reports for all audits when multiple audits are not ok"""
+        factory = RequestFactory()
+        request = factory.get("/")
+
+        # Due to the bare request the RequestFactory creates
+        # we use a self-contained messages storage system
+        request._messages = CookieStorage(request)
+
+        # Create a non-okay audit result and cache it.
+        audit_results = AccountAudit()
+        model_instance_result = ModelInstanceResult(AccountFactory())
+        model_instance_result.add_error("foo")
+        audit_results.add_result(model_instance_result)
+        audit_results.cache()
+
+        # Create a non-okay audit result and cache it.
+        billing_project_audit_results = BillingProjectAudit()
+        billing_project_model_instance_result = ModelInstanceResult(BillingProjectFactory())
+        billing_project_model_instance_result.add_error("foo")
+        billing_project_audit_results.add_result(model_instance_result)
+        billing_project_audit_results.cache()
+
+        # Directly fire Django's user_logged_in signal
+        user_logged_in.send(sender=self.staff_user.__class__, request=request, user=self.staff_user)
+
+        messages = [m.message for m in get_messages(request)]
+        self.assertEqual(len(messages), 1)
+        self.assertIn("Audit AccountAudit contains errors", str(messages[0]))
+        self.assertIn("Audit BillingProjectAudit contains errors", str(messages[0]))
+
+    @patch("anvil_consortium_manager.auditor.utils.AUDITS_TO_CHECK", TEST_AUDITS_ONE)
     def test_all_audits_okay_no_messages(self):
         """Verify the check_cached_anvil_audits function does not alert when audit is okay and in cache"""
         factory = RequestFactory()
