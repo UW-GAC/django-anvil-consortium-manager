@@ -51,8 +51,14 @@
           {% if request.user.is_authenticated %}
             {# show logout #}
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'logout' %}"><span class="fa-solid fa-right-from-bracket"></span> Logout {{ user.username }}</a>
+              {# URL provided by django-allauth/account/urls.py #}
+              <form method="post" style="display:none" action="{% url 'logout' %}" id="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning">Sign Out</button>
+              </form>
+              <a class="nav-link" title="Sign Out" href="#" onclick="document.getElementById('logout-form').submit()"><span class="fa-solid fa-right-from-bracket"></span> Logout {{ user.username }}</a>
             </li>
+
           {% else %}
             {# show login #}
             <li class="nav-item">
