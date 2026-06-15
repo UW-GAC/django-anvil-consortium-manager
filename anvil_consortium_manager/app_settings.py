@@ -55,6 +55,11 @@ class AppSettings(object):
             raise ImproperlyConfigured("ANVIL_AUDIT_CACHE is required in settings.py")
         return x
 
+    @property
+    def CHECK_AUDIT_CACHE_ON_LOGIN(self):
+        x = self._setting("CHECK_AUDIT_CACHE_ON_LOGIN", False)
+        return x
+
 
 _app_settings = AppSettings("ANVIL_")
 

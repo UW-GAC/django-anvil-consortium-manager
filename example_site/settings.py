@@ -251,3 +251,6 @@ ANVIL_WORKSPACE_ADAPTERS = [
 
 # Specify the name of the cache set above.
 ANVIL_AUDIT_CACHE = "anvil_audit_cache"
+
+# Check the audit cache upon login.
+# ANVIL_CHECK_AUDIT_CACHE_ON_LOGIN = True
