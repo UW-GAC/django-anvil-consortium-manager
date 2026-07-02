@@ -1,6 +1,6 @@
 # Change log
 
-## 0.36.0 (2026-05-15)
+## 0.36.0 (2026-07-02)
 
 * Add support for a check of cached anvil audit status on staff login. If audits results missing or not okay - alert staff user via django message.
     - Feature is disabled by default, enable for your site via ANVIL_CHECK_AUDIT_CACHE_ON_LOGIN
