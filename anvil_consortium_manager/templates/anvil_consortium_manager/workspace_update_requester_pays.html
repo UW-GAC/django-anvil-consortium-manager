@@ -1,4 +1,4 @@
-{% extends "anvil_consortium_manager/base.html" %}
+{% extends "anvil_consortium_manager/__object_detail.html" %}
 {% load static %}
 {% load crispy_forms_tags %}
 
@@ -6,23 +6,22 @@
 
 {% block title %}Update requester pays{% endblock %}
 
-{% block content %}
+{% block panel %}
+  {% include 'anvil_consortium_manager/snippets/workspace_details_panel.html' with workspace=object workspace_data=workspace_data %}
+{% endblock panel %}
+
+{% block after_panel %}
 <div class="container">
 
   <div class="row">
     <div class="col-sm-12">
-
-
-      <h2>Update requester pays</h2>
-
-      <h2>{{ object }}</h2>
-
       <p>
         When a workspace is set to "requester pays", the user accessing data stored within the workspace is responsible for the costs associated data egress, rather than the billing project owner.
       </p>
       <p>
         Are you sure you want to update requester pays status for <a href="{{ object.get_absolute_url }}">{{ object }}</a> on AnVIL?
       </p>
+
 
       <form method="post">
         {% csrf_token %}
@@ -36,4 +35,14 @@
 
 
 </div>
-{% endblock content %}
+{% endblock after_panel %}
+
+
+{% block action_buttons %}
+{% endblock action_buttons %}
+
+
+{% block inline_javascript %}
+  {{ form.media }}
+  {{ workspace_data_formset.media }}
+{% endblock inline_javascript %}

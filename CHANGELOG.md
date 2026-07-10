@@ -1,5 +1,9 @@
 # Change log
 
+## 0.36.1 (Devel)
+
+* Rework workspace detail and update template such that badges are only shown on the workspace detail page.
+
 ## 0.36.0 (2026-07-02)
 
 * Add support for a check of cached anvil audit status on staff login. If audits results missing or not okay - alert staff user via django message.
