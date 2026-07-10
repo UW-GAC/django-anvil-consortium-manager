@@ -6923,6 +6923,19 @@ class WorkspaceDetailTest(TestCase):
         response = self.client.get(obj.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
+    def test_templates(self):
+        """View uses the correct templates."""
+        obj = factories.DefaultWorkspaceDataFactory.create()
+        self.client.force_login(self.user)
+        response = self.client.get(obj.get_absolute_url())
+        self.assertTemplateUsed(response, "anvil_consortium_manager/workspace_detail.html")
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_details_panel.html")
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_access_pill.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_is_locked_pill.html")
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_requester_pays_pill.html")
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_view_on_anvil_pill.html")
+
     def test_access_with_view_permission(self):
         """Raises permission denied if user has limited view permission."""
         user = User.objects.create_user(username="test-limited", password="test-limited")
@@ -12799,6 +12812,18 @@ class WorkspaceUpdateTest(TestCase):
         response = self.client.get(self.get_url(self.workspace.billing_project, self.workspace.name))
         self.assertEqual(response.status_code, 200)
 
+    def test_templates(self):
+        """Uses the correct templates."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project, self.workspace.name))
+        self.assertTemplateUsed(response, "anvil_consortium_manager/workspace_update.html")
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_details_panel.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_access_pill.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_is_locked_pill.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_requester_pays_pill.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_view_on_anvil_pill.html")
+
     def test_access_with_view_permission(self):
         """Raises permission denied if user has only view permission."""
         user_with_view_perm = User.objects.create_user(username="test-other", password="test-other")
@@ -13148,6 +13173,18 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.get_url(self.workspace.billing_project.name, self.workspace.name))
         self.assertEqual(response.status_code, 200)
+
+    def test_templates(self):
+        """Uses the correct templates."""
+        self.client.force_login(self.user)
+        response = self.client.get(self.get_url(self.workspace.billing_project, self.workspace.name))
+        self.assertTemplateUsed(response, "anvil_consortium_manager/workspace_update_requester_pays.html")
+        self.assertTemplateUsed(response, "anvil_consortium_manager/snippets/workspace_details_panel.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_access_pill.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_app_access_alert.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_is_locked_pill.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_requester_pays_pill.html")
+        self.assertTemplateNotUsed(response, "anvil_consortium_manager/snippets/workspace_view_on_anvil_pill.html")
 
     def test_access_with_view_permission(self):
         """Raises permission denied if user has only view permission."""

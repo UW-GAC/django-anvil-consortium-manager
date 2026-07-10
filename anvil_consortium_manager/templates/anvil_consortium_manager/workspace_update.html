@@ -1,18 +1,12 @@
-{% extends "anvil_consortium_manager/workspace_detail.html" %}
+{% extends "anvil_consortium_manager/__object_detail.html" %}
 {% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}Update {{ workspace_type_display_name }}{% endblock title %}
 
 {% block panel %}
-<dl class="row">
-  <dt class="col-sm-2">Billing project</dt> <dd class="col-sm-10"><a href="{{ object.billing_project.get_absolute_url }}">{{ object.billing_project }}</a></dd>
-  <dt class="col-sm-2">Name</dt> <dd class="col-sm-10">{{ object.name }}</dd>
-  <dt class="col-sm-2">Date added</dt> <dd class="col-sm-10">{{ object.created }}</dd>
-  <dt class="col-sm-2">Date modified</dt> <dd class="col-sm-10">{{ object.modified }}</dd>
-</dl>
+  {% include 'anvil_consortium_manager/snippets/workspace_details_panel.html' with workspace=object workspace_data=workspace_data %}
 {% endblock panel %}
-
 
 {% block after_panel %}
   <form method="post">
