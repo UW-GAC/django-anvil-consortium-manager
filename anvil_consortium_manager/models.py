@@ -118,7 +118,7 @@ class UserEmailEntry(TimeStampedModel, models.Model):
 
     def __str__(self):
         """String method."""
-        return "{email} for {user}".format(email=self.email, user=self.user)
+        return f"{self.email} for {self.user}"
 
     def save(self, *args, **kwargs):
         self.email = self.email.lower()
@@ -217,7 +217,7 @@ class Account(TimeStampedModel, ActivatorModel):
         Returns:
             A string representing the object.
         """
-        return "{email}".format(email=self.email)
+        return f"{self.email}"
 
     def clean(self):
         """Additional custom cleaning steps.
@@ -330,7 +330,7 @@ class AccountUserArchive(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "{user} for {account}".format(user=self.user, account=self.account)
+        return f"{self.user} for {self.account}"
 
 
 class ManagedGroup(TimeStampedModel):
@@ -353,7 +353,7 @@ class ManagedGroup(TimeStampedModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "{name}".format(name=self.name)
+        return f"{self.name}"
 
     def get_absolute_url(self):
         return reverse("anvil_consortium_manager:managed_groups:detail", kwargs={"slug": self.name})
@@ -394,7 +394,7 @@ class ManagedGroup(TimeStampedModel):
 
     def get_anvil_url(self):
         """Return the URL of the group on AnVIL."""
-        return "https://app.terra.bio/#groups/{group}".format(group=self.name)
+        return f"https://app.terra.bio/#groups/{self.name}"
 
     def _add_parents_to_graph(self, G):
         parent_memberships = self.parent_memberships.all()
@@ -530,7 +530,7 @@ class ManagedGroup(TimeStampedModel):
 
         Groups or accounts that are not already in the app are not imported."""
         if not self.is_managed_by_app:
-            raise exceptions.AnVILNotGroupAdminError("group {} is not managed by app".format(self.name))
+            raise exceptions.AnVILNotGroupAdminError(f"group {self.name} is not managed by app")
         # Now add membership records.
         api_client = AnVILAPIClient()
         response = api_client.get_group_members(self.name)
@@ -608,7 +608,7 @@ class ManagedGroup(TimeStampedModel):
         response = AnVILAPIClient().get_groups()
         this_group = [x["role"].lower() for x in response.json() if x["groupName"].lower() == self.name.lower()]
         if len(this_group) == 0:
-            raise exceptions.AnVILGroupNotFound("Group {} not found on AnVIL.".format(self.name))
+            raise exceptions.AnVILGroupNotFound(f"Group {self.name} not found on AnVIL.")
         elif "admin" in this_group:
             return True
         else:
@@ -693,7 +693,7 @@ class Workspace(TimeStampedModel):
             raise ValidationError("app_access_reason cannot be blank if app_access is not OWNER.")
 
     def __str__(self):
-        return "{billing_project}/{name}".format(billing_project=self.billing_project, name=self.name)
+        return f"{self.billing_project}/{self.name}"
 
     def get_absolute_url(self):
         return reverse(
@@ -705,13 +705,11 @@ class Workspace(TimeStampedModel):
         )
 
     def get_full_name(self):
-        return "{billing_project}/{name}".format(billing_project=self.billing_project, name=self.name)
+        return f"{self.billing_project}/{self.name}"
 
     def get_anvil_url(self):
         """Return the URL of the workspace on AnVIL."""
-        return "https://anvil.terra.bio/#workspaces/{billing_project}/{group}".format(
-            billing_project=self.billing_project.name, group=self.name
-        )
+        return f"https://anvil.terra.bio/#workspaces/{self.billing_project.name}/{self.name}"
 
     def anvil_exists(self):
         """Check if the workspace exists on AnVIL."""
@@ -1040,7 +1038,7 @@ class Workspace(TimeStampedModel):
 
         # First, check if the app can even access the workspace. If not, raise an error.
         if not self.is_owner:
-            raise exceptions.AnVILNotWorkspaceOwnerError("App does not have OWNER access to {}".format(self))
+            raise exceptions.AnVILNotWorkspaceOwnerError(f"App does not have OWNER access to {self}")
 
         if not all_account_groups:
             all_account_groups = account.get_all_groups()
@@ -1057,7 +1055,7 @@ class Workspace(TimeStampedModel):
             except exceptions.WorkspaceAccessAuthorizationDomainUnknownError:
                 # In this case, we don't know sharing status OR auth domain status.
                 raise exceptions.WorkspaceAccessUnknownError(
-                    "Workspace sharing and auth domain status is unknown for {}.".format(account)
+                    f"Workspace sharing and auth domain status is unknown for {account}."
                 )
             # If we don't know if it's shared but the account is not in the auth domain, they don't have access.
             # If the account is in the auth domain, then we should re-raise the sharing exception.
@@ -1101,8 +1099,6 @@ class BaseWorkspaceData(models.Model):
 class DefaultWorkspaceData(BaseWorkspaceData):
     """Default empty WorkspaceData model."""
 
-    pass
-
 
 class WorkspaceAuthorizationDomain(TimeStampedModel):
     """Through table for the Workspace authorization_domains field."""
@@ -1124,7 +1120,7 @@ class WorkspaceAuthorizationDomain(TimeStampedModel):
 
     def __str__(self):
         """String method for WorkspaceAuthorizationDomains"""
-        return "Auth domain {group} for {workspace}".format(group=self.group.name, workspace=self.workspace)
+        return f"Auth domain {self.group.name} for {self.workspace}"
 
 
 class ManagedGroupMembershipRoleChoicesMixin(models.Model):
@@ -1158,9 +1154,7 @@ class GroupGroupMembership(TimeStampedModel, ManagedGroupMembershipRoleChoicesMi
         ]
 
     def __str__(self):
-        return "{child_group} as {role} in {parent_group}".format(
-            child_group=self.child_group, role=self.role, parent_group=self.parent_group
-        )
+        return f"{self.child_group} as {self.role} in {self.parent_group}"
 
     def get_absolute_url(self):
         return reverse(
@@ -1215,11 +1209,7 @@ class GroupAccountMembership(TimeStampedModel, ManagedGroupMembershipRoleChoices
         constraints = [models.UniqueConstraint(fields=["account", "group"], name="unique_group_account_membership")]
 
     def __str__(self):
-        return "{account} as {role} in {group}".format(
-            account=self.account,
-            group=self.group,
-            role=self.role,
-        )
+        return f"{self.account} as {self.role} in {self.group}"
 
     def get_absolute_url(self):
         return reverse(
@@ -1296,11 +1286,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
 
         Returns:
             str: a string description of the object."""
-        return "{group} with {access} to {workspace}".format(
-            group=self.group,
-            access=self.access,
-            workspace=self.workspace,
-        )
+        return f"{self.group} with {self.access} to {self.workspace}"
 
     def clean(self):
         """Perform model cleaning steps.
@@ -1345,7 +1331,7 @@ class WorkspaceGroupSharing(TimeStampedModel):
             self.workspace.billing_project.name, self.workspace.name, acl_updates
         )
         if len(response.json()["usersNotFound"]) > 0:
-            raise exceptions.AnVILGroupNotFound("{} not found on AnVIL".format(self.group))
+            raise exceptions.AnVILGroupNotFound(f"{self.group} not found on AnVIL")
 
     def anvil_delete(self):
         """Remove the access to ``workspace`` for the ``group`` on AnVIL."""

@@ -492,7 +492,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             logger.exception(f"[AccountLinkVerify] {self.log_message_after_account_link_failed}: {e}")
 
             # Get the exception type and message
-            error_description = f"{type(e).__name__}: {str(e)}"
+            error_description = f"{type(e).__name__}: {e!s}"
 
             # Send a mail about issue to the admins.
             mail_content = render_to_string(
@@ -519,7 +519,7 @@ class AccountLinkVerify(auth.AnVILConsortiumManagerAccountLinkRequired, Redirect
             )
 
             # Get the exception type and message
-            error_description = f"{type(e).__name__}: {str(e)}"
+            error_description = f"{type(e).__name__}: {e!s}"
 
             # Send a mail about issue to the admins.
             mail_content = render_to_string(
@@ -596,7 +596,7 @@ class AccountDeactivate(
     template_name = "anvil_consortium_manager/account_confirm_deactivate.html"
     context_table_name = "group_table"
     message_error_removing_from_groups = (
-        "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+        "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"
     )
     message_already_inactive = "This Account is already inactive."
     success_message = "Successfully deactivated Account in app."
@@ -658,7 +658,7 @@ class AccountReactivate(
     form_class = Form
     template_name = "anvil_consortium_manager/account_confirm_reactivate.html"
     message_error_adding_to_groups = (
-        "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+        "Error adding account to groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"
     )
     message_already_active = "This Account is already active."
     success_message = "Successfully reactivated Account in app."
@@ -714,7 +714,7 @@ class AccountDelete(
 ):
     model = models.Account
     message_error_removing_from_groups = (
-        "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"  # noqa
+        "Error removing account from groups; manually verify group memberships on AnVIL. (AnVIL API Error: {})"
     )
     success_message = "Successfully deleted Account from app."
 

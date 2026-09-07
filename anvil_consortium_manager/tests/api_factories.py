@@ -33,7 +33,7 @@ class ErrorResponseFactory(MockAPIResponseFactory):
 
 class GroupDetailsFactory(factory.DictFactory):
     groupName = factory.Faker("word")
-    groupEmail = factory.LazyAttribute(lambda obj: "{}@firecloud.org".format(obj.groupName))
+    groupEmail = factory.LazyAttribute(lambda obj: f"{obj.groupName}@firecloud.org")
     role = FuzzyChoice(["admin", "member"])
 
 
