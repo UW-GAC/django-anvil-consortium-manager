@@ -1049,7 +1049,7 @@ class ManagedGroupAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, 
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
         # Check cached result.
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_membership_{}".format(group.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"managed_group_membership_{group.pk}")
         self.assertIsNotNone(cached_audit_result)
         self.assertIsInstance(cached_audit_result, ManagedGroupMembershipAudit)
         self.assertEqual(len(cached_audit_result.get_verified_results()), 0)
@@ -1240,7 +1240,7 @@ class ManagedGroupMembershipAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearT
             Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.group = ManagedGroupFactory.create()
-        self.cache_key = "managed_group_membership_{}".format(self.group.pk)
+        self.cache_key = f"managed_group_membership_{self.group.pk}"
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -1605,7 +1605,7 @@ class ManagedGroupMembershipAuditReviewTest(AuditCacheClearTestMixin, TestCase):
             Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.group = ManagedGroupFactory.create()
-        self.cache_key = "managed_group_membership_{}".format(self.group.pk)
+        self.cache_key = f"managed_group_membership_{self.group.pk}"
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -2071,7 +2071,7 @@ class IgnoredManagedGroupMembershipDetailTest(TestCase):
         obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
-        html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
+        html = f"""<a href="{obj.group.get_absolute_url()}">{obj.group!s}</a>"""
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
         # Action buttons.
@@ -2098,7 +2098,7 @@ class IgnoredManagedGroupMembershipDetailTest(TestCase):
         obj = factories.IgnoredManagedGroupMembershipFactory.create()
         self.client.force_login(user)
         response = self.client.get(obj.get_absolute_url())
-        html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
+        html = f"""<a href="{obj.group.get_absolute_url()}">{obj.group!s}</a>"""
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
         # Action buttons.
@@ -2960,11 +2960,7 @@ class WorkspaceAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, Tes
         }
 
     def get_api_workspace_settings_url(self, billing_project_name, workspace_name):
-        return "{}/api/workspaces/v2/{}/{}/settings".format(
-            self.api_client.rawls_entry_point,
-            billing_project_name,
-            workspace_name,
-        )
+        return f"{self.api_client.rawls_entry_point}/api/workspaces/v2/{billing_project_name}/{workspace_name}/settings"
 
     def get_view(self):
         """Return the view being tested."""
@@ -3199,7 +3195,7 @@ class WorkspaceAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, Tes
         response = self.client.post(self.get_url(), {})  # Runs successfully.
         self.assertEqual(response.status_code, 302)
         # Check cached result.
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"workspace_sharing_{workspace.pk}")
         self.assertIsNotNone(cached_audit_result)
         self.assertIsInstance(cached_audit_result, WorkspaceSharingAudit)
 
@@ -3386,7 +3382,7 @@ class WorkspaceSharingAuditRunTest(AnVILAPIMockTestMixin, AuditCacheClearTestMix
             Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.workspace = WorkspaceFactory.create()
-        self.cache_key = "workspace_sharing_{}".format(self.workspace.pk)
+        self.cache_key = f"workspace_sharing_{self.workspace.pk}"
         # Set this variable here because it will include the service account.
         # Tests can update it with the update_api_response method.
         self.api_response = {"acl": {}}
@@ -3734,7 +3730,7 @@ class WorkspaceSharingAuditReviewTest(AuditCacheClearTestMixin, TestCase):
             Permission.objects.get(codename=AnVILProjectManagerAccess.STAFF_VIEW_PERMISSION_CODENAME)
         )
         self.workspace = WorkspaceFactory.create()
-        self.cache_key = "workspace_sharing_{}".format(self.workspace.pk)
+        self.cache_key = f"workspace_sharing_{self.workspace.pk}"
 
     def get_url(self, *args):
         """Get the url for the view being tested."""
@@ -4276,7 +4272,7 @@ class IgnoredWorkspaceSharingDetailTest(TestCase):
         obj = factories.IgnoredWorkspaceSharingFactory.create()
         self.client.force_login(self.user)
         response = self.client.get(obj.get_absolute_url())
-        html = """<a href="{url}">{text}</a>""".format(url=obj.workspace.get_absolute_url(), text=str(obj.workspace))
+        html = f"""<a href="{obj.workspace.get_absolute_url()}">{obj.workspace!s}</a>"""
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
         # Action buttons.
@@ -4303,7 +4299,7 @@ class IgnoredWorkspaceSharingDetailTest(TestCase):
         obj = factories.IgnoredWorkspaceSharingFactory.create()
         self.client.force_login(user)
         response = self.client.get(obj.get_absolute_url())
-        html = """<a href="{url}">{text}</a>""".format(url=obj.workspace.get_absolute_url(), text=str(obj.workspace))
+        html = f"""<a href="{obj.workspace.get_absolute_url()}">{obj.workspace!s}</a>"""
         self.assertContains(response, html)
         # "Added by" link is tested in a separate test, since not all projects will have an absolute url for the user.
         # Action buttons.

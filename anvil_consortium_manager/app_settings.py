@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 
-class AppSettings(object):
+class AppSettings:
     """Class to handle settings for django-anvil-consortium-manager."""
 
     def __init__(self, prefix):
