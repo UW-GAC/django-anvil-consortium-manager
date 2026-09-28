@@ -156,7 +156,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
     def __init__(self, managed_group, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not managed_group.is_managed_by_app:
-            raise AnVILNotGroupAdminError("group {} is not managed by app".format(managed_group.name))
+            raise AnVILNotGroupAdminError(f"group {managed_group.name} is not managed by app")
         self.managed_group = managed_group
 
     def get_cache_key(self):
@@ -238,7 +238,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
         for obj in ignored_qs.order_by("ignored_email"):
             try:
                 admins_in_anvil.remove(obj.ignored_email)
-                record = "{}: {}".format(GroupAccountMembership.RoleChoices.ADMIN, obj.ignored_email)
+                record = f"{GroupAccountMembership.RoleChoices.ADMIN}: {obj.ignored_email}"
                 self.add_result(
                     ManagedGroupMembershipIgnoredResult(
                         obj, record=record, current_role=GroupAccountMembership.RoleChoices.ADMIN
@@ -247,7 +247,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
             except ValueError:
                 try:
                     members_in_anvil.remove(obj.ignored_email)
-                    record = "{}: {}".format(GroupAccountMembership.RoleChoices.MEMBER, obj.ignored_email)
+                    record = f"{GroupAccountMembership.RoleChoices.MEMBER}: {obj.ignored_email}"
                     self.add_result(
                         ManagedGroupMembershipIgnoredResult(
                             obj, record=record, current_role=GroupAccountMembership.RoleChoices.MEMBER
@@ -258,7 +258,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
                     self.add_result(ManagedGroupMembershipIgnoredResult(obj, record=None))
 
         for member in admins_in_anvil:
-            record = "{}: {}".format(GroupAccountMembership.RoleChoices.ADMIN, member)
+            record = f"{GroupAccountMembership.RoleChoices.ADMIN}: {member}"
             self.add_result(
                 ManagedGroupMembershipNotInAppResult(
                     record, group=self.managed_group, email=member, role=GroupAccountMembership.RoleChoices.ADMIN
@@ -266,7 +266,7 @@ class ManagedGroupMembershipAudit(base.AnVILAudit):
             )
         # Add any members that the app doesn't know about.
         for member in members_in_anvil:
-            record = "{}: {}".format(GroupAccountMembership.RoleChoices.MEMBER, member)
+            record = f"{GroupAccountMembership.RoleChoices.MEMBER}: {member}"
             self.add_result(
                 ManagedGroupMembershipNotInAppResult(
                     record, group=self.managed_group, email=member, role=GroupAccountMembership.RoleChoices.MEMBER
