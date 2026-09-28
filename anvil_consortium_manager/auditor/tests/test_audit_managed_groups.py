@@ -744,7 +744,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, Tes
         with freeze_time(cache_timestamp):
             audit_results = managed_groups.ManagedGroupAudit()
             audit_results.run_audit(cache=True)
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_membership_{}".format(group.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"managed_group_membership_{group.pk}")
         self.assertIsNotNone(cached_audit_result)
         self.assertIsInstance(cached_audit_result, managed_groups.ManagedGroupMembershipAudit)
         self.assertEqual(cached_audit_result.timestamp, cache_timestamp)
@@ -778,7 +778,7 @@ class ManagedGroupAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, Tes
         with freeze_time(cache_timestamp):
             audit_results = managed_groups.ManagedGroupAudit()
             audit_results.run_audit(cache=False)
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_membership_{}".format(group.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"managed_group_membership_{group.pk}")
         self.assertIsNone(cached_audit_result)
 
 
@@ -2375,7 +2375,7 @@ class ManagedGroupMembershipAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTest
         with freeze_time(cache_timestamp):
             audit_results = managed_groups.ManagedGroupMembershipAudit(group)
             audit_results.run_audit(cache=True)
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("managed_group_membership_{}".format(group.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"managed_group_membership_{group.pk}")
         self.assertIsNotNone(cached_audit_result)
         self.assertIsInstance(cached_audit_result, managed_groups.ManagedGroupMembershipAudit)
         self.assertEqual(cached_audit_result.timestamp, cache_timestamp)
