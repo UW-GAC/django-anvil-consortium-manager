@@ -339,10 +339,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.rawls_entry_point + "/api/workspaces/{namespace}/{name}/clone".format(
-            namespace=existing_workspace_namespace,
-            name=existing_workspace_name,
-        )
+        url = self.rawls_entry_point + f"/api/workspaces/{existing_workspace_namespace}/{existing_workspace_name}/clone"
         body = {
             "namespace": cloned_workspace_namespace,
             "name": cloned_workspace_name,
@@ -428,7 +425,7 @@ class AnVILAPIClient:
         Returns:
             requests.Response
         """
-        url = self.rawls_entry_point + "/api/workspaces/v2/{}/{}/settings".format(workspace_namespace, workspace_name)
+        url = self.rawls_entry_point + f"/api/workspaces/v2/{workspace_namespace}/{workspace_name}/settings"
         setting = [{"config": {"enabled": requester_pays}, "settingType": "GcpBucketRequesterPays"}]
         return self.auth_session.put(url, 200, headers={"Content-type": "application/json"}, data=json.dumps(setting))
 
@@ -580,16 +577,12 @@ class AnVILAPISession(AuthorizedSession):
 
     def _log_request(self, request_type, url, *args, **kwargs):
         """Log info about the request."""
-        msg = "Starting request...\n  {request_type}: {url}\n  args: {args}\n  kwargs: {kwargs}".format(
-            request_type=request_type, url=url, args=args, kwargs=kwargs
-        )
+        msg = f"Starting request...\n  {request_type}: {url}\n  args: {args}\n  kwargs: {kwargs}"
         logger.info(msg)
 
     def _log_response(self, response):
         """Log info about the response."""
-        msg = "Got response...\n  status_code: {status_code}\n  text: {text}".format(
-            status_code=response.status_code, text=response.text
-        )
+        msg = f"Got response...\n  status_code: {response.status_code}\n  text: {response.text}"
         logger.info(msg)
 
     def _handle_response(self, success_code, response):
