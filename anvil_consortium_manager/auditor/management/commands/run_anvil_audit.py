@@ -19,9 +19,7 @@ from ...audit import workspaces as workspace_audit
 class ErrorTableWithLink(base_audit.ErrorTable):
     model_instance = tables.Column(
         orderable=False,
-        linkify=lambda value, table: "https://{domain}{url}".format(
-            domain=table.site.domain, url=value.get_absolute_url()
-        ),
+        linkify=lambda value, table: f"https://{table.site.domain}{value.get_absolute_url()}",
     )
 
     def __init__(self, *args, **kwargs):
@@ -68,7 +66,7 @@ class Command(BaseCommand):
         n_ignored = 0
 
         audit_name = audit_results.__class__.__name__
-        self.stdout.write("Running on {}... ".format(audit_name), ending="")
+        self.stdout.write(f"Running on {audit_name}... ", ending="")
         try:
             # Assume the method is called anvil_audit.
             audit_results.run_audit(cache=cache_results)
@@ -83,7 +81,7 @@ class Command(BaseCommand):
             if ignore_model:
                 n_ignored = ignore_model.objects.all().count()
                 if n_ignored:
-                    msg += " (ignoring {n_ignored} records)".format(n_ignored=n_ignored)
+                    msg += f" (ignoring {n_ignored} records)"
             self.stdout.write(self.style.SUCCESS(msg))
 
         if email and (not errors_only) or (errors_only and not audit_results.ok()):
