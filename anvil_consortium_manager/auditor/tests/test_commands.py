@@ -492,9 +492,7 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
         )
         email = mail.outbox[0]
         self.assertEqual(len(email.alternatives), 1)
-        html_fragment = """<a href="https://example.com{url}">{obj}</a>""".format(
-            obj=str(billing_project), url=billing_project.get_absolute_url()
-        )
+        html_fragment = f"""<a href="https://example.com{billing_project.get_absolute_url()}">{billing_project!s}</a>"""
         self.assertInHTML(html_fragment, email.alternatives[0][0])
 
     def test_command_run_audit_not_ok_email_has_html_link_different_domain(self):
@@ -516,8 +514,8 @@ class RunAnvilAuditTest(AnVILAPIMockTestMixin, TestCase):
             )
             email = mail.outbox[0]
             self.assertEqual(len(email.alternatives), 1)
-            html_fragment = """<a href="https://foobar.com{url}">{obj}</a>""".format(
-                obj=str(billing_project), url=billing_project.get_absolute_url()
+            html_fragment = (
+                f"""<a href="https://foobar.com{billing_project.get_absolute_url()}">{billing_project!s}</a>"""
             )
             self.assertInHTML(html_fragment, email.alternatives[0][0])
 
