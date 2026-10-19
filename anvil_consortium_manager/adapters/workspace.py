@@ -80,7 +80,7 @@ class BaseWorkspaceAdapter(ABC):
     def get_list_table_class_staff_view(self):
         """Return the table class to use for the WorkspaceListByType view for staff."""
         if not self.list_table_class_staff_view:
-            raise ImproperlyConfigured("Set `list_table_class_staff_view` in `{}`.".format(type(self)))
+            raise ImproperlyConfigured(f"Set `list_table_class_staff_view` in `{type(self)}`.")
         if self.list_table_class_staff_view.Meta.model != models.Workspace:
             raise ImproperlyConfigured(
                 "list_table_class_staff_view Meta model field must be anvil_consortium_manager.models.Workspace."
@@ -90,7 +90,7 @@ class BaseWorkspaceAdapter(ABC):
     def get_list_table_class_view(self):
         """Return the table class to use for the WorkspaceListByType view for non-staff users."""
         if not self.list_table_class_view:
-            raise ImproperlyConfigured("Set `list_table_class_view` in `{}`.".format(type(self)))
+            raise ImproperlyConfigured(f"Set `list_table_class_view` in `{type(self)}`.")
         if self.list_table_class_view.Meta.model != models.Workspace:
             raise ImproperlyConfigured(
                 "list_table_class_view Meta model field must be anvil_consortium_manager.models.Workspace."
@@ -162,15 +162,12 @@ class BaseWorkspaceAdapter(ABC):
 
     def before_anvil_create(self, workspace):
         """Custom actions to take after a workspace is created on AnVIL."""
-        pass
 
     def after_anvil_create(self, workspace):
         """Custom actions to take after a workspace is created on AnVIL."""
-        pass
 
     def after_anvil_import(self, workspace):
         """Custom actions to take after a workspace is imported from AnVIL."""
-        pass
 
 
 class AdapterAlreadyRegisteredError(Exception):
@@ -198,9 +195,9 @@ class WorkspaceAdapterRegistry:
         type = adapter.get_type()
         if type in self._registry:
             if self._registry[type] is adapter_class:
-                raise AdapterAlreadyRegisteredError("adapter {} already exists in registry.".format(adapter_class))
+                raise AdapterAlreadyRegisteredError(f"adapter {adapter_class} already exists in registry.")
             else:
-                raise AdapterAlreadyRegisteredError("type `{}` already exists in registry.".format(type))
+                raise AdapterAlreadyRegisteredError(f"type `{type}` already exists in registry.")
         # Add the adapter to the registry.
         self._registry[type] = adapter_class
 
@@ -213,11 +210,11 @@ class WorkspaceAdapterRegistry:
             # Check that the registered adapter is the same class and raise an exception if not.
             registered_adapter = self._registry[type]
             if registered_adapter is not adapter_class:
-                raise AdapterNotRegisteredError("adapter {} has not been registered yet.".format(adapter_class))
+                raise AdapterNotRegisteredError(f"adapter {adapter_class} has not been registered yet.")
             else:
                 del self._registry[type]
         else:
-            raise AdapterNotRegisteredError("adapter {} has not been registered yet.".format(adapter_class))
+            raise AdapterNotRegisteredError(f"adapter {adapter_class} has not been registered yet.")
 
     def get_adapter(self, type):
         """ "Return an instance of the adapter for a given workspace ``type``."""

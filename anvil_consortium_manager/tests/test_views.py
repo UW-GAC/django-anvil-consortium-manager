@@ -1693,7 +1693,7 @@ class AccountDetailTest(TestCase):
 
         # Dynamically set the get_absolute_url method. This is hacky...
         def foo(self):
-            return "test_profile_{}".format(self.username)
+            return f"test_profile_{self.username}"
 
         UserModel = get_user_model()
         user = UserModel.objects.create(username="testuser2", password="testpassword")
@@ -1702,7 +1702,7 @@ class AccountDetailTest(TestCase):
         with patch.object(
             UserModel,
             "get_absolute_url",
-            return_value="test_profile_{}".format(user.username),
+            return_value=f"test_profile_{user.username}",
             create=True,
         ):
             response = self.client.get(self.get_url(account.uuid))
@@ -4864,7 +4864,7 @@ class AccountAutocompleteTest(TestCase):
 
         def get_autocomplete_label(*args, **kwargs):
             account = args[0]
-            return "TEST {}".format(account.email)
+            return f"TEST {account.email}"
 
         with patch(
             "anvil_consortium_manager.adapters.default.DefaultAccountAdapter.get_autocomplete_label",
@@ -5777,7 +5777,7 @@ class ManagedGroupCreateTest(AnVILAPIMockTestMixin, TestCase):
         # API call for mixin to add membership.
         self.anvil_response_mock.add(
             responses.PUT,
-            self.api_client.sam_entry_point + "/api/groups/v1/test-group/member/{}".format(child_group.email),
+            self.api_client.sam_entry_point + f"/api/groups/v1/test-group/member/{child_group.email}",
             status=204,
         )
         # Call the view.
@@ -11060,9 +11060,9 @@ class WorkspaceCloneTest(AnVILAPIMockTestMixin, TestCase):
             Permission.objects.get(codename=models.AnVILProjectManagerAccess.STAFF_EDIT_PERMISSION_CODENAME)
         )
         self.workspace_to_clone = factories.WorkspaceFactory.create()
-        self.api_url = self.api_client.rawls_entry_point + "/api/workspaces/{}/{}/clone".format(
-            self.workspace_to_clone.billing_project.name,
-            self.workspace_to_clone.name,
+        self.api_url = (
+            self.api_client.rawls_entry_point
+            + f"/api/workspaces/{self.workspace_to_clone.billing_project.name}/{self.workspace_to_clone.name}/clone"
         )
         self.workspace_type = DefaultWorkspaceAdapter.type
 
@@ -13147,8 +13147,9 @@ class WorkspaceUpdateRequesterPaysTest(AnVILAPIMockTestMixin, TestCase):
         )
         workspace_data = factories.DefaultWorkspaceDataFactory.create()
         self.workspace = workspace_data.workspace
-        self.api_url = self.api_client.rawls_entry_point + "/api/workspaces/v2/{}/{}/settings".format(
-            self.workspace.billing_project.name, self.workspace.name
+        self.api_url = (
+            self.api_client.rawls_entry_point
+            + f"/api/workspaces/v2/{self.workspace.billing_project.name}/{self.workspace.name}/settings"
         )
 
     def get_url(self, *args):
@@ -14728,13 +14729,9 @@ class GroupGroupMembershipDetailTest(TestCase):
         self.client.force_login(self.user)
         obj = factories.GroupGroupMembershipFactory.create()
         response = self.client.get(obj.get_absolute_url())
-        html = """<a href="{url}">{text}</a>""".format(
-            url=obj.parent_group.get_absolute_url(), text=str(obj.parent_group)
-        )
+        html = f"""<a href="{obj.parent_group.get_absolute_url()}">{obj.parent_group!s}</a>"""
         self.assertContains(response, html)
-        html = """<a href="{url}">{text}</a>""".format(
-            url=obj.child_group.get_absolute_url(), text=str(obj.child_group)
-        )
+        html = f"""<a href="{obj.child_group.get_absolute_url()}">{obj.child_group!s}</a>"""
         self.assertContains(response, html)
 
 
@@ -17353,9 +17350,9 @@ class GroupAccountMembershipDetailTest(TestCase):
         self.client.force_login(self.user)
         obj = factories.GroupAccountMembershipFactory.create()
         response = self.client.get(obj.get_absolute_url())
-        html = """<a href="{url}">{text}</a>""".format(url=obj.group.get_absolute_url(), text=str(obj.group))
+        html = f"""<a href="{obj.group.get_absolute_url()}">{obj.group!s}</a>"""
         self.assertContains(response, html)
-        html = """<a href="{url}">{text}</a>""".format(url=obj.account.get_absolute_url(), text=str(obj.account))
+        html = f"""<a href="{obj.account.get_absolute_url()}">{obj.account!s}</a>"""
         self.assertContains(response, html)
 
 
@@ -20916,9 +20913,7 @@ class WorkspaceGroupSharingCreateTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
         self,
     ):
-        self.fail(
-            "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
-        )
+        self.fail("Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code.")
 
     def test_get_workspace_app_access_no_access(self):
         """Workspace does not appear in the list of objects."""
@@ -21719,9 +21714,7 @@ class WorkspaceGroupSharingCreateByWorkspaceTest(AnVILAPIMockTestMixin, TestCase
     def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
         self,
     ):
-        self.fail(
-            "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
-        )
+        self.fail("Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code.")
 
     def test_get_app_access_limited(self):
         """View redirects with message if app has limited access to the workspace."""
@@ -22465,9 +22458,7 @@ class WorkspaceGroupSharingCreateByGroupTest(AnVILAPIMockTestMixin, TestCase):
     def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
         self,
     ):
-        self.fail(
-            "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
-        )
+        self.fail("Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code.")
 
     def test_get_workspace_app_access_no_access(self):
         """Workspace does not appear in the list of objects."""
@@ -23321,9 +23312,7 @@ class WorkspaceGroupSharingCreateByWorkspaceGroupTest(AnVILAPIMockTestMixin, Tes
     def test_api_sharing_workspace_that_doesnt_exist_with_group_that_doesnt_exist(
         self,
     ):
-        self.fail(
-            "Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code."  # noqa
-        )
+        self.fail("Sharing a workspace that doesn't exist with a group that doesn't exist returns a successful code.")
 
     def test_get_app_access_limited(self):
         """View redirects with message if app has limited access to the workspace."""
