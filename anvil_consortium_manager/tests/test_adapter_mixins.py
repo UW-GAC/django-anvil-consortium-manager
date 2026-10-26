@@ -49,7 +49,7 @@ class GroupGroupMembershipAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(name="foo")
         self.anvil_response_mock.add(
             responses.PUT,
-            self.api_client.sam_entry_point + "/api/groups/v1/foo/member/{email}".format(email=self.child_group.email),
+            self.api_client.sam_entry_point + f"/api/groups/v1/foo/member/{self.child_group.email}",
             status=204,
         )
 
@@ -72,7 +72,7 @@ class GroupGroupMembershipAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(name="foo")
         self.anvil_response_mock.add(
             responses.PUT,
-            self.api_client.sam_entry_point + "/api/groups/v1/foo/admin/{}".format(self.child_group.email),
+            self.api_client.sam_entry_point + f"/api/groups/v1/foo/admin/{self.child_group.email}",
             status=204,
         )
 
@@ -116,12 +116,12 @@ class GroupGroupMembershipAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         group = factories.ManagedGroupFactory.create(name="foo")
         self.anvil_response_mock.add(
             responses.PUT,
-            self.api_client.sam_entry_point + "/api/groups/v1/foo/member/{}".format(child_group_member.email),
+            self.api_client.sam_entry_point + f"/api/groups/v1/foo/member/{child_group_member.email}",
             status=204,
         )
         self.anvil_response_mock.add(
             responses.PUT,
-            self.api_client.sam_entry_point + "/api/groups/v1/foo/admin/{}".format(child_group_admin.email),
+            self.api_client.sam_entry_point + f"/api/groups/v1/foo/admin/{child_group_admin.email}",
             status=204,
         )
 
@@ -165,12 +165,12 @@ class GroupGroupMembershipAdapterMixinTest(AnVILAPIMockTestMixin, TestCase):
         # Two API calls: one to delete and one to add.
         self.anvil_response_mock.add(
             responses.DELETE,
-            self.api_client.sam_entry_point + "/api/groups/v1/foo/admin/{}".format(self.child_group.email),
+            self.api_client.sam_entry_point + f"/api/groups/v1/foo/admin/{self.child_group.email}",
             status=204,
         )
         self.anvil_response_mock.add(
             responses.PUT,
-            self.api_client.sam_entry_point + "/api/groups/v1/foo/member/{}".format(self.child_group.email),
+            self.api_client.sam_entry_point + f"/api/groups/v1/foo/member/{self.child_group.email}",
             status=204,
         )
         # Run the adapter method.

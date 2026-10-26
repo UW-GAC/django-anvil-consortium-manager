@@ -19,7 +19,7 @@ class Bootstrap5MediaFormMixin:
         # Therefore, we need to put the css for the select2-bootstrap-5-theme here.
         css = {
             "screen": (
-                "https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css",  # NOQA: E501
+                "https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css",
             )
         }
 
