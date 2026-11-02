@@ -32,7 +32,7 @@ class IgnoredManagedGroupMembership(IgnoredAuditResult):
         constraints = [models.UniqueConstraint(fields=["group", "ignored_email"], name="unique_group_ignored_email")]
 
     def __str__(self):
-        return "{group} membership: ignoring {email}".format(group=self.group, email=self.ignored_email)
+        return f"{self.group} membership: ignoring {self.ignored_email}"
 
     def save(self, *args, **kwargs):
         """Save method to set the email address to lowercase before saving."""
@@ -72,7 +72,7 @@ class IgnoredWorkspaceSharing(IgnoredAuditResult):
         ]
 
     def __str__(self):
-        return "{workspace} sharing: ignoring {email}".format(workspace=self.workspace, email=self.ignored_email)
+        return f"{self.workspace} sharing: ignoring {self.ignored_email}"
 
     def save(self, *args, **kwargs):
         """Save method to set the email address to lowercase before saving."""

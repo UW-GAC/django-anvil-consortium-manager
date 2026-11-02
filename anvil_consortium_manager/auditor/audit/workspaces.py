@@ -244,7 +244,7 @@ class WorkspaceSharingAudit(base.AnVILAudit):
     def __init__(self, workspace, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not workspace.is_owner:
-            raise AnVILNotWorkspaceOwnerError("workspace {} is not managed by app".format(workspace))
+            raise AnVILNotWorkspaceOwnerError(f"workspace {workspace} is not managed by app")
         self.workspace = workspace
 
     def get_cache_key(self):

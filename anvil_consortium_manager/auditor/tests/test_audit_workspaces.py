@@ -72,11 +72,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         return {"acl": acl}
 
     def get_api_workspace_settings_url(self, billing_project_name, workspace_name):
-        return "{}/api/workspaces/v2/{}/{}/settings".format(
-            self.api_client.rawls_entry_point,
-            billing_project_name,
-            workspace_name,
-        )
+        return f"{self.api_client.rawls_entry_point}/api/workspaces/v2/{billing_project_name}/{workspace_name}/settings"
 
     def test_anvil_audit_no_workspaces(self):
         """anvil_audit works correct if there are no Workspaces in the app."""
@@ -1508,7 +1504,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         with freeze_time(cache_timestamp):
             audit_results = workspaces.WorkspaceAudit()
             audit_results.run_audit(cache=True)
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"workspace_sharing_{workspace.pk}")
         self.assertIsNotNone(cached_audit_result)
         self.assertIsInstance(cached_audit_result, workspaces.WorkspaceSharingAudit)
         self.assertEqual(cached_audit_result.timestamp, cache_timestamp)
@@ -1542,7 +1538,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         with freeze_time(cache_timestamp):
             audit_results = workspaces.WorkspaceAudit()
             audit_results.run_audit(cache=False)
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"workspace_sharing_{workspace.pk}")
         self.assertIsNone(cached_audit_result)
 
     def test_app_access_limited_reader_on_anvil(self):
@@ -1726,7 +1722,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertTrue(record_result.ok())
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"workspace_sharing_{workspace.pk}")
         self.assertIsNone(cached_audit_result)
 
     def test_app_access_no_access_no_sharing_audit_cached(self):
@@ -1747,7 +1743,7 @@ class WorkspaceAuditTest(AnVILAPIMockTestMixin, AuditCacheClearTestMixin, TestCa
         self.assertEqual(len(audit_results.get_not_in_app_results()), 0)
         record_result = audit_results.get_result_for_model_instance(workspace)
         self.assertTrue(record_result.ok())
-        cached_audit_result = caches[app_settings.AUDIT_CACHE].get("workspace_sharing_{}".format(workspace.pk))
+        cached_audit_result = caches[app_settings.AUDIT_CACHE].get(f"workspace_sharing_{workspace.pk}")
         self.assertIsNone(cached_audit_result)
 
     def test_app_access_limited_one_auth_domain_ok(self):

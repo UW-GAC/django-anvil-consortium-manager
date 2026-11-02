@@ -1693,7 +1693,7 @@ class GroupAccountMembershipTest(TestCase):
         instance = GroupAccountMembership(account=account, group=group, role=GroupAccountMembership.RoleChoices.MEMBER)
         instance.save()
         self.assertIsInstance(instance.__str__(), str)
-        expected_string = "{email} as MEMBER in {group}".format(email=email, group=group)
+        expected_string = f"{email} as MEMBER in {group}"
         self.assertEqual(instance.__str__(), expected_string)
 
     def test_get_absolute_url(self):
@@ -2993,11 +2993,11 @@ class WorkspaceMethodIsAccessibleByAccount(TestCase):
         account = factories.AccountFactory.create()
         with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError) as e:
             workspace.is_accessible_by_account(account)
-        self.assertIn("App does not have OWNER access to {}".format(workspace), str(e.exception))
+        self.assertIn(f"App does not have OWNER access to {workspace}", str(e.exception))
 
     def test_app_access_no_access(self):
         workspace = factories.WorkspaceFactory.create(app_access=Workspace.AppAccessChoices.NO_ACCESS)
         account = factories.AccountFactory.create()
         with self.assertRaises(exceptions.AnVILNotWorkspaceOwnerError) as e:
             workspace.is_accessible_by_account(account)
-        self.assertIn("App does not have OWNER access to {}".format(workspace), str(e.exception))
+        self.assertIn(f"App does not have OWNER access to {workspace}", str(e.exception))
