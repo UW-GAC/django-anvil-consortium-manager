@@ -137,9 +137,9 @@ class AnVILAudit(ABC):
             )
         if required_size > max_entries:
             msg = (
-                "The cache defined by `anvil_audit_cache` should have a maximum size of at least {} entries. "
-                "Currently it is set to {}."
-            ).format(required_size, max_entries)
+                f"The cache defined by `anvil_audit_cache` should have a maximum size of at least {required_size} entries. "
+                f"Currently it is set to {max_entries}."
+            )
             logger.error(msg)
             # raise ImproperlyConfigured(
             #     "The cache defined by `anvil_audit_cache` must have a "
@@ -158,7 +158,7 @@ class AnVILAudit(ABC):
         """Cache the audit results."""
         self._check_cache_type()
         self._check_cache_size()
-        logger.info("Caching audit results as {}".format(self.get_cache_key()))
+        logger.info(f"Caching audit results as {self.get_cache_key()}")
         cache_key = self.get_cache_key()
         caches[app_settings.AUDIT_CACHE].set(cache_key, self)
 
@@ -194,19 +194,19 @@ class AnVILAudit(ABC):
         # Check that it hasn't been added yet.
         check = [x for x in self._not_in_app_results if x == result]
         if len(check) > 0:
-            raise ValueError("Already added a result for {}.".format(result.record))
+            raise ValueError(f"Already added a result for {result.record}.")
         self._not_in_app_results.append(result)
 
     def _add_model_instance_result(self, result):
         check = [x for x in self._model_instance_results if x.model_instance == result.model_instance]
         if len(check) > 0:
-            raise ValueError("Already added a result for {}.".format(result.model_instance))
+            raise ValueError(f"Already added a result for {result.model_instance}.")
         self._model_instance_results.append(result)
 
     def _add_ignored_result(self, result):
         check = [x for x in self._ignored_results if x.model_instance == result.model_instance]
         if len(check) > 0:
-            raise ValueError("Already added a result for {}.".format(result.model_instance))
+            raise ValueError(f"Already added a result for {result.model_instance}.")
         self._ignored_results.append(result)
 
     def get_result_for_model_instance(self, model_instance):
@@ -263,7 +263,7 @@ class AnVILAudit(ABC):
                 for result in self.get_error_results()
             ]
         if include_not_in_app:
-            exported_results["not_in_app"] = list(sorted([x.record for x in self.get_not_in_app_results()]))
+            exported_results["not_in_app"] = sorted([x.record for x in self.get_not_in_app_results()])
         if include_ignored:
             exported_results["ignored"] = [
                 {"id": result.model_instance.pk, "instance": result.model_instance, "record": result.record}

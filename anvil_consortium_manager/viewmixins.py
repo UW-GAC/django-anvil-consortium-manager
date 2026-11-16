@@ -254,14 +254,14 @@ class WorkspaceCheckAccessMixin:
             models.Workspace.AppAccessChoices.LIMITED,
             models.Workspace.AppAccessChoices.OWNER,
         ]:
-            raise ImproperlyConfigured("Invalid workspace access level: {}".format(self.workspace_access))
+            raise ImproperlyConfigured(f"Invalid workspace access level: {self.workspace_access}")
         return self.workspace_access
 
     def get_workspace_unlocked(self):
         if self.workspace_unlocked is None:
             raise ImproperlyConfigured("You must set `workspace_unlocked` or override `get_workspace_unlocked`.")
         if self.workspace_unlocked not in [True, False]:
-            raise ImproperlyConfigured("Invalid workspace_unlocked value: {}".format(self.workspace_unlocked))
+            raise ImproperlyConfigured(f"Invalid workspace_unlocked value: {self.workspace_unlocked}")
         return self.workspace_unlocked
 
     def _check_workspace_access_ok(self, workspace):
@@ -272,7 +272,7 @@ class WorkspaceCheckAccessMixin:
         elif workspace_access_level == workspace.AppAccessChoices.OWNER:
             x = workspace.is_owner
         else:
-            raise ValueError("Invalid workspace access level: {}".format(workspace_access_level))
+            raise ValueError(f"Invalid workspace access level: {workspace_access_level}")
 
         if not x:
             workspace_access_error_message = self.get_workspace_access_error_message(workspace)
@@ -288,7 +288,7 @@ class WorkspaceCheckAccessMixin:
         # Check lock status.
         workspace_unlocked = self.get_workspace_unlocked()
         if workspace_unlocked not in [True, False]:
-            raise ValueError("Invalid workspace unlocked value: {}".format(workspace_unlocked))
+            raise ValueError(f"Invalid workspace unlocked value: {workspace_unlocked}")
 
         x = True
         if workspace_unlocked and workspace.is_locked:

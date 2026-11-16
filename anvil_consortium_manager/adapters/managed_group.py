@@ -20,7 +20,7 @@ class BaseManagedGroupAdapter(ABC):
         """Return the table class to use for the ManagedGroupList view for staff view users."""
         # Make sure that ManagedGroup is the model being passed.
         if not self.list_table_class:
-            raise ImproperlyConfigured("Set `list_table_class` in `{}`.".format(type(self)))
+            raise ImproperlyConfigured(f"Set `list_table_class` in `{type(self)}`.")
         if self.list_table_class.Meta.model != models.ManagedGroup:
             raise ImproperlyConfigured(
                 "list_table_class Meta model field must be anvil_consortium_manager.models.ManagedGroup."
@@ -29,7 +29,6 @@ class BaseManagedGroupAdapter(ABC):
 
     def after_anvil_create(self, managed_group):
         """Custom actions to run after a ManagedGroup is created by the app."""
-        pass
 
 
 def get_managed_group_adapter():
